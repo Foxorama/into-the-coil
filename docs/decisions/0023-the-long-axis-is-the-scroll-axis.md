@@ -8,6 +8,9 @@
 decision hangs on the number stands; every 100 below, and in the decisions written before 0364, is
 the lane as it was then.
 
+⚠️ **Superseded in part by [0552](0552-the-box-is-every-screen.md)**: *every device gives the player
+the same box*. A wider screen's box reaches its own front edge.
+
 ## The rule
 
 **The long axis of the screen is always the scroll axis.** Landscape scrolls horizontally, portrait

@@ -4,6 +4,7 @@ import { makeIntent, type Intent } from '../src/sim/intent.ts';
 import {
   flyShip,
   holdStation,
+  leadFor,
   PLAYER_ALONG_MARGIN,
   PLAYER_ALONG_SPAN,
   PLAYER_LEAD,
@@ -30,6 +31,9 @@ import { sprite } from './bodies.ts';
 
 const SCROLL = 0.6;
 
+/** The narrowest view's span, where the box is the box it always was — 0552. */
+const NARROWEST = viewOf(1920, 1080).alongSpan;
+
 /** A ship at rest in the camera's frame, which is what every composer places one as. */
 function ship(along = 50, across = 50) {
   const e = makeEntity();
@@ -50,7 +54,7 @@ function ship(along = 50, across = 50) {
  * 200 steps is far past the point of measurable change at any response above about 0.05.
  */
 function settled(e: ReturnType<typeof ship>, intent: Intent, steps = 200) {
-  for (let i = 0; i < steps; i++) flyShip(e, intent, 0, SCROLL);
+  for (let i = 0; i < steps; i++) flyShip(e, intent, 0, SCROLL, NARROWEST);
   return e;
 }
 
@@ -85,7 +89,7 @@ describe('the ship goes where it is asked', () => {
     */
     const e = ship();
     for (let i = 0; i < 200; i++) {
-      flyShip(e, ask(0, 0), 0, SCROLL);
+      flyShip(e, ask(0, 0), 0, SCROLL, NARROWEST);
       expect(e.velAlong, `drifted off station on step ${i}`).toBeCloseTo(SCROLL, 12);
       expect(e.velAcross).toBeCloseTo(0, 12);
     }
@@ -111,7 +115,7 @@ describe('the ship has mass', () => {
   it('THE ONE: it does not arrive at full speed on the step it is asked', () => {
     // The whole reversal, in one assertion. Before this, velocity WAS the ask and this was equality.
     const e = ship();
-    flyShip(e, ask(0, 1), 0, SCROLL);
+    flyShip(e, ask(0, 1), 0, SCROLL, NARROWEST);
     expect(e.velAcross, 'the ship reached full speed instantly — there is no mass').toBeLessThan(SHIP_SPEED);
     expect(e.velAcross, 'the ship did not move at all — this is a stall, not inertia').toBeGreaterThan(0);
   });
@@ -119,7 +123,7 @@ describe('the ship has mass', () => {
   it('and it does not stop on the step the ask does', () => {
     // The other half, and the one a player calls the run-on. Both come from the same constant.
     const e = settled(ship(), ask(0, 1));
-    flyShip(e, ask(0, 0), 0, SCROLL);
+    flyShip(e, ask(0, 0), 0, SCROLL, NARROWEST);
     expect(e.velAcross, 'the ship stopped dead — that is the arcade answer, not this one').toBeGreaterThan(0);
     expect(e.velAcross).toBeLessThan(SHIP_SPEED);
   });
@@ -135,7 +139,7 @@ describe('the ship has mass', () => {
     const target = SHIP_SPEED;
     let gap = target;
     for (let i = 0; i < 60; i++) {
-      flyShip(e, ask(0, 1), 0, SCROLL);
+      flyShip(e, ask(0, 1), 0, SCROLL, NARROWEST);
       const next = Math.abs(target - e.velAcross);
       expect(next, `the gap grew on step ${i} — the response is overshooting`).toBeLessThanOrEqual(gap + 1e-12);
       expect(e.velAcross, 'the ship overshot its own top speed').toBeLessThanOrEqual(target + 1e-12);
@@ -193,7 +197,7 @@ describe('the box is the same on every device', () => {
   it('cannot be pushed past the leading edge of the player box', () => {
     const e = ship(PLAYER_ALONG_SPAN, 50);
     for (let i = 0; i < 200; i++) {
-      flyShip(e, ask(1, 0), 0, SCROLL);
+      flyShip(e, ask(1, 0), 0, SCROLL, NARROWEST);
       e.along += e.velAlong;
     }
     // ⚠️ `PLAYER_LEAD` rather than the subtraction — 0074's one description, and 0080 gave it a
@@ -204,7 +208,7 @@ describe('the box is the same on every device', () => {
   it('cannot be pushed back through the camera', () => {
     const e = ship(10, 50);
     for (let i = 0; i < 200; i++) {
-      flyShip(e, ask(-1, 0), 0, SCROLL);
+      flyShip(e, ask(-1, 0), 0, SCROLL, NARROWEST);
       e.along += e.velAlong;
     }
     expect(e.along).toBeGreaterThanOrEqual(PLAYER_ALONG_MARGIN - 1e-9);
@@ -217,7 +221,7 @@ describe('the box is the same on every device', () => {
     ] as const) {
       const e = ship(50, start);
       for (let i = 0; i < 200; i++) {
-        flyShip(e, ask(0, dir), 0, SCROLL);
+        flyShip(e, ask(0, dir), 0, SCROLL, NARROWEST);
         e.across += e.velAcross;
       }
       expect(e.across).toBeGreaterThanOrEqual(PLAYER_MARGIN - 1e-9);
@@ -230,27 +234,57 @@ describe('the box is the same on every device', () => {
     let camera = 100;
     for (let i = 0; i < 300; i++) {
       camera += SCROLL;
-      flyShip(e, ask(-1, 0), camera, SCROLL);
+      flyShip(e, ask(-1, 0), camera, SCROLL, NARROWEST);
       e.along += e.velAlong;
       expect(e.along).toBeGreaterThanOrEqual(camera + PLAYER_ALONG_MARGIN - 1e-9);
     }
   });
 
-  it('is measured against the NARROWEST view, so a 21:9 buys lookahead and not room', () => {
+  it('PLAYER_LEAD is the NARROWEST view’s wall, which is what content is measured against', () => {
     /*
-      0023 fixes the dodge lane so difficulty does not vary with the screen. Sizing the player's box
-      off the current view would undo that on the other axis: the widest view would hand its player
-      35% more room to retreat into than the narrowest one.
-
       ⚠️ **Stated as the PROPERTY rather than as the number, which is what 0080 cost it.** It read
       `toBe(150)` — a value that meant *the narrowest view* only as long as `MIN_ASPECT` was 1.5, and
-      the whole of 0080 is that `MIN_ASPECT` moved. What has to hold at any value is that the box is
-      the narrowest view and that every wider one spends its extra span on lookahead.
+      the whole of 0080 is that `MIN_ASPECT` moved.
+
+      ⚠️ **AND IT NO LONGER SAYS THE BOX IS THE SAME ON EVERY DEVICE — 0552.** It was *"a 21:9 buys
+      lookahead and not room"*, which is the rule that left a third of a phone's screen out of reach.
+      What still holds is that `PLAYER_ALONG_SPAN` is the narrowest view, so a level measured against
+      it is measured against the smallest box any player has.
     */
-    expect(PLAYER_ALONG_SPAN, 'the box is not the narrowest view').toBeCloseTo(viewOf(1920, 1080).alongSpan, 9);
-    expect(PLAYER_ALONG_SPAN, 'a wider screen bought play space rather than lookahead').toBeLessThan(
-      viewOf(3440, 1440).alongSpan,
-    );
+    expect(PLAYER_ALONG_SPAN, 'the reference box is not the narrowest view').toBeCloseTo(NARROWEST, 9);
+    expect(leadFor(NARROWEST), 'the narrowest view’s wall moved').toBeCloseTo(PLAYER_LEAD, 9);
+  });
+
+  /*
+    ⚠️ **THE ASK, IN THE PLAYER'S UNITS — 0552.** *"On mobile tho it's now a good third of the screen
+    is visible dead space … I just want all resolutions to have good gameplay."* Every camera here is
+    a screen in CSS pixels, held the way it is played, with the desktop's 75-pixel bar where the shell
+    keeps one (0500), and what is measured is the share of the picture along the lane that the ship
+    cannot fly into. A 20:9 phone measured 25% before this and a 21:9 one 30%.
+  */
+  it.each([
+    ['a 16:9 monitor, full screen', 1920, 1080, 0],
+    ['a 1080p browser window under the bar', 1920, 945, 75],
+    ['a 1440p browser window under the bar', 2560, 1305, 75],
+    ['a 16:10 laptop under the bar', 1440, 820, 75],
+    ['a 21:9 monitor under the bar', 3440, 1305, 75],
+    ['a 19.5:9 phone, landscape', 844, 390, 0],
+    ['a 20:9 phone, landscape', 915, 412, 0],
+    ['a 21:9 phone, landscape', 960, 411, 0],
+    ['a phone under its own toolbar', 915, 360, 0],
+  ] as const)('on %s the ship reaches the front of the picture (%i×%i)', (_name, width, height, bar) => {
+    const view = viewOf(width, height, bar);
+    const e = ship(PLAYER_ALONG_MARGIN + 1, 50);
+    for (let i = 0; i < 2000; i++) {
+      flyShip(e, ask(1, 0), 0, SCROLL, view.alongSpan);
+      e.along += e.velAlong;
+    }
+    expect(e.along, 'pushed through the wall').toBeLessThanOrEqual(leadFor(view.alongSpan) + 1e-9);
+    // The share of the picture in front of the ship at its wall — the dead space the report counted.
+    const ahead = (view.alongSpan - e.along) / view.alongSpan;
+    expect(ahead, 'more than a twentieth of the screen in front of the wall is out of reach').toBeLessThanOrEqual(0.05 + 1e-9);
+    // And the clear air in front of it is the narrowest view's, in world units, on every screen.
+    expect(view.alongSpan - e.along).toBeCloseTo(PLAYER_ALONG_MARGIN, 6);
   });
 
   it('insets by the same fraction on both axes, so the box is the screen’s own shape', () => {
@@ -273,7 +307,7 @@ describe('the interpolation contract survives', () => {
   it('sets velocity and never position, so the renderer still has a prev to draw from', () => {
     const e = ship(50, 50);
     const before = { along: e.along, across: e.across };
-    flyShip(e, ask(1, 1), 0, SCROLL);
+    flyShip(e, ask(1, 1), 0, SCROLL, NARROWEST);
     expect(e.along).toBe(before.along);
     expect(e.across).toBe(before.across);
   });
@@ -286,7 +320,7 @@ describe('the interpolation contract survives', () => {
     const e = pool.spawn()!;
     reset(e, 50, ACROSS_SPAN - PLAYER_MARGIN, sprite(0));
     for (let i = 0; i < 5; i++) {
-      flyShip(e, ask(0, 1), 0, SCROLL);
+      flyShip(e, ask(0, 1), 0, SCROLL, NARROWEST);
       stepEntities(pool, 0);
       expect(Math.abs(e.across - e.prevAcross)).toBeLessThanOrEqual(SHIP_SPEED + 1e-9);
       expect(e.across).toBeLessThanOrEqual(ACROSS_SPAN - PLAYER_MARGIN + 1e-9);

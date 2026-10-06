@@ -86,8 +86,8 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0258: the turn is at the box's ends now, not at the ship.
-      find: '        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {\n          e.turnsLeft--;',
-      replace: '        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {',
+      find: '        if (outward ? inView >= leadFor(w.view.alongSpan) - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {\n          e.turnsLeft--;',
+      replace: '        if (outward ? inView >= leadFor(w.view.alongSpan) - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {',
     },
   },
   {

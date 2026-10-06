@@ -12,6 +12,7 @@ import {
   ROAM_MAX,
   ROAM_MIN,
   cullPlayerShotAlong,
+  spawnAlong,
   viewOf,
 } from '../src/sim/camera.ts';
 import { makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
@@ -25,7 +26,7 @@ import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES, shotsPerVolley } from '../src/content/enemies.ts';
 import { streamOffset } from '../src/content/formations.ts';
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, leadFor } from '../src/sim/flight.ts';
 import { fireGapFor } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { GameFrame } from '../src/app/frame.ts';
@@ -802,8 +803,8 @@ describe('0197 — a wave arrives as a wave', () => {
       [3440, 1440],
     ] as const) {
       const view = viewOf(w, h);
-      // Every position the ship can legally hold, in the camera's frame.
-      for (let ship = PLAYER_ALONG_MARGIN; ship <= PLAYER_LEAD; ship += 4) {
+      // Every position the ship can legally hold, in the camera's frame — this view's box since 0552.
+      for (let ship = PLAYER_ALONG_MARGIN; ship <= leadFor(view.alongSpan); ship += 4) {
         const entry = flankAlongFor(ship, 0, view.alongSpan);
         expect(
           entry,
@@ -842,13 +843,17 @@ describe('0197 — a wave arrives as a wave', () => {
   });
 
   it('and a flanker still arrives from beyond the leading edge rather than on top of it', () => {
-    // The ceiling is MAX_ALONG_SPAN, so an entry is never absurdly far out; 0059 already stops a body
-    // that is entirely off screen from firing, which is the thing that must not happen.
-    for (const ship of [PLAYER_ALONG_MARGIN, 90, PLAYER_LEAD]) {
-      const entry = flankAlongFor(ship, 0, 178);
-      expect(entry, 'a flanker is placed past the horizon the game spawns against').toBeLessThanOrEqual(
-        MAX_ALONG_SPAN,
-      );
+    // The ceiling is the clear air past MAX_ALONG_SPAN, so an entry is never absurdly far out — short
+    // of where a wave spawns; 0059 already stops a body that is entirely off screen from firing, which
+    // is the thing that must not happen. The air past the horizon is 0552's: the widest view's box.
+    for (const span of [178, MAX_ALONG_SPAN]) {
+      for (const ship of [PLAYER_ALONG_MARGIN, 90, leadFor(span)]) {
+        const entry = flankAlongFor(ship, 0, span);
+        expect(entry, 'a flanker is placed past the horizon the game spawns against').toBeLessThanOrEqual(
+          MAX_ALONG_SPAN + FLANK_CLEAR_AIR,
+        );
+        expect(entry, 'a flanker is placed where a wave spawns').toBeLessThan(spawnAlong(0));
+      }
     }
   });
 });

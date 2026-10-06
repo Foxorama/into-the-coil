@@ -44,8 +44,8 @@ export const PROBES = [
     edit: {
       path: 'src/app/boss.ts',
       // ⚠️ Re-anchored by 0263, which put the rock's kind on the shot.
-      find: '    const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);\n    reset(shot, along, -rock.radius, rock, kind);',
-      replace: '    const along = cameraAlong + PLAYER_LEAD + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);\n    reset(shot, along, -rock.radius, rock, kind);',
+      find: '    const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD + past);\n    reset(shot, along, -rock.radius, rock, kind);',
+      replace: '    const along = cameraAlong + PLAYER_LEAD + past + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD + past);\n    reset(shot, along, -rock.radius, rock, kind);',
     },
   },
   {

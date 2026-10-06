@@ -385,10 +385,21 @@ export const FLANK_CLEAR_AIR = 24;
  *
  * ⚠️ **SO THE VIEW IS A FLOOR AND NOT A CEILING.** A flanker arrives at the leading edge of the
  * screen the player actually has, and `MAX_ALONG_SPAN` goes on being the ceiling so nothing is placed
- * beyond the widest device's reach. On 16:9 that moves the entry from 120 to 177.8; on 21:9, from 120
+ * beyond the widest device's reach (plus its clear air since 0552 — `FLANK_CEILING`). On 16:9 that moves the entry from 120 to 177.8; on 21:9, from 120
  * to 237. **Both are the same sentence — *at the front edge of your screen* — for the first time.**
  */
 export function flankAlongFor(shipAlong: number, cameraAlong: number, alongSpan: number): number {
   const ahead = shipAlong - cameraAlong + FLANK_CLEAR_AIR;
-  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), MAX_ALONG_SPAN);
+  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), FLANK_CEILING);
 }
+
+/**
+ * The furthest a flanker is ever placed — the widest view, and the clear air past it.
+ *
+ * ⚠️ **IT WAS `MAX_ALONG_SPAN`, AND THE BOX REACHING THE SCREEN'S FRONT IS WHAT MADE THAT WRONG — 0552.**
+ * Since the player's box is the view's own on every screen, a ship at the front of the widest one stands
+ * 10.7 units short of the horizon (`PLAYER_ALONG_MARGIN`) — and a ceiling AT the horizon put its flanker
+ * that close in front of it, not `FLANK_CLEAR_AIR`. A flanker that enters past the edge slides in, as the 16:9 view's
+ * already did; it is still short of `spawnAlong`, so it is never placed where a wave is.
+ */
+const FLANK_CEILING = MAX_ALONG_SPAN + FLANK_CLEAR_AIR;

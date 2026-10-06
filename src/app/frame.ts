@@ -57,7 +57,7 @@ import { animate, type Body, type Entity, reset, stepEntities, turnFor } from '.
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
 // `SCROLL_PER_STEP` also sizes the rift's carve slots, which are allocated before any world exists — 0377.
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, SCROLL_PER_STEP, SHIP_SPEED, flyShip, holdStation } from '../sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, SCROLL_PER_STEP, SHIP_SPEED, boxPastFor, flyShip, holdStation, leadFor } from '../sim/flight.ts';
 import {
   BURN_ASK,
   BURN_ROOT,
@@ -2062,14 +2062,14 @@ export class GameFrame implements Frame {
     pulseChill(w);
     // The cold scales the stick's ask before the ship flies on it — 0253.
     if (flying) chillShip(w);
-    if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
+    if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep, w.view.alongSpan);
     /*
       ⚠️ **THE WALL IS DRAWN WHILE IT IS MET — 0359.** The clamp above is the rule; this is when its
       picture is on the screen. Within `BOUND_NEAR` of the wall the hold is refilled every step, and
       away from it the hold runs down, so the mark arrives as the ship pushes in and leaves half a
       second after it pulls back. A wreck presses nothing.
     */
-    if (flying && PLAYER_LEAD - (w.ship.along - w.cameraAlong) <= BOUND_NEAR) w.boundPress = BOUND_HOLD;
+    if (flying && leadFor(w.view.alongSpan) - (w.ship.along - w.cameraAlong) <= BOUND_NEAR) w.boundPress = BOUND_HOLD;
     else if (w.boundPress > 0) w.boundPress--;
 
     /*
@@ -3208,6 +3208,8 @@ export function layRoom(w: World): void {
     sprite: room.wall ?? -1,
     extent: room.wall === null ? 0 : SPRITE_EXTENT[SPRITE_KINDS[room.wall]!]!,
     from: rest - room.mouth,
+    // The narrowest view's wall: the painter moves it on by `boxPastFor` its own view, as it does the
+    // pieces (0498), so a resize mid-fight moves the wall and the clamp together — 0552.
     to: rest + PLAYER_LEAD,
     // Shut. `stepWreck` opens it once the thing that was in the wall is on the floor — 0337.
     open: 0,
@@ -3678,10 +3680,10 @@ function steerWheels(w: World): void {
   /*
     ⚠️ **NO FURTHER THAN THE NO-FLY WALL — 0549.** *"It should reach across 75% of the screen or to the
     no-fly zone wall, whichever is closer."* The wall is the front of the player's own box,
-    `PLAYER_LEAD` from the camera (0074, 0359), and it is inside the screen's edge on every aspect the
+    `leadFor` this view from the camera (0074, 0359, 0552), and it is inside the screen's edge on every aspect the
     view allows; the edge stays in the `min` so a view narrower than the box would still hold it on screen.
   */
-  const wall = w.cameraAlong + w.scrollPerStep + PLAYER_LEAD;
+  const wall = w.cameraAlong + w.scrollPerStep + leadFor(w.view.alongSpan);
   const edge = w.cameraAlong + w.scrollPerStep + w.view.alongSpan - WHEEL_EDGE_MARGIN;
   const far = wall < edge ? wall : edge;
   const leash = wheel.leash * w.view.alongSpan;
@@ -6865,7 +6867,7 @@ function cutFlank(w: World, index: number): void {
   const side = origin === 'acrossPlus' ? 1 : -1;
   const camera = wave.at + w.levelOrigin - spawnAlong(0);
   const near = camera + flankAlongFor(camera, camera, w.view.alongSpan);
-  const far = camera + flankAlongFor(camera + PLAYER_LEAD, camera, w.view.alongSpan) + w.scrollPerStep;
+  const far = camera + flankAlongFor(camera + leadFor(w.view.alongSpan), camera, w.view.alongSpan) + w.scrollPerStep;
   const a = streamOffset(0, row.radius);
   const b = streamOffset(wave.count - 1, row.radius);
   openPassage(w, near + Math.min(a, b), far + Math.max(a, b), row.radius, side, w.scrollPerStep - row.closing * w.difficulty.closing);
@@ -7117,7 +7119,7 @@ function rainBodies(w: World, enemy: EnemyKind, count: number): void {
     const e = w.enemies.spawn();
     if (e === null) return;
     w.score.spawned += 1;
-    const along = w.cameraAlong + w.rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
+    const along = w.cameraAlong + w.rockRng.range(PLAYER_ALONG_MARGIN, leadFor(w.view.alongSpan));
     reset(e, along, -row.radius, row, kind);
     animate(e, row.cycle);
     e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), i / count);
@@ -7736,7 +7738,7 @@ function steerEnemies(w: World): void {
         if (e.turnsLeft <= 0) break;
         const inView = e.along - w.cameraAlong;
         const outward = e.spin > 0;
-        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {
+        if (outward ? inView >= leadFor(w.view.alongSpan) - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {
           e.turnsLeft--;
           // Out of turns: hand it back to the closing speed it was spawned with, and let it go.
           if (e.turnsLeft <= 0) {
@@ -8033,7 +8035,7 @@ function driftPickups(w: World): void {
       ship can fly in. *"It waits further out than the ship can fly"*, which is 0100's report about a
       power-up you can see and cannot reach. Arrival happens once.
     */
-    if (item.spin === 0 && inView > PICKUP_SLOW_AT) {
+    if (item.spin === 0 && inView > PICKUP_SLOW_AT + boxPastFor(w.view.alongSpan)) {
       item.velAlong += (0 - item.velAlong) * PICKUP_EASE;
       continue;
     }
@@ -8090,7 +8092,7 @@ function driftPickups(w: World): void {
       The kick is small enough that the bounce still reads as a bounce.
     */
     const floor = PLAYER_ALONG_MARGIN + item.radius;
-    const ceiling = PLAYER_LEAD - item.radius;
+    const ceiling = leadFor(w.view.alongSpan) - item.radius;
     if (inView <= floor && item.velAlong < w.scrollPerStep) bounceFloat(w, item, 1, 0);
     else if (inView >= ceiling && item.velAlong > w.scrollPerStep) bounceFloat(w, item, -1, 0);
     // The lane's own pair is at the top of this loop, where every pickup has always turned at it.
@@ -8399,7 +8401,7 @@ function spawnPickup(w: World, index: number): void {
 
     ⚠️ **Nothing allocates**: a subtraction, a divide and a `Math.max`.
   */
-  const approach = (entry.at - w.cameraAlong - PICKUP_SLOW_AT) / w.scrollPerStep;
+  const approach = (entry.at - w.cameraAlong - PICKUP_SLOW_AT - boxPastFor(w.view.alongSpan)) / w.scrollPerStep;
   item.holdFor = lingerFor(row) + Math.max(0, Math.round(approach));
   startCycle(item, row, index % row.faces.length);
 }
@@ -9246,6 +9248,7 @@ function driveBoss(w: World): void {
     // The pace the bob keeps time on, and the camera the drift does, which a room does not stop — 0459.
     w.scrollRate,
     w.cameraAlong + w.restedBy,
+    boxPastFor(w.view.alongSpan),
   );
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops
@@ -9569,7 +9572,7 @@ function driveBoss(w: World): void {
         case 'shot': {
           const rock = SHOTS[fall.shot];
           const before = w.enemyShots.size;
-          belch(fall, w.enemyShots, rock, SHOT_INDEX[fall.shot], rock.speed * w.difficulty.shotSpeed, w.cameraAlong, w.scrollPerStep, w.rockRng);
+          belch(fall, w.enemyShots, rock, SHOT_INDEX[fall.shot], rock.speed * w.difficulty.shotSpeed, w.cameraAlong, w.scrollPerStep, w.rockRng, boxPastFor(w.view.alongSpan));
           for (let i = before; i < w.enemyShots.size; i++) {
             const thrown = w.enemyShots.at(i);
             burst(w, thrown.along, 0, BURST.belch);
@@ -11357,8 +11360,8 @@ const RUNTIME_PASSAGES = 16;
  * rifts a level*, a level's pickups — but since 0372 a player banks every charge and can empty a
  * salvo at one wall, and eight grows stone back on the screen. Twenty-four was the next guess and
  * holds for a salvo at one wall; nothing measured it against a rift that carves both. The count
- * here is the bound instead: a carve reaches at most `PLAYER_LEAD` + a rift's reach + its radius
- * ahead of the camera, is on the screen until the camera passes that, and one throw lands per
+ * here is the bound instead: a carve reaches at most the widest view's box (`leadFor(MAX_ALONG_SPAN)`,
+ * 0552) + a rift's reach + its radius ahead of the camera, is on the screen until the camera passes that, and one throw lands per
  * `THROW_GAP_STEPS` meanwhile — two walls each. `tests/void.test.ts` flies the one-wall salvo from
  * both ends of the box on the widest screen.
  */
@@ -11369,7 +11372,7 @@ function carvesOnScreen(): number {
     const row = SPECIALS[kind];
     if (row.rift !== null) deepest = Math.max(deepest, row.reach + row.rift.radius);
   }
-  return 2 * Math.ceil((PLAYER_LEAD + deepest) / (SCROLL_PER_STEP * THROW_GAP_STEPS));
+  return 2 * Math.ceil((leadFor(MAX_ALONG_SPAN) + deepest) / (SCROLL_PER_STEP * THROW_GAP_STEPS));
 }
 export const CARVE_PASSAGES = carvesOnScreen();
 
@@ -11396,7 +11399,7 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
   */
   const to = bank !== undefined
     ? Number.POSITIVE_INFINITY
-    : room === null ? origin + level.bossAt + PLAYER_LEAD : origin + level.bossAt - room.stand - room.mouth;
+    : room === null ? origin + level.bossAt + leadFor(MAX_ALONG_SPAN) : origin + level.bossAt - room.stand - room.mouth;
   // @setup: a level boundary — one array for the level, written in place from here on.
   const passages = new Float64Array((row.passages.length + RUNTIME_PASSAGES + CARVE_PASSAGES) * 3);
   for (let i = 0; i < row.passages.length; i++) {

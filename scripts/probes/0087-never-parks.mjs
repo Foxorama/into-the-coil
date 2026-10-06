@@ -99,7 +99,7 @@ export const PROBES = [
         `PICKUP_SLOW_AT` must not fall into the approach again, and did, and reached 182 units.
       */
       find:
-        '    if (item.spin === 0 && inView > PICKUP_SLOW_AT) {\n' +
+        '    if (item.spin === 0 && inView > PICKUP_SLOW_AT + boxPastFor(w.view.alongSpan)) {\n' +
         '      item.velAlong += (0 - item.velAlong) * PICKUP_EASE;\n' +
         '      continue;\n' +
         '    }\n',

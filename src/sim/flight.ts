@@ -81,6 +81,10 @@ export const FLIGHT_RESPONSE = 0.2;
  * the same box and the widest screens spend their extra span on lookahead. The alternative, clamping
  * to the current view, makes retreat distance a property of the monitor.
  *
+ * ⚠️ **SINCE 0552 IT IS THE NARROWEST BOX AND NOT EVERY BOX.** The same box on every device was a
+ * third of a phone's screen out of reach; `leadFor` is the wall a view actually has, and this is what
+ * content measured against the smallest box any player gets is measured against.
+ *
  * ⚠️ **The expression has not changed and the number has: 150 → 177.8.**
  * `docs/decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md` raised `MIN_ASPECT` to the
  * reference aspect, and this is where that lands. Reported from play: *"the barrier line is just
@@ -157,6 +161,35 @@ export const PLAYER_ALONG_MARGIN = PLAYER_ALONG_SPAN * PLAYER_INSET;
  */
 export const PLAYER_LEAD = PLAYER_ALONG_SPAN - PLAYER_ALONG_MARGIN;
 
+/**
+ * How much further forward the box reaches on a view of `alongSpan` than on the narrowest one — 0552.
+ *
+ * ── ⚠️ THE BOX IS THE SCREEN ON EVERY SCREEN, NOT ON THE 16:9 ONE ────────────────────────────────
+ *
+ * Reported from play: *"on mobile tho it's now a good third of the screen is visible dead space."* The
+ * box was `PLAYER_ALONG_SPAN` on every device, so a 16:9 view was 94% box and a 20:9 phone's 266 units
+ * were 75% — the rest drawn, lived in by every enemy, and out of reach. 0080 named the phone as owed;
+ * `docs/decisions/0552-the-box-is-every-screen.md` pays it.
+ *
+ * ⚠️ **IT IS ADDED AT THE FRONT, AND THE MARGIN IN FRONT STAYS A DISTANCE.** `PLAYER_ALONG_MARGIN`
+ * is the clear air between the ship at its wall and the place a wave becomes visible, and an arrival is
+ * a speed in world units, so a reaction is the same number of units on every screen — a fraction of a
+ * wider view would be more air for no reason. The trailing margin does not move either: the box
+ * travels with the camera, and retreat is measured from the trailing edge on every device (0023).
+ *
+ * ⚠️ **Zero on the narrowest view, so every 16:9 number is the number it was.** Content measured
+ * against `PLAYER_LEAD` is measured against the narrowest box, and anything that must follow the box
+ * the player HAS adds this to it.
+ */
+export function boxPastFor(alongSpan: number): number {
+  return alongSpan > PLAYER_ALONG_SPAN ? alongSpan - PLAYER_ALONG_SPAN : 0;
+}
+
+/** How far ahead of the camera the ship may fly on a view of `alongSpan` — the wall it meets — 0552. */
+export function leadFor(alongSpan: number): number {
+  return PLAYER_LEAD + boxPastFor(alongSpan);
+}
+
 function clamp(n: number, min: number, max: number): number {
   return n < min ? min : n > max ? max : n;
 }
@@ -191,7 +224,7 @@ export function holdStation(ship: Entity, scrollPerStep: number): void {
  * ⚠️ Nothing allocates: no vector object, no destructuring of a returned pair. This runs once per
  * fixed step.
  */
-export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrollPerStep: number): void {
+export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrollPerStep: number, alongSpan: number): void {
   const ax = intent.along;
   const ay = intent.across;
 
@@ -231,7 +264,8 @@ export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrol
   // ⚠️ The ALONG margin at both ends, not the across one — 0080. They were the same number until the
   // box became the screen's own shape, and the trailing edge is the one a reader forgets.
   const minAlong = cameraAlong + PLAYER_ALONG_MARGIN;
-  const maxAlong = cameraAlong + PLAYER_LEAD;
+  // ⚠️ The view's own box, not the narrowest one's — 0552: a wider screen's front is a wall it can reach.
+  const maxAlong = cameraAlong + leadFor(alongSpan);
   const nextAlong = ship.along + ship.velAlong;
   if (nextAlong < minAlong || nextAlong > maxAlong) {
     ship.velAlong = clamp(nextAlong, minAlong, maxAlong) - ship.along;
