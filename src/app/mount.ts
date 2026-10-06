@@ -1762,7 +1762,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       chrome.setSheet('victory', runSheet(state.run, place, bank()));
     }
     /*
-      ⚠️ **NOT `now === 'title' && was === 'gameOver'` ANY MORE — 0558.** A continue that ran out or was
+      ⚠️ **NOT `now === 'title' && was === 'gameOver'` ANY MORE — 0559.** A continue that ran out or was
       walked away from goes on the table, but by the time this runs the title has ended the run and its
       account is gone, so `dispatch` writes it before the reducer moves (`walkedAway`).
     */
@@ -1787,7 +1787,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     the rest, on the title's arrival whichever screen it came from: the field closed (`lifecycle.end`),
     and the world flying the pilot's ship, fitted from the hangar, as it did before the run began.
 
-    ⚠️ **THE WHOLE RUN, AND NOT ONLY WHAT THE TITLE SHOWS.** The title is drawn on the void, and the next
+    ⚠️ **THE WHOLE RUN, AND NOT ONLY WHAT THE TITLE SHOWS — `docs/decisions/0559-a-run-ends-whole.md`.**
+    The title is drawn on the void, and the next
     run and the music room each sweep the field before they show it, so a first version left the field
     alone. Played back: *"we should clear-out the whole run and not rely on the music room and next run
     to tidy up for us."* What a run leaves is closed where it ends.
@@ -1803,7 +1804,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     /*
       A continue that ran out, or was walked away from, onto the title: the run is over and it goes on the
       table — written HERE, off the run as it stands, because the title the reducer is about to show ends
-      the run and empties its account (0558). `bank` dispatches the shards before this one moves.
+      the run and empties its account (0559). `bank` dispatches the shards before this one moves.
     */
     if (action.slice === 'screen' && action.type === 'show' && action.screen === 'title' && state.screen.current === 'gameOver') walkedAway();
     const next = reduce(state, action);

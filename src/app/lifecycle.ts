@@ -1,6 +1,6 @@
 /**
  * THE WAYS A RUN MOVES: it begins, it goes onward a level, it is resumed after it ran out, and since
- * 0558 it ends.
+ * 0559 it ends.
  *
  * `docs/decisions/0068-a-run-over-is-a-continue.md`. Each one is a pair of statements — one to the
  * reducer about the run, one to the world about the field — and the whole of what separates them is
@@ -12,7 +12,7 @@
  * | `onward` | untouched | untouched — the burn begins | kept |
  * | `arrive` | carried forward untouched | **left exactly as it was** — 0076; the script changes | kept |
  * | `resume` | back to a full complement, level UNTOUCHED | left exactly as it was | dropped |
- * | `end`    | gone — `initialRun`, at the title (0558) | **closed**: as no run had touched it | dropped |
+ * | `end`    | gone — `initialRun`, at the title (0558, 0559) | **closed**: as no run had touched it | dropped |
  *
  * ⚠️ **`onward` WAS ONE VERB AND IS TWO, AND THE BURN IS WHAT WENT BETWEEN THEM** —
  * [0340](../../docs/decisions/0340-the-coil-is-a-route.md). It used to enter the next level and end
@@ -80,7 +80,7 @@ export interface Lifecycle {
   /** The run picked up where it ran out. A new ship, a full complement, and the same field. */
   resume(): void;
   /**
-   * The run over, however it ended — 0558: the field swept back to level one's opening with the camera
+   * The run over, however it ended — 0559: the field swept back to level one's opening with the camera
    * at zero, the ship back at the start, and nothing the run did left anywhere in the world. The run's
    * half is the reducer's (a run arriving at the title is over); the shell calls this as it arrives.
    */

@@ -22,32 +22,11 @@ export const PROBES = [
     suite: 'tests/run-ends.browser.test.ts',
     broke: 'the run told it has ended and keeping its lives',
     guard: 'a pilot chosen after a quit stands on the pad in their own ship',
+    // ⚠️ Re-pointed by 0559: the slice's answer is the whole run gone, not its lives.
     edit: {
       path: 'src/state/slices/run.ts',
       find: '      return initialRun;',
       replace: '      return state;',
-    },
-  },
-  {
-    decision: '0558',
-    suite: 'tests/run-ends.test.ts',
-    broke: 'a run ending with what its weapons left still on the field',
-    guard: 'leaves the world as no run had touched it',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    if (layer !== w.shipPool) layer.clear();',
-      replace: '    if (layer === w.shipPool) layer.clear();',
-    },
-  },
-  {
-    decision: '0558',
-    suite: 'tests/run-ends.browser.test.ts',
-    broke: 'a continue left to run out never put on the table',
-    guard: 'a continue left to run out goes on the table',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: "    if (action.slice === 'screen' && action.type === 'show' && action.screen === 'title' && state.screen.current === 'gameOver') walkedAway();",
-      replace: "    if (action.slice === 'screen' && action.type === 'show' && action.screen === 'title' && state.screen.current === 'gameOver') void walkedAway;",
     },
   },
 ];

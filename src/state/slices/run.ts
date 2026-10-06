@@ -477,7 +477,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         credits: state.credits,
       };
     /*
-      0558: the run over, however it ended — gone, not stood down: `initialRun`, *no run in progress*.
+      0558, 0559: the run over, however it ended — gone, not stood down: `initialRun`, *no run in progress*.
       Every screen that reads the run's account has read it by now; a continue walked away from onto the
       title is put on the table by the shell before this arrives.
     */

@@ -51,7 +51,7 @@ describe('a run at the title is over', () => {
   });
 
   it('and is gone whole — not a run stood down with its account, its arsenal and its level still on it', () => {
-    // Asked: *"we should clear-out the whole run"*. A run's half of the state is `initialRun` at the title.
+    // 0559, asked: *"we should clear-out the whole run"*. A run's half of the state is `initialRun` at the title.
     let flown = reduce(reduce(initialState, BEGIN), show('playing'));
     flown = reduce(flown, { slice: 'run', type: 'took', special: SPECIAL_KINDS[0]! });
     flown = reduce(flown, { slice: 'run', type: 'levelCleared' });
@@ -114,7 +114,7 @@ function differences(a: unknown, b: unknown, path = 'world', out: string[] = [])
   return out;
 }
 
-describe('0558 — a run ends whole', () => {
+describe('0559 — a run ends whole', () => {
   it('leaves the world as no run had touched it: every pool, every body, every number', () => {
     /*
       Asked: *"there's a very real chance we implement something in the future that hangs around and bites

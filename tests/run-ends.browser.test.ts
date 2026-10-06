@@ -90,7 +90,7 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
   it('a continue left to run out goes on the table, written before the title ends the run', async () => {
     /*
       ⚠️ **MOVED BY THIS DECISION, AND IT HAD NO GUARD.** A run over whose offer runs out onto the title
-      goes on the score table — 0438. It was written as the title arrived, off the run; since 0558 the
+      goes on the score table — 0438. It was written as the title arrived, off the run; since 0559 the
       title empties the run, so it is written as the title is asked for, before the reducer moves. Held
       here in what the player keeps: a row in the saved table.
     */

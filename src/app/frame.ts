@@ -11645,7 +11645,7 @@ export function resetCreditScore(score: LevelScore): void {
 }
 
 /**
- * The rest of a run, gone — `docs/decisions/0558-a-run-ends-at-the-title.md`, after `startLevel` has
+ * The rest of a run, gone — `docs/decisions/0559-a-run-ends-whole.md`, after `startLevel` has
  * swept the level's script and put the ship back at the start. What a level boundary keeps and a new run
  * never needed to clear, because `begin` came straight after it: what the ship's own weapons left on the
  * field, the run's clock, the stick's last reading, this step's logs, the readout's latches, and where
