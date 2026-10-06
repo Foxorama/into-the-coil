@@ -390,10 +390,10 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    * stays attached to the disc and the car and you can go back and forth with it."* And: *"fires out
    * every 4 secs and fades away at 3.6 seconds give or take before the new one fires out."*
    *
-   * ⚠️ **NINE BEATS AND TEN — 216 STEPS AND 240, SINCE 0549.** 0545 threw every ten beats and burned
-   * out a beat before the next. Asked for since: the wheel is thrown
-   * every 3.6 s, still on the grid every gun is on (`VOLLEY_CYCLE`), its tether lets go at 3.4 s and it
-   * burns down until 4 s — so the next is out while the last is ending. The first wheel of a life is
+   * ⚠️ **SIX BEATS, 144 STEPS AND 160, SINCE 0551** — nine beats and ten, 216 and 240, since 0549. 0545
+   * threw every ten beats and burned out a beat before the next. Asked for since: the wheel is thrown
+   * every 2.4 s, still on the grid every gun is on (`VOLLEY_CYCLE`), its tether lets go at 2.27 s and it
+   * burns down until 2.67 s — so the next is out while the last is ending. The first wheel of a life is
    * thrown on the next beat (`firstVolleyIn` in `src/app/frame.ts`).
    *
    * ⚠️ **IT HANGS, ON A LEASH** — answered while it was planned: *"it flies out ahead, slows, and hangs
@@ -414,8 +414,14 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     hint: 'A fire wheel on a tether',
     shot: 'catherine',
     flight: 'tether',
-    // Nine beats since 0549 (it was ten): the next wheel is out while the last is still burning down.
-    fireEvery: 216,
+    /*
+      Six beats since 0551, nine since 0549, ten before. Asked for: *"reduce both by 30% so that the
+      wheel lasts 30% less time and refires 30% faster (keeping the same cadence for wheel decay and
+      refire gap that we have now)."* 30% of nine beats is 6.3, and the gun is held to the beat grid
+      (0094), so it is six — a third off, not three tenths — and the wheel's life and burn-down are a
+      third off with it, which is what keeps the shape of the overlap the same.
+    */
+    fireEvery: 144,
     barrels: 1,
     links: 1,
     weight: 1,
@@ -443,18 +449,27 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       its last 0.6 (`life - fade` is 204 steps, 3.4 s), thrown every nine beats (216, 3.6 s): for the
       last 0.4 s of each wheel the next is already out, and only one ever has a tether.
     */
+    /*
+      ⚠️ **AND SINCE 0551 EVERY ONE OF THOSE IS TWO THIRDS.** *"Reduce both by 30%... keeping the same
+      cadence."* A life of 160 steps (2.67 s) burning down over its last 24 (0.4 s), so the tether lets go
+      at 136 (2.27 s) and the next is thrown at 144 (2.4 s) — 0549's 3.4, 3.6 and 4 s, each times two thirds.
+    */
     wheel: {
-      life: 240,
-      fade: 36,
-      // 0549: three quarters of the screen, or the no-fly wall where that is nearer — `steerWheels`.
-      reach: 0.75,
+      life: 160,
+      fade: 24,
+      /*
+        0.6 since 0551, 0.75 since 0549: *"let's make it 60% instead of 75% of screen size to get a bit more
+        control for the player."* Still the no-fly wall where that is nearer — `steerWheels`.
+      */
+      reach: 0.6,
       settle: 0.09,
       /*
-        ⚠️ 0.8, and 0.9 for one proof: on 16:9 that was 192 units, and a ship can get no further than about
-        190 from a wheel at the wall — corner to corner — so the leash never acted and its guard could not
-        fail. 170 tows a wheel after a ship that retreats across the lane, and leaves the 160 of a throw free.
+        ⚠️ 0.65 since 0551, moved with the reach: it was 0.8 over a reach of 0.75, and 0.9 for one proof — on
+        16:9 that was 192 units, and a ship can get no further than about 190 from a wheel at the wall, so the
+        leash never acted and its guard could not fail. 139 tows a wheel after a ship that retreats across
+        the lane, and leaves the 128 of a throw free, as 170 left 160.
       */
-      leash: 0.8,
+      leash: 0.65,
       spin: 0.32,
       // 0549: half of 0545's 5.4, with the wheel drawn half the size — *"a lot smaller"*.
       rim: 2.7,
@@ -462,18 +477,19 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       embers: 3,
       ember: 'cinder',
       /*
-        ⚠️ **17, AND IT WAS 16 — 0549: *"the spark spray should spray out to the same size as it
-        currently does."*** An ember leaves the rim leaning out from its tangent (`EMBER_FLARE`), so how
-        far from the hub it ends is the rim and its flight added at that lean: 5.4 and 24 units of flight
-        ended 26.8 out, and from a rim of 2.7 the same 26.8 is 25.5 of flight, seventeen steps at 1.5.
+        ⚠️ **14 SINCE 0551, AND 17 SINCE 0549** — *"the spark spray diameter needs a 20% reduction in size,
+        it's very strong atm."* Measured as the player sees it — the furthest an ember gets from a hanging
+        wheel's hub, plus the half of its cooled streak that leads (`tests/wheel.test.ts`): 28.7 units at
+        seventeen, 23.6 at fourteen, 18% in; thirteen is 21.6, 25%. Fourteen is the nearer, and the shorter
+        life is fewer sparks in the air at once as well as a smaller spray.
       */
-      emberLife: 17,
+      emberLife: 14,
       /*
-        ⚠️ 0.7 since 0549 — *"slightly thinner"* — and 0.9 before it, and 1.6 until 0545's first
-        photograph: drawn as wide as it hits, a cord of 3.2 units was a bar across the screen that
-        outshone the wheel it holds.
+        ⚠️ 0.5 since 0551 — *"still a bit too thick"* — 0.7 since 0549, *"slightly thinner"*, 0.9 before it,
+        and 1.6 until 0545's first photograph: drawn as wide as it hits, a cord of 3.2 units was a bar
+        across the screen that outshone the wheel it holds.
       */
-      tether: 0.7,
+      tether: 0.5,
       tetherDamage: 1,
     },
   },

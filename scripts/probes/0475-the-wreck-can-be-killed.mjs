@@ -73,9 +73,9 @@ export const PROBES = [
     guard: 'a real boss lasts forty seconds at max weapons, and every phase gets eight volleys away, so every attack is seen — the arc',
     edit: {
       path: 'src/content/bosses.ts',
-      // 0545 weighted the Catherine wheel on the same row, and 0549 re-weighed it; the break still takes only the arc's and the ray's.
-      find: '    gunWeights: { arc: 1.2, ray: 0.82, catherine: 1.42 },',
-      replace: '    gunWeights: { arc: 1.5, ray: 1, catherine: 1.42 },',
+      // 0545 weighted the Catherine wheel on the same row, and 0549 and 0551 re-weighed it; the break still takes only the arc's and the ray's.
+      find: '    gunWeights: { arc: 1.2, ray: 0.82, catherine: 0.42 },',
+      replace: '    gunWeights: { arc: 1.5, ray: 1, catherine: 0.42 },',
     },
   },
 ];

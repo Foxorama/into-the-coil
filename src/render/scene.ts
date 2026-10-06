@@ -449,7 +449,7 @@ const TETHER_RUN = 0.35;
   `BOLT_PAGE_STEPS` as lightning is — the crackle — pinned at both ends and widest at its middle. And
   two sparks jump along the first filament from page to page. Five strokes a tether, all counted.
 
-  The tether lets go when its wheel starts to burn down (0549: at 3.4 s); it fades over its last
+  The tether lets go when its wheel starts to burn down (0549: at 3.4 s; 0551: at 2.27 s); it fades over its last
   `TETHER_FADE_STEPS`, read off the steps it has left (`holdFor`).
 */
 /** The second wave on the cord, running the other way: amplitude, waves along it, and speed. */
@@ -475,8 +475,11 @@ const TETHER_FILAMENT = 0.16;
 const TETHER_FILAMENT_SECOND = 0.11;
 /** A spark on the filament, in world units across its core. */
 const TETHER_SPARK = 0.3;
-/** Steps the tether fades over before it lets go — a fifth of a second. */
-const TETHER_FADE_STEPS = 12;
+/**
+ * Steps the tether fades over before it lets go — two fifteenths of a second since 0551, a fifth before:
+ * two thirds, with the rest of the wheel's clock, so the shape of the let-go is the one the player kept.
+ */
+const TETHER_FADE_STEPS = 8;
 /** How many `bolt` calls one tether costs: its cord, two filaments and two sparks. */
 export const STROKES_PER_TETHER = 5;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
@@ -624,8 +627,22 @@ export function paintBolts(
       const held = e.holdFor >= TETHER_FADE_STEPS ? 1 : e.holdFor <= 0 ? 0 : e.holdFor / TETHER_FADE_STEPS;
       const page = Math.floor(e.spin / BOLT_PAGE_STEPS);
       const last = TETHER_VERTICES - 1;
+      /*
+        ⚠️ **ITS START IS WHERE THE MUZZLE IS DRAWN, NOT WHERE THE WHEEL IS DRAWN PLUS THIS STEP'S GAP —
+        0551.** Played: *"the end of the tether also starts on the hood of the car and then moves forward
+        so the end attaches to the weapon nozzle."* The wheel's end is interpolated as every body is; an
+        offset from it that is not interpolated too puts the muzzle's end a fraction of the wheel's last
+        step behind the muzzle — five units, on the hood, while the wheel flies out at full speed, and
+        nothing once it hangs. So the offset is drawn between the step before's and this one's.
+      */
+      const fromAlong = e.prevFromAlong + (e.fromAlong - e.prevFromAlong) * alpha;
+      const fromAcross = e.prevFromAcross + (e.fromAcross - e.prevFromAcross) * alpha;
+      const span = Math.sqrt(fromAlong * fromAlong + fromAcross * fromAcross);
+      if (span <= 0) continue;
+      const tAlong = -fromAcross / span;
+      const tAcross = fromAlong / span;
       // It stops at the wheel's face, not its heart; `t` runs from the muzzle (0) to there (1).
-      const reach = length > TETHER_HUB ? 1 - TETHER_HUB / length : 0;
+      const reach = span > TETHER_HUB ? 1 - TETHER_HUB / span : 0;
       // The cord, then each filament over it: pass -1 is the cord, 0 and 1 the filaments.
       for (let pass = -1; pass < 2; pass++) {
         for (let v = 0; v <= last; v++) {
@@ -636,8 +653,8 @@ export function paintBolts(
           // The crackle rises off the cord within a few joins of each end rather than over the whole length.
           const lift = v < 4 ? v / 4 : v > last - 4 ? (last - v) / 4 : 1;
           if (pass >= 0) off += lift * TETHER_CRACKLE * jag(pass * 7919 + 1, v, page);
-          const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
-          const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
+          const along = endAlong + fromAlong * (1 - t) + tAlong * off;
+          const across = endAcross + fromAcross * (1 - t) + tAcross * off;
           const inView = along - cameraAlong;
           TETHER[v * 2] = screenX(view, inView, across);
           TETHER[v * 2 + 1] = screenY(view, inView, across);

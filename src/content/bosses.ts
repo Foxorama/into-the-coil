@@ -4019,8 +4019,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0549: and 1.45 since the wheel is thrown to the no-fly wall, where it hangs past the fish's middle and
       most of its embers miss — at 0.55 that took 114 s. At 1.45, 42 s.
+
+      0551: 0.45, since the wheel is thrown 60% of the screen — from the ship at rest it hangs on the fish
+      again, and at 1.45 took it in 12.7 s. At 0.45, 42.7 s, held and on its lane.
     */
-    gunWeights: { arc: 1.3, shuriken: 0.95, ray: 0.95, catherine: 1.45 },
+    gunWeights: { arc: 1.3, shuriken: 0.95, ray: 0.95, catherine: 0.45 },
     damage: 3,
     station: 155,
     drift: 5,
@@ -4137,8 +4140,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0549: and the Catherine wheel at 1.8 — thrown to the no-fly wall it hangs off the bird's patrol, and at
       the gun's 0.6 it took 285 s. At 1.8, 96 s held and 43 s on its lane, where 0545 had it at 93.
+
+      0551: 1.05, thrown 60% of the screen — at 1.8 it took the bird in 23.6 s on its lane. At 1.15 the
+      Firebird met the floor (41.9 s on its lane) and the fighter borrowing the wheel did not, at 38.9 s.
     */
-    gunWeights: { arc: 1.1, ray: 0.82, catherine: 1.8 },
+    gunWeights: { arc: 1.1, ray: 0.82, catherine: 1.05 },
     damage: 3,
     station: 154,
     drift: 6,
@@ -4286,8 +4292,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0549: 1.42, since the wheel is thrown to the no-fly wall and hangs past the gyre — 108 s at 0.57; at
       1.5 it was 39 s, and at 1.42 the others' forty-one.
+
+      0551: 0.42, thrown 60% of the screen — from the ship at rest it hangs in the gyre's face again, and at
+      1.42 took it in 12.5 s. At 0.42, 41.4 s.
     */
-    gunWeights: { arc: 1.2, ray: 0.82, catherine: 1.42 },
+    gunWeights: { arc: 1.2, ray: 0.82, catherine: 0.42 },
     damage: 3,
     station: 156,
     // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place
@@ -4434,7 +4443,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 940. 1800 from 1600 — 0441: the arc at the true cap took it in 36 s.
     health: 1800,
     // 0549: the wheel thrown to the no-fly wall hangs past the frost ship — 198 s at its 0.6; 72 s at 1.6, 0545's.
-    gunWeights: { catherine: 1.6 },
+    // 0551: thrown 60% of the screen it is on the ship again — 22.9 s at 1.6; at 0.9, 41.6 s held and 46 s on its lane.
+    gunWeights: { catherine: 0.9 },
     damage: 3,
     station: 157,
     drift: 5,
@@ -4586,7 +4596,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 1000. 1860 from 1700 — 0441: the arc at the true cap took it in 37 s.
     health: 1860,
     // 0549: set from its own lane, where at 1.25 the wheel took it in 30 s; at 0.9, 41 s there and 66 s held.
-    gunWeights: { catherine: 0.9 },
+    // 0551: still from its lane — 26.8 s there at 0.9 with the wheel thrown 60%; at 0.57, 41.2 s there and 69 s held.
+    gunWeights: { catherine: 0.57 },
     damage: 3,
     /*
       ⚠️ **154 → 178 — 0459.** *"Hydra needs to be closer to the right edge of the screen, it's too far
@@ -4811,8 +4822,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0549: and the Catherine wheel at 0.57 — thrown to the no-fly wall it took her in 39.7 s at its 0.6, the
       one boss it got quicker on. At 0.57, 43 s.
+
+      0551: 0.5 — thrown 60% of the screen and faster, 36.5 s at 0.57. At 0.5, 44.6 s; at 0.53 it was 40.9,
+      too near the floor for a ship that borrows the gun.
     */
-    gunWeights: { arc: 1.4, catherine: 0.57 },
+    gunWeights: { arc: 1.4, catherine: 0.5 },
     damage: 3,
     /*
       ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you
