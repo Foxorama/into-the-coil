@@ -33,9 +33,10 @@ import { SCREENS, STEPS_PER_SECOND, type ChoiceName, type Screen } from '../stat
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS } from '../content/specials.ts';
-import { SHIP_BOX, SPRITE, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
-import { RIMS } from '../content/rims.ts';
-import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, mix, shade, withFit } from '../render/bake.ts';
+import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
+import { RIMS, RIM_KINDS } from '../content/rims.ts';
+import { FLAME_KINDS } from '../content/flames.ts';
+import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
@@ -43,7 +44,7 @@ import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { KEEPER_FACES } from '../render/keeper-art.ts';
 import { KEEPERS } from '../content/keepers.ts';
-import { SHELF_KINDS } from '../content/wares.ts';
+import { SHELF_KINDS, SHELVES, type OwnableKind } from '../content/wares.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
 import { PAD_SPECIAL_BUTTONS } from './pad.ts';
@@ -2107,6 +2108,85 @@ ${each('-tab-key[hidden]')} { display: none; }
 .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3em; }
 .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
 /*
+  ── COSMO'S SELLS PICTURES — 0564 ───────────────────────────────────────────────────────────────────
+
+  One shelf at a time on every device, stepped by the aisle drawn as tabs on the shelf's head — the
+  player's answer, *"sub-tabs probably as we'll be expanding the range"*: a sixth table is a sixth tab and
+  never a taller plate. Each ware a tile: its picture, its name, and under it its price, *Yours*, or its
+  price in the warning ink while the balance is short of it, told by the ink and by the words both.
+*/
+.itc-shop-band-away { display: none; }
+.itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-options { gap: 0.2em; border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 50%, transparent); }
+.itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-option { border-radius: 0.55em 0.55em 0 0; border-bottom-width: 0; padding-top: 0.25em; padding-bottom: 0.25em; }
+.itc-shop-option.itc-shop-option-tile { display: grid; grid-template-rows: auto auto auto; justify-items: center; align-content: start; gap: 0.12em; padding-top: 0.35em; padding-bottom: 0.3em; }
+.itc-shop-option-art { display: block; position: relative; width: 100%; height: 3.1em; pointer-events: none; }
+.itc-shop-option-label { line-height: 1.1; }
+.itc-shop-option-tag { font-size: 0.78em; font-weight: 800; letter-spacing: 0.04em; }
+.itc-shop-option-owned .itc-shop-option-tag { opacity: 0.75; }
+.itc-shop-option-owned .itc-shop-option-tag::before { content: '✓ '; }
+.itc-shop-option-short:not(.itc-shop-option-on) .itc-shop-option-tag { color: var(--itc-warn); }
+/* A dangle hangs from the top of its box, a strand and then the thing, as it does from the dash. */
+.itc-shop-art-dangle { position: absolute; left: 50%; top: 0; font-size: 1em; }
+.itc-shop-art-rim { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; }
+.itc-shop-art-rim canvas { height: 100%; width: auto; }
+.itc-shop-art-flame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.8em;
+  height: 1.2em;
+  translate: -50% -50%;
+  border-radius: 60% 8% 8% 60% / 50%;
+  background: radial-gradient(ellipse at 88% 50%, var(--itc-flame-wisp) 0 14%, var(--itc-flame-inner) 34%, var(--itc-flame-outer) 62%, transparent 74%);
+  filter: drop-shadow(0 0 0.3em var(--itc-flame-outer));
+}
+/* The ware in the window, large on the card beside its name. */
+/*
+  The ware in the window, large on the card beside its name and what it is. Its state is on its tile and
+  on the shop's first action, so the card on Cosmo's carries the picture where the others carry the state.
+*/
+.itc-shop-focus { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'art name' 'art said'; }
+/* Cosmo's has the height one shelf leaves, so its card has the plate's width and the balance and actions go under it. */
+.itc-shop-foot { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: 'focus focus focus' 'glyphs sheet choices'; }
+.itc-shop-foot > .itc-shop-glyphs { justify-self: start; text-align: left; }
+.itc-shop-focus-eyebrow, .itc-shop-focus-state { display: none; }
+.itc-hangar-focus-art, .itc-parts-focus-art, .itc-shop-focus-art { grid-area: art; display: block; position: relative; width: 3.2em; height: 3.1em; align-self: center; }
+.itc-hangar-focus-art:empty, .itc-parts-focus-art:empty, .itc-shop-focus-art:empty { display: none; }
+/*
+  The sheet that asks before a purchase — 0564, answered *"a confirm sheet"*: the ware, its price, the
+  balance before and after, and Buy beside Not now. Over the whole screen, so nothing behind it is pressed.
+*/
+.itc-shop-ask {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  /* Over the panel and not in it, so in the plate's own type, written the plate's way (0562). */
+  font: 600 clamp(0.85rem, max(min(5.4cqh, 1.25rem), 2.5cqh), 2.2rem)/1.35 system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--itc-void) 62%, transparent);
+}
+.itc-shop-ask-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45em;
+  min-width: min(18em, 80cqw);
+  padding: 1em 1.4em;
+  border-radius: 0.8em;
+  border: 2px solid var(--itc-ink);
+  background: color-mix(in srgb, var(--itc-void) 92%, var(--itc-ally, var(--itc-ink)));
+  box-shadow: 0 0 2em color-mix(in srgb, var(--itc-ink) 30%, transparent);
+  text-align: center;
+}
+.itc-shop-ask-title { margin: 0; font-size: 1.2em; font-weight: 800; }
+.itc-shop-ask-art { display: block; position: relative; width: 5em; height: 5em; }
+.itc-shop-ask-art .itc-shop-art-dangle { font-size: 1.6em; top: 0; }
+.itc-shop-ask-art .itc-shop-art-flame { font-size: 1.5em; }
+.itc-shop-ask-line { margin: 0; font-size: 0.85em; opacity: 0.9; font-variant-numeric: tabular-nums; }
+.itc-shop-ask-row { display: flex; gap: 0.7em; margin-top: 0.3em; }
+/*
   ── COSMO'S COUNTER — 0542 ──────────────────────────────────────────────────────────────────────────
 
   The keeper at the plate's head — Cosmo's face in a ring of the ally's violet, the name, and the line —
@@ -2530,6 +2610,16 @@ ${each('-band[hidden]')} { display: none; }
   .itc-shop-focus { display: none; }
   .itc-shop-foot { grid-template-areas: 'sheet choices'; }
   .itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { display: none; }
+  /* 0564: and the ware's picture is its tile's on a phone, where the card is a line; the tile's own picture a size down. */
+  .itc-shop-focus-art { display: none; }
+  /* On Cosmo's the card would only say the name the lit tile already says, and its line is the height the shelf needs. */
+  .itc-shop-focus { display: none; }
+  .itc-shop-foot { grid-template-areas: 'sheet choices'; }
+  .itc-shop-option.itc-shop-option-tile { padding-top: 0.2em; padding-bottom: 0.15em; gap: 0; }
+  .itc-shop-option-art { height: 1.9em; }
+  .itc-shop-art-dangle { font-size: 0.62em; }
+  .itc-shop-art-flame { font-size: 0.7em; }
+  .itc-shop-focus { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'name' 'said'; }
   /* 0561's tick stands down on a phone, where a band shows one option and its fill already says it is fitted. */
   .itc-hangar-option-on:not(.itc-hangar-option-face)::before, .itc-parts-option-on:not(.itc-parts-option-face)::before { display: none; }
   /*
@@ -3408,9 +3498,11 @@ interface Panel {
   glyphs: HTMLElement | null;
 }
 
-/** The focus card's four lines — 0562. */
+/** The focus card's four lines — 0562 — and since 0564 a picture of a ware, large. */
 interface FocusCard {
   root: HTMLElement;
+  /** The ware's own picture, a copy of its tile's, on Cosmo's; empty elsewhere. */
+  art: HTMLElement;
   /** The band's name, small, over the option. */
   eyebrow: HTMLElement;
   /** The option itself, large. */
@@ -3902,6 +3994,19 @@ export interface Chrome {
    */
   standBox(screen: Screen): { left: number; width: number } | null;
   /**
+   * What each ware's tile says under its name — 0564: its price, *Yours*, or its price short of the balance,
+   * which is drawn in a warning ink as well as said. Position for position, as the shelf lists them.
+   */
+  setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void;
+  /**
+   * Ask before something is done that cannot be undone — 0564, Cosmo's purchase: a sheet over the plate
+   * with what is asked, the lines that say what it costs, and two buttons. The cursor walks only the two
+   * while it is up; `no`, B and Escape put it away. `yes` is called once, and the sheet goes.
+   */
+  ask(screen: Screen, question: { title: string; lines: readonly string[]; yes: string; no: string }, yes: () => void): void;
+  /** Put a sheet away without its `yes` — 0564. True if one was up, so Back knows it was spent. */
+  dismiss(): boolean;
+  /**
    * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
    * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
    * them, hung `above` or `below` it, with the speaker's `name` over the words beside a `mark` in their
@@ -4048,6 +4153,8 @@ export function spatially(
 /** The three things a player can be holding — 0458, How to play's columns. */
 export type GuideDevice = 'keyboard' | 'pad' | 'touch';
 const GUIDE_DEVICES: readonly GuideDevice[] = ['keyboard', 'pad', 'touch'];
+/** How many pixels across a rim's picture is baked for its tile — 0564; the card shows the same bitmap larger. */
+const WARE_ART_PIXELS = 160;
 /** How an option tried on is fitted, in the words of the hand holding the game — 0561. */
 const FITS: Record<GuideDevice, string> = { keyboard: 'Enter or a click fits it', pad: 'A fits it', touch: 'tap it to fit it' };
 /** The keys that do things on a plate, in the hand's words — 0562. Touch has none to name. */
@@ -4712,6 +4819,8 @@ export function makeChrome(
     // second stylesheet: the palette is chosen at runtime and a static rule cannot know it.
     root.style.setProperty('--itc-ink', colours.player);
     root.style.setProperty('--itc-void', colours.space);
+    // 0564: the ink a price short of the balance is drawn in — the hazard's gilt, a role, so the high-contrast palette answers it.
+    root.style.setProperty('--itc-warn', colours.hazard);
     // The coil's own second ink, for the title's wordmark — 0436. The ally violet is the ship's too.
     root.style.setProperty('--itc-ally', colours.ally);
 
@@ -4963,7 +5072,7 @@ export function makeChrome(
         card.appendChild(element);
         return element;
       };
-      focus = { root: card, eyebrow: line('eyebrow'), name: line('name'), said: line('said'), state: line('state') };
+      focus = { root: card, art: line('art'), eyebrow: line('eyebrow'), name: line('name'), said: line('said'), state: line('state') };
       glyphs = document.createElement('span');
       glyphs.className = prefix + 'glyphs';
       glyphs.setAttribute('aria-hidden', 'true');
@@ -5097,6 +5206,22 @@ export function makeChrome(
             name.textContent = GOLFERS[golfer].goesBy;
             button.append(portraitOf(golfer, prefix), name);
           }
+        } else if (SHELF_KINDS.some((kind) => kind === choice.name)) {
+          /*
+            ⚠️ **A WARE IS A TILE — 0564: ITS PICTURE, ITS NAME AND ITS PRICE.** *"The store has no merchandise"*:
+            every ware was its name in a pill. The picture is the ware's own drawing, put in by `furnish` once
+            the readout's drawings exist; the name and the tag are the shell's (`setLabels`, `setTags`).
+          */
+          button.classList.add(prefix + 'option-tile');
+          const art = document.createElement('span');
+          art.className = prefix + 'option-art';
+          art.setAttribute('aria-hidden', 'true');
+          const name = document.createElement('span');
+          name.className = prefix + 'option-label';
+          name.textContent = option.label;
+          const tag = document.createElement('span');
+          tag.className = prefix + 'option-tag';
+          button.append(art, name, tag);
         } else {
           button.textContent = option.label;
         }
@@ -5501,6 +5626,57 @@ export function makeChrome(
   }
   dice.appendChild(swing);
   hud.appendChild(dice);
+  /*
+    ── EVERY WARE'S PICTURE ON ITS TILE — 0564 ─────────────────────────────────────────────────────
+
+    A dangle is the readout's own drawing of it, copied, so the one on the tile and the one on the dash
+    cannot differ: the copy wears the classes that show that one body, and the inks the readout gives it.
+    A rim is its wheel's picture baked at the tile's size, and a flame is drawn in the flame's own inks.
+    Read off the shelves, so a ware on a new shelf has a picture when its table says what it is.
+  */
+  const furnish = (): void => {
+    const shop = panels.shop;
+    if (shop === undefined) return;
+    for (const band of shop.bands) {
+      const shelf = SHELF_KINDS.find((kind) => kind === band.name);
+      if (shelf === undefined) continue;
+      SHELVES[shelf].wares.forEach((ware, i) => {
+        const art = band.buttons[i]?.querySelector('.itc-shop-option-art');
+        if (art === null || art === undefined) return;
+        art.replaceChildren(wareArt(ware));
+      });
+    }
+  };
+  const wareArt = (ware: OwnableKind): HTMLElement => {
+    const holder = document.createElement('span');
+    const dangle = DANGLE_KINDS.find((kind) => kind === ware);
+    if (dangle !== undefined) {
+      holder.className = 'itc-shop-art-dangle itc-playing-hud-hanging itc-playing-hud-hangs-' + dangle;
+      for (const name of ['--itc-fur', '--itc-leaf', '--itc-gilt', '--itc-alien', '--itc-ball-shade']) holder.style.setProperty(name, dice.style.getPropertyValue(name));
+      holder.style.setProperty('--itc-lit', colours.impact);
+      holder.style.setProperty('--itc-ally', colours.ally);
+      holder.appendChild(dice.cloneNode(true));
+      return holder;
+    }
+    const rim = RIM_KINDS.find((kind) => kind === ware);
+    if (rim !== undefined) {
+      holder.className = 'itc-shop-art-rim';
+      const wheel = RIMS[rim].wheel;
+      const glyph = wheel === null ? 'spinnerWheel' : wheel.frames[0].base;
+      holder.appendChild(bakeGlyph(glyph, colours, WARE_ART_PIXELS / SPRITE_EXTENT[glyph]));
+      return holder;
+    }
+    const flame = FLAME_KINDS.find((kind) => kind === ware);
+    holder.className = 'itc-shop-art-flame';
+    if (flame !== undefined) {
+      const inks = flameInks(colours, flame);
+      holder.style.setProperty('--itc-flame-outer', inks.outer);
+      holder.style.setProperty('--itc-flame-inner', inks.inner);
+      holder.style.setProperty('--itc-flame-wisp', inks.wisp);
+    }
+    return holder;
+  };
+  furnish();
   wearShip(SHIPS.fighter);
   /** The ship whose dash the readout has on — 0521, so `setShip` can tell a new plate from the same one. */
   let wornPlate: ShipRow = SHIPS.fighter;
@@ -5726,6 +5902,8 @@ export function makeChrome(
     bossBar.classList.toggle('itc-playing-boss-shown', shownScreen !== null && SCREENS[shownScreen].steps && bossFraction >= 0);
   };
 
+  /** The sheet up over a screen, asking — 0564, and how to give the cursor its walk back. */
+  let asking: { sheet: HTMLElement; put: () => void } | null = null;
   /** The hand the player is holding the game in — 0458's `setDevice`, kept since 0561 for a band's words. */
   let device: GuideDevice = 'keyboard';
   /** The control under the cursor on the shown screen, or `undefined` on a screen with none. */
@@ -5819,7 +5997,25 @@ export function makeChrome(
     else if (shut) state = band.whys[shown] ?? band.why ?? '';
     else if (band.press === 'tries') state = band.look >= 0 ? FITS[device] : 'Fitted';
     else state = band.why ?? '';
-    const name = button === undefined ? '' : (button.getAttribute('aria-label') ?? button.textContent ?? '');
+    const label = button?.querySelector('[class$="option-label"]');
+    const name = button === undefined ? '' : (label?.textContent ?? button.getAttribute('aria-label') ?? button.textContent ?? '');
+    // 0564: and a ware's picture, large — a copy of its tile's, taken again when the ware changes.
+    const art = button?.querySelector('[class$="option-art"]');
+    const shownArt = card.art.dataset['ware'];
+    const ware = art === null || art === undefined ? '' : band.name + ':' + String(shown);
+    if (shownArt !== ware) {
+      card.art.replaceChildren(...(art === null || art === undefined ? [] : [...art.childNodes].map((node) => node.cloneNode(true))));
+      card.art.dataset['ware'] = ware;
+      // A canvas copies empty: the bitmap is drawn again from the tile's.
+      const from = art?.querySelectorAll('canvas') ?? [];
+      card.art.querySelectorAll('canvas').forEach((to, i) => {
+        const source = from[i];
+        if (source === undefined) return;
+        to.width = source.width;
+        to.height = source.height;
+        to.getContext('2d')?.drawImage(source, 0, 0);
+      });
+    }
     const hint = shown < 0 ? '' : (band.hints[shown] ?? '');
     // A band of faces carries the name in its line (0513); the card has said it already, large.
     const said = band.faces === 'portraits' ? hint.slice(hint.indexOf(' — ') + 3) : hint;
@@ -6236,6 +6432,12 @@ export function makeChrome(
         */
         if (shown && panel.crossing !== null) panel.crossing.drawnFlown = -1;
       }
+      // 0564: a sheet asking goes with its screen, unanswered.
+      if (asking !== null && shownScreen !== screen) {
+        asking.sheet.remove();
+        asking.put();
+        asking = null;
+      }
       // 0458: the screen being left keeps where its cursor was, for the player who comes back to it.
       if (shownScreen !== null && panels[shownScreen] !== undefined) remembered[shownScreen] = { row: cursor.row, col: cursor.col };
       /*
@@ -6499,7 +6701,11 @@ export function makeChrome(
         if (buttons === undefined || band === undefined) continue;
         for (let i = 0; i < buttons.length; i++) {
           const option = options[i];
-          if (option !== undefined) buttons[i]!.textContent = option.label;
+          if (option === undefined) continue;
+          // 0564: a tile keeps its picture and its tag; only its name is written.
+          const label = buttons[i]!.querySelector('.' + prefixFor(screen) + 'option-label');
+          if (label !== null) label.textContent = option.label;
+          else buttons[i]!.textContent = option.label;
         }
         band.hints = options.map((option) => option.hint);
         sayBand(band);
@@ -6531,7 +6737,8 @@ export function makeChrome(
       const control = panel?.controls[index];
       if (panel === undefined || control === undefined || control.hidden === !shown) return;
       control.hidden = !shown;
-      panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+      // 0564: not under a sheet that is asking, whose two buttons are the walk until it goes.
+      if (asking === null) panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
     },
     setActionLabel(screen: Screen, index: number, label: string): void {
       // The first text of the button, so a hint inside it (`-action-hint`) is kept.
@@ -6557,6 +6764,99 @@ export function makeChrome(
       if (stand === null || stand === undefined) return null;
       const box = stand.getBoundingClientRect();
       return box.width > 0 ? { left: box.left, width: box.width } : null;
+    },
+    setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const buttons = panels[screen]?.options[name];
+        if (buttons === undefined) continue;
+        const prefix = prefixFor(screen);
+        buttons.forEach((button, i) => {
+          const tag = button.querySelector('.' + prefix + 'option-tag');
+          const said = tags[i];
+          if (tag === null || said === undefined) return;
+          tag.textContent = said.text;
+          button.classList.toggle(prefix + 'option-owned', said.tone === 'owned');
+          button.classList.toggle(prefix + 'option-short', said.tone === 'short');
+        });
+      }
+    },
+    ask(screen: Screen, question: { title: string; lines: readonly string[]; yes: string; no: string }, yes: () => void): void {
+      const panel = panels[screen];
+      if (panel === undefined) return;
+      this.dismiss();
+      const prefix = prefixFor(screen);
+      const sheet = document.createElement('div');
+      sheet.className = prefix + 'ask';
+      sheet.setAttribute('role', 'alertdialog');
+      sheet.setAttribute('aria-label', question.title);
+      const card = document.createElement('div');
+      card.className = prefix + 'ask-card';
+      const title = document.createElement('p');
+      title.className = prefix + 'ask-title';
+      title.textContent = question.title;
+      card.appendChild(title);
+      // 0564: the ware itself, large, as the focus card has it.
+      const art = panel.focus?.art.cloneNode(true);
+      if (art instanceof HTMLElement && art.childNodes.length > 0) {
+        art.className = prefix + 'ask-art';
+        const from = panel.focus?.art.querySelectorAll('canvas') ?? [];
+        art.querySelectorAll('canvas').forEach((to, i) => {
+          const source = from[i];
+          if (source === undefined) return;
+          to.width = source.width;
+          to.height = source.height;
+          to.getContext('2d')?.drawImage(source, 0, 0);
+        });
+        card.appendChild(art);
+      }
+      for (const text of question.lines) {
+        const line = document.createElement('p');
+        line.className = prefix + 'ask-line';
+        line.textContent = text;
+        card.appendChild(line);
+      }
+      const row = document.createElement('div');
+      row.className = prefix + 'ask-row';
+      const button = (label: string, lead: boolean, press: () => void): HTMLButtonElement => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = prefix + 'action' + (lead ? ' ' + prefix + 'action-lead' : '');
+        b.textContent = label;
+        b.addEventListener('click', press);
+        return b;
+      };
+      const confirm = button(question.yes, true, () => {
+        this.dismiss();
+        yes();
+      });
+      const decline = button(question.no, false, () => this.dismiss());
+      row.append(confirm, decline);
+      card.appendChild(row);
+      sheet.appendChild(card);
+      panel.root.appendChild(sheet);
+      // The cursor walks the two while the sheet is up, and comes back to where it was when it goes.
+      const was = { row: cursor.row, col: cursor.col };
+      panel.rows.splice(0, panel.rows.length, [confirm, decline]);
+      cursor.row = 0;
+      cursor.col = 0;
+      asking = {
+        sheet,
+        put: () => {
+          panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+          cursor.row = Math.min(was.row, panel.rows.length - 1);
+          cursor.col = Math.min(was.col, (panel.rows[cursor.row]?.length ?? 1) - 1);
+        },
+      };
+      paintFocus();
+    },
+    dismiss(): boolean {
+      if (asking === null) return false;
+      const { sheet, put } = asking;
+      asking = null;
+      sheet.remove();
+      put();
+      paintFocus();
+      return true;
     },
     setKeeperLine(screen: Screen, line: string): void {
       const keeper = panels[screen]?.keeper;

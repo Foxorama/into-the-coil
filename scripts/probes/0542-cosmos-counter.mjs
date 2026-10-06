@@ -37,8 +37,9 @@ export const PROBES = [
     guard: 'tries the ware on the dash',
     edit: {
       path: 'src/app/mount.ts',
-      find: "label: OWNABLES[w].name + ' · ' + (state.hangar.owned[w] ? 'yours' : String(OWNABLES[w].price) + ' ✦'),",
-      replace: 'label: OWNABLES[w].name,',
+      // 0564: the price is the tile's tag, under its name.
+      find: "return { text: String(price) + ' ✦', tone:",
+      replace: "return { text: '', tone:",
     },
   },
   {
@@ -49,8 +50,8 @@ export const PROBES = [
     guard: 'tries the ware on the dash',
     edit: {
       path: 'src/app/mount.ts',
-      find: "chrome.setActionLabel('shop', 0, 'Buy · ' + String(OWNABLES[ware].price ?? 0) + ' ✦');",
-      replace: "chrome.setActionLabel('shop', 0, 'Buy');",
+      find: ": 'Buy · ' + String(price) + ' ✦');",
+      replace: ": 'Buy');",
     },
   },
   {
@@ -61,8 +62,9 @@ export const PROBES = [
     guard: 'tries the ware on the dash',
     edit: {
       path: 'src/app/mount.ts',
-      find: '>= (OWNABLES[ware].price ?? 0)) justSold = ware;',
-      replace: '>= (OWNABLES[ware].price ?? 0)) justSold = null;',
+      // 0564: set when the sheet's Buy is pressed.
+      find: '              justSold = ware;',
+      replace: '              justSold = null;',
     },
   },
   {

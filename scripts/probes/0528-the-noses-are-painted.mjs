@@ -45,8 +45,9 @@ export const PROBES = [
     guard: 'the band names the ship on the stand’s three',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '          if (option !== undefined) buttons[i]!.textContent = option.label;',
-      replace: '',
+      // 0564: a tile's name is its label span; every other option is still named by its text.
+      find: '          else buttons[i]!.textContent = option.label;',
+      replace: '          else void option;',
     },
   },
   {

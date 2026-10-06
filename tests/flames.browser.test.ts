@@ -92,7 +92,9 @@ describe.runIf(chromePath)('0530 — the thrusters bought and fitted burn blue i
     await page.waitForTimeout(400);
     const tried = await royalBlue(page);
     expect(tried, `the thrusters in the window do not burn on the pad: ${tried} royal-blue pixels, against ${bare} before`).toBeGreaterThan(Math.max(4 * bare, 40));
-    await page.locator(`${shown('shop')} .${shop}action`, { hasText: SCREENS.shop.actions[0]!.label }).click();
+    await page.locator(`${shown('shop')} .${shop}choices .${shop}action >> nth=0`).click();
+    // 0564: and the sheet's Buy, which is the one that buys.
+    await page.locator(`.${shop}ask .${shop}action`, { hasText: SCREENS.shop.actions[0]!.label }).click();
     await page.locator(`${shown('shop')} .${shop}tab`, { hasText: SCREENS.parts.heading }).click();
     await page.waitForSelector(shown('parts'), { state: 'attached' });
     await page.locator(`${shown('parts')} [${SETTING_ATTR}="flame"] .${parts}option >> nth=${FLAME_KINDS.indexOf('ion')}`).dispatchEvent('click');

@@ -49,7 +49,8 @@ async function hanging(page: Page): Promise<DangleKind | null> {
     if (hud === null || !hud.classList.contains('itc-playing-hud-shown')) return null;
     return (
       kinds.find((kind) => {
-        const thing = document.querySelector('.itc-playing-hud-hang-' + kind + ' .itc-playing-hud-dice-strand > *');
+        // In the readout: since 0564 each dangle's tile at Cosmo's carries a copy of its drawing.
+        const thing = hud.querySelector('.itc-playing-hud-hang-' + kind + ' .itc-playing-hud-dice-strand > *');
         return thing !== null && thing.getBoundingClientRect().width > 0;
       }) ?? null
     );
@@ -89,29 +90,48 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
       expect(await hanging(page), `${ware} in the window was not tried on the dash`).toBe(ware);
     }
 
+    // 0564: one shelf at a time, as the aisle's tabs step them, and every ware on it a picture with a size.
+    const drawn = await page.locator(`${shown('shop')} .${SHOP}band`).evaluateAll((els) =>
+      els.filter((el) => el.querySelector(`[data-itc-setting]:not([data-itc-setting="aisle"]):not([data-itc-setting="pilot"])`) !== null && el.getBoundingClientRect().height > 0).length);
+    expect(drawn, 'more than one shelf is drawn at once on a desktop').toBe(1);
+    // A picture is something inside the tile's art box laid out with a width — the thing on the strand.
+    const pictures = await page.locator(`${shown('shop')} [${SETTING_ATTR}="hanging"] .${SHOP}option-art`).evaluateAll((els) =>
+      els.map((el) => [...el.querySelectorAll('*')].some((part) => part.getBoundingClientRect().width > 4)));
+    expect(pictures.every(Boolean) && pictures.length === SHELVES.hanging.wares.length, 'a ware on the shelf has no picture').toBe(true);
+
     // 0542: the price on the ware's face, and on Buy.
-    const buy = page.locator(`${shown('shop')} .${SHOP}action`, { hasText: SCREENS.shop.actions[0]!.label });
+    // 0564: the shop's first action, whatever it says — Buy, how far short, or Fit it now.
+    const buy = page.locator(`${shown('shop')} .${SHOP}choices .${SHOP}action >> nth=0`);
+    // And the sheet that asks before a purchase, whose own Buy is the one that buys.
+    const confirm = page.locator(`.${SHOP}ask .${SHOP}action`, { hasText: SCREENS.shop.actions[0]!.label });
     await pickWare(page, 'golfball');
     const face = page.locator(`${shown('shop')} [${SETTING_ATTR}="hanging"] .${SHOP}option >> nth=${SHELVES.hanging.wares.indexOf('golfball')}`);
     expect(await face.innerText(), 'the golf ball does not say its price on its face').toContain(String(OWNABLES.golfball.price));
     expect(await buy.innerText(), 'Buy does not name the price').toContain(String(OWNABLES.golfball.price));
 
-    // The golf ball bought: the balance down by its price, Buy gone, and the shelf saying it is theirs.
+    // 0564: Buy asks first, and nothing is spent until the sheet's Buy is pressed.
     await buy.click();
     let kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
+    expect(kept.owned.golfball, 'Buy bought without asking').toBe(false);
+    expect(await page.locator(`.${SHOP}ask`).innerText(), 'the sheet does not say the balance after').toContain('300 → 50');
+    await confirm.click();
+    // The golf ball bought: the balance down by its price, Buy gone, and the shelf saying it is theirs.
+    kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.owned.golfball, 'Buy did not buy').toBe(true);
     expect(kept.shards, 'the price was not taken, or was taken twice').toBe(50);
-    expect(await buy.isVisible(), 'Buy is still offered on a ware already owned').toBe(false);
+    expect(await buy.innerText(), 'the ware bought is not offered to be fitted').toContain('Fit it now');
     expect(await shelfLine(page, 'golfball')).toContain('Yours');
     // 0542: Cosmo thanks the player, and the ware's face says it is theirs.
     expect(await keeperLine(page), 'Cosmo did not thank the player for the sale').toBe(COSMO.shop.sold);
-    expect(await face.innerText(), 'the golf ball still says its price once it is owned').toContain('yours');
+    expect(await face.innerText(), 'the golf ball still says its price once it is owned').toContain('Yours');
 
     // The next is out of reach, and the shelf says by how much; a press of Buy cannot buy it.
     await pickWare(page, 'family');
     expect(await shelfLine(page, 'family')).toBe('Need 200 more Star Shards');
     expect(await keeperLine(page), 'Cosmo does not say how far off the balance is').toBe(COSMO.shop.short.replace('{short}', '200'));
+    expect(await buy.innerText(), 'the first action does not say how far short the balance is').toContain('Need 200 more');
     await buy.click();
+    expect(await page.locator(`.${SHOP}ask`).count(), 'a sheet asked to buy what the balance cannot cover').toBe(0);
     kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.owned.family, 'a ware was bought on credit').toBe(false);
     expect(kept.shards).toBe(50);

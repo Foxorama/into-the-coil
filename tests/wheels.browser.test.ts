@@ -60,7 +60,9 @@ describe.runIf(chromePath)('0527 — the spinners are bought, fitted, and turn',
     expect(tried.change, `the car on Cosmo's pad does not try the spinners on: ${tried.change.toFixed(4)} of the stand moved, against ${tried.noise.toFixed(4)} standing still`).toBeGreaterThan(Math.max(3 * tried.noise, 0.002));
     expect(tried.after, `the spinners tried on do not turn: ${tried.after.toFixed(4)} a bob apart, against ${tried.noise.toFixed(4)}`).toBeGreaterThan(Math.max(3 * tried.noise, 0.001));
     expect(hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar).rim.firebird, 'trying the spinners on fitted them').not.toBe('spinner');
-    await page.locator(`${shown('shop')} .${shop}action`, { hasText: SCREENS.shop.actions[0]!.label }).click();
+    await page.locator(`${shown('shop')} .${shop}choices .${shop}action >> nth=0`).click();
+    // 0564: and the sheet's Buy, which is the one that buys.
+    await page.locator(`.${shop}ask .${shop}action`, { hasText: SCREENS.shop.actions[0]!.label }).click();
     const kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.owned.spinner, 'Buy did not buy the spinners').toBe(true);
     expect(kept.shards).toBe(0);
