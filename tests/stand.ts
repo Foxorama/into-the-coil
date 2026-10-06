@@ -18,6 +18,7 @@
 import type { Page } from 'playwright-core';
 import { prefixFor } from '../src/app/chrome.ts';
 import { BLUE_BOB_RATE } from '../src/render/port.ts';
+import { STAND_PAD_AT } from '../src/content/port.ts';
 import { STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
 
 /** How far a channel must move for a pixel to count as changed — past the edge a sub-pixel bob blurs. */
@@ -26,23 +27,36 @@ const MARGIN = 48;
 /** One bob of the ship on its beam, in milliseconds: `BLUE_BOB_RATE` radians a step, at the sim's rate. */
 const BOB_MS = ((Math.PI * 2) / BLUE_BOB_RATE / STEPS_PER_SECOND) * 1000;
 
-/** Keep the stand's pixels on the page under `key`, to be compared there — a megabyte is not sent back. */
+/**
+ * Keep the pixels round the ship on the page under `key`, to be compared there — a megabyte is not sent back.
+ *
+ * ⚠️ **ROUND THE SHIP, AND IT WAS THE WHOLE STAND — 0568.** Since the hangar opened out the stand is most of
+ * the screen: a wall, the keeper, and the open bay with its stars drifting past. A look changed on the ship
+ * was then two thousandths of the box against a noise of one, the stars' — under CI, every look's guard
+ * read *no change*. So what is read is the ship's own part of the stand: a band of its width about the pad
+ * (`STAND_PAD_AT`), from above the ship to the deck, where the stars are not.
+ */
 async function snap(page: Page, screen: Screen, key: string): Promise<void> {
   await page.evaluate(
-    ({ prefix, key }: { prefix: string; key: string }) => {
+    ({ prefix, key, pad, half }: { prefix: string; key: string; pad: number; half: number }) => {
       const canvas = document.querySelector<HTMLCanvasElement>('#app canvas')!;
       const box = document.querySelector('.' + prefix + 'stand')!.getBoundingClientRect();
       const k = canvas.width / canvas.getBoundingClientRect().width;
-      const x = Math.max(0, Math.floor(box.left * k));
-      const y = Math.max(0, Math.floor(box.top * k));
-      const w = Math.min(canvas.width - x, Math.floor(box.width * k));
-      const h = Math.min(canvas.height - y, Math.floor(box.height * k));
+      const left = box.left + box.width * Math.max(0, pad - half);
+      const right = box.left + box.width * Math.min(1, pad + half);
+      const x = Math.max(0, Math.floor(left * k));
+      const y = Math.max(0, Math.floor((box.top + box.height * 0.3) * k));
+      const w = Math.min(canvas.width - x, Math.floor((right - left) * k));
+      const h = Math.min(canvas.height - y, Math.floor(box.height * 0.7 * k));
       const kept = ((window as unknown as { itcStand?: Record<string, Uint8ClampedArray> }).itcStand ??= {});
       kept[key] = canvas.getContext('2d')!.getImageData(x, y, w, h).data;
     },
-    { prefix: prefixFor(screen), key },
+    { prefix: prefixFor(screen), key, pad: STAND_PAD_AT, half: SHIP_BAND },
   );
 }
+
+/** Half the width of the band read round the ship, as a share of the stand — the ship and a little either side. */
+const SHIP_BAND = 0.2;
 
 /** The share of the stand's pixels whose colour moved past `MARGIN` between two snaps. */
 async function changed(page: Page, from: string, to: string): Promise<number> {

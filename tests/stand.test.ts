@@ -47,6 +47,20 @@ const SIZES = [
 
 const STANDING = SCREEN_KINDS.filter((s) => SCREENS[s].stand !== null);
 
+/**
+ * The stand's column, as the stylesheet lays it out — 0568: on anything taller than a phone, the plate a
+ * fixed 24 rem column on the left inside the panel's 0.8 rem padding and the stand the rest; on a phone
+ * (0465's 460 px), the stand the left third. Modelled because this runs without a page; the page's own
+ * column is read by `standBox`, and tests/stand.browser.test.ts holds the readout in it.
+ */
+function standColumn(width: number, height: number): { left: number; width: number; top: number; height: number } {
+  if (height > 460) {
+    const left = 12.8 + 384;
+    return { left, width: width - left - 12.8, top: 12.8, height: height - 25.6 };
+  }
+  return { left: width * 0.02, width: width * 0.31, top: 0, height };
+}
+
 function drawStand(screen: (typeof STANDING)[number], width: number, height: number, t = 0, ship = SHIPS.firebird, camera = SCREENS[screen].stand!.camera): Blit[] {
   const base = viewOf(width, height);
   const view = { ...base };
@@ -56,7 +70,8 @@ function drawStand(screen: (typeof STANDING)[number], width: number, height: num
     modelled here because this runs without a page, and held in the page by tests/stand.browser.test.ts.
   */
   const fitted = { ...camera };
-  fitStand(camera, base, width, { left: width * 0.02, width: width * (width > 1100 ? 0.36 : 0.31) }, SCREENS[screen].stand!.keeper, fitted);
+  const box = standColumn(width, height);
+  fitStand(camera, base, width, box, SCREENS[screen].stand!.keeper, fitted, height);
   standViewInto(base, fitted, width, height, view);
   const surface = new RecordingSurface();
   paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper);
@@ -79,7 +94,8 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       }
       expect(all(blits, 'blueSide'), `${screen}: the pilot's ship is not on its pad, once`).toHaveLength(1);
       expect(all(blits, 'blueIdle'), `${screen}: the ship's flame is not idling under it`).toHaveLength(1);
-      expect(all(blits, 'pad'), `${screen}: the two pads are not both there`).toHaveLength(2);
+      // 0568: the ship's pad alone — the inner one stood half under the keeper's counter.
+      expect(all(blits, 'pad'), `${screen}: the ship's pad is not there, once`).toHaveLength(1);
     }
   });
 
@@ -90,9 +106,10 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
         const ship = all(drawStand(screen, width, height), 'blueSide')[0]!;
         const half = (PORT_EXTENT.blueSide * ship.scale) / 2;
         const at = `${screen} at ${width}x${height}`;
-        // The stand is the left of the screen: a third where it is narrowest, two fifths on a laptop.
-        expect(ship.x + half * 0.84, `${at}: the ship reaches past the stand into the plate`).toBeLessThanOrEqual(width * 0.45);
-        expect(ship.x - half * 0.84, `${at}: the ship is off the left of the screen`).toBeGreaterThanOrEqual(0);
+        // 0568: in the stand's column, wherever the layout puts it — the plate's left on a desktop, its right on a phone.
+        const box = standColumn(width, height);
+        expect(ship.x + half * 0.84, `${at}: the ship reaches past the stand`).toBeLessThanOrEqual(box.left + box.width);
+        expect(ship.x - half * 0.84, `${at}: the ship is under the plate`).toBeGreaterThanOrEqual(box.left);
         expect(ship.y, `${at}: the ship is not on the screen`).toBeGreaterThan(0);
         expect(ship.y, `${at}: the ship is not on the screen`).toBeLessThan(height);
       }
@@ -180,12 +197,18 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       for (const [width, height] of SIZES) {
         const blits = drawStand(screen, width, height);
         const at = `${screen} at ${width}x${height}`;
-        for (const kind of [keeper.figure, keeper.counter, 'blueSide'] as const) {
+        /*
+          0568: the keeper in the column on every screen bigger than a phone. On a phone the stand is a third
+          of the screen, and at the room's full height it holds the ship or the counter, not both: the ship.
+        */
+        for (const kind of height > 460 ? ([keeper.figure, keeper.counter, 'blueSide'] as const) : (['blueSide'] as const)) {
           const drawn = all(blits, kind);
           expect(drawn, `${at}: ${kind} is not drawn once`).toHaveLength(1);
           const half = (PORT_EXTENT[kind] * drawn[0]!.scale) / 2;
-          expect(drawn[0]!.x - half * 0.5, `${at}: ${kind} is off the left of the screen`).toBeGreaterThanOrEqual(0);
-          expect(drawn[0]!.x + half * 0.5, `${at}: ${kind} reaches past the stand into the plate`).toBeLessThanOrEqual(width * 0.45);
+          // 0568: in the stand's column.
+          const box = standColumn(width, height);
+          expect(drawn[0]!.x - half * 0.5, `${at}: ${kind} is under the plate or off the screen`).toBeGreaterThanOrEqual(box.left);
+          expect(drawn[0]!.x + half * 0.5, `${at}: ${kind} reaches past the stand`).toBeLessThanOrEqual(box.left + box.width);
           expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeGreaterThan(0);
           expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeLessThan(height);
         }
@@ -219,31 +242,32 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
   });
 
   /*
-    ⚠️ **THE STARS THROUGH THE WALL — 0550.** *"we've lost the space background behind the spacestation
-    hanger — can we fit in a starry background to emphasise the space station nature of it?"* The bay is
-    behind the plate on every tab, so a viewport is cut in the back wall. Asked in pixels: the hole is on
-    the screen, in the stand's part of it, with no wall tile drawn over it and the sky drawn under it.
+    ⚠️ **THE STARS — 0550, AND THE OPEN BAY SINCE 0568.** *"we've lost the space background behind the
+    spacestation hanger"* was answered with a viewport cut in the back wall, because the bay stood behind
+    the plate. Played: *"I want to see the end of the hangar and the open starfield on the right hand side,
+    it feels cramped and claustrophobic"*. The plate is on the left now, so the bay is in the stand, and
+    the stars are seen past it. Asked in pixels, on every screen bigger than a phone: the back wall ends
+    inside the stand's column with sky past it, and the sky is drawn under the room.
   */
-  it('0550 — cuts a viewport in the back wall that every tab shows in the stand, the sky through it and no wall over it', () => {
+  it('0568 — shows the end of the hangar and the open stars past it in the stand, on every tab', () => {
     for (const screen of STANDING) {
-      for (const [width, height] of SIZES) {
+      for (const [width, height] of [...SIZES, [1920, 1080] as const]) {
         const at = `${screen} at ${width}x${height}`;
         const blits = drawStand(screen, width, height);
-        const viewport = all(blits, 'viewport');
-        expect(viewport, `${at}: the viewport is not drawn once`).toHaveLength(1);
-        const v = viewport[0]!;
-        const unit = v.scale;
-        // The pane: two tiles wide, one high, about the viewport's centre.
-        const left = v.x - PORT_EXTENT.wall * unit;
-        const top = v.y - (PORT_EXTENT.wall / 2) * unit;
-        expect(left, `${at}: the pane starts off the left of the screen`).toBeGreaterThanOrEqual(0);
-        expect(v.x + PORT_EXTENT.wall * unit, `${at}: the pane reaches into the plate`).toBeLessThanOrEqual(width * 0.45);
-        // At least half the pane's height is on the screen, so stars are seen through it and not its frame.
-        const seen = Math.min(height, top + PORT_EXTENT.wall * unit) - Math.max(0, top);
-        expect(seen / (PORT_EXTENT.wall * unit), `${at}: less than half the pane is on the screen`).toBeGreaterThanOrEqual(0.5);
-        const half = (PORT_EXTENT.wall * unit) / 2;
-        const over = all(blits, 'wall').filter((b) => b.x > left && b.x < left + 2 * PORT_EXTENT.wall * unit && Math.abs(b.y - v.y) < half);
-        expect(over, `${at}: a wall tile is drawn over the pane`).toEqual([]);
+        if (height > 460) {
+          const box = standColumn(width, height);
+          const walls = all(blits, 'wall');
+          const unit = walls[0]!.scale;
+          const wallEnds = Math.max(...walls.map((b) => b.x)) + (PORT_EXTENT.wall * unit) / 2;
+          expect(wallEnds, `${at}: the back wall runs past the stand — the bay is not in view`).toBeLessThan(box.left + box.width);
+          /*
+            Ten units of stars everywhere — a strip is not an open bay — and more on a wide screen, the shape the
+            report was made on: 1280x720 shows about twenty-five, 1920x1080 about thirty-eight. On a 4:3 the
+            room's own height decides the camera first, and 1024x768 shows thirteen.
+          */
+          const want = width / height >= 16 / 9 - 0.01 ? 20 : 10;
+          expect(box.left + box.width - wallEnds, `${at}: fewer than ${want} units of stars past the bay`).toBeGreaterThanOrEqual(want * unit);
+        }
         /*
           And the sky is under it: the first level's, which the atlas holds after the port's own kinds, all
           drawn before the wall and the viewport go over it. ⚠️ Not "a sky blit inside the pane": the sky is
@@ -264,12 +288,18 @@ describe('0563 — the ship is the picture', () => {
     counter beside it — a box of 200, under a sixth of the screen. Asked in what the player sees: the ship's
     box on the laptop is past a sixth of the screen across. It is not more because the keeper and the
     viewport are kept in view (0550) and the ship in its column: those, not this number, set the camera.
+
+    ⚠️ **LOWERED BY 0568 FROM 0.17 TO 0.125, AND WHY.** The player asked for the open bay and the stars on
+    the right — *"it feels cramped and claustrophobic"* — and for less zoom: *"everything is way too big
+    and zoomed in"*. A 1280's column cannot hold the bay and the ship at 0563's size both, and the camera is
+    held to the room's whole height: 0568 draws the ship at 166 of 1280, about the size the review
+    measured before 0563, and about 250 of 1920 with the bay and the stars beside it.
   */
   it('draws the pilot’s ship past a sixth of a laptop’s width, in its column', () => {
     for (const screen of STANDING) {
       const ship = all(drawStand(screen, 1280, 720), 'blueSide')[0]!;
       const box = PORT_EXTENT.blueSide * ship.scale;
-      expect(box, `${screen}: the ship's box is ${Math.round(box)}px of 1280`).toBeGreaterThanOrEqual(1280 * 0.17);
+      expect(box, `${screen}: the ship's box is ${Math.round(box)}px of 1280`).toBeGreaterThanOrEqual(1280 * 0.125);
     }
   });
 });

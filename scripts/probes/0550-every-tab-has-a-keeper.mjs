@@ -29,30 +29,11 @@ export const PROBES = [
       replace: "      // 0550: MMXXVI, who paints it.\n      keeper: 'unity',",
     },
   },
-  {
-    decision: '0550',
-    suite: 'tests/stand.test.ts',
-    // The wall drawn whole, over the hole.
-    broke: 'a wall tile over the viewport',
-    guard: 'cuts a viewport in the back wall',
-    edit: {
-      path: 'src/render/port.ts',
-      find: '      if (along > hole.along && along < hole.along + 2 * wall && across > hole.across && across < hole.across + wall) continue;\n',
-      replace: '',
-    },
-  },
-  {
-    decision: '0550',
-    suite: 'tests/stand.test.ts',
-    // The viewport somewhere the stand never shows — up behind the plate, by the bay.
-    broke: 'the viewport behind the plate',
-    guard: 'cuts a viewport in the back wall',
-    edit: {
-      path: 'src/content/port.ts',
-      find: '  viewport: { along: 60, across: 40 },',
-      replace: '  viewport: { along: 120, across: 40 },',
-    },
-  },
+  /*
+    The viewport's two probes went with its guard in 0568: the stars are the open bay's now, in the stand,
+    and that is guarded by tests/stand.test.ts's 0568 test and broken by 0568's own probes. The viewport is
+    still drawn, where the camera sees it, and is no longer something the camera must keep in view.
+  */
   {
     decision: '0550',
     suite: 'tests/layout.browser.test.ts',

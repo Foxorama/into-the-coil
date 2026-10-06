@@ -36,6 +36,7 @@ import { SIDES, SIDE_LABELS } from '../content/specials.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
+import { STAND_PAD_AT } from '../content/port.ts';
 import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
@@ -2003,18 +2004,11 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
 .itc-hangar-foot > .itc-hangar-choices, .itc-parts-foot > .itc-parts-choices, .itc-shop-foot > .itc-shop-choices { grid-area: choices; }
 .itc-hangar-band-hint, .itc-parts-band-hint, .itc-shop-band-hint { display: none; }
 /*
-  ── THE PLATE GROWS WITH THE SCREEN — 0562 ──────────────────────────────────────────────────────────
-
-  The plate's type was capped at a laptop's, so at 1920x1080 it was the 1280x720 plate with half of it
-  empty. Its em now runs with the short side past the cap, to a ceiling, and the plate's spacing is in
-  its em, so the whole plate is a larger copy rather than a small one with air under it.
+  0568 takes back 0562's plate that grew with the screen: *"the menu's take up like 80% of the screen
+  space … everything is way too big and zoomed in"* at 1920. The plate is a size, not a share — see the
+  desktop's layout further down — and a bigger screen shows more of the hangar.
 */
-.itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { font-size: clamp(0.85rem, max(min(5.4cqh, 1.25rem), 2.5cqh), 2.2rem); }
 .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { padding: min(0.8em, 2.4cqh) min(0.9em, 2cqw); gap: min(0.5em, 1.4cqh); }
-/* On a screen much wider than it is tall, the plate stops growing across and the stand takes the rest. */
-@container (min-aspect-ratio: 19/9) {
-  .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { grid-template-columns: minmax(0, 1fr) minmax(0, 40em); }
-}
 /*
   0548: the shoulders that step the tabs, at the strip's two ends while a pad is in hand — set apart from
   the tabs, in a key's frame, so they read as what to press and never as a fourth tab.
@@ -2955,6 +2949,102 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-keeper, .itc-parts-keeper { display: none; }
   /* The readout typeset by the width up here — by the height it was the stand's full width over the ship. */
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.7rem, 3cqw, 1rem); }
+}
+/*
+  ── THE HANGAR OPENS OUT — 0568 ────────────────────────────────────────────────────────────────────
+
+  On every screen that is not a phone and not held upright. Played at 1920x1080: *"the menu's take up like
+  80% of the screen space"*, the ship over the stall, the bay off the screen. So the plate is a slim
+  column docked on the left at a size of its own — it does not grow with the screen, which shows more
+  hangar instead — and the hangar takes the rest: the ship in the middle of it on the pad by the bay,
+  the open bay and the stars on its right, and the dash on the deck under the ship.
+
+  ⚠️ **A BAND IS A ROW OF FIXED CHIPS THAT SCROLLS.** It was a grid sized to the options there are, so a
+  sixth gun would have made every chip narrower: *"is it going to make the menus wider or enable the
+  left right options?"* — the second. A chip is one size; a band shows as many as fit, and its arrows
+  and the cursor bring the rest into view.
+
+  After the phone's and the upright layouts in the sheet, so where this one applies it is the last word.
+*/
+@container (min-height: 461px) and (orientation: landscape) {
+  .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel {
+    grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+    grid-template-areas: 'plate stand';
+    font-size: clamp(0.78rem, 2.1cqh, 1rem);
+    padding: 0.8rem;
+    gap: 0;
+  }
+  .itc-hangar-settings-box, .itc-parts-settings-box, .itc-shop-settings-box { gap: 0.35em; }
+  .itc-hangar-groups, .itc-parts-groups { row-gap: 0.25em; }
+  /* The panel's height on every tab, and never its content's — a tab's plate taller by a pixel jumped the strip (0548). */
+  .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { grid-area: plate; height: 100%; min-height: 0; overflow: hidden; }
+  /*
+    The bands take what height is left and scroll in it if a font runs taller than this one, and the foot —
+    the card, the balance, Buy and Back — never leaves the plate's bottom: on CI's wider letters a plate one
+    line too tall put Buy under the clip, where a click could not settle on it.
+  */
+  .itc-hangar-settings-box, .itc-parts-settings-box, .itc-shop-settings-box { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; align-content: start; }
+  .itc-hangar-plate > .itc-hangar-foot, .itc-parts-plate > .itc-parts-foot, .itc-shop-plate > .itc-shop-foot { flex: none; }
+  .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { grid-area: stand; position: relative; }
+  /* The balance is in the plate's foot; the dash on the deck under the ship, which stands in the stand's middle. */
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { position: absolute; left: ${STAND_PAD_AT * 100}%; bottom: 0.6rem; translate: -50% 0; margin: 0; padding-bottom: 2.2em; font-size: 0.85rem; }
+  .itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs { font-size: 0.78rem; gap: 0.2em; }
+  .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { flex: 1 1 auto; min-width: 0; padding: 0.35em 0.35em 0.3em; overflow: hidden; text-overflow: ellipsis; }
+  /* The faces a size that fits the column, all five in view. */
+  .itc-hangar-band-faces .itc-hangar-face, .itc-parts-band-faces .itc-parts-face, .itc-shop-band-faces .itc-shop-face { width: 2.3em; height: 2.3em; }
+  .itc-hangar-band-faces .itc-hangar-options, .itc-parts-band-faces .itc-parts-options, .itc-shop-band-faces .itc-shop-options { gap: 0.15em; }
+  /* The plate's head, one thing under another: the keeper, the faces, who the pilot is. */
+  .itc-hangar-settings-box, .itc-parts-settings-box, .itc-shop-settings-box { grid-template-columns: minmax(0, 1fr); }
+  .itc-hangar-keeper, .itc-hangar-band-faces, .itc-hangar-pilot-card { grid-column: 1; grid-row: auto; }
+  .itc-hangar-pilot-card .itc-hangar-pilot-bio { font-size: 0.76em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr); }
+  /* A band: its name over it, then the arrows and the chips between them, the plate's whole width. */
+  .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band, .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'label label label' 'less track more';
+    row-gap: 0;
+  }
+  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label, .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-band-label { display: block; grid-area: label; font-size: 0.6em; padding-left: 1.6em; }
+  .itc-hangar-plate .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options,
+  .itc-parts-plate .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options,
+  .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-options {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    gap: 0.3em;
+    padding: 0.55em 0.15em 0.2em;
+  }
+  /* Three chips to a band's view, whole, whatever the band holds; the rest are a scroll away. */
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-swatch) {
+    flex: 0 0 calc((100% - 0.6em) / 3);
+    font-size: 0.82em;
+    padding: 0.35em 0.3em;
+    white-space: normal;
+  }
+  .itc-shop-option.itc-shop-option-tile { flex: 0 0 calc((100% - 0.6em) / 3); font-size: 0.82em; }
+  /* The paints wrap, a swatch is small; the flame and the art scroll as every other band does. */
+  .itc-parts-plate .itc-parts-band:has(.itc-parts-option-swatch) .itc-parts-options { flex-wrap: wrap; overflow: visible; }
+  .itc-parts-option.itc-parts-option-swatch { width: 1.4em; height: 1.4em; }
+  /* A chip with a picture stands the picture over its name, so a long name has the chip's width. */
+  .itc-hangar-option-thumbed, .itc-parts-option-thumbed { flex-direction: column; gap: 0.05em; line-height: 1.05; }
+  .itc-hangar-option-thumb, .itc-parts-option-thumb { width: 2em; height: 1.15em; margin: -0.15em 0 -0.05em; object-fit: contain; }
+  /*
+    The balance keeps to its own cell: each line whole, and the second (Cosmo's *After*) under the first when
+    the cell is narrow. One unbroken line ran under Buy on CI's letters and took its click.
+  */
+  .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { flex-wrap: wrap; align-items: center; row-gap: 0; min-width: 0; max-width: 100%; justify-self: stretch; }
+  .itc-hangar-sheet-label, .itc-parts-sheet-label, .itc-shop-sheet-label { line-height: 1.05; min-width: 0; }
+  .itc-hangar-sheet-value, .itc-parts-sheet-value, .itc-shop-sheet-value { white-space: nowrap; }
+  /* The aisle is the shelf's own tabs, across the plate's width. */
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more'; }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-band-label { display: none; }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-option { flex: 1 0 auto; }
+  /* The foot stacked: the card across the plate, and the balance and the actions under it. */
+  .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'focus focus' 'sheet choices' 'glyphs glyphs'; }
+  .itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { font-size: 0.74em; }
 }
 /*
   ── ONE VOICE — 0440 ─────────────────────────────────────────────────────────────────────────────
@@ -6077,7 +6167,8 @@ export function makeChrome(
       for (const control of row) control.classList.toggle(ring, control === here);
     }
     // 0562: the focus card speaks for the band the cursor is on, and keeps speaking for it when the cursor leaves the bands.
-    const on = panel.bands.find((band) => band.root === here && band.faces !== 'chip');
+    // 0568: never the pilots — who they are is said at the plate's head, and the foot said it again.
+    const on = panel.bands.find((band) => band.root === here && band.faces === 'words');
     if (on !== undefined) panel.spoken = on;
     paintCard(panel);
     // Focus the element as well, so the keyboard, the screen reader and the pad all agree about where
@@ -6175,6 +6266,13 @@ export function makeChrome(
   const paintLook = (band: Band): void => {
     const look = band.buttons[0]?.className.split(' ')[0] + '-look';
     band.buttons.forEach((button, i) => button.classList.toggle(look, i === band.look));
+    // 0568: a band is a row that scrolls, so the one tried on is brought into it.
+    const tried = band.buttons[band.look];
+    const track = tried?.parentElement;
+    if (tried === undefined || !(track instanceof HTMLElement) || track.scrollWidth <= track.clientWidth) return;
+    const left = tried.offsetLeft - track.offsetLeft;
+    if (left < track.scrollLeft) track.scrollLeft = left;
+    else if (left + tried.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + tried.offsetWidth - track.clientWidth;
   };
   /** Try an option on — 0561. Trying on the fitted one is putting back. */
   const tryOn = (band: Band, index: number): void => {

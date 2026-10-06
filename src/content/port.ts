@@ -289,6 +289,8 @@ export const STAGE = {
   /** The two pads, and the height each ship hovers at over its own. */
   bluePad: 94,
   viperPad: 142,
+  /** 0568: the pad the hangar's tabs stand the pilot's ship on — the Viper's, by the bay. */
+  standPad: 142,
   blueRide: 80,
   viperRide: 84,
   /**
@@ -304,7 +306,8 @@ export const STAGE = {
    * pad, so the shop's camera has the counter and the ship it tries things on in the stand's part of the
    * screen together. Where each keeper stands at it is their own row's (`KeeperRow.at`, 0554).
    */
-  stall: { along: 70, across: 85 },
+  // 0568: by the inner pad, clear of the ship, which stands on the outer one now.
+  stall: { along: 106, across: 85 },
   /**
    * The viewport in the back wall — 0550: *"can we fit in a starry background to emphasise the space
    * station nature of it?"* The bay is behind the plate on every tab, so the stars were seen only past the
@@ -325,8 +328,13 @@ export const STAGE = {
  * across the column, the keeper's counter to its left at the column's edge; and the ship's box no wider
  * than this share of the column, the camera drawn back from the row's zoom where it would be.
  */
-export const STAND_PAD_AT = 0.66;
-export const STAND_SHIP_SHARE = 0.8;
+export const STAND_PAD_AT = 0.46;
+export const STAND_SHIP_SHARE = 0.34;
+/**
+ * 0568: how far past the bay the sky is painted for the stand, in world units — far enough that no
+ * screen's edge ever comes before it, where on a phone the plate stands to the right of the column.
+ */
+export const STAND_SKY = 400;
 
 /**
  * Where a camera stands in the room when a menu stands in it — 0540: the point of the room it is on, in
