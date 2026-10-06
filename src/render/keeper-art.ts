@@ -631,14 +631,14 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.beginPath();
   ctx.ellipse(50 * u, (RING - 0.5) * u, 15.5 * u, 2.6 * u, 0, 0, Math.PI * 2);
   ctx.fill();
-  // The neck: rising out of the ring and leaning into the head, the far side in shade.
+  // The neck: straight up out of the ring under the head, a little narrower at the top, the far side in
+  // shade — 0556: 0555's S leaned the head off its own body.
   ctx.fillStyle = feather;
   ctx.beginPath();
-  ctx.moveTo(37 * u, (RING + 1) * u);
-  ctx.quadraticCurveTo(33 * u, 54 * u, 37 * u, 45 * u);
-  ctx.lineTo(55 * u, 45 * u);
-  // The throat tucked in under the bill, and the breast out below it, as a duck's neck is an S.
-  ctx.bezierCurveTo(51 * u, 51 * u, 57 * u, 57 * u, 63 * u, (RING + 1) * u);
+  ctx.moveTo(37.5 * u, (RING + 1) * u);
+  ctx.quadraticCurveTo(36.5 * u, (54 + FACE_DROP / 2) * u, (39 + FACE_SHIFT) * u, (45 + FACE_DROP) * u);
+  ctx.lineTo((55 + FACE_SHIFT) * u, (45 + FACE_DROP) * u);
+  ctx.quadraticCurveTo(57.5 * u, (54 + FACE_DROP / 2) * u, 60.5 * u, (RING + 1) * u);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -650,19 +650,19 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.fill();
   ctx.fillStyle = rgba(dark, 0.18);
   ctx.beginPath();
-  ctx.ellipse(48 * u, 47.5 * u, 11 * u, 3.4 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse((48 + FACE_SHIFT) * u, (47.5 + FACE_DROP) * u, 11 * u, 3.4 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   // A fluff of down on the front of the neck, lit, its points hanging.
   ctx.fillStyle = shade(feather, 0.18);
   ctx.beginPath();
-  ctx.moveTo(39 * u, 52 * u);
-  ctx.quadraticCurveTo(45 * u, 50 * u, 51 * u, 52.5 * u);
-  ctx.lineTo(49.5 * u, 57.5 * u);
-  ctx.lineTo(47 * u, 55 * u);
-  ctx.lineTo(44.5 * u, 59 * u);
-  ctx.lineTo(42 * u, 55.5 * u);
-  ctx.lineTo(39.5 * u, 57.5 * u);
+  ctx.moveTo(39.5 * u, 54 * u);
+  ctx.quadraticCurveTo(45 * u, 52.5 * u, 50.5 * u, 54.5 * u);
+  ctx.lineTo(49.2 * u, 58.8 * u);
+  ctx.lineTo(47 * u, 56.6 * u);
+  ctx.lineTo(44.8 * u, 60 * u);
+  ctx.lineTo(42.4 * u, 57 * u);
+  ctx.lineTo(40 * u, 58.8 * u);
   ctx.closePath();
   ctx.fill();
   // The ring's near lip over all of it, with a stripe of the shop's own ink round it.
@@ -682,10 +682,13 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.strokeStyle = dark;
   ctx.lineWidth = line;
   /*
-    The head: one silhouette, a round crown whose brow slopes forward and down into the bill's root, as a
-    duck's does — a ball with a bill stuck on it reads as a chick. Outlined by stroking it at twice the
-    line and filling over, so the crown and the brow are one shape. Lit from above the far shoulder.
+    The head (`head`), outlined by stroking it at twice the line and filling over, so only the outer half
+    of the line shows. Lit from above the far shoulder. Everything on it — the beret, the eyes, the bill —
+    is drawn `FACE_DROP` down and `FACE_SHIFT` right, so the face sits at the bubble's middle on a shorter
+    neck.
   */
+  ctx.save();
+  ctx.translate(FACE_SHIFT * u, FACE_DROP * u);
   ctx.lineWidth = line * 2;
   head(ctx, u, 0, 0);
   ctx.stroke();
@@ -741,10 +744,11 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.lineTo(42 * u, 8.8 * u);
   ctx.stroke();
   ctx.lineWidth = line;
-  // The eyes: big and glossy, the far one narrowed by the turn of the head, two glints in each.
-  for (const [x, y, rx, ry, glint] of [
-    [42, 27.5, 3.6, 4.5, 1.5],
-    [56.4, 26.6, 1.6, 3.1, 0.75],
+  // The eyes: small dark beads either side of the bill's root, one glint each — 0556: 0555's big
+  // two-glint ovals were too much.
+  for (const [x, y, rx, ry] of [
+    [42.5, 28.5, 2.5, 3.1],
+    [54.5, 28.5, 2.5, 3.1],
   ] as const) {
     ctx.fillStyle = dark;
     ctx.beginPath();
@@ -752,70 +756,77 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
     ctx.fill();
     ctx.fillStyle = palette.impact;
     ctx.beginPath();
-    ctx.arc((x - rx * 0.35) * u, (y - ry * 0.4) * u, glint * u, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc((x + rx * 0.35) * u, (y + ry * 0.45) * u, glint * 0.45 * u, 0, Math.PI * 2);
+    ctx.arc((x - rx * 0.3) * u, (y - ry * 0.35) * u, 0.85 * u, 0, Math.PI * 2);
     ctx.fill();
   }
-  // A pink cheek under the near eye.
+  // A pink cheek out past each eye.
   ctx.fillStyle = rgba(palette.enemy, 0.35);
+  for (const x of [34.5, 62.5]) {
+    ctx.beginPath();
+    ctx.ellipse(x * u, 35.5 * u, 3.2 * u, 1.9 * u, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  /*
+    The bill, facing out under the eyes as the eyes do — 0556: a bill out to the side under eyes that look
+    straight out read as a face turned two ways at once. Seen a little from above: a broad rounded scoop,
+    narrow where the feathers meet it in an arch and flaring to a round front edge, its top lit and two
+    nostrils on it, the lower a thin crescent under the front with its corners turned up. Outlined in the
+    bill's own darker ink, thin, never the ink line the head wears — a black ring round it read as a hole.
+  */
+  const rim = shade(bill, -0.5);
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = Math.max(1, 0.95 * u);
+  ctx.fillStyle = shade(bill, -0.18);
   ctx.beginPath();
-  ctx.ellipse(43 * u, 39.5 * u, 4 * u, 2.3 * u, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // The bill. The lower first, tucked under; then the upper — long and flat from its root on the face to
-  // a broad spoon of a tip, its top lit, a nostril near the root and the nail at the tip.
-  ctx.fillStyle = shade(bill, -0.12);
-  ctx.lineWidth = Math.max(1, 1.8 * u);
-  ctx.beginPath();
-  ctx.moveTo(56 * u, 46.4 * u);
-  ctx.quadraticCurveTo(64 * u, 45.6 * u, 70.5 * u, 45.8 * u);
-  ctx.quadraticCurveTo(69 * u, 49.4 * u, 63 * u, 49.4 * u);
-  ctx.quadraticCurveTo(58 * u, 49.4 * u, 56 * u, 46.4 * u);
+  ctx.moveTo(40 * u, 42.4 * u);
+  ctx.bezierCurveTo(41 * u, 47 * u, 56 * u, 47 * u, 57 * u, 42.4 * u);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.lineWidth = line;
+  // Wider than it is deep, and flat across the front: an oval of a bill reads as a snout.
+  const upper = () => {
+    ctx.beginPath();
+    ctx.moveTo(45 * u, 35.5 * u);
+    ctx.quadraticCurveTo(48.5 * u, 34 * u, 52 * u, 35.5 * u);
+    ctx.bezierCurveTo(55 * u, 36.5 * u, 59 * u, 38.5 * u, 59 * u, 41 * u);
+    ctx.bezierCurveTo(59 * u, 43.6 * u, 54 * u, 44.6 * u, 48.5 * u, 44.6 * u);
+    ctx.bezierCurveTo(43 * u, 44.6 * u, 38 * u, 43.6 * u, 38 * u, 41 * u);
+    ctx.bezierCurveTo(38 * u, 38.5 * u, 42 * u, 36.5 * u, 45 * u, 35.5 * u);
+    ctx.closePath();
+  };
   ctx.fillStyle = bill;
-  ctx.beginPath();
-  ctx.moveTo(55 * u, 35.5 * u);
-  ctx.bezierCurveTo(61 * u, 35.5 * u, 64 * u, 38.6 * u, 69 * u, 38.4 * u);
-  ctx.bezierCurveTo(75 * u, 38.2 * u, 78.5 * u, 40.5 * u, 77.6 * u, 43.6 * u);
-  ctx.quadraticCurveTo(76 * u, 46.4 * u, 70 * u, 46.2 * u);
-  ctx.quadraticCurveTo(62 * u, 45.8 * u, 56.5 * u, 47 * u);
-  ctx.quadraticCurveTo(53 * u, 42 * u, 55 * u, 35.5 * u);
-  ctx.closePath();
+  upper();
   ctx.fill();
   ctx.save();
   ctx.clip();
-  ctx.fillStyle = shade(bill, 0.25);
-  ctx.beginPath();
-  ctx.moveTo(55 * u, 35.5 * u);
-  ctx.bezierCurveTo(61 * u, 35.5 * u, 64 * u, 38.6 * u, 69 * u, 38.4 * u);
-  ctx.bezierCurveTo(73 * u, 38.3 * u, 76 * u, 39.6 * u, 77 * u, 41.2 * u);
-  ctx.bezierCurveTo(70 * u, 40.4 * u, 63 * u, 41.2 * u, 55.5 * u, 40.6 * u);
-  ctx.closePath();
-  ctx.fill();
   ctx.fillStyle = shade(bill, -0.12);
   ctx.beginPath();
-  ctx.ellipse(66 * u, 46 * u, 14 * u, 2 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(48.5 * u, 45.2 * u, 11 * u, 2.4 * u, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = rgba(palette.impact, 0.35);
+  ctx.beginPath();
+  ctx.ellipse(48 * u, 38.4 * u, 6 * u, 1.5 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+  ctx.strokeStyle = rim;
+  upper();
   ctx.stroke();
-  ctx.fillStyle = shade(bill, -0.45);
+  ctx.fillStyle = rim;
+  for (const x of [47, 50]) {
+    ctx.beginPath();
+    ctx.ellipse(x * u, 37 * u, 0.55 * u, 0.35 * u, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // The corners of the bill turned up, a small smile either side.
   ctx.beginPath();
-  ctx.ellipse(62 * u, 39.6 * u, 1.4 * u, 0.6 * u, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = shade(bill, -0.2);
-  ctx.beginPath();
-  ctx.ellipse(76.4 * u, 41.8 * u, 1.2 * u, 1.6 * u, 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  // The smile, turned up at the corner of the bill into the cheek.
-  ctx.lineWidth = Math.max(1, 1.6 * u);
-  ctx.beginPath();
-  ctx.moveTo(56.5 * u, 46.8 * u);
-  ctx.quadraticCurveTo(53.6 * u, 46.6 * u, 52.8 * u, 44.4 * u);
+  ctx.moveTo(38.4 * u, 41.8 * u);
+  ctx.quadraticCurveTo(37.4 * u, 41.6 * u, 37 * u, 40.4 * u);
+  ctx.moveTo(58.6 * u, 41.8 * u);
+  ctx.quadraticCurveTo(59.6 * u, 41.6 * u, 60 * u, 40.4 * u);
   ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
   // The helmet's near side: the bubble's rim, a long highlight and a glint, the light on its antenna.
   ctx.strokeStyle = palette.blade;
   ctx.lineWidth = Math.max(1, 1.6 * u);
@@ -855,6 +866,17 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
 const RING = 63;
 /** The bubble: its centre's height and its radius, in the same square. */
 const BUBBLE = { y: 37, r: 31 };
+/**
+ * How far the face is drawn below where 0555 put it, in the same square, the neck shorter by as much —
+ * 0556: *"make the neck just slightly smaller, but keep the bubble the same size … to get the duck face
+ * centred a bit more"*. Three brings the head's middle to within two of the bubble's, where it was five.
+ */
+const FACE_DROP = 3;
+/**
+ * And how far right — *"it's a little bit left of center as well"*. The head, the bill and the eyes were
+ * drawn about 48.5 across and the bubble about 50, so the face moves the difference, the neck's top with it.
+ */
+const FACE_SHIFT = 1.5;
 
 /**
  * The bubble's outline, open at the bottom where it is seated in the neck ring — 0555. A whole circle
@@ -868,12 +890,10 @@ function bubble(ctx: CanvasRenderingContext2D, u: number): void {
 }
 
 /**
- * MMXXVI's head as one path, offset by (`dx`, `dy`): the round crown and the brow that slopes from it into
- * the bill's root. Two subpaths wound the same way, so a fill is their union.
+ * MMXXVI's head, offset by (`dx`, `dy`) — a little wider than it is tall, centred over the neck and facing
+ * out since 0556. 0555's brow sloping into a bill out to the side went with the side view.
  */
 function head(ctx: CanvasRenderingContext2D, u: number, dx: number, dy: number): void {
   ctx.beginPath();
-  ctx.ellipse((43 + dx) * u, (32 + dy) * u, 19 * u, 17.5 * u, 0, 0, Math.PI * 2);
-  ctx.moveTo((64 + dx) * u, (35 + dy) * u);
-  ctx.ellipse((55 + dx) * u, (35 + dy) * u, 9 * u, 8 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse((48.5 + dx) * u, (32 + dy) * u, 19 * u, 17.5 * u, 0, 0, Math.PI * 2);
 }
