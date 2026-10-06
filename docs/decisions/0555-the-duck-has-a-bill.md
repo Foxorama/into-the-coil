@@ -23,10 +23,11 @@ spray can, and a wire circle for a rim.
 |---|---|
 | **the turn** | three quarters towards the pad, as a painter looks at the work. It is also the view in which a duck's bill reads as a bill |
 | **the bill** | the upper is long and flat from a root on the face to a spoon of a tip. It has a slight dip along the top, a lit top plane, a nostril near the root and the nail at the tip. The lower is tucked under it, and a smile turns up at the corner into the cheek |
-| **the neck** | rises out of the collar ring's open throat, which is dark, and leans into the head. The far side is in shade, there is a shadow under the head and a lit fluff of down on the front. The ring's near lip is drawn over it, so the neck goes down into the suit |
-| **cute** | a bigger head on a smaller frame, big eyes with two glints each (the far one narrowed by the turn), a pink cheek, a tuft at the back of the head and a curl on the crown. A painter's beret is tipped back, and a dab of paint sits where a brush came too close |
-| **the clothes** | a white suit, shaded on the far side with a seam over each shoulder. Over it a painter's apron splashed in the shop's inks, with two wet brushes in its pocket. The brushes show over the counter in the port |
-| **the helmet** | the glass's far side is tinted behind the duck rather than over it, so the face is not dimmed. The rim, a long highlight, a glint and a lower reflection are in front, and the antenna now leans off the bubble's shoulder |
+| **the neck** | an S, as a duck's is: the throat tucked in under the bill and the breast out below it. It rises out of the helmet ring's open throat, which is dark. The far side is in shade, there is a shadow under the head and a lit fluff of down on the front. The ring's near lip is drawn over it, so the neck goes down into the suit |
+| **the head** | one silhouette, not a ball with a bill stuck on: a crown a little longer than it is tall, and a brow that slopes forward and down into the bill's root. The eyes are set high and back, as a duck's are, with the far one only peeking over the brow. The play said the first, rounder draft read as a chick |
+| **cute** | big glossy eyes with two glints each, a pink cheek and a curl on the crown. A painter's beret is tipped back, and a dab of paint sits where a brush came too close. Still yellow, on the player's word |
+| **the clothes** | a white suit, outlined and shaded on the far side, with a seam over each shoulder. It rises to a neck of its own that the helmet's ring sits on. Over it a painter's apron splashed in the shop's inks, with two wet brushes in its pocket. The brushes show over the counter in the port |
+| **the helmet** | seated in its ring. 0550's bubble was a whole circle that narrowed to a point below the face, and the play saw the gap between it and the suit. The glass now ends on a chord a hair inside the ring's rim (`bubble`). Its far side is tinted behind the duck rather than over it, so the face is not dimmed. The rim, a long highlight, a glint and a lower reflection are in front, and the antenna leans off the bubble's shoulder |
 | **the booth** | a scalloped awning, each scallop dripping its own ink, with only a bead over the middle three where the helmet stands. Paint has run down both posts, and a roller leans on the near one. The name is on a framed, bolted plaque, and paint runs over the top board's edge at both ends. On the top: a tin with a drip and a wire handle, a second tin tipped over and pouring off the edge, a spray can with a puff, and a tyre on a chrome rim (the parts). The colour chips at the foot catch a highlight |
 
 ## Why it is built the way it is
@@ -47,4 +48,5 @@ photograph rather than assumed.
 
 ## What is owed
 
-A look at it. Two choices the player may veto: the beret, and turning the duck towards the pad.
+A look at it. Two choices the player may veto: the beret, and turning the duck towards the pad. A
+mallard's green head was offered for a stronger duck read and declined: the duck stays yellow.

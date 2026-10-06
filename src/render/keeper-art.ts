@@ -476,11 +476,12 @@ function boot(ctx: CanvasRenderingContext2D, palette: Palette, x: number, y: num
 
 /**
  * MMXXVI — a space duck, who paints the ships on Paint & Parts. Turned three quarters towards the pad, as
- * a painter looks at the work (0555): a duckling's big round head on a neck that rises out of the suit's
- * collar ring, a proper bill — long, flat and spoon-tipped, a nostril near its root, the nail at its tip,
- * the lower one tucked under it and a smile turned up at the corner — big glossy eyes, a pink cheek and a
- * painter's beret, all inside a glass bubble with its light on an antenna. Under it a white suit and a
- * painter's apron splashed in the shop's inks, two brushes in its pocket.
+ * a painter looks at the work (0555): a yellow duck's head whose brow slopes into the bill, on an S of a
+ * neck that rises out of the helmet's ring, a proper bill — long, flat and spoon-tipped, a nostril near its
+ * root, the nail at its tip, the lower one tucked under it and a smile turned up at the corner — big glossy
+ * eyes set high, a pink cheek and a painter's beret, all inside a glass bubble seated in that ring, its
+ * light on an antenna. Under it a white suit and a painter's apron splashed in the shop's inks, two
+ * brushes in its pocket.
  */
 function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: number): void {
   const u = size / 100;
@@ -498,12 +499,16 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   // The suit's shoulders.
   ctx.beginPath();
   ctx.moveTo(8 * u, 100 * u);
-  ctx.quadraticCurveTo(10 * u, 78 * u, 30 * u, 73 * u);
-  ctx.lineTo(70 * u, 73 * u);
+  ctx.quadraticCurveTo(10 * u, 78 * u, 28 * u, 73 * u);
+  // Up to the helmet's ring: the suit's own neck, which the bubble is seated on.
+  ctx.quadraticCurveTo(33 * u, 71 * u, 32 * u, RING * u);
+  ctx.lineTo(68 * u, RING * u);
+  ctx.quadraticCurveTo(67 * u, 71 * u, 72 * u, 73 * u);
   ctx.quadraticCurveTo(90 * u, 78 * u, 92 * u, 100 * u);
   ctx.closePath();
   ctx.fillStyle = suit;
   ctx.fill();
+  ctx.stroke();
   ctx.save();
   ctx.clip();
   // The suit's shade on the far side, away from the light, and a seam over each shoulder.
@@ -553,7 +558,6 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
     [78, 86, 2.8, palette.acid],
     [84, 96, 2.2, palette.void],
     [40, 92, 2.2, palette.hazard],
-    [47, 86, 1.4, palette.enemy],
   ];
   for (const [x, y, r, ink] of splashes) {
     ctx.fillStyle = ink;
@@ -568,7 +572,6 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.restore();
   ctx.strokeStyle = dark;
   ctx.lineWidth = line;
-  ctx.stroke();
   // Two brushes stood in the apron's pocket, each wet with its own ink, and the pocket over them.
   for (const [x0, x1, tip] of [
     [53.5, 52, palette.enemy],
@@ -615,26 +618,27 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.stroke();
   // Inside the bubble, behind the duck: the glass's far side, a cool tint.
   ctx.fillStyle = rgba(palette.frost, 0.1);
-  ctx.beginPath();
-  ctx.arc(50 * u, 38 * u, 31 * u, 0, Math.PI * 2);
+  bubble(ctx, u);
+  ctx.closePath();
   ctx.fill();
-  // The suit's collar ring, its open throat dark, the neck down through it.
+  // The helmet's neck ring, seated on the suit, its open throat dark, the neck down through it.
   ctx.fillStyle = palette.blade;
   ctx.beginPath();
-  ctx.ellipse(50 * u, 73 * u, 24 * u, 5 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(50 * u, RING * u, 20 * u, 4.2 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   ctx.fillStyle = shade(palette.blade, -0.6);
   ctx.beginPath();
-  ctx.ellipse(50 * u, 72.4 * u, 18.5 * u, 3 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(50 * u, (RING - 0.5) * u, 15.5 * u, 2.6 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   // The neck: rising out of the ring and leaning into the head, the far side in shade.
   ctx.fillStyle = feather;
   ctx.beginPath();
-  ctx.moveTo(36 * u, 73 * u);
-  ctx.quadraticCurveTo(34 * u, 61 * u, 37 * u, 48 * u);
-  ctx.lineTo(55 * u, 48 * u);
-  ctx.quadraticCurveTo(59 * u, 61 * u, 63 * u, 73 * u);
+  ctx.moveTo(37 * u, (RING + 1) * u);
+  ctx.quadraticCurveTo(33 * u, 54 * u, 37 * u, 45 * u);
+  ctx.lineTo(55 * u, 45 * u);
+  // The throat tucked in under the bill, and the breast out below it, as a duck's neck is an S.
+  ctx.bezierCurveTo(51 * u, 51 * u, 57 * u, 57 * u, 63 * u, (RING + 1) * u);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -642,69 +646,61 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.clip();
   ctx.fillStyle = featherShade;
   ctx.beginPath();
-  ctx.ellipse(62 * u, 62 * u, 8 * u, 16 * u, -0.15, 0, Math.PI * 2);
+  ctx.ellipse(61 * u, 57 * u, 7 * u, 13 * u, -0.15, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = rgba(dark, 0.18);
   ctx.beginPath();
-  ctx.ellipse(48 * u, 50 * u, 11 * u, 3.6 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(48 * u, 47.5 * u, 11 * u, 3.4 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   // A fluff of down on the front of the neck, lit, its points hanging.
   ctx.fillStyle = shade(feather, 0.18);
   ctx.beginPath();
-  ctx.moveTo(39 * u, 57 * u);
-  ctx.quadraticCurveTo(45 * u, 55 * u, 51 * u, 57.5 * u);
-  ctx.lineTo(49.5 * u, 63 * u);
-  ctx.lineTo(47 * u, 60 * u);
-  ctx.lineTo(44.5 * u, 64.5 * u);
-  ctx.lineTo(42 * u, 60.5 * u);
-  ctx.lineTo(39.5 * u, 63 * u);
+  ctx.moveTo(39 * u, 52 * u);
+  ctx.quadraticCurveTo(45 * u, 50 * u, 51 * u, 52.5 * u);
+  ctx.lineTo(49.5 * u, 57.5 * u);
+  ctx.lineTo(47 * u, 55 * u);
+  ctx.lineTo(44.5 * u, 59 * u);
+  ctx.lineTo(42 * u, 55.5 * u);
+  ctx.lineTo(39.5 * u, 57.5 * u);
   ctx.closePath();
   ctx.fill();
   // The ring's near lip over all of it, with a stripe of the shop's own ink round it.
   ctx.fillStyle = palette.blade;
   ctx.lineWidth = line;
   ctx.beginPath();
-  ctx.ellipse(50 * u, 73 * u, 24 * u, 5 * u, 0, 0, Math.PI);
-  ctx.ellipse(50 * u, 72.4 * u, 18.5 * u, 3 * u, 0, Math.PI, 0, true);
+  ctx.ellipse(50 * u, RING * u, 20 * u, 4.2 * u, 0, 0, Math.PI);
+  ctx.ellipse(50 * u, (RING - 0.5) * u, 15.5 * u, 2.6 * u, 0, Math.PI, 0, true);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
   ctx.strokeStyle = palette.player;
   ctx.lineWidth = Math.max(1, 1.3 * u);
   ctx.beginPath();
-  ctx.ellipse(50 * u, 73.6 * u, 21.5 * u, 3.9 * u, 0, Math.PI * 0.12, Math.PI * 0.88);
+  ctx.ellipse(50 * u, (RING + 0.6) * u, 17.8 * u, 3.3 * u, 0, Math.PI * 0.12, Math.PI * 0.88);
   ctx.stroke();
   ctx.strokeStyle = dark;
   ctx.lineWidth = line;
-  // A tuft of down at the back of the head, under the cheek.
-  ctx.fillStyle = feather;
-  ctx.beginPath();
-  ctx.moveTo(30 * u, 38 * u);
-  ctx.quadraticCurveTo(22 * u, 39 * u, 21.5 * u, 45 * u);
-  ctx.quadraticCurveTo(25 * u, 43 * u, 26.5 * u, 44.5 * u);
-  ctx.quadraticCurveTo(24.5 * u, 48 * u, 27 * u, 51 * u);
-  ctx.quadraticCurveTo(30 * u, 47 * u, 33 * u, 47 * u);
-  ctx.closePath();
-  ctx.fill();
+  /*
+    The head: one silhouette, a round crown whose brow slopes forward and down into the bill's root, as a
+    duck's does — a ball with a bill stuck on it reads as a chick. Outlined by stroking it at twice the
+    line and filling over, so the crown and the brow are one shape. Lit from above the far shoulder.
+  */
+  ctx.lineWidth = line * 2;
+  head(ctx, u, 0, 0);
   ctx.stroke();
-  // The head: big and round, lit from above the far shoulder and shaded under the bill.
-  ctx.beginPath();
-  ctx.arc(45 * u, 34 * u, 19 * u, 0, Math.PI * 2);
+  ctx.lineWidth = line;
+  ctx.fillStyle = featherShade;
+  head(ctx, u, 0, 0);
   ctx.fill();
   ctx.save();
   ctx.clip();
-  ctx.fillStyle = featherShade;
-  ctx.beginPath();
-  ctx.arc(45 * u, 34 * u, 19 * u, 0, Math.PI * 2);
-  ctx.fill();
   ctx.fillStyle = feather;
-  ctx.beginPath();
-  ctx.arc(42.5 * u, 30.5 * u, 18.6 * u, 0, Math.PI * 2);
+  head(ctx, u, -2.2, -3);
   ctx.fill();
   ctx.fillStyle = rgba(palette.impact, 0.4);
   ctx.beginPath();
-  ctx.ellipse(37 * u, 23 * u, 8 * u, 4.6 * u, -0.5, 0, Math.PI * 2);
+  ctx.ellipse(36 * u, 23 * u, 8 * u, 4.6 * u, -0.5, 0, Math.PI * 2);
   ctx.fill();
   // A dab of paint on the back of the head, where a brush was waved too close.
   ctx.fillStyle = palette.player;
@@ -715,9 +711,6 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.arc(32.4 * u, 36.2 * u, 0.8 * u, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  ctx.beginPath();
-  ctx.arc(45 * u, 34 * u, 19 * u, 0, Math.PI * 2);
-  ctx.stroke();
   // The beret, tipped back over the far ear, its stalk on top and a curl of down out from under its brim.
   ctx.fillStyle = feather;
   ctx.beginPath();
@@ -750,8 +743,8 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.lineWidth = line;
   // The eyes: big and glossy, the far one narrowed by the turn of the head, two glints in each.
   for (const [x, y, rx, ry, glint] of [
-    [43, 31, 4.4, 5.6, 1.8],
-    [57.5, 29.5, 2.6, 4.8, 1.1],
+    [42, 27.5, 3.6, 4.5, 1.5],
+    [56.4, 26.6, 1.6, 3.1, 0.75],
   ] as const) {
     ctx.fillStyle = dark;
     ctx.beginPath();
@@ -768,7 +761,7 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   // A pink cheek under the near eye.
   ctx.fillStyle = rgba(palette.enemy, 0.35);
   ctx.beginPath();
-  ctx.ellipse(41 * u, 41.5 * u, 4.2 * u, 2.4 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(43 * u, 39.5 * u, 4 * u, 2.3 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   // The bill. The lower first, tucked under; then the upper — long and flat from its root on the face to
   // a broad spoon of a tip, its top lit, a nostril near the root and the nail at the tip.
@@ -785,22 +778,22 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.lineWidth = line;
   ctx.fillStyle = bill;
   ctx.beginPath();
-  ctx.moveTo(54 * u, 36.5 * u);
-  ctx.bezierCurveTo(60 * u, 35 * u, 66 * u, 37.6 * u, 72 * u, 37 * u);
-  ctx.bezierCurveTo(78.5 * u, 36.4 * u, 81 * u, 43.5 * u, 75.5 * u, 46 * u);
-  ctx.quadraticCurveTo(68 * u, 47 * u, 60 * u, 46.4 * u);
-  ctx.quadraticCurveTo(57.5 * u, 46.4 * u, 56 * u, 47 * u);
-  ctx.quadraticCurveTo(52.5 * u, 42 * u, 54 * u, 36.5 * u);
+  ctx.moveTo(55 * u, 35.5 * u);
+  ctx.bezierCurveTo(61 * u, 35.5 * u, 64 * u, 38.6 * u, 69 * u, 38.4 * u);
+  ctx.bezierCurveTo(75 * u, 38.2 * u, 78.5 * u, 40.5 * u, 77.6 * u, 43.6 * u);
+  ctx.quadraticCurveTo(76 * u, 46.4 * u, 70 * u, 46.2 * u);
+  ctx.quadraticCurveTo(62 * u, 45.8 * u, 56.5 * u, 47 * u);
+  ctx.quadraticCurveTo(53 * u, 42 * u, 55 * u, 35.5 * u);
   ctx.closePath();
   ctx.fill();
   ctx.save();
   ctx.clip();
   ctx.fillStyle = shade(bill, 0.25);
   ctx.beginPath();
-  ctx.moveTo(54 * u, 36.5 * u);
-  ctx.bezierCurveTo(60 * u, 35 * u, 66 * u, 37.6 * u, 72 * u, 37 * u);
-  ctx.bezierCurveTo(76 * u, 36.6 * u, 78.5 * u, 39 * u, 78.8 * u, 41 * u);
-  ctx.bezierCurveTo(72 * u, 39 * u, 64 * u, 40.4 * u, 55 * u, 40.4 * u);
+  ctx.moveTo(55 * u, 35.5 * u);
+  ctx.bezierCurveTo(61 * u, 35.5 * u, 64 * u, 38.6 * u, 69 * u, 38.4 * u);
+  ctx.bezierCurveTo(73 * u, 38.3 * u, 76 * u, 39.6 * u, 77 * u, 41.2 * u);
+  ctx.bezierCurveTo(70 * u, 40.4 * u, 63 * u, 41.2 * u, 55.5 * u, 40.6 * u);
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = shade(bill, -0.12);
@@ -811,11 +804,11 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.stroke();
   ctx.fillStyle = shade(bill, -0.45);
   ctx.beginPath();
-  ctx.ellipse(63.5 * u, 39 * u, 1.4 * u, 0.6 * u, 0.12, 0, Math.PI * 2);
+  ctx.ellipse(62 * u, 39.6 * u, 1.4 * u, 0.6 * u, 0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = shade(bill, -0.2);
   ctx.beginPath();
-  ctx.ellipse(77.6 * u, 41 * u, 1.3 * u, 1.7 * u, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(76.4 * u, 41.8 * u, 1.2 * u, 1.6 * u, 0.3, 0, Math.PI * 2);
   ctx.fill();
   // The smile, turned up at the corner of the bill into the cheek.
   ctx.lineWidth = Math.max(1, 1.6 * u);
@@ -827,7 +820,7 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.strokeStyle = palette.blade;
   ctx.lineWidth = Math.max(1, 1.6 * u);
   ctx.beginPath();
-  ctx.moveTo(60.6 * u, 8.9 * u);
+  ctx.moveTo(60.6 * u, 7.9 * u);
   ctx.lineTo(63.6 * u, 3 * u);
   ctx.stroke();
   ctx.fillStyle = palette.player;
@@ -840,21 +833,47 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.fill();
   ctx.strokeStyle = rgba(palette.frost, 0.85);
   ctx.lineWidth = Math.max(1, 1.8 * u);
-  ctx.beginPath();
-  ctx.arc(50 * u, 38 * u, 31 * u, 0, Math.PI * 2);
+  bubble(ctx, u);
   ctx.stroke();
   ctx.strokeStyle = rgba(palette.impact, 0.7);
   ctx.lineWidth = Math.max(1, 2.6 * u);
   ctx.beginPath();
-  ctx.arc(50 * u, 38 * u, 26.5 * u, Math.PI * 1.08, Math.PI * 1.42);
+  ctx.arc(50 * u, BUBBLE.y * u, 26.5 * u, Math.PI * 1.08, Math.PI * 1.42);
   ctx.stroke();
   ctx.strokeStyle = rgba(palette.frost, 0.35);
   ctx.lineWidth = Math.max(1, 1.4 * u);
   ctx.beginPath();
-  ctx.arc(50 * u, 38 * u, 27.5 * u, Math.PI * 0.08, Math.PI * 0.38);
+  ctx.arc(50 * u, BUBBLE.y * u, 27.5 * u, Math.PI * 0.06, Math.PI * 0.3);
   ctx.stroke();
   ctx.fillStyle = rgba(palette.impact, 0.6);
   ctx.beginPath();
   ctx.arc(68 * u, 19 * u, 1.5 * u, 0, Math.PI * 2);
   ctx.fill();
+}
+
+/** Where the helmet's neck ring sits on MMXXVI's suit, in the bust's 100 square. */
+const RING = 63;
+/** The bubble: its centre's height and its radius, in the same square. */
+const BUBBLE = { y: 37, r: 31 };
+
+/**
+ * The bubble's outline, open at the bottom where it is seated in the neck ring — 0555. A whole circle
+ * narrowed to a point below the face and never met the ring, which left a gap between glass and suit;
+ * the glass ends on the chord a hair inside the ring's rim, so the ring holds it.
+ */
+function bubble(ctx: CanvasRenderingContext2D, u: number): void {
+  const seat = Math.asin((RING - 1 - BUBBLE.y) / BUBBLE.r);
+  ctx.beginPath();
+  ctx.arc(50 * u, BUBBLE.y * u, BUBBLE.r * u, seat, Math.PI - seat, true);
+}
+
+/**
+ * MMXXVI's head as one path, offset by (`dx`, `dy`): the round crown and the brow that slopes from it into
+ * the bill's root. Two subpaths wound the same way, so a fill is their union.
+ */
+function head(ctx: CanvasRenderingContext2D, u: number, dx: number, dy: number): void {
+  ctx.beginPath();
+  ctx.ellipse((43 + dx) * u, (32 + dy) * u, 19 * u, 17.5 * u, 0, 0, Math.PI * 2);
+  ctx.moveTo((64 + dx) * u, (35 + dy) * u);
+  ctx.ellipse((55 + dx) * u, (35 + dy) * u, 9 * u, 8 * u, 0, 0, Math.PI * 2);
 }
