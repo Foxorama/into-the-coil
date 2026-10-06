@@ -39,9 +39,16 @@ export interface KeeperRow {
   readonly name: string;
   /** Said when the tab is opened — and, for a keeper with no shop, all they say. */
   readonly greet: string;
-  /** Their bust behind the counter, and the counter in front of them, in the port's atlas. */
-  readonly bust: PortKind;
+  /** Their figure in the port's atlas — a bust behind the counter or a whole one on it — and the counter. */
+  readonly figure: PortKind;
   readonly counter: PortKind;
+  /**
+   * Where their figure's box is centred against the counter's, in world units, and whether they stand
+   * behind it, the counter drawn over them, or on its top, drawn over it — 0554. Each keeper's own,
+   * because Unity stands on their bench and the other two behind theirs (0282).
+   */
+  readonly at: { readonly along: number; readonly across: number };
+  readonly stands: 'behind' | 'on';
   /** The two lines on the counter's front: the name, large, and what is done there, under it. */
   readonly sign: readonly [string, string];
   /** What they say of a ware in the window — a shop's, and `null` for a keeper with nothing to sell. */
@@ -52,8 +59,11 @@ export interface KeeperRow {
 export const COSMO = {
   name: 'Cosmo',
   greet: 'Try it on, no charge for looking.',
-  bust: 'cosmo',
+  figure: 'cosmo',
   counter: 'stall',
+  // 0542: a head over the counter, a unit to the bar's side of its middle.
+  at: { along: -1, across: -5 },
+  stands: 'behind',
   sign: ['COSMO’S', 'COSMETICS'],
   shop: {
     owned: 'That one’s yours already — fit it in {where}.',
@@ -70,12 +80,22 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     named Unity - I bring it all together for the quote - androgynous based on a Least Weasel"*. The tab
     where the loadout and the dash are put together, kept by the one who puts them together. The Aussie is
     in the picture — a bush hat and a tradie's hi-vis — and not put on in the line, which is theirs as given.
+
+    ⚠️ **SMALL, ON THE BENCHTOP, LEANING ON A GIANT WRENCH — 0554.** *"Least weasel mechanic should be small
+    and standing on the benchtop in overalls. Leaning against a giant wrench that is propped up against one
+    of the columns of the trade stand."* A least weasel is the smallest carnivore there is, and a bust
+    Cosmo's size behind the counter made them a person-sized one. So they stand on the top, whole and about
+    half the counter's height, in navy overalls over the hi-vis, a shoulder against a wrench taller than
+    they are that leans on the post by the pad. The box is centred off the bench's middle so the wrench's
+    jaw meets that post and their boots the timber (`paintUnityStanding`).
   */
   unity: {
     name: 'Unity',
     greet: 'I bring it all together.',
-    bust: 'unity',
+    figure: 'unity',
     counter: 'bench',
+    at: { along: 7, across: -4.5 },
+    stands: 'on',
     sign: ['UNITY’S', 'TRADE & REPAIR'],
     shop: null,
   },
@@ -86,8 +106,10 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
   mmxxvi: {
     name: 'MMXXVI',
     greet: 'We’ll make it look good.',
-    bust: 'mmxxvi',
+    figure: 'mmxxvi',
     counter: 'booth',
+    at: { along: -1, across: -5 },
+    stands: 'behind',
     sign: ['MMXXVI', 'PAINT & PARTS'],
     shop: null,
   },

@@ -42,7 +42,7 @@ function hangarJetsOf(ship: ShipKind): readonly Pt[] {
 }
 import { paintRunner } from './golfer-art.ts';
 import { paintCosmo } from './cosmo-art.ts';
-import { KEEPER_FACES } from './keeper-art.ts';
+import { KEEPER_FACES, paintUnityStanding } from './keeper-art.ts';
 import { KEEPERS } from '../content/keepers.ts';
 
 /**
@@ -186,8 +186,11 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'cosmo':
       paintCosmo(ctx, palette, size);
       return canvas;
-    // 0550: Unity's and MMXXVI's, on the same terms — the portrait's own drawing behind their counters.
+    // 0554: Unity whole, on their bench and leaning on the wrench — the plate keeps their bust.
     case 'unity':
+      paintUnityStanding(ctx, palette, size, extent);
+      return canvas;
+    // 0550: MMXXVI's, on Cosmo's terms — the portrait's own drawing behind their counter.
     case 'mmxxvi':
       KEEPER_FACES[kind](ctx, palette, size);
       return canvas;
@@ -767,8 +770,8 @@ function paintSign(ctx: CanvasRenderingContext2D, sign: readonly [string, string
 
 /**
  * Unity's bench — 0550: a trade counter in the stall's box, under a corrugated-iron awning on two steel
- * posts, with a spanner hung off one. A steel front with a hi-vis name and a hazard strip at its foot, a
- * timber top, and on it a red toolbox, a spanner and an oil can. Unity stands behind it (`paintStand`).
+ * posts — the spanner that hung off one gone with 0554, for the giant one propped against it. A steel front with a hi-vis name and a hazard strip at its foot, a
+ * timber top, and on it a red toolbox and an oil can. Unity stands on it (`paintStand`, 0554).
  */
 function paintBench(ctx: CanvasRenderingContext2D, palette: Palette): void {
   const steel = shade(palette.blade, -0.55);
@@ -786,17 +789,6 @@ function paintBench(ctx: CanvasRenderingContext2D, palette: Palette): void {
   ctx.fillRect(-15, -15, 30, 0.4);
   ctx.fillStyle = shade(iron, -0.45);
   ctx.fillRect(-15, -12.2, 30, 0.6);
-  // A spanner hung off the right post on a hook.
-  ctx.strokeStyle = palette.blade;
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.moveTo(14, -11.5);
-  ctx.lineTo(14, -6.5);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(14, -12, 0.9, 0, Math.PI * 2);
-  ctx.arc(14, -6, 0.8, 0, Math.PI * 2);
-  ctx.stroke();
   // The counter: steel, a timber top, and a hazard strip at the foot.
   ctx.fillStyle = steel;
   ctx.fillRect(-13.5, 1, 27, 14);
@@ -827,7 +819,11 @@ function paintBench(ctx: CanvasRenderingContext2D, palette: Palette): void {
     for (const y of [3.4, 7, 10.6]) ctx.fillRect(x - 0.25, y - 0.25, 0.5, 0.5);
   }
   paintSign(ctx, KEEPERS.unity.sign, palette.bullet, palette.blade);
-  // On the top: a red toolbox at one end, a spanner lying, and an oil can at the other.
+  /*
+    On the top: a red toolbox and an oil can at the bar's end — 0554: the pad's end is Unity's, who stands on
+    it against the wrench they prop on the post there (`paintUnityStanding`); the spanner that lay between
+    is that wrench now.
+  */
   const box = shade(palette.enemy, -0.15);
   ctx.fillStyle = box;
   ctx.fillRect(-12.5, -2.4, 5.4, 2.8);
@@ -841,24 +837,20 @@ function paintBench(ctx: CanvasRenderingContext2D, palette: Palette): void {
   ctx.lineTo(-8.4, -3.3);
   ctx.lineTo(-8.4, -2.4);
   ctx.stroke();
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(-5, 0);
-  ctx.lineTo(-1.5, -0.4);
-  ctx.stroke();
   ctx.fillStyle = palette.hazard;
   ctx.beginPath();
-  ctx.moveTo(8.4, 0.4);
-  ctx.lineTo(8.4, -1.8);
-  ctx.lineTo(9.4, -2.6);
-  ctx.lineTo(11.6, -2.6);
-  ctx.lineTo(11.6, 0.4);
+  ctx.moveTo(-1.8, 0.4);
+  ctx.lineTo(-1.8, -1.8);
+  ctx.lineTo(-2.8, -2.6);
+  ctx.lineTo(-5, -2.6);
+  ctx.lineTo(-5, 0.4);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = shade(palette.hazard, -0.3);
+  ctx.lineWidth = 0.5;
   ctx.beginPath();
-  ctx.moveTo(9.4, -2.6);
-  ctx.lineTo(7.4, -4.4);
+  ctx.moveTo(-2.8, -2.6);
+  ctx.lineTo(-0.8, -4.4);
   ctx.stroke();
 }
 

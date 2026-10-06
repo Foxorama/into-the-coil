@@ -133,7 +133,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
   paintDeck(surface, view);
   /*
-    0542: the tab's keeper behind their counter, by the pad — the bust first, so the counter is in front.
+    0542: the tab's keeper at their counter, by the pad — a keeper behind it first, so the counter is in front.
     ⚠️ **THE TAB'S OWN KEEPER SINCE 0550, AND IT WAS COSMO ON ALL THREE (0548).** Played: *"Hangin Out, Paints
     & Parts and Cosmo's Cosmetics all show Cosmo."* The three share one camera, and it holds one counter
     whole beside the pad, so the counter there is the tab's: Unity's bench, MMXXVI's booth, Cosmo's stall.
@@ -141,8 +141,12 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   */
   if (keeper !== null) {
     const row = KEEPERS[keeper];
-    put(surface, view, PORT_SPRITE[row.bust], STAGE.keeper.along, STAGE.keeper.across);
+    // 0554: and where they stand is theirs — behind the counter, or on it, as Unity stands on their bench.
+    const along = STAGE.stall.along + row.at.along;
+    const across = STAGE.stall.across + row.at.across;
+    if (row.stands === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across);
     put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);
+    if (row.stands === 'on') put(surface, view, PORT_SPRITE[row.figure], along, across);
   }
   // The pilot's beam and pad, and the Viper's pad, empty.
   const beam = PORT_EXTENT.beam;
