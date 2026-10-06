@@ -2280,8 +2280,15 @@ ${each('-band[hidden]')} { display: none; }
   /* A step smaller still, for CI's wider letters, under which "Mothership" was ten pixels past its face. */
   .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-option { font-size: 0.76em; padding-left: 0.2em; padding-right: 0.2em; }
   .itc-shop-keeper { padding: 0.2em 0.6em; gap: 0.1em 0.6em; }
-  .itc-shop-keeper-face { width: clamp(2rem, 9cqh, 2.8rem); }
-  .itc-shop-keeper-line { font-size: 0.78em; }
+  .itc-shop-keeper-face { width: clamp(1.6rem, 7cqh, 2.2rem); }
+  /*
+    ⚠️ **0548: AND ON A PHONE COSMO IS A FACE AND ONE LINE.** The pilots joined the plate under him, and on
+    CI's wider letters at 667x375 his card's name and wrapped line put Buy and Back four pixels under the
+    fold. The name is his stall in the picture beside the plate; the line is one line, cut short where it
+    must be, and the shelf's own line under it still says what the balance is short by.
+  */
+  .itc-shop-keeper-name { display: none; }
+  .itc-shop-keeper-line { font-size: 0.78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; padding: 0 0.1em; row-gap: 0.05em; }
   /* Paint has three bands to Parts' two, and its column is the plate's height: the headings' own spacing gives. */
