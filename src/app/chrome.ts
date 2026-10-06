@@ -1578,7 +1578,7 @@ ${each('-band')} {
 }
 ${each('-band-label')} { grid-area: label; font-size: 0.72em; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.7; }
 ${each('-band-hint')} { grid-area: hint; font-size: max(0.66em, 0.7rem); font-weight: 400; opacity: 0.75; min-height: 1.35em; }
-${each('-options')} { grid-area: track; display: flex; gap: 0.4em; justify-content: center; min-width: 0; }
+${each('-options')} { grid-area: track; display: flex; gap: 0.4em; justify-content: center; min-width: 0; touch-action: pan-y; }
 ${each('-band-step')} {
   font: inherit;
   color: inherit;
@@ -1593,6 +1593,16 @@ ${each('-band-step')} {
 ${each('-band-less')} { grid-area: less; }
 ${each('-band-more')} { grid-area: more; }
 ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
+/*
+  0566: on a touch screen the hangar's tabs and its arrows are pressed by a thumb, and they were 31 px and
+  less at 844x390 against a floor of 44. Their hit is grown past what is drawn, by a box laid round each
+  that takes the press and no room, so nothing on the plate moves for it.
+*/
+@media (pointer: coarse) {
+  .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab, .itc-hangar-band-step, .itc-parts-band-step, .itc-shop-band-step { position: relative; }
+  .itc-hangar-tab::after, .itc-parts-tab::after, .itc-shop-tab::after { content: ''; position: absolute; inset: -0.5rem 0 -0.4rem; }
+  .itc-hangar-band-step::after, .itc-parts-band-step::after, .itc-shop-band-step::after { content: ''; position: absolute; inset: -0.7rem -0.6rem; }
+}
 /*
   A shut option — 0521, a dash not yet won: drawn, so the player knows it is there, and told by its
   outline as well as its fade, so it is not a matter of contrast alone.
@@ -1894,7 +1904,8 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   align-self: center;
   margin-top: auto;
   padding-bottom: 3.6em;
-  font: 600 calc(0.8 * clamp(${STRIP.fontFloorRem}rem, ${STRIP.fontCqh}cqh, ${STRIP.fontCapRem}rem))/1 system-ui, sans-serif;
+  /* 0566: with a floor of its own, so the counts are not nine pixels on a phone — they were, measured. */
+  font: 600 max(0.9rem, calc(0.8 * clamp(${STRIP.fontFloorRem}rem, ${STRIP.fontCqh}cqh, ${STRIP.fontCapRem}rem)))/1 system-ui, sans-serif;
   pointer-events: none;
   max-width: 100%;
 }
@@ -2454,7 +2465,8 @@ ${each('-band[hidden]')} { display: none; }
   column-gap: min(1rem, 2cqw);
   width: min(100%, 64em);
 }
-@container (max-height: 460px) {
+/* 0566: and a phone held upright, which only the hangar's tabs are drawn on (the gate has the rest). */
+@container (max-height: 460px) or ((orientation: portrait) and (max-width: 700px)) {
   /*
     ── THE TITLE ON A PHONE — 0370, and rows since 0458 ──────────────────────────────────────────
 
@@ -2538,6 +2550,8 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-shop-keeper-name, .itc-hangar-keeper-name, .itc-parts-keeper-name { display: none; }
   .itc-shop-keeper-line, .itc-hangar-keeper-line, .itc-parts-keeper-line { font-size: 0.78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 0566: Cosmo's line may take two on a phone — the shelf left the height (0564), and the line was cut mid-word. */
+  .itc-shop-keeper-line { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.2; }
   /*
     0550: and a keeper who only greets is not on a phone's plate at all. Paint's three bands are the plate's
     whole height there, and the card put Back sixteen pixels under the fold at 480x320. Their bust and their
@@ -2545,7 +2559,9 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-shop-keeper-greets, .itc-hangar-keeper-greets, .itc-parts-keeper-greets { display: none; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; padding: 0 0.1em; row-gap: 0.05em; }
+  .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'label label label' 'less track more'; padding: 0 0.1em; row-gap: 0; }
+  /* 0566: one chip a band, as wide as the band, its name cut rather than run past its edge. */
+  .itc-hangar-group .itc-hangar-band .itc-hangar-option, .itc-parts-group .itc-parts-band .itc-parts-option { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   /* Paint has three bands to Parts' two, and its column is the plate's height: the headings' own spacing gives. */
   .itc-hangar-group-heading, .itc-parts-group-heading { padding-bottom: 0.15em; }
   .itc-hangar-plate .itc-hangar-group, .itc-parts-plate .itc-parts-group { gap: 0.15rem; }
@@ -2589,8 +2605,20 @@ ${each('-band[hidden]')} { display: none; }
     .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { opacity: 0.35; }
     .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { z-index: 1; }
   }
-  .itc-hangar-band, .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
+  /*
+    0566: the band's name back over it, small — *Catherine wheel* and *Candle* stood side by side with
+    nothing to say which was the gun. The lines under the bands went in 0562, which is the height it costs.
+  */
+  .itc-hangar-band, .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'label label label' 'less track more'; row-gap: 0.05em; }
   .itc-hangar-band-label, .itc-parts-band-label { display: none; }
+  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label { display: block; grid-area: label; font-size: 0.56em; text-align: center; letter-spacing: 0.14em; opacity: 0.75; line-height: 1.1; }
+  /* The pilot's line is their name alone on a phone: the ship and the gun ran it into an ellipsis. */
+  .itc-parts-pilot-line > .itc-parts-pilot-craft, .itc-parts-pilot-line > .itc-parts-pilot-gun, .itc-shop-pilot-line > .itc-shop-pilot-craft, .itc-shop-pilot-line > .itc-shop-pilot-gun { display: none; }
+  /* And clear of a notch, on a phone that has one. */
+  .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel {
+    padding-left: max(min(1rem, 2cqw), env(safe-area-inset-left, 0px));
+    padding-right: max(min(1rem, 2cqw), env(safe-area-inset-right, 0px));
+  }
   .itc-hangar-option, .itc-parts-option { font-size: 0.8em; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { padding: 0.25em 0.3em; }
   /*
@@ -2889,6 +2917,30 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-music-now-legend { display: none; }
   .itc-music-now { width: 100%; }
+}
+/*
+  ── THE HANGAR HELD UPRIGHT — 0566 ────────────────────────────────────────────────────────────────
+
+  The room across the top, the ship on its pad in it, and the plate under it the screen's width — the
+  stand a row of its own rather than a column, so neither is laid over the other. The type is the
+  width's, since the width is the short side here.
+*/
+@container (orientation: portrait) {
+  .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 36cqh minmax(0, 1fr);
+    font-size: clamp(0.8rem, 3.9cqw, 1.3rem);
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+  .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand, .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { grid-area: auto; opacity: 1; }
+  .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { min-height: 0; overflow-y: auto; }
+  /* The balance and the dash stand at the stand's foot, the dash small: the ship is the picture up here. */
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { padding-bottom: 2.2em; }
+  .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr); }
+  .itc-hangar-keeper, .itc-parts-keeper { display: none; }
+  /* The readout typeset by the width up here — by the height it was the stand's full width over the ship. */
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.7rem, 3cqw, 1rem); }
 }
 /*
   ── ONE VOICE — 0440 ─────────────────────────────────────────────────────────────────────────────
@@ -4194,6 +4246,12 @@ export function spatially(
 /** The three things a player can be holding — 0458, How to play's columns. */
 export type GuideDevice = 'keyboard' | 'pad' | 'touch';
 const GUIDE_DEVICES: readonly GuideDevice[] = ['keyboard', 'pad', 'touch'];
+/**
+ * How far a thumb must travel across a band for it to be a swipe and not a tap — 0566 — and how long a
+ * tap is ignored after one, since the finger lifting is also a click on whatever option it ended over.
+ */
+const SWIPE_PIXELS = 36;
+const SWIPE_SETTLE_MS = 350;
 /** How many pixels across a rim's picture is baked for its tile — 0564; the card shows the same bitmap larger. */
 const WARE_ART_PIXELS = 160;
 /** How an option tried on is fitted, in the words of the hand holding the game — 0561. */
@@ -5223,6 +5281,30 @@ export function makeChrome(
       */
       box.setAttribute(SETTING_ATTR, choice.name);
       const buttons: HTMLButtonElement[] = [];
+      /*
+        0566: a thumb drawn across a band on a touch screen steps it, as its arrows do — and the tap that
+        ends a swipe is not also a press on the option it ended over.
+      */
+      let swipeFrom: number | null = null;
+      let swipedAt = -Infinity;
+      if (choice.faces !== 'chip') {
+        const down = (event: PointerEvent): void => {
+          swipeFrom = event.pointerType === 'touch' ? event.clientX : null;
+        };
+        const up = (event: PointerEvent): void => {
+          if (swipeFrom === null) return;
+          const across = event.clientX - swipeFrom;
+          swipeFrom = null;
+          const band = choiceBands.find((b) => b.root === line);
+          if (band === undefined || Math.abs(across) < SWIPE_PIXELS) return;
+          swipedAt = performance.now();
+          stepBand(band, across < 0 ? 1 : -1, false);
+        };
+        box.addEventListener('pointerdown', down);
+        box.addEventListener('pointerup', up);
+        listeners.push(() => box.removeEventListener('pointerdown', down));
+        listeners.push(() => box.removeEventListener('pointerup', up));
+      }
       choice.options.forEach((option, index) => {
         const button = document.createElement('button');
         button.type = 'button';
@@ -5274,6 +5356,8 @@ export function makeChrome(
         const target = chip ? (index + 1) % choice.options.length : index;
         // A pointer's press, which a band of pilots reads differently from the cursor's — 0513.
         const press = (): void => {
+          // 0566: the end of a swipe is not a tap.
+          if (performance.now() - swipedAt < SWIPE_SETTLE_MS) return;
           /*
             ⚠️ **ON A BAND THAT TRIES, A POINTER'S PRESS IS THE DECISION — 0561.** A click or a tap fits the
             option at once, because a pointer chose it; a shut one is tried on and refused, so the player

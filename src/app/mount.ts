@@ -1975,7 +1975,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (moved && state.screen.current === 'title' && runOnField) leaveRun();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
-    if (moved) applyScreen();
+    /*
+      0566: off a stand in portrait, the gate comes back — Back from the hangar to the title, which is not
+      drawn on its side. Through the gate's own door, which applies the screen as it shuts.
+    */
+    if (moved && playable && measure().alongAxis !== 'x' && !standsTall()) setPlayable(false);
+    else if (moved) applyScreen();
     // 0523: into or out of Cosmo's, the readout swaps the ware in the window for what the ship has hung.
     // 0561: and any screen change lets go of an option tried on, so the stand and the atlas wear the fit again.
     const tried = look !== null;
@@ -4367,14 +4372,30 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let fittedHeight = 0;
   let fittedDpr = 0;
 
+  /*
+    ── PORTRAIT IN THE HANGAR — 0566 ─────────────────────────────────────────────────────────────────
+
+    Asked: is portrait allowed in the hangar family? *"yes"*. 0031's gate is about the FLIGHT — side-on art
+    moving the wrong way across a portrait screen — and nothing in the hangar moves anywhere: the room is a
+    still picture with a ship idling in it. So the gate stands down while a screen that stands (`stand`)
+    is up, and comes back the moment the screen is any other, the title included; nothing flies in
+    portrait, and the room is drawn side-on as ever, across the top of the screen, the plate under it.
+    The view the world is given is the landscape view of the screen turned on its side — its scale is
+    what the room is drawn at — so everything that reads the view still reads a side view.
+  */
+  const standsTall = (): boolean => SCREENS[state.screen.current].stand !== null;
+  const tallStand = (): View => viewOf(viewportHeight(host), viewportWidth(host), 0);
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */
   const onResize = (): void => {
-    const next = measure();
+    let next = measure();
     // Gate FIRST and return: a view that is not drawn needs no fit and no atlas, and baking the
     // top-down sprites for a rotation nobody will see is the one expensive thing a resize can do.
     if (next.alongAxis !== 'x') {
-      setPlayable(false);
-      return;
+      if (!standsTall()) {
+        setPlayable(false);
+        return;
+      }
+      next = tallStand();
     }
     const width = viewportWidth(host);
     const height = viewportHeight(host);

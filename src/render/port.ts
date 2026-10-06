@@ -191,7 +191,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
  * resize or a change of tab costs no allocation; and in a portrait view, which is never played, the
  * base itself.
  */
-export function standViewInto(base: View, camera: StandCamera, width: number, height: number, out: View): void {
+export function standViewInto(base: View, camera: StandCamera, width: number, height: number, out: View, below = 0): void {
   out.alongSpan = base.alongSpan;
   out.acrossSpan = base.acrossSpan;
   out.alongAxis = base.alongAxis;
@@ -211,7 +211,8 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
   const along = camera.x * width - camera.along * scale;
   out.gutterAlong = Math.min(0, Math.max(width - base.alongSpan * scale, along));
   const across = camera.y * height - camera.across * scale;
-  out.gutterAcross = Math.min(0, Math.max(height - ACROSS_SPAN * scale, across));
+  // 0566: `below` is how much of the screen's foot is under the plate, where the deck may end short of the edge.
+  out.gutterAcross = Math.min(0, Math.max(height - below - ACROSS_SPAN * scale, across));
 }
 
 /**
