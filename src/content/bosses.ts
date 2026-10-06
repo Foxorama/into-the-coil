@@ -4143,8 +4143,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0551: 1.05, thrown 60% of the screen — at 1.8 it took the bird in 23.6 s on its lane. At 1.15 the
       Firebird met the floor (41.9 s on its lane) and the fighter borrowing the wheel did not, at 38.9 s.
+
+      0553: 0.98 — thrown every two seconds, 1.05 took it in 40.1 s on its lane. At 0.98, 41.4 s there.
     */
-    gunWeights: { arc: 1.1, ray: 0.82, catherine: 1.05 },
+    gunWeights: { arc: 1.1, ray: 0.82, catherine: 0.98 },
     damage: 3,
     station: 154,
     drift: 6,
@@ -4295,8 +4297,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0551: 0.42, thrown 60% of the screen — from the ship at rest it hangs in the gyre's face again, and at
       1.42 took it in 12.5 s. At 0.42, 41.4 s.
+
+      0553: 0.4 — thrown every two seconds, 0.42 took it in 41.2 s. At 0.4, 43.2 s.
     */
-    gunWeights: { arc: 1.2, ray: 0.82, catherine: 0.42 },
+    gunWeights: { arc: 1.2, ray: 0.82, catherine: 0.4 },
     damage: 3,
     station: 156,
     // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place
@@ -4444,7 +4448,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     health: 1800,
     // 0549: the wheel thrown to the no-fly wall hangs past the frost ship — 198 s at its 0.6; 72 s at 1.6, 0545's.
     // 0551: thrown 60% of the screen it is on the ship again — 22.9 s at 1.6; at 0.9, 41.6 s held and 46 s on its lane.
-    gunWeights: { catherine: 0.9 },
+    // 0553: thrown every two seconds, 0.9 took it in 40.4 s; at 0.85, 44.2 s, but its third phase got 7.9
+    // volleys away against the estate and the Thunderbolt borrowing the wheel. At 0.82, 45.9 s, every ship over.
+    gunWeights: { catherine: 0.82 },
     damage: 3,
     station: 157,
     drift: 5,

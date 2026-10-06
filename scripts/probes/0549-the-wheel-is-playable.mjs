@@ -8,14 +8,14 @@ export const PROBES = [
     decision: '0549',
     suite: 'tests/wheel.test.ts',
     broke: 'the wheel thrown every four seconds, as 0545 had it',
-    guard: 'THE ASK, IN SECONDS: 0549’s clock',
-    edit: { path: 'src/content/weapons.ts', find: '    fireEvery: 144,', replace: '    fireEvery: 240,' },
+    guard: 'THE ASK, IN SECONDS: 0551’s clock',
+    edit: { path: 'src/content/weapons.ts', find: '    fireEvery: 120,', replace: '    fireEvery: 240,' },
   },
   {
     decision: '0549',
     suite: 'tests/wheel.test.ts',
     broke: 'the last wheel put out when the next is thrown',
-    guard: 'throws one wheel on the first beat of a life, and then one every six beats',
+    guard: 'throws one wheel on the first beat of a life, and then one every five beats',
     edit: {
       path: 'src/app/frame.ts',
       find: '  if (wheel === null) return;\n  const disc = w.playerShots.spawn();',
@@ -40,7 +40,7 @@ export const PROBES = [
     decision: '0549',
     suite: 'tests/wheel.test.ts',
     broke: 'a tether that goes out without fading',
-    guard: 'lets its tether go at 2.27 s',
+    guard: 'lets its tether go at 1.87 s',
     edit: { path: 'src/app/frame.ts', find: '    link.holdFor = disc.lifeFor - wheel.fade;', replace: '    link.holdFor = 99;' },
   },
   {

@@ -3,6 +3,9 @@
 **Accepted 2026-10-06.** The Firebird's Catherine wheel, [0549](0549-the-wheel-is-playable.md), played and
 changed again. Supersedes 0549's reach, leash, clock, ember life and tether width; the rest of 0549 stands.
 
+⚠️ **Its throw, its life and three of its boss weights are [0553](0553-the-wheel-comes-round-sooner.md)'s since
+2026-10-06**: each 0.4 s sooner. The numbers below are this decision's, kept as the record.
+
 ## The ask
 
 > *"need to change the catherine wheel*

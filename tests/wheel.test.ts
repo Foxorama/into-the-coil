@@ -95,24 +95,24 @@ describe('0545 — the guns move', () => {
 });
 
 describe('0545 — the Catherine wheel', () => {
-  it('THE ASK, IN SECONDS: 0549’s clock — let go at 3.4 s, thrown at 3.6 s, gone at 4 s — a third shorter, the same shape — 0551', () => {
+  it('THE ASK, IN SECONDS: 0551’s clock — let go at 2.27 s, thrown at 2.4 s, gone at 2.67 s — 0.4 s sooner, the same gaps — 0553', () => {
     /*
       0549: *"the tether should fade out at 3.4sec and then the new wheel should fire at 3.6 sec."* 0551:
-      *"reduce both by 30%... keeping the same cadence for wheel decay and refire gap."* 30% is off the beat
-      grid, so it is a third — every one of 0549's times by two thirds. At 60 steps a second.
+      a third off every one of those, *"keeping the same cadence for wheel decay and refire gap."* 0553:
+      *"let's take another .4sec off the catherine wheel fire rate and decay."* So 0549's times by two
+      thirds, less 0.4 s each — and the two gaps between them, let-go to throw and the overlap, as 0551 had
+      them. At 60 steps a second.
     */
-    const SHORTER = 2 / 3;
-    expect((WHEEL.life - WHEEL.fade) / 60, 'the tether lets go').toBeCloseTo(3.4 * SHORTER, 6);
-    expect(GUN.fireEvery / 60, 'the next wheel is thrown').toBeCloseTo(3.6 * SHORTER, 6);
-    expect(WHEEL.life / 60, 'the last wheel is gone').toBeCloseTo(4 * SHORTER, 6);
-    // And within a beat of the 30% asked, which is as near as the grid comes.
-    expect(Math.abs(GUN.fireEvery - 216 * 0.7), 'the refire is further from 30% faster than the grid makes it').toBeLessThanOrEqual(VOLLEY_CYCLE / 2);
+    const SOONER = 0.4;
+    expect((WHEEL.life - WHEEL.fade) / 60, 'the tether lets go').toBeCloseTo((3.4 * 2) / 3 - SOONER, 6);
+    expect(GUN.fireEvery / 60, 'the next wheel is thrown').toBeCloseTo((3.6 * 2) / 3 - SOONER, 6);
+    expect(WHEEL.life / 60, 'the last wheel is gone').toBeCloseTo((4 * 2) / 3 - SOONER, 6);
     // *"So it's firing while the old wheel is visible and ending"*: the last is still burning when the next goes.
     expect(WHEEL.life, 'the last wheel is gone before the next is thrown').toBeGreaterThan(GUN.fireEvery);
     expect(GUN.fireEvery % VOLLEY_CYCLE, 'the cadence is off the beat grid').toBe(0);
   });
 
-  it('throws one wheel on the first beat of a life, and then one every six beats on the run’s grid, the last still burning down', () => {
+  it('throws one wheel on the first beat of a life, and then one every five beats on the run’s grid, the last still burning down', () => {
     expect(firstVolleyIn(0, GUN.fireEvery), 'a new life waits longer than a beat for its gun').toBeLessThanOrEqual(VOLLEY_CYCLE);
     const { world, frame } = armed();
     const thrownAt: number[] = [];
@@ -348,7 +348,7 @@ describe('0545 — the Catherine wheel', () => {
     expect(Math.hypot(first![0] - x, first![1] - y), 'the tether starts off the muzzle the player sees').toBeLessThan(1);
   });
 
-  it('lets its tether go at 2.27 s, fading it over the steps before — 0549, 0551', () => {
+  it('lets its tether go at 1.87 s, fading it over the steps before — 0549, 0551, 0553', () => {
     const { world, frame } = armed();
     step(world, frame);
     const first = wheels(world)[0]!;
@@ -370,9 +370,9 @@ describe('0545 — the Catherine wheel', () => {
         lifeThen = first.lifeFor;
       }
     }
-    // It lets go the step its wheel starts to burn down, two thirds of 0549's 3.4 s after the throw, to the step.
+    // It lets go the step its wheel starts to burn down — 0551's 2.27 s less 0553's 0.4 — after the throw, to the step.
     expect(lifeThen, 'the tether let go other than as its wheel began to burn down').toBe(WHEEL.fade);
-    expect(Math.abs(letGoAt / 60 - (3.4 * 2) / 3), 'the tether did not let go at 2.27 s').toBeLessThanOrEqual(1 / 60);
+    expect(Math.abs(letGoAt / 60 - ((3.4 * 2) / 3 - 0.4)), 'the tether did not let go at 1.87 s').toBeLessThanOrEqual(1 / 60);
     expect(faded, 'the tether went out without fading').toBe(true);
   });
 

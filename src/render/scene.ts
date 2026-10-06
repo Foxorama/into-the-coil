@@ -449,7 +449,7 @@ const TETHER_RUN = 0.35;
   `BOLT_PAGE_STEPS` as lightning is — the crackle — pinned at both ends and widest at its middle. And
   two sparks jump along the first filament from page to page. Five strokes a tether, all counted.
 
-  The tether lets go when its wheel starts to burn down (0549: at 3.4 s; 0551: at 2.27 s); it fades over its last
+  The tether lets go when its wheel starts to burn down (0549: at 3.4 s; 0551: at 2.27 s; 0553: at 1.87 s); it fades over its last
   `TETHER_FADE_STEPS`, read off the steps it has left (`holdFor`).
 */
 /** The second wave on the cord, running the other way: amplitude, waves along it, and speed. */

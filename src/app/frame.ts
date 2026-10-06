@@ -3646,7 +3646,7 @@ const WHEEL_EDGE_MARGIN = 4;
  */
 function throwWheel(w: World): void {
   const gun = WEAPONS[w.weapon.kind];
-  // On the grid, like every gun — 0094. Six beats since 0551.
+  // On the grid, like every gun — 0094. Five beats since 0553.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   const wheel = gun.wheel;
   if (wheel === null) return;
