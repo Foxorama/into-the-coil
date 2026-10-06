@@ -2978,6 +2978,13 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-groups, .itc-parts-groups { row-gap: 0.25em; }
   /* The panel's height on every tab, and never its content's — a tab's plate taller by a pixel jumped the strip (0548). */
   .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { grid-area: plate; height: 100%; min-height: 0; overflow: hidden; }
+  /*
+    The bands take what height is left and scroll in it if a font runs taller than this one, and the foot —
+    the card, the balance, Buy and Back — never leaves the plate's bottom: on CI's wider letters a plate one
+    line too tall put Buy under the clip, where a click could not settle on it.
+  */
+  .itc-hangar-settings-box, .itc-parts-settings-box, .itc-shop-settings-box { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; align-content: start; }
+  .itc-hangar-plate > .itc-hangar-foot, .itc-parts-plate > .itc-parts-foot, .itc-shop-plate > .itc-shop-foot { flex: none; }
   .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { grid-area: stand; position: relative; }
   /* The balance is in the plate's foot; the dash on the deck under the ship, which stands in the stand's middle. */
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { position: absolute; left: ${STAND_PAD_AT * 100}%; bottom: 0.6rem; translate: -50% 0; margin: 0; padding-bottom: 2.2em; font-size: 0.85rem; }
