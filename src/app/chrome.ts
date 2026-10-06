@@ -2523,6 +2523,12 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-focus-eyebrow, .itc-parts-focus-eyebrow, .itc-shop-focus-eyebrow, .itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { display: none; }
   .itc-hangar-focus-name, .itc-parts-focus-name, .itc-shop-focus-name { font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { gap: 0.3em 0.5em; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'focus focus' 'sheet choices'; }
+  /*
+    On Cosmo's the card would say only the name the lit ware already says, and its line is the height the
+    shelf needs: CI's wider letters put the shop's plate twelve pixels past the others at 667x375 with it.
+  */
+  .itc-shop-focus { display: none; }
+  .itc-shop-foot { grid-template-areas: 'sheet choices'; }
   .itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { display: none; }
   /* 0561's tick stands down on a phone, where a band shows one option and its fill already says it is fitted. */
   .itc-hangar-option-on:not(.itc-hangar-option-face)::before, .itc-parts-option-on:not(.itc-parts-option-face)::before { display: none; }
