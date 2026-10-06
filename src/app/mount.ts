@@ -1767,6 +1767,29 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
   };
 
+  /** Whether a run has begun since the shell last left one — 0558. Set when a run begins, spent by `leaveRun`. */
+  let runOnField = false;
+  /*
+    ── A RUN THAT ENDS — `docs/decisions/0558-a-run-ends-at-the-title.md` ────────────────────────────
+
+    The lifecycle's four verbs begin, go on, arrive and resume a run, and nothing ended one: a quit and a
+    win went to the title with the run's lives still up, so the shell went on reading *a run is flying*
+    for the rest of the tab — `fitPilot` refused, `fitAtlasGun` baked the run's ship as the one flying, and a pilot chosen after
+    a quit stood on the pad under the last run's wheels. The run's half is the reducer's
+    (`src/state/root.ts`: a run that arrives at the title has no lives); this is the shell's, on the
+    title's arrival whichever screen it came from: the world flies the pilot's ship, fitted from the
+    hangar, as it did before the run began.
+
+    ⚠️ **NOT THE FIELD.** The title is drawn on the void (`placeOnScreen`), so the run's remains are never
+    seen there, and the next thing that shows the field sweeps it itself — a run (`begin`) and the music
+    room (`enterRoom`). A sweep here was written and taken out again: it changed nothing on the screen.
+  */
+  function leaveRun(): void {
+    runOnField = false;
+    fitPilot();
+    syncHud();
+  }
+
   const dispatch = (action: Action): void => {
     const next = reduce(state, action);
     if (next === state) return;
@@ -1774,6 +1797,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const was = state.screen.current;
     // A new run: nothing on the table is its yet, and last run's row stops being lit on the title.
     if (action.slice === 'run' && action.type === 'begin') {
+      runOnField = true;
       runRecorded = false;
       ledger.best = 0;
       ledger.paid = false;
@@ -1893,6 +1917,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     // The account goes on before the screen is shown, so its lines animate in as it appears — 0428.
     if (moved) enterScreen(was, state.screen.current);
+    // 0558: and a run that has come back to the title leaves the field as the title found it.
+    if (moved && state.screen.current === 'title' && runOnField) leaveRun();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
