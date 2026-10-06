@@ -7,7 +7,7 @@
  *
  * ⚠️ **`tests/state-shape.test.ts` counts `case ` in this file and requires zero.** That is a
  * mechanical check over a structural rule, and the structural rule is the one below: a decision that
- * belongs to one slice's state goes in that slice. What is left here is routing, and two agreements.
+ * belongs to one slice's state goes in that slice. What is left here is routing, and three agreements.
  */
 
 import { type ScreenAction, type ScreenState, initialScreen, reduceScreen } from './slices/screen.ts';
@@ -65,7 +65,20 @@ export const initialState: State = {
 export function reduce(state: State, action: Action): State {
   if (action.slice === 'screen') {
     const screen = reduceScreen(state.screen, action);
-    return agree(screen === state.screen ? state : { ...state, screen });
+    if (screen === state.screen) return agree(state);
+    /*
+      THE THIRD AGREEMENT: a run that arrives at the title is over — `docs/decisions/0555-a-run-at-the-title-is-over.md`.
+
+      ⚠️ **ON THE TITLE, NOT ON THE BUTTONS THAT GO THERE.** A quit and a victory both left for the title
+      with the run's lives still up, and lives above nought is what the shell reads as *a run is flying*:
+      the hangar's pad kept the last run's ship for the rest of the tab, and spinners fitted after it never
+      turned. Every way off a run arrives here, including the ones not written yet.
+
+      ⚠️ **ON ARRIVING, NOT ON BEING THERE**, so it lives on this route and not in `agree`: *Fly* begins
+      the run with the title still up, and a rule about standing on the title ended every run it began.
+    */
+    const run = screen.current === 'title' && state.screen.current !== 'title' ? reduceRun(state.run, END_RUN) : state.run;
+    return agree({ ...state, screen, run });
   }
   /*
     ⚠️ **The settings slice takes part in NO agreement, and that is the point of it.** What a run is
@@ -93,6 +106,8 @@ const SHOW_GAME_OVER: ScreenAction = { slice: 'screen', type: 'show', screen: 'g
 const SHOW_ENDED: ScreenAction = { slice: 'screen', type: 'show', screen: 'ended' };
 // The run finished goes to the finale, which expires into the victory screen — 0418.
 const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outro' };
+// A run that reaches the title is over — 0555.
+const END_RUN: RunAction = { slice: 'run', type: 'ended' };
 
 /**
  * THE AGREEMENTS BETWEEN TWO SLICES, deliberately here rather than in either of them.
