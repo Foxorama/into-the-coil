@@ -65,6 +65,14 @@ longer decides the camera.
   and its probe stayed green, so it went (0019). The probe that moves the camera back to the inner pad,
   and the one that lets it close in, both go red.
 - Three probes of 0540 whose anchors were renamed, `bluePad` to the stand's own `pad`, were moved.
+- **The pixel guards read round the ship** (`tests/stand.ts`). They read the whole stand, which is now
+  mostly wall and an open bay with stars drifting past. On CI every look's change came out about twice
+  the noise and under the bar of three. They read a band of the ship's width about the pad, from above
+  it to the deck, where the stars are not.
+- **The plate's foot is pinned to its bottom**, and the bands above it scroll if a font runs taller. On
+  CI's letters a fixed-height plate one line too tall put Buy under the clip, where a click could not
+  settle. Checked here under `* { letter-spacing: 0.1em }`, twice the width that reproduced CI's
+  overflow before.
 
 ## What is owed
 
