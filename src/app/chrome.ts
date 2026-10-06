@@ -4073,7 +4073,7 @@ export interface Chrome {
    * Where the stand's column is on the screen, in CSS pixels — 0563, for the camera to be fitted to it.
    * `null` off a stand or before it is laid out. A read of layout, made on a screen change or a resize.
    */
-  standBox(screen: Screen): { left: number; width: number } | null;
+  standBox(screen: Screen): { left: number; width: number; top: number; height: number } | null;
   /**
    * What each ware's tile says under its name — 0564: its price, *Yours*, or its price short of the balance,
    * which is drawn in a warning ink as well as said. Position for position, as the shelf lists them.
@@ -6884,11 +6884,11 @@ export function makeChrome(
       if (spoken !== null && SHELF_KINDS.some((kind) => kind === spoken.name)) panel.spoken = panel.bands.find((b) => b.name === shelf) ?? spoken;
       paintCard(panel);
     },
-    standBox(screen: Screen): { left: number; width: number } | null {
+    standBox(screen: Screen): { left: number; width: number; top: number; height: number } | null {
       const stand = panels[screen]?.dash?.parentElement;
       if (stand === null || stand === undefined) return null;
       const box = stand.getBoundingClientRect();
-      return box.width > 0 ? { left: box.left, width: box.width } : null;
+      return box.width > 0 ? { left: box.left, width: box.width, top: box.top, height: box.height } : null;
     },
     setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void {
       for (const screen of Object.keys(panels) as Screen[]) {

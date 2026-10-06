@@ -1639,8 +1639,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const width = viewportWidth(host);
     const box = chrome.standBox(state.screen.current);
     if (box === null) return;
-    fitStand(stand.camera, view, width, box, stand.keeper, framed);
-    standViewInto(view, framed, width, viewportHeight(host), world.standView);
+    const height = viewportHeight(host);
+    fitStand(stand.camera, view, width, box, stand.keeper, framed, height);
+    // 0566: in portrait the plate is under the stand, and the deck may stop above the screen's foot.
+    standViewInto(view, framed, width, height, world.standView, Math.max(0, height - (box.top + box.height)));
   }
 
   /**

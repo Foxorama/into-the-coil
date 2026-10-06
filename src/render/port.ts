@@ -224,10 +224,19 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
  * back wall more than a quarter of their width off the screen's left — the keeper and the stars are each
  * the player's own ask (0550), and a camera close enough to lose them is too close.
  */
-export function fitStand(camera: StandCamera, base: View, width: number, box: { left: number; width: number }, keeper: KeeperKind | null, out: StandCamera): void {
+export function fitStand(
+  camera: StandCamera,
+  base: View,
+  width: number,
+  box: { left: number; width: number; top?: number; height?: number },
+  keeper: KeeperKind | null,
+  out: StandCamera,
+  screenHeight = 0,
+): void {
   out.along = camera.along;
   out.across = camera.across;
-  out.y = camera.y;
+  // 0566: the camera's share down the column, where the column is not the whole height — portrait's.
+  out.y = box.top !== undefined && box.height !== undefined && screenHeight > 0 ? (box.top + box.height * camera.y) / screenHeight : camera.y;
   out.x = (box.left + box.width * STAND_PAD_AT) / width;
   out.zoom = camera.zoom;
   if (base.scale <= 0 || box.width <= 0) return;
