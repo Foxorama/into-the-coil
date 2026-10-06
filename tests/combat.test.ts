@@ -506,6 +506,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     intro: null,
     stand: null,
     standView: viewOf(VIEWPORT.width, VIEWPORT.height),
+    standKeeper: null,
     outro: null,
     finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.
@@ -663,6 +664,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     intro: null,
     stand: null,
     standView: viewOf(VIEWPORT.width, VIEWPORT.height),
+    standKeeper: null,
     outro: null,
     finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.

@@ -163,6 +163,7 @@ function stationKeepingWorld(surface: Surface): World {
     intro: null,
     stand: null,
     standView: viewOf(1280, 720),
+    standKeeper: null,
     outro: null,
     finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.

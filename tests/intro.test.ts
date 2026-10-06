@@ -33,6 +33,7 @@ import {
 import { SPRITE } from '../src/content/sprites.ts';
 import { CADDIE_DISC, SHIPS, SHIP_KINDS, fitted, type ShipKind } from '../src/content/ships.ts';
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
+import { KEEPER_KINDS } from '../src/content/keepers.ts';
 import { SKY } from '../src/app/mount.ts';
 import { paintPort, paintStand } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
@@ -152,11 +153,13 @@ describe('the picture', () => {
     /*
       ⚠️ **OR ON THE STAND, SINCE 0540**, which is baked from the same pieces: the hangar's tabs stand in the
       room, and a car on a rim that turns has its spinners drawn there and in no frame of the intro.
-      0542: and Cosmo's stall, on every tab since 0548.
+      0542: and Cosmo's stall — and since 0550 every keeper's counter, each on the tab it keeps.
     */
     const stand = new RecordingSurface();
-    paintStand(stand, viewOf(NARROW.width, NARROW.height), 0, SKY, fitted(SHIPS.firebird, SHIPS.firebird.weapon, 'spinner'));
-    for (const b of stand.blits) seen.add(b.sprite);
+    for (const keeper of KEEPER_KINDS) {
+      paintStand(stand, viewOf(NARROW.width, NARROW.height), 0, SKY, fitted(SHIPS.firebird, SHIPS.firebird.weapon, 'spinner'), keeper);
+      for (const b of stand.blits) seen.add(b.sprite);
+    }
     const unseen = PORT_KINDS.filter((kind) => !seen.has(PORT_SPRITE[kind]));
     expect(unseen, 'baked for the intro and the stand and never drawn in either').toEqual([]);
   });

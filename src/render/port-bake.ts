@@ -42,6 +42,8 @@ function hangarJetsOf(ship: ShipKind): readonly Pt[] {
 }
 import { paintRunner } from './golfer-art.ts';
 import { paintCosmo } from './cosmo-art.ts';
+import { KEEPER_FACES } from './keeper-art.ts';
+import { KEEPERS } from '../content/keepers.ts';
 
 /**
  * Bake every piece of the port for one palette, at the resolution it will be blitted at, with the
@@ -184,6 +186,11 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'cosmo':
       paintCosmo(ctx, palette, size);
       return canvas;
+    // 0550: Unity's and MMXXVI's, on the same terms — the portrait's own drawing behind their counters.
+    case 'unity':
+    case 'mmxxvi':
+      KEEPER_FACES[kind](ctx, palette, size);
+      return canvas;
     case 'viper':
       paintViper(ctx, f, palette, size);
       return canvas;
@@ -202,6 +209,9 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'deck':
     case 'lamp':
     case 'stall':
+    case 'bench':
+    case 'booth':
+    case 'viewport':
     case 'bar':
     case 'door':
     case 'spill':
@@ -332,6 +342,15 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       return;
     case 'stall':
       paintStall(ctx, palette);
+      return;
+    case 'bench':
+      paintBench(ctx, palette);
+      return;
+    case 'booth':
+      paintBooth(ctx, palette);
+      return;
+    case 'viewport':
+      paintViewport(ctx, palette);
       return;
     case 'door': {
       // A sliding hatch with a lit porthole: it slides behind the facade, so it is drawn whole.
@@ -516,6 +535,8 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'viperSurge':
     case 'blueWheel':
     case 'cosmo':
+    case 'unity':
+    case 'mmxxvi':
       throw new Error(`bakePort: ${kind} is drawn in the ship's own frame`);
     default: {
       const never: never = kind;
@@ -708,14 +729,7 @@ function paintStall(ctx: CanvasRenderingContext2D, palette: Palette): void {
   ctx.fillRect(-13.5, 2.3, 27, 0.35);
   ctx.fillRect(-13.5, 13.4, 27, 0.35);
   // The name on the front, in the gold.
-  ctx.fillStyle = palette.hazard;
-  ctx.font = 'bold 3.2px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('COSMO’S', 0, 6.4);
-  ctx.font = '1.9px system-ui, sans-serif';
-  ctx.fillStyle = shade(palette.hazard, -0.15);
-  ctx.fillText('COSMETICS', 0, 9.8);
+  paintSign(ctx, KEEPERS.cosmo.sign, palette.hazard, shade(palette.hazard, -0.15));
   // A few of the wares on the counter, at its two ends: a red die and a tree, a framed photo and a ball.
   ctx.fillStyle = mix(palette.enemy, palette.bullet, 0.3);
   ctx.fillRect(-12, -1.3, 1.7, 1.7);
@@ -737,6 +751,233 @@ function paintStall(ctx: CanvasRenderingContext2D, palette: Palette): void {
   ctx.beginPath();
   ctx.arc(11, -0.4, 0.85, 0, Math.PI * 2);
   ctx.fill();
+}
+
+/** A counter's sign on its front: the keeper's row's two lines, the name large and the trade under it. */
+function paintSign(ctx: CanvasRenderingContext2D, sign: readonly [string, string], name: string, trade: string): void {
+  ctx.fillStyle = name;
+  ctx.font = 'bold 3.2px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(sign[0], 0, 6.4);
+  ctx.font = '1.9px system-ui, sans-serif';
+  ctx.fillStyle = trade;
+  ctx.fillText(sign[1], 0, 9.8);
+}
+
+/**
+ * Unity's bench — 0550: a trade counter in the stall's box, under a corrugated-iron awning on two steel
+ * posts, with a spanner hung off one. A steel front with a hi-vis name and a hazard strip at its foot, a
+ * timber top, and on it a red toolbox, a spanner and an oil can. Unity stands behind it (`paintStand`).
+ */
+function paintBench(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const steel = shade(palette.blade, -0.55);
+  const iron = shade(palette.blade, -0.2);
+  // The posts.
+  ctx.fillStyle = shade(palette.blade, -0.45);
+  ctx.fillRect(-13.2, -12.5, 1.1, 13.5);
+  ctx.fillRect(12.1, -12.5, 1.1, 13.5);
+  // The awning: corrugated iron, a ridge and a hollow in turn, and its lower lip.
+  for (let i = 0; i < 15; i++) {
+    ctx.fillStyle = i % 2 === 0 ? iron : shade(iron, -0.3);
+    ctx.fillRect(-15 + i * 2, -15, 2.05, 3);
+  }
+  ctx.fillStyle = shade(iron, 0.25);
+  ctx.fillRect(-15, -15, 30, 0.4);
+  ctx.fillStyle = shade(iron, -0.45);
+  ctx.fillRect(-15, -12.2, 30, 0.6);
+  // A spanner hung off the right post on a hook.
+  ctx.strokeStyle = palette.blade;
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(14, -11.5);
+  ctx.lineTo(14, -6.5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(14, -12, 0.9, 0, Math.PI * 2);
+  ctx.arc(14, -6, 0.8, 0, Math.PI * 2);
+  ctx.stroke();
+  // The counter: steel, a timber top, and a hazard strip at the foot.
+  ctx.fillStyle = steel;
+  ctx.fillRect(-13.5, 1, 27, 14);
+  ctx.fillStyle = PORT_INK.woodLight;
+  ctx.fillRect(-14, 0.4, 28, 1.4);
+  ctx.fillStyle = shade(steel, 0.25);
+  ctx.fillRect(-13.5, 2.3, 27, 0.35);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-13.5, 12.4, 27, 1.6);
+  ctx.clip();
+  ctx.fillStyle = palette.space;
+  ctx.fillRect(-13.5, 12.4, 27, 1.6);
+  ctx.fillStyle = palette.hazard;
+  for (let x = -14; x < 14; x += 2.4) {
+    ctx.beginPath();
+    ctx.moveTo(x, 14);
+    ctx.lineTo(x + 1.2, 12.4);
+    ctx.lineTo(x + 2.4, 12.4);
+    ctx.lineTo(x + 1.2, 14);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  // Rivets down the two ends.
+  ctx.fillStyle = shade(steel, 0.4);
+  for (const x of [-12.6, 12.6]) {
+    for (const y of [3.4, 7, 10.6]) ctx.fillRect(x - 0.25, y - 0.25, 0.5, 0.5);
+  }
+  paintSign(ctx, KEEPERS.unity.sign, palette.bullet, palette.blade);
+  // On the top: a red toolbox at one end, a spanner lying, and an oil can at the other.
+  const box = shade(palette.enemy, -0.15);
+  ctx.fillStyle = box;
+  ctx.fillRect(-12.5, -2.4, 5.4, 2.8);
+  ctx.fillStyle = shade(box, -0.35);
+  ctx.fillRect(-12.5, -1.3, 5.4, 0.35);
+  ctx.strokeStyle = palette.blade;
+  ctx.lineWidth = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(-11.2, -2.4);
+  ctx.lineTo(-11.2, -3.3);
+  ctx.lineTo(-8.4, -3.3);
+  ctx.lineTo(-8.4, -2.4);
+  ctx.stroke();
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(-5, 0);
+  ctx.lineTo(-1.5, -0.4);
+  ctx.stroke();
+  ctx.fillStyle = palette.hazard;
+  ctx.beginPath();
+  ctx.moveTo(8.4, 0.4);
+  ctx.lineTo(8.4, -1.8);
+  ctx.lineTo(9.4, -2.6);
+  ctx.lineTo(11.6, -2.6);
+  ctx.lineTo(11.6, 0.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = shade(palette.hazard, -0.3);
+  ctx.beginPath();
+  ctx.moveTo(9.4, -2.6);
+  ctx.lineTo(7.4, -4.4);
+  ctx.stroke();
+}
+
+/**
+ * MMXXVI's booth — 0550: a paint shop's counter in the stall's box, under an awning striped in the inks
+ * the shop paints with and dripping them off its edge. A dark front with the name in white, a row of
+ * colour chips along its foot, and on the top two paint tins, a spray can and a rim — the parts.
+ */
+function paintBooth(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const counter = shade(palette.player, -0.62);
+  const paints = [palette.enemy, palette.hazard, palette.acid, palette.player, palette.void, palette.bullet];
+  // The posts.
+  ctx.fillStyle = PORT_INK.woodLight;
+  ctx.fillRect(-13, -12, 1, 13);
+  ctx.fillRect(12, -12, 1, 13);
+  // The awning, a stripe of each paint, and every stripe dripping a little of itself.
+  for (let i = 0; i < 9; i++) {
+    const ink = paints[i % paints.length]!;
+    const x = -14.5 + i * (29 / 9);
+    ctx.fillStyle = ink;
+    ctx.fillRect(x, -14.5, 29 / 9 + 0.05, 2.6);
+    const drip = 0.8 + ((i * 7) % 5) * 0.45;
+    ctx.fillRect(x + 1.1, -12, 0.7, drip);
+    ctx.beginPath();
+    ctx.arc(x + 1.45, -12 + drip, 0.45, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = PORT_INK.woodDark;
+  ctx.fillRect(-14.8, -14.9, 29.6, 0.5);
+  // The counter, its top board, and a light line under it.
+  ctx.fillStyle = counter;
+  ctx.fillRect(-13.5, 1, 27, 14);
+  ctx.fillStyle = PORT_INK.woodLight;
+  ctx.fillRect(-14, 0.4, 28, 1.4);
+  ctx.fillStyle = palette.player;
+  ctx.fillRect(-13.5, 2.3, 27, 0.35);
+  paintSign(ctx, KEEPERS.mmxxvi.sign, palette.impact, palette.player);
+  // The chips along its foot.
+  for (let i = 0; i < paints.length; i++) {
+    ctx.fillStyle = paints[i]!;
+    ctx.fillRect(-10.5 + i * 3.7, 12.2, 2.4, 1.6);
+  }
+  // On the top: two tins, a spray can, and a rim stood on its edge.
+  for (const [x, ink] of [
+    [-12, palette.enemy],
+    [-8.6, palette.player],
+  ] as const) {
+    ctx.fillStyle = ink;
+    ctx.fillRect(x, -2.2, 2.8, 2.6);
+    ctx.fillStyle = palette.blade;
+    ctx.beginPath();
+    ctx.ellipse(x + 1.4, -2.2, 1.4, 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = palette.void;
+  ctx.fillRect(6, -2.8, 1.4, 3.2);
+  ctx.fillStyle = palette.blade;
+  ctx.fillRect(6.2, -3.5, 1, 0.7);
+  ctx.strokeStyle = palette.blade;
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.arc(10.8, -1.6, 2, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.lineWidth = 0.3;
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(10.8, -1.6);
+    ctx.lineTo(10.8 + Math.cos(a) * 1.8, -1.6 + Math.sin(a) * 1.8);
+    ctx.stroke();
+  }
+}
+
+/**
+ * The viewport in the back wall — 0550. Drawn over the hole the wall leaves (`paintRoom`): a heavy frame
+ * round a two-tile pane with two struts across it, riveted, and the faintest tint and sheen on the glass,
+ * so the stars behind read as seen through a window and not as a missing wall.
+ */
+function paintViewport(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const frame = shade(PORT_INK.seam, -0.15);
+  const lit = shade(PORT_INK.seam, 0.35);
+  // The glass.
+  ctx.fillStyle = rgba(palette.player, 0.06);
+  ctx.fillRect(-20, -10, 40, 20);
+  ctx.fillStyle = rgba(palette.impact, 0.07);
+  ctx.beginPath();
+  ctx.moveTo(-14, -10);
+  ctx.lineTo(-8, -10);
+  ctx.lineTo(-16, 10);
+  ctx.lineTo(-20, 10);
+  ctx.lineTo(-20, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(10, -10);
+  ctx.lineTo(12, -10);
+  ctx.lineTo(4, 10);
+  ctx.lineTo(2, 10);
+  ctx.closePath();
+  ctx.fill();
+  // The frame, lapping the wall round the hole, and the two struts across the pane.
+  ctx.fillStyle = frame;
+  ctx.fillRect(-22, -12, 44, 2.4);
+  ctx.fillRect(-22, 9.6, 44, 2.4);
+  ctx.fillRect(-22, -12, 2.4, 24);
+  ctx.fillRect(19.6, -12, 2.4, 24);
+  ctx.fillRect(-7.5, -10, 1.4, 20);
+  ctx.fillRect(6.1, -10, 1.4, 20);
+  ctx.fillStyle = lit;
+  ctx.fillRect(-22, -12, 44, 0.4);
+  ctx.fillRect(-20, 9.6, 40, 0.3);
+  ctx.fillStyle = shade(PORT_INK.wallDark, -0.2);
+  ctx.fillRect(-19.6, -9.6, 39.2, 0.5);
+  // Rivets round the frame.
+  ctx.fillStyle = lit;
+  for (let x = -20; x <= 20; x += 5) {
+    ctx.fillRect(x - 0.25, -11.1, 0.5, 0.5);
+    ctx.fillRect(x - 0.25, 10.6, 0.5, 0.5);
+  }
 }
 
 /**
