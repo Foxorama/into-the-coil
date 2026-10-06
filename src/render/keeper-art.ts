@@ -636,9 +636,9 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.fillStyle = feather;
   ctx.beginPath();
   ctx.moveTo(37.5 * u, (RING + 1) * u);
-  ctx.quadraticCurveTo(36.5 * u, 54 * u, 39 * u, 45 * u);
-  ctx.lineTo(55 * u, 45 * u);
-  ctx.quadraticCurveTo(57.5 * u, 54 * u, 60.5 * u, (RING + 1) * u);
+  ctx.quadraticCurveTo(36.5 * u, (54 + FACE_DROP / 2) * u, 39 * u, (45 + FACE_DROP) * u);
+  ctx.lineTo(55 * u, (45 + FACE_DROP) * u);
+  ctx.quadraticCurveTo(57.5 * u, (54 + FACE_DROP / 2) * u, 60.5 * u, (RING + 1) * u);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -650,19 +650,19 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.fill();
   ctx.fillStyle = rgba(dark, 0.18);
   ctx.beginPath();
-  ctx.ellipse(48 * u, 47.5 * u, 11 * u, 3.4 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(48 * u, (47.5 + FACE_DROP) * u, 11 * u, 3.4 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   // A fluff of down on the front of the neck, lit, its points hanging.
   ctx.fillStyle = shade(feather, 0.18);
   ctx.beginPath();
-  ctx.moveTo(39 * u, 52 * u);
-  ctx.quadraticCurveTo(45 * u, 50 * u, 51 * u, 52.5 * u);
-  ctx.lineTo(49.5 * u, 57.5 * u);
-  ctx.lineTo(47 * u, 55 * u);
-  ctx.lineTo(44.5 * u, 59 * u);
-  ctx.lineTo(42 * u, 55.5 * u);
-  ctx.lineTo(39.5 * u, 57.5 * u);
+  ctx.moveTo(39.5 * u, 54 * u);
+  ctx.quadraticCurveTo(45 * u, 52.5 * u, 50.5 * u, 54.5 * u);
+  ctx.lineTo(49.2 * u, 58.8 * u);
+  ctx.lineTo(47 * u, 56.6 * u);
+  ctx.lineTo(44.8 * u, 60 * u);
+  ctx.lineTo(42.4 * u, 57 * u);
+  ctx.lineTo(40 * u, 58.8 * u);
   ctx.closePath();
   ctx.fill();
   // The ring's near lip over all of it, with a stripe of the shop's own ink round it.
@@ -683,8 +683,11 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.lineWidth = line;
   /*
     The head (`head`), outlined by stroking it at twice the line and filling over, so only the outer half
-    of the line shows. Lit from above the far shoulder.
+    of the line shows. Lit from above the far shoulder. Everything on it — the beret, the eyes, the bill —
+    is drawn `FACE_DROP` down, so the face sits at the bubble's middle on a shorter neck.
   */
+  ctx.save();
+  ctx.translate(0, FACE_DROP * u);
   ctx.lineWidth = line * 2;
   head(ctx, u, 0, 0);
   ctx.stroke();
@@ -820,6 +823,7 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.moveTo(58.6 * u, 41.8 * u);
   ctx.quadraticCurveTo(59.6 * u, 41.6 * u, 60 * u, 40.4 * u);
   ctx.stroke();
+  ctx.restore();
   ctx.strokeStyle = dark;
   ctx.lineWidth = line;
   // The helmet's near side: the bubble's rim, a long highlight and a glint, the light on its antenna.
@@ -861,6 +865,12 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
 const RING = 63;
 /** The bubble: its centre's height and its radius, in the same square. */
 const BUBBLE = { y: 37, r: 31 };
+/**
+ * How far the face is drawn below where 0555 put it, in the same square, the neck shorter by as much —
+ * 0556: *"make the neck just slightly smaller, but keep the bubble the same size … to get the duck face
+ * centred a bit more"*. Three brings the head's middle to within two of the bubble's, where it was five.
+ */
+const FACE_DROP = 3;
 
 /**
  * The bubble's outline, open at the bottom where it is seated in the neck ring — 0555. A whole circle
