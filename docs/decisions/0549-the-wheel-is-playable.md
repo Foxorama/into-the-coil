@@ -4,6 +4,9 @@
 how it looks and how it flies. Supersedes 0545's cadence, its life, how far it is thrown and its leash; the
 rest of 0545 stands.
 
+⚠️ **Its clock, reach, leash, ember life, tether width and boss weights are [0551](0551-the-wheel-is-held-closer.md)'s
+since 2026-10-06**; the numbers below are this decision's, kept as the record of what was built first.
+
 ## The ask
 
 > *"let's make the Firebird's Catherine Wheel actually playable*

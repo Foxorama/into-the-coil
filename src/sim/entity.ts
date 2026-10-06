@@ -446,6 +446,13 @@ export interface Entity extends Body {
   fromAlong: number;
   fromAcross: number;
   /**
+   * Where a Catherine wheel's tether started the step before, as the same offset — 0551. The rest of a
+   * bolt interpolates as one thing, but a tether's two ends are a wheel and a ship that move apart, so
+   * its start is drawn between this and `fromAlong`. Zero for everything else, and read for nothing else.
+   */
+  prevFromAlong: number;
+  prevFromAcross: number;
+  /**
    * How far down the lane of its boss's muzzle a beam is rooted, in world units — 0452: a barrel's end
    * or a throat, which is not where the muzzle is. `fromAlong` is re-pinned from it every step as the
    * hull drifts. Zero for everything that is not a beam.
@@ -643,6 +650,8 @@ export function makeEntity(): Entity {
     faceIn: 0,
     fromAlong: 0,
     fromAcross: 0,
+    prevFromAlong: 0,
+    prevFromAcross: 0,
     rootAlong: 0,
     knots: 0,
     jag: 0,
@@ -726,6 +735,8 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.faceIn = 0;
   e.fromAlong = 0;
   e.fromAcross = 0;
+  e.prevFromAlong = 0;
+  e.prevFromAcross = 0;
   e.rootAlong = 0;
   e.knots = 0;
   e.jag = 0;

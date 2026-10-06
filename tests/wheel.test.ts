@@ -5,13 +5,13 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, SHIP_KINDS, shipCarrying } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE } from '../src/content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { TETHER_BOLT_KIND, WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SHIP_SPEED } from '../src/sim/flight.ts';
 import { STROKES_PER_TETHER, paintBolts } from '../src/render/scene.ts';
-import { BOLT_FLAME, BOLT_ROPE, type BoltLook, type BoltTone, type Surface } from '../src/render/surface.ts';
+import { BOLT_FLAME, BOLT_ROPE, screenX, screenY, type BoltLook, type BoltTone, type Surface } from '../src/render/surface.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -62,6 +62,16 @@ function cinders(world: World): Entity[] {
   return out;
 }
 
+/** Every ember in the air, hot or cooled — 0551. */
+function embers(world: World): Entity[] {
+  const out: Entity[] = [];
+  for (let i = 0; i < world.playerShots.size; i++) {
+    const c = world.playerShots.at(i);
+    if (c.sprite === SPRITE.cinder || c.sprite === SPRITE.cinderCool) out.push(c);
+  }
+  return out;
+}
+
 /** A tough body that never fires and rides the camera `ahead` of the ship and `aside` across it. */
 function target(world: World, ahead: number, aside: number): Entity {
   const enemy = world.enemies.spawn()!;
@@ -85,16 +95,24 @@ describe('0545 — the guns move', () => {
 });
 
 describe('0545 — the Catherine wheel', () => {
-  it('THE ASK, IN SECONDS: the tether lets go at 3.4 s and the next wheel is thrown at 3.6 s — 0549', () => {
-    // *"The tether should fade out at 3.4sec and then the new wheel should fire at 3.6 sec."* At 60 steps a second.
-    expect((WHEEL.life - WHEEL.fade) / 60, 'the tether lets go').toBeCloseTo(3.4, 6);
-    expect(GUN.fireEvery / 60, 'the next wheel is thrown').toBeCloseTo(3.6, 6);
+  it('THE ASK, IN SECONDS: 0549’s clock — let go at 3.4 s, thrown at 3.6 s, gone at 4 s — a third shorter, the same shape — 0551', () => {
+    /*
+      0549: *"the tether should fade out at 3.4sec and then the new wheel should fire at 3.6 sec."* 0551:
+      *"reduce both by 30%... keeping the same cadence for wheel decay and refire gap."* 30% is off the beat
+      grid, so it is a third — every one of 0549's times by two thirds. At 60 steps a second.
+    */
+    const SHORTER = 2 / 3;
+    expect((WHEEL.life - WHEEL.fade) / 60, 'the tether lets go').toBeCloseTo(3.4 * SHORTER, 6);
+    expect(GUN.fireEvery / 60, 'the next wheel is thrown').toBeCloseTo(3.6 * SHORTER, 6);
+    expect(WHEEL.life / 60, 'the last wheel is gone').toBeCloseTo(4 * SHORTER, 6);
+    // And within a beat of the 30% asked, which is as near as the grid comes.
+    expect(Math.abs(GUN.fireEvery - 216 * 0.7), 'the refire is further from 30% faster than the grid makes it').toBeLessThanOrEqual(VOLLEY_CYCLE / 2);
     // *"So it's firing while the old wheel is visible and ending"*: the last is still burning when the next goes.
     expect(WHEEL.life, 'the last wheel is gone before the next is thrown').toBeGreaterThan(GUN.fireEvery);
     expect(GUN.fireEvery % VOLLEY_CYCLE, 'the cadence is off the beat grid').toBe(0);
   });
 
-  it('throws one wheel on the first beat of a life, and then one every nine beats on the run’s grid, the last still burning down', () => {
+  it('throws one wheel on the first beat of a life, and then one every six beats on the run’s grid, the last still burning down', () => {
     expect(firstVolleyIn(0, GUN.fireEvery), 'a new life waits longer than a beat for its gun').toBeLessThanOrEqual(VOLLEY_CYCLE);
     const { world, frame } = armed();
     const thrownAt: number[] = [];
@@ -117,7 +135,7 @@ describe('0545 — the Catherine wheel', () => {
       }
     }
     expect(overlapped, 'no throw ever found the last wheel still visible').toBeGreaterThanOrEqual(2);
-    // The first is the life's own, on the next beat; the rest are on the ten-beat grid every gun's is (0094).
+    // The first is the life's own, on the next beat; the rest are on the gun's own grid, on the beat's (0094).
     expect(thrownAt.length).toBeGreaterThanOrEqual(3);
     expect(thrownAt[1]! - thrownAt[0]!).toBeLessThanOrEqual(GUN.fireEvery);
     expect(thrownAt[2]! - thrownAt[1]!).toBe(GUN.fireEvery);
@@ -148,11 +166,12 @@ describe('0545 — the Catherine wheel', () => {
     expect(disc.turn, 'it does not spin').not.toBe(turn);
   });
 
-  it('THE ASK, IN THE PLAYER’S UNITS: it reaches three quarters of the screen, or the no-fly wall where that is nearer — 0549', () => {
+  it('THE ASK, IN THE PLAYER’S UNITS: it reaches 60% of the screen, or the no-fly wall where that is nearer — 0549, 0551', () => {
     /*
-      *"It should reach across 75% of the screen or to the no-fly zone wall, whichever is closer."* From
-      the back of the player's box three quarters of the screen falls short of the wall; from the middle
-      of it the wall is nearer. Measured as a share of the screen the test's view shows, from the muzzle.
+      0549: *"It should reach across 75% of the screen or to the no-fly zone wall, whichever is closer."*
+      0551: *"let's make it 60% instead of 75% of screen size."* From the back of the player's box 60% of
+      the screen falls short of the wall; from the middle of it the wall is nearer. Measured as a share of
+      the screen the test's view shows, from the muzzle.
     */
     for (const [where, share] of [
       ['the back of the box', 0],
@@ -170,7 +189,7 @@ describe('0545 — the Catherine wheel', () => {
       const wallIsNearer = muzzleInView + WHEEL.reach * span > PLAYER_LEAD;
       expect(wallIsNearer, `from ${where} the wrong limit is the nearer`).toBe(share > 0);
       if (wallIsNearer) expect(Math.abs(hung - PLAYER_LEAD) / span, `from ${where} it did not hang at the wall`).toBeLessThan(0.02);
-      else expect(Math.abs((hung - muzzleInView) / span - 0.75), `from ${where} it did not reach three quarters of the screen`).toBeLessThan(0.02);
+      else expect(Math.abs((hung - muzzleInView) / span - 0.6), `from ${where} it did not reach 60% of the screen`).toBeLessThan(0.02);
     }
   });
 
@@ -229,7 +248,107 @@ describe('0545 — the Catherine wheel', () => {
     expect(wheels(world).some((d) => d.spin === -1), 'it outlived its life').toBe(false);
   });
 
-  it('lets its tether go at 3.4 s, fading it over the steps before — 0549', () => {
+  it('THE ASK: the disc burns down first, and the last of its sparks are in the air after it has gone — 0551', () => {
+    /*
+      *"The decay wheel leaves a yellow disc on screen after the sparks have finished, physics wise, the
+      disc would decay first then the last of the fired sparks would disappear."* One wheel and no next:
+      while it burns down it shrinks to nothing, its hurtbox with it, and it never stops throwing; the
+      step it is gone, sparks it threw are still flying, and they are gone within an ember's life of it.
+    */
+    const { world, frame } = armed();
+    step(world, frame);
+    world.fireIn = NEVER;
+    const first = wheels(world)[0]!;
+    first.spin = -1;
+    let threwWhileBurning = 0;
+    let goneAt = -1;
+    let sparksWhenGone = 0;
+    for (let age = 1; age < WHEEL.life + WHEEL.emberLife + 4; age++) {
+      step(world, frame);
+      const alive = wheels(world).some((d) => d === first && d.spin === -1);
+      if (alive && first.lifeFor <= WHEEL.fade) {
+        expect(first.swell, 'it is not drawn shrinking as it burns down').toBeCloseTo(first.lifeFor / WHEEL.fade, 9);
+        expect(first.radius, 'it lands wider than it is drawn').toBeLessThanOrEqual(DISC.radius * first.swell + 1e-9);
+        // Thrown this step: one tick into its life, as the wheel is when it is first seen.
+        threwWhileBurning += embers(world).filter((c) => c.lifeFor === WHEEL.emberLife - 1).length;
+      }
+      if (!alive && goneAt < 0) {
+        goneAt = age;
+        sparksWhenGone = embers(world).length;
+      }
+    }
+    expect(threwWhileBurning, 'it stopped throwing sparks when it began to burn down').toBeGreaterThan(0);
+    expect(goneAt, 'it outlived its life').toBeGreaterThan(0);
+    expect(sparksWhenGone, 'its sparks were gone before the disc — the disc hangs on alone').toBeGreaterThan(0);
+    expect(embers(world).length, 'its sparks outlived it by more than an ember’s life').toBe(0);
+  });
+
+  it('THE ASK, IN THE PLAYER’S UNITS: the spark spray is a fifth smaller across than 0549’s — 0551', () => {
+    /*
+      *"The spark spray diameter needs a 20% reduction in size."* What the player sees is the spray's edge:
+      the furthest an ember gets from a hanging wheel's hub, plus the half of its streak that leads — it
+      has cooled by then. Flown at 0549's ember life and at this one, on the same flight: within three
+      points of four fifths, which is as near as a whole step of life comes. Measured 28.7 and 23.6, 18%
+      in; a life one step shorter is 21.6, 25% in, and fails this.
+    */
+    function edge(): number {
+      const { world, frame } = armed();
+      step(world, frame);
+      world.fireIn = NEVER;
+      const disc = wheels(world)[0]!;
+      for (let i = 0; i < 60; i++) step(world, frame);
+      let furthest = 0;
+      for (let i = 0; i < 40; i++) {
+        step(world, frame);
+        for (const c of embers(world)) if (c.lifeFor === 1) furthest = Math.max(furthest, Math.hypot(c.along - disc.along, c.across - disc.across));
+      }
+      return furthest + SPRITE_EXTENT.cinderCool / 2;
+    }
+    const now = edge();
+    const kept = WHEEL.emberLife;
+    let before: number;
+    try {
+      WHEEL.emberLife = 17;
+      before = edge();
+    } finally {
+      WHEEL.emberLife = kept;
+    }
+    expect(Math.abs(now / before - 0.8), 'the spray is not a fifth smaller across').toBeLessThanOrEqual(0.03);
+  });
+
+  it('THE ASK, IN PIXELS: the tether starts on the muzzle the player sees, between steps, while the wheel flies out — 0551', () => {
+    /*
+      *"The end of the tether also starts on the hood of the car and then moves forward so the end
+      attaches to the weapon nozzle."* Painted half way between two steps while the wheel is still flying
+      out at its row's speed and the ship is moving: the cord's first point is on the muzzle as it is
+      drawn — the ship's interpolated place — to a pixel. Until 0551 it was up to a step of the wheel's
+      flight behind it, which at half a step is two and a half units.
+    */
+    const { world, frame, stick } = armed();
+    stick.across = 1;
+    for (let i = 0; i < 4; i++) step(world, frame);
+    const disc = wheels(world)[0]!;
+    expect(disc.along - disc.prevAlong - world.scrollPerStep, 'the wheel is not flying out fast').toBeGreaterThan(DISC.speed * 0.5);
+    const alpha = 0.5;
+    let first: [number, number] | null = null;
+    const surface: Surface = {
+      clear(): void {},
+      blit(): void {},
+      bolt(points: Float32Array, _count: number, _width: number, _alpha: number, _tone: BoltTone, look?: BoltLook): void {
+        if (look === BOLT_ROPE) first = [points[0]!, points[1]!];
+      },
+    };
+    paintBolts(surface, world.view, world.bolts, world.cameraAlong, alpha);
+    const ship = world.ship;
+    const along = ship.prevAlong + (ship.along - ship.prevAlong) * alpha + world.shipRow.muzzle.along;
+    const across = ship.prevAcross + (ship.across - ship.prevAcross) * alpha + world.shipRow.muzzle.across;
+    const x = screenX(world.view, along - world.cameraAlong, across);
+    const y = screenY(world.view, along - world.cameraAlong, across);
+    expect(first, 'no cord was painted').not.toBeNull();
+    expect(Math.hypot(first![0] - x, first![1] - y), 'the tether starts off the muzzle the player sees').toBeLessThan(1);
+  });
+
+  it('lets its tether go at 2.27 s, fading it over the steps before — 0549, 0551', () => {
     const { world, frame } = armed();
     step(world, frame);
     const first = wheels(world)[0]!;
@@ -244,16 +363,16 @@ describe('0545 — the Catherine wheel', () => {
         if (b.kind !== TETHER_BOLT_KIND) continue;
         expect(b.along, 'the tether is not on the first wheel').toBeCloseTo(first.along, 6);
         tethered = true;
-        if (b.holdFor < 12) faded = true;
+        if (b.holdFor < 8) faded = true;
       }
       if (!tethered) {
         letGoAt = age;
         lifeThen = first.lifeFor;
       }
     }
-    // It lets go the step its wheel starts to burn down, which is 3.4 s after the throw, to the step.
+    // It lets go the step its wheel starts to burn down, two thirds of 0549's 3.4 s after the throw, to the step.
     expect(lifeThen, 'the tether let go other than as its wheel began to burn down').toBe(WHEEL.fade);
-    expect(Math.abs(letGoAt / 60 - 3.4), 'the tether did not let go at 3.4 s').toBeLessThanOrEqual(1 / 60);
+    expect(Math.abs(letGoAt / 60 - (3.4 * 2) / 3), 'the tether did not let go at 2.27 s').toBeLessThanOrEqual(1 / 60);
     expect(faded, 'the tether went out without fading').toBe(true);
   });
 

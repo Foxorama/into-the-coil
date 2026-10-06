@@ -3641,7 +3641,7 @@ const WHEEL_EDGE_MARGIN = 4;
  */
 function throwWheel(w: World): void {
   const gun = WEAPONS[w.weapon.kind];
-  // On the grid, like every gun — 0094. Nine beats.
+  // On the grid, like every gun — 0094. Six beats since 0551.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   const wheel = gun.wheel;
   if (wheel === null) return;
@@ -3668,7 +3668,8 @@ function throwWheel(w: World): void {
 function steerWheels(w: World): void {
   const wheel = WEAPONS[w.weapon.kind].wheel;
   if (wheel === null) return;
-  const speed = SHOTS[WEAPONS[w.weapon.kind].shot].speed;
+  const disc = SHOTS[WEAPONS[w.weapon.kind].shot];
+  const speed = disc.speed;
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
   /*
@@ -3730,16 +3731,26 @@ function steerWheels(w: World): void {
     // It spins: the frame turns the bitmap, folded into one turn either side (`turnFor`'s range).
     const turned = b.turn + wheel.spin;
     b.turn = turned > Math.PI ? turned - Math.PI * 2 : turned;
-    // And burns down over its last beat: the same wheel, darker, its flames short.
-    if (b.lifeFor <= wheel.fade) {
+    /*
+      ⚠️ **AND BURNS DOWN TO NOTHING, THROWING SPARKS AS IT GOES — 0551.** Played: *"the decay wheel
+      leaves a yellow disc on screen after the sparks have finished, physics wise, the disc would decay
+      first then the last of the fired sparks would disappear."* Until 0551 it stopped throwing the step it
+      began to burn down and hung, darker but whole, for longer than its last embers flew. So it shrinks
+      to its hub over `fade` — its hurtbox with it, since a wheel drawn smaller than it lands would lie —
+      and keeps throwing off a rim that shrinks too, so the last sparks are in the air after it has gone.
+    */
+    const burning = b.lifeFor <= wheel.fade;
+    if (burning) {
       b.sprite = SPRITE.catherineFade;
       b.spriteBase = SPRITE.catherineFade;
       b.spriteHit = SPRITE.catherineFade;
-      continue;
+      // The life it will be drawn with, after this step's tick: nothing at all on its last step.
+      b.swell = (b.lifeFor - 1) / wheel.fade;
+      b.radius = disc.radius * b.swell;
     }
     if (w.steps % wheel.emberEvery === 0) throwEmbers(w, b, wheel);
-    // And it crackles once a beat while it burns, where it is — heard with the sparks it throws.
-    if (w.steps % VOLLEY_CYCLE === 0) w.onCue('crackle', b.across);
+    // And it crackles once a beat while it is on its tether, where it is — heard with the sparks it throws.
+    if (!burning && w.steps % VOLLEY_CYCLE === 0) w.onCue('crackle', b.across);
   }
 }
 
@@ -3755,7 +3766,8 @@ function throwEmbers(w: World, b: Entity, wheel: CatherineWheel): void {
     const ember = w.playerShots.spawn();
     // An ember the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
     if (ember === null) return;
-    reset(ember, b.along + Math.cos(a) * wheel.rim, b.across + Math.sin(a) * wheel.rim, row, EMBER_KIND);
+    // Off the rim as it is drawn, which shrinks while the wheel burns down (`swell`) — 0551.
+    reset(ember, b.along + Math.cos(a) * wheel.rim * b.swell, b.across + Math.sin(a) * wheel.rim * b.swell, row, EMBER_KIND);
     // Off the rim the way it turns — a quarter turn on from the spoke — and a little outward.
     const heading = a + Math.PI * 0.5 - EMBER_FLARE;
     ember.velAlong = b.velAlong + Math.cos(heading) * row.speed;
@@ -3816,6 +3828,9 @@ function layTether(w: World): void {
     link.velAlong = 0;
     link.fromAlong = w.ship.along + w.shipRow.muzzle.along - disc.along;
     link.fromAcross = w.ship.across + w.shipRow.muzzle.across - disc.across;
+    // And where it started the step before, so the painter draws its start on the muzzle it draws — 0551.
+    link.prevFromAlong = w.ship.prevAlong + w.shipRow.muzzle.along - disc.prevAlong;
+    link.prevFromAcross = w.ship.prevAcross + w.shipRow.muzzle.across - disc.prevAcross;
     // One step: it is drawn, and the next step's `stepEntities` releases it just before the next is laid.
     link.lifeFor = 1;
     link.spin = w.steps;

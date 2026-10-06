@@ -61,7 +61,7 @@ export const PROBES = [
     suite: 'tests/wheel.test.ts',
     broke: 'a wheel that never burns down',
     guard: 'burns down once its tether lets go',
-    edit: { path: 'src/app/frame.ts', find: '    if (b.lifeFor <= wheel.fade) {\n      b.sprite = SPRITE.catherineFade;', replace: '    if (b.lifeFor <= 0) {\n      b.sprite = SPRITE.catherineFade;' },
+    edit: { path: 'src/app/frame.ts', find: '    const burning = b.lifeFor <= wheel.fade;', replace: '    const burning = b.lifeFor <= 0;' },
   },
   {
     decision: '0545',
