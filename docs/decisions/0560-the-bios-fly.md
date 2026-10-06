@@ -1,7 +1,7 @@
 # 0560 — The bios fly
 
 **Accepted 2026-10-07.** Item 1 of the queue in
-[the hangar family, reviewed](../reports/the-hangar-family-reviewed-2026-10-07.md). Amends the `bio`
+[the hangar family, reviewed](../../reports/the-hangar-family-reviewed-2026-10-07.md). Amends the `bio`
 line [0513](0513-the-pilot-flies.md) put on `GolferRow`.
 
 ## The ask
