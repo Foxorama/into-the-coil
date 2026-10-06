@@ -33,7 +33,7 @@ import { SCREENS, STEPS_PER_SECOND, type ChoiceName, type Screen } from '../stat
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS } from '../content/specials.ts';
-import { SHIP_BOX, SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
+import { SHIP_BOX, SPRITE, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS } from '../content/rims.ts';
 import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
@@ -4424,7 +4424,7 @@ export function makeChrome(
     return { root, ship, name, who, bio, craft, gun, card };
   };
   /** Each card's two turning wheels — 0527, baked the first time a car on spinners is shown there. */
-  const cardWheels: Partial<Record<Screen, HTMLCanvasElement[]>> = {};
+  const cardWheels: Partial<Record<Screen, { picture: SpriteKind; wheels: HTMLCanvasElement[] }>> = {};
   const paintPilot = (screen: Screen, golfer: GolferKind | undefined): void => {
     const pilotCard = pilotCards[screen];
     if (pilotCard === undefined || golfer === undefined) return;
@@ -4442,12 +4442,20 @@ export function makeChrome(
     if (pilotCard.ship === null) return;
     const shipBox = pilotCard.ship;
     shipBox.replaceChildren(shipOnCard(screen, row.ship, fit));
-    // 0527: and a car on a turning rim turns it here, each wheel laid over its tyre and spun by the stylesheet.
-    const rates = fit.rim === null ? null : RIMS[fit.rim].turn;
-    if (ship.wheels !== null && rates !== null) {
+    /*
+      0527: and a car on a turning rim turns it here, each wheel laid over its tyre and spun by the stylesheet.
+      ⚠️ **A ROLL ONLY — 0556.** The stylesheet turns one picture at a steady rate; a rim that strikes from
+      picture to picture (the lightning) shows its baked rim here, still, as a card shows every other part.
+    */
+    const wheel = fit.rim === null ? null : RIMS[fit.rim].wheel;
+    const rates = wheel === null ? null : wheel.turn;
+    if (ship.wheels !== null && wheel !== null && rates !== null) {
       const prefix = prefixFor(screen);
       const radius = ship.wheels.radius;
-      const wheels = (cardWheels[screen] ??= [0, 1].map(() => bakeGlyph('spinnerWheel', colours, CARD_SHIP_PIXELS_PER_UNIT)));
+      const picture = wheel.frames[0].base;
+      const kept = cardWheels[screen];
+      const wheels = kept !== undefined && kept.picture === picture ? kept.wheels : [0, 1].map(() => bakeGlyph(picture, colours, CARD_SHIP_PIXELS_PER_UNIT));
+      cardWheels[screen] = { picture, wheels };
       ship.wheels.at.forEach((at, i) => {
         const wheel = wheels[i]!;
         wheel.className = prefix + 'pilot-wheel';

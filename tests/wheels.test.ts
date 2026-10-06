@@ -42,7 +42,7 @@ describe('the rims', () => {
   it('THE ASK: the Mothership’s spinners on Cosmo’s shelf at 1000 shards, and they turn', () => {
     expect(WARES).toContain('spinner');
     expect(OWNABLES.spinner.price).toBe(1000);
-    expect(RIMS.spinner.turn, 'the spinners are baked still').not.toBe(null);
+    expect(RIMS.spinner.wheel?.turn ?? null, 'the spinners are baked still').not.toBe(null);
     expect(initialHangar.owned.spinner, 'the spinners were owned before they were bought').toBe(false);
   });
 
@@ -121,7 +121,7 @@ describe('the run', () => {
       expect(wheel.across - world.ship.across, `wheel ${i} off its tyre`).toBeCloseTo(wheels.at[i]!.across, 6);
     }
     // In seconds, as the player watches it: summed over a whole turn of the front wheel, one full turn.
-    const rates = RIMS.spinner.turn!;
+    const rates = RIMS.spinner.wheel!.turn!;
     const steps = Math.round((rates[0] * 1000) / STEP_MS);
     let front = 0;
     let back = 0;
@@ -152,6 +152,56 @@ describe('the run', () => {
       still.frame.step();
       expect(still.world.wheels.size, `${ship} on ${String(rim)} wore turning wheels`).toBe(0);
     }
+  });
+});
+
+describe('0556 — the lightning crackles', () => {
+  it('strikes a new crack over each wheel every sixteenth of a second, somewhere new, and never sweeps between two', () => {
+    /*
+      Played: *"they just look like a teal bar, they don't even look like lightning"* — asked: *"make them
+      crackle like lightning"*. In the player's seconds: a second of the fight shows every crack on each
+      wheel, about sixteen strikes, and a strike is THERE on the step it lands — the renderer interpolates a
+      turn, and a crack swept round from where the last one was would read as a wheel spinning, not lightning.
+    */
+    const { world, frame } = flying('thunderbolt', 'bolts');
+    const wheel = RIMS.bolts.wheel!;
+    const frames = new Set(wheel.frames.flatMap((f) => [SPRITE[f.base], SPRITE[f.hit]]));
+    const seen = [new Set<number>(), new Set<number>()];
+    const strikes = [0, 0];
+    frame.step();
+    expect(world.wheels.size, 'no lightning over the wheels').toBe(2);
+    const second = Math.round(1000 / STEP_MS);
+    for (let s = 0; s < second; s++) {
+      const was = [world.wheels.at(0).sprite, world.wheels.at(1).sprite];
+      frame.step();
+      for (let i = 0; i < 2; i++) {
+        const w = world.wheels.at(i);
+        expect(frames.has(w.sprite), `wheel ${i} wears a picture that is not the lightning's`).toBe(true);
+        seen[i]!.add(w.sprite);
+        if (w.sprite !== was[i]) {
+          strikes[i]!++;
+          expect(w.prevTurn, `wheel ${i} swept round to its new crack instead of striking it`).toBe(w.turn);
+        }
+      }
+    }
+    for (let i = 0; i < 2; i++) {
+      expect(seen[i]!.size, `wheel ${i} showed ${seen[i]!.size} cracks in a second`).toBe(wheel.frames.length);
+      expect(strikes[i], `wheel ${i} struck ${strikes[i]} times in a second`).toBeGreaterThanOrEqual(Math.floor(1 / wheel.hold) - 1);
+    }
+  });
+
+  it('every rim that moves names pictures the atlas has, and the lightning flashes when the car does', () => {
+    for (const rim of RIM_KINDS) {
+      for (const f of RIMS[rim].wheel?.frames ?? []) {
+        expect(SPRITE[f.base], `${rim}: ${f.base}`).toBeTypeOf('number');
+        expect(SPRITE[f.hit], `${rim}: ${f.hit}`).toBeTypeOf('number');
+      }
+    }
+    const { world, frame } = flying('thunderbolt', 'bolts');
+    world.ship.flashFor = 4;
+    frame.step();
+    const hits = RIMS.bolts.wheel!.frames.map((f) => SPRITE[f.hit]);
+    expect(hits, 'the lightning did not take the hit').toContain(world.wheels.at(0).sprite);
   });
 });
 

@@ -33,7 +33,7 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { LEAN_KINDS, THRUST, THRUST_KINDS, THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, ownFit, shieldPlateOf, type Fit, type GunView } from '../content/ships.ts';
+import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, ownFit, shellOrbit, shieldPlateOf, type Fit, type GunView } from '../content/ships.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
 import { FLAMES, type FlameKind } from '../content/flames.ts';
@@ -935,6 +935,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
   spinnerWheel: 'player',
   spinnerWheelHit: 'hazard',
+  // 0556: and the lightning's, on the same terms.
+  boltWheel0: 'player',
+  boltWheel0Hit: 'hazard',
+  boltWheel1: 'player',
+  boltWheel1Hit: 'hazard',
+  boltWheel2: 'player',
+  boltWheel2Hit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
   weaverHit: 'impact',
@@ -2881,14 +2888,19 @@ function thunderboltOutline(stage: number, own = true): Pt[] {
     ...helmetArc(),
     // The chin of the helmet, and the top of his arm out to the grip.
     [1.2, -6.6],
-    [5, -8.4],
-    [9, -10],
-    // The ape-hanger bar, up and forward from the grip, and its riser down to the fork crown.
-    [9.2, -11],
-    [12.6, -11.2],
-    [12.8, -10.2],
-    [11, -9.6],
-    [11, -6.2],
+    [4, -8.2],
+    [6, -9.4],
+    /*
+      0556: the bar swept back to him from the top of a riser raked back off the fork crown — played: *"tilt
+      the handlebars closer to the marmot because he's got super long arms now"*. The grip was out over the
+      front wheel at nine, and is at six, where his reach ends.
+    */
+    [5.4, -10.9],
+    [7.2, -11.7],
+    [9.6, -11.5],
+    [10.6, -10.6],
+    [11.4, -8],
+    [11.4, -6.2],
     [11.8, -5],
     // The lightning ball on the fork crown — or, with another ship's gun, the fork running straight on.
     ...ball,
@@ -2911,9 +2923,12 @@ function thunderboltOutline(stage: number, own = true): Pt[] {
 /** The gap under his arm, between it, the tank and the bars' riser: a hole in the outline. */
 const THUNDERBOLT_GAP: readonly Pt[] = [
   [2.6, -4.6],
-  [5.4, -6.5],
-  [8.8, -8.3],
-  [9.4, -7.4],
+  [4.8, -6.6],
+  [6.8, -8.3],
+  [7.6, -9.5],
+  [9, -9.8],
+  [9.6, -8.6],
+  [9.8, -5.6],
   [9.4, -4.8],
   [7.6, -4],
   [2.8, -3.8],
@@ -2948,10 +2963,10 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
     [-5, -7],
     [-2.6, -5.4],
     [1.2, -6.6],
-    [5, -8.4],
-    [8.6, -9.8],
-    [8.8, -8.3],
-    [5.4, -6.5],
+    [4, -8.2],
+    [5.8, -9.28],
+    [6.8, -8.3],
+    [4.8, -6.6],
     [2.6, -4.6],
     [-1, -2.6],
     [-6, -1.4],
@@ -2992,7 +3007,7 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
     [1.4, 4.1],
   ]));
   // His paw on the grip, tucked inside the bar's outline.
-  const [px, py] = at(9.95, -8.9);
+  const [px, py] = at(6.75, -10.25);
   disc(ctx, f, fur, px, py, 0.92 * 0.062);
   // The helmet: black, a sheen across its crown, the ear bumps lit, a cyan bolt down its side, and the
   // visor down in the shot's amber with a glare across it.
@@ -3123,9 +3138,9 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
     [13.2, 1.3],
   ]), 0.95);
   seam(ctx, f, chrome, 0.06, box([
-    [10.4, -6.4],
-    [10.4, -10.2],
-    [12.1, -10.55],
+    [10.6, -6.6],
+    [10.1, -10.2],
+    [7.2, -10.5],
   ]), 0.95);
   // The pods on the rear fender, in the lacquer banded in chrome, their warheads in the shot's orange.
   paintTurrets(ctx, f, palette, THUNDERBOLT_PODS[stage]!, THUNDERBOLT_POD_TOP, THUNDERBOLT_FENDER, box, { shell: shade(body, 0.25), band: chrome });
@@ -3420,21 +3435,129 @@ export function paintRim(ctx: Pen, f: Frame, palette: Palette, rim: RimKind, cx:
       return;
     }
     /*
-      The Thunderbolt's — 0545: one fat slash of the arc's cyan across a dark dish, round a chrome hub —
-      a lightning strike at the size a wheel is drawn. Half a radius thick, on the spinner's terms: a
-      wheel is five pixels across, and a zigzag at that size is a smudge.
+      The Thunderbolt's — 0545, drawn as one fat slash of cyan, half a radius thick on the spinner's terms.
+      0556, played: *"they just look like a teal bar, they don't even look like lightning"*. Now the first
+      of its three cracks (`paintCrackle`), still in the hull, and the frame strikes all three over it.
     */
-    case 'bolts': {
-      disc(ctx, f, shade(palette.trim, -0.55), cx, cy, r * 0.84);
-      poly(ctx, f, palette.player, spoke(cx, cy, r * 0.78, r * 0.5, turn + 0.6));
-      disc(ctx, f, shade(palette.trim, 0.6), cx, cy, r * 0.28);
+    case 'bolts':
+      paintCrackle(ctx, f, palette, 0, cx, cy, r, turn);
       return;
-    }
     default: {
       const unhandled: never = rim;
       return unhandled;
     }
   }
+}
+
+/**
+ * One lightning bolt across a wheel: where round the hub it leaves, how far each of its three knots is
+ * thrown aside (in the tyre's radius), and which way a fork leaves its middle knot, or `0` for none.
+ */
+interface Crack {
+  readonly a: number;
+  readonly jags: readonly [number, number, number];
+  readonly fork: -1 | 0 | 1;
+  /** How far out it reaches, as a share of the dish: a short one dies before the rim. */
+  readonly reach: number;
+}
+
+/**
+ * The Thunderbolt's three cracks — 0556, struck in turn over each wheel (`RIMS.bolts.wheel`). Each is a
+ * different count, spacing and set of forks, so three in a row never read as one picture blinking.
+ */
+const CRACKS: readonly (readonly Crack[])[] = [
+  [
+    { a: 0.2, jags: [0.14, -0.12, 0.1], fork: 1, reach: 1 },
+    { a: 2.3, jags: [-0.1, 0.15, -0.08], fork: 0, reach: 1 },
+    { a: 4.3, jags: [0.12, 0.06, -0.14], fork: 0, reach: 0.8 },
+  ],
+  [
+    { a: 1, jags: [-0.13, 0.1, 0.12], fork: -1, reach: 1 },
+    { a: 3.4, jags: [0.1, -0.14, 0.06], fork: 1, reach: 1 },
+  ],
+  [
+    { a: 0.7, jags: [0.08, 0.14, -0.1], fork: 0, reach: 1 },
+    { a: 2.6, jags: [-0.12, -0.04, 0.13], fork: 1, reach: 0.75 },
+    { a: 4.1, jags: [0.15, -0.1, -0.06], fork: -1, reach: 1 },
+    { a: 5.4, jags: [-0.08, 0.12, 0.05], fork: 0, reach: 0.7 },
+  ],
+];
+
+/** A crack's centreline in the frame's units: from the hub out through its knots to its end. */
+function crackPath(crack: Crack, cx: number, cy: number, r: number, turn: number): Pt[] {
+  const a = crack.a + turn;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const out: Pt[] = [];
+  const knots = [0.26, 0.42, 0.56, 0.7, 0.84 * crack.reach];
+  for (let k = 0; k < knots.length; k++) {
+    const along = knots[k]! * r;
+    const aside = (k === 0 || k === knots.length - 1 ? 0 : crack.jags[k - 1]!) * r;
+    out.push([cx + c * along - s * aside, cy + s * along + c * aside]);
+  }
+  return out;
+}
+
+/** A polyline thickened to `width`, tapering to `tip` of it at its far end: one fill, so one mark. */
+function ribbon(path: readonly Pt[], width: number, tip: number): Pt[] {
+  const left: Pt[] = [];
+  const right: Pt[] = [];
+  for (let k = 0; k < path.length; k++) {
+    const [x0, y0] = path[Math.max(0, k - 1)]!;
+    const [x1, y1] = path[Math.min(path.length - 1, k + 1)]!;
+    const len = Math.hypot(x1 - x0, y1 - y0) || 1;
+    const w = (width / 2) * (1 - ((1 - tip) * k) / (path.length - 1));
+    const nx = (-(y1 - y0) / len) * w;
+    const ny = ((x1 - x0) / len) * w;
+    left.push([path[k]![0] + nx, path[k]![1] + ny]);
+    right.push([path[k]![0] - nx, path[k]![1] - ny]);
+  }
+  return [...left, ...right.reverse()];
+}
+
+/**
+ * Lightning crackling across a dark dish round a chrome hub — `docs/decisions/0556-the-marmot-crackles.md`,
+ * crack `k` of `CRACKS`, in a tyre of radius `r` about `(cx, cy)`, turned `turn`.
+ *
+ * ⚠️ **THE BOLTS ARE LIGHT, AND THE DISH AND THE HUB ARE BODY** — 0227. A wheel is five pixels across at
+ * the fight's camera, so a jagged bolt there is finer than 0106's floor allows a solid mark; as light
+ * over the dish it may be, and what reads at that size is the flicker from crack to crack, which no
+ * solid slash could do. On the pad, at hangar size, the forks and the jags read as drawn.
+ */
+function paintCrackle(ctx: Pen, f: Frame, palette: Palette, k: number, cx: number, cy: number, r: number, turn: number): void {
+  const cyan = palette.player;
+  disc(ctx, f, shade(palette.trim, -0.55), cx, cy, r * 0.84);
+  glow(ctx, f, cyan, cx, cy, r * 0.84, 0.3);
+  for (const crack of CRACKS[k % CRACKS.length]!) {
+    const path = crackPath(crack, cx, cy, r, turn);
+    poly(ctx, f, cyan, ribbon(path, r * 0.34, 0.5), 0.5);
+    poly(ctx, f, shade(cyan, 0.55), ribbon(path, r * 0.15, 0.4), 0.88);
+    if (crack.fork !== 0) {
+      const [mx, my] = path[2]!;
+      const a = crack.a + turn + crack.fork * 0.55;
+      const fork: Pt[] = [
+        [mx, my],
+        [mx + Math.cos(a) * r * 0.16 - Math.sin(a) * r * 0.05 * crack.fork, my + Math.sin(a) * r * 0.16 + Math.cos(a) * r * 0.05 * crack.fork],
+        [mx + Math.cos(a) * r * 0.3, my + Math.sin(a) * r * 0.3],
+      ];
+      poly(ctx, f, shade(cyan, 0.4), ribbon(fork, r * 0.09, 0.3), 0.85);
+    }
+    // A spark where it strikes the rim.
+    const [ex, ey] = path[path.length - 1]!;
+    disc(ctx, f, shade(cyan, 0.75), ex, ey, r * 0.08, 0.85);
+  }
+  // The hub is body, so it is over the floor: the old bolt's hub was 0.28 of the tyre and passed it.
+  disc(ctx, f, shade(palette.trim, 0.6), cx, cy, r * 0.3);
+  disc(ctx, f, shade(cyan, 0.8), cx, cy, r * 0.13, 0.85);
+}
+
+/** Crack `k` on its own at a radius of one, sealed in its dish as the spinner is — 0556. */
+function drawBoltWheel(ctx: Pen, f: Frame, palette: Palette, k: number): void {
+  ctx.fillStyle = shade(palette.trim, -0.55);
+  ctx.beginPath();
+  ring(ctx, f, 0, 0, 0.84);
+  seal(ctx);
+  paintCrackle(ctx, f, palette, k, 0, 0, 1, 0);
 }
 
 /** A bar through `(cx, cy)` at angle `a`, `reach` out each way and `width` across: one spoke pair. */
@@ -13304,10 +13427,11 @@ interface PlateAt {
   readonly edge: number;
 }
 
-function plateAt(size: number, extent: number, angle: number): PlateAt {
+// 0556: at the shell's own orbit (`shellOrbit`), which is every ship's but the Thunderbolt's.
+function plateAt(size: number, extent: number, angle: number, orbit: number): PlateAt {
   const half = size / 2;
   const unit = size / extent;
-  const radius = SHIELD_ORBIT * unit;
+  const radius = orbit * unit;
   const cell = PLATE_CELL * unit;
   return {
     cx: half - Math.cos(angle) * radius,
@@ -13464,9 +13588,14 @@ function drawPlumePlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette
 function drawStormPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
   const cyan = palette.player;
   const { radius, edge, unit, angle } = at;
-  plateArc(ctx, at, radius, PLATE_SWEEP * 0.75, cyan, edge * 2, 0.08, 'butt');
+  /*
+    0556: stood further out than the shared orbit, at the same LENGTH of arc — it was moved off the bike
+    because it overwhelmed it, and the same sweep further out would have been a bigger cage.
+  */
+  const across = (SHIELD_ORBIT * unit) / radius;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.75 * across, cyan, edge * 2, 0.08, 'butt');
   const knots = 11;
-  const sweep = PLATE_SWEEP * 1.6;
+  const sweep = PLATE_SWEEP * 1.6 * across;
   const first = angle - sweep / 2;
   const jagged = (k: number): number => radius + edge * (k % 2 === 0 ? 0.45 : -0.15) * (k % 4 < 2 ? 1 : 0.7);
   const path = (width: number, colour: string, alpha: number): void => {
@@ -13838,6 +13967,19 @@ export function drawKind(
       ring(ctx, f, 0, 0, 0.84);
       seal(ctx);
       paintRim(ctx, f, palette, 'spinner', 0, 0, 1, 0);
+      return;
+    // 0556: the Thunderbolt's cracks, each its own body on the spinner's terms; the frame strikes them in turn.
+    case 'boltWheel0':
+    case 'boltWheel0Hit':
+      drawBoltWheel(ctx, f, palette, 0);
+      return;
+    case 'boltWheel1':
+    case 'boltWheel1Hit':
+      drawBoltWheel(ctx, f, palette, 1);
+      return;
+    case 'boltWheel2':
+    case 'boltWheel2Hit':
+      drawBoltWheel(ctx, f, palette, 2);
       return;
     /*
       ⚠️ **EACH FRAME OF A CYCLE IS ITS OWN ARM, AND THE ARM NAMES ITS INDEX — 0410.** Reading the index
@@ -16808,7 +16950,7 @@ export function drawKind(
     case 'shieldStorm240c': {
       const plate = shieldPlateOf(SPRITE[kind]);
       if (plate === null) throw new Error(`${kind} stands at no place on any ship's shell`);
-      const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!);
+      const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!, shellOrbit(plate.ship.shield));
       const look = plate.ship.shield.look;
       switch (look) {
         case 'honeycomb':

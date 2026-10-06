@@ -44,10 +44,11 @@ export const PROBES = [
     suite: 'tests/wheels.test.ts',
     broke: 'a spinner standing still over its wheel',
     guard: 'a spinner stands over each wheel and TURNS',
+    // ⚠️ Re-pointed by 0556: the turn is read off the rim's row now, as the pad reads it.
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const next = wheel.turn + (TAU * STEP_MS) / ((i === 0 ? rates[0] : rates[1]) * 1000);',
-      replace: '    const next = wheel.turn;',
+      find: '    const turn = wheelTurn(row, i, now);',
+      replace: '    const turn = 0 * now;',
     },
   },
   {
@@ -69,8 +70,8 @@ export const PROBES = [
     guard: 'turning on its pad',
     edit: {
       path: 'src/render/port.ts',
-      find: '  if (wheels !== null && rates !== null) {',
-      replace: '  if (wheels === null && rates !== null) {',
+      find: '  if (wheels !== null && wheel !== null) {',
+      replace: '  if (wheels === null && wheel !== null) {',
     },
   },
 ];

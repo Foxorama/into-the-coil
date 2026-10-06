@@ -38,8 +38,9 @@ export const PROBES = [
     guard: 'turns a car’s spinners on the pad',
     edit: {
       path: 'src/render/port.ts',
-      find: '      const turn = ((Math.PI * 2 * seconds) / (i === 0 ? rates[0] : rates[1])) % (Math.PI * 2);',
-      replace: '      const turn = 0 * seconds;',
+      // ⚠️ Re-pointed by 0556: the turn is read off the rim's row now.
+      find: '      put(surface, view, sprite, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);',
+      replace: '      put(surface, view, sprite, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, 0 * seconds, swell);',
     },
   },
   {

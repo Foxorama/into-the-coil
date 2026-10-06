@@ -107,8 +107,13 @@ export const PORT_KINDS = [
   'pool',
   'contrail',
   'veil',
-  // 0540: a turning rim, at hangar size, for a car on its pad while a tab stands in the port.
-  'blueWheel',
+  /*
+    0540: a turning rim, at hangar size, for a car on its pad while a tab stands in the port. 0556: one
+    for each picture a rim shows in turn (`WHEEL_FRAMES`), baked off the rim the car is fitted with.
+  */
+  'blueWheel0',
+  'blueWheel1',
+  'blueWheel2',
   // 0542: Cosmo, and the stall by the pilot's pad they keep their counter at.
   'cosmo',
   'stall',
@@ -185,7 +190,9 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   contrail: 16,
   veil: 1,
   // 0540: the fight's spinner, at hangar size — baked at it rather than blitted up, on the ships' terms above.
-  blueWheel: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
+  blueWheel0: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
+  blueWheel1: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
+  blueWheel2: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
   // 0542: a bust a head taller than the counter, and the stall's square box.
   cosmo: 14,
   stall: 30,
