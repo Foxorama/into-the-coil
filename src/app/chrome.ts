@@ -4444,7 +4444,7 @@ export function makeChrome(
     shipBox.replaceChildren(shipOnCard(screen, row.ship, fit));
     /*
       0527: and a car on a turning rim turns it here, each wheel laid over its tyre and spun by the stylesheet.
-      ⚠️ **A ROLL ONLY — 0556.** The stylesheet turns one picture at a steady rate; a rim that strikes from
+      ⚠️ **A ROLL ONLY — 0557.** The stylesheet turns one picture at a steady rate; a rim that strikes from
       picture to picture (the lightning) shows its baked rim here, still, as a card shows every other part.
     */
     const wheel = fit.rim === null ? null : RIMS[fit.rim].wheel;

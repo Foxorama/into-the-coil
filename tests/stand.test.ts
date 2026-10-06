@@ -58,7 +58,7 @@ function drawStand(screen: (typeof STANDING)[number], width: number, height: num
 
 const all = (blits: readonly Blit[], kind: PortKind): Blit[] => blits.filter((b) => b.sprite === PORT_SPRITE[kind]);
 
-/** Every picture laid over a wheel on the pad, whichever of a rim's it is — 0556. */
+/** Every picture laid over a wheel on the pad, whichever of a rim's it is — 0557. */
 const WHEEL_SPRITES: readonly number[] = PORT_KINDS.filter((kind) => kind.startsWith('blueWheel')).map((kind) => PORT_SPRITE[kind]);
 const wheelsOn = (blits: readonly Blit[]): Blit[] => blits.filter((b) => WHEEL_SPRITES.includes(b.sprite));
 
@@ -131,7 +131,7 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     expect(wheelsOn(drawStand('parts', 1280, 720, 0, SHIPS.fighter)), 'a spinner is drawn on a ship with no wheels').toEqual([]);
   });
 
-  it('0556 — the Thunderbolt’s lightning crackles on the pad: a new crack every sixteenth of a second, struck somewhere new', () => {
+  it('0557 — the Thunderbolt’s lightning crackles on the pad: a new crack every sixteenth of a second, struck somewhere new', () => {
     /*
       Played: *"they just look like a teal bar … make them crackle like lightning"*. Held in what the player
       sees: in one second on the pad, every one of the rim's cracks lands on each wheel, the picture is

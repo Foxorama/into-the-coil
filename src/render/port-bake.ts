@@ -100,7 +100,7 @@ export function withTheGame(port: Atlas, game: Atlas): Atlas {
 }
 
 /**
- * The `n`th picture the pilot's fitted rim shows over a wheel, at hangar size — 0556. A rim with fewer
+ * The `n`th picture the pilot's fitted rim shows over a wheel, at hangar size — 0557. A rim with fewer
  * pictures repeats its last, and a rim baked still bakes the spinner, which no car on it ever draws.
  */
 function bakeWheel(n: number, palette: Palette, pixelsPerUnit: number, pilot: GolferRow): HTMLCanvasElement {

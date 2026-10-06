@@ -1,4 +1,4 @@
-// The breaks behind docs/decisions/0556-the-marmot-crackles.md.
+// The breaks behind docs/decisions/0557-the-marmot-crackles.md.
 //
 // ⚠️ The lightning is a picture that changes and lands somewhere new, in the fight and on the pad; a strike
 // swept round from the last would read as a wheel spinning. And the storm's shell stands at its own orbit
@@ -9,7 +9,7 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0556',
+    decision: '0557',
     suite: 'tests/wheels.test.ts',
     broke: 'a strike swept round from the last crack by the renderer',
     guard: 'strikes a new crack over each wheel every sixteenth of a second',
@@ -20,7 +20,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0556',
+    decision: '0557',
     suite: 'tests/wheels.test.ts',
     broke: 'the lightning in the fight holding its first crack for good',
     guard: 'strikes a new crack over each wheel every sixteenth of a second',
@@ -31,7 +31,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0556',
+    decision: '0557',
     suite: 'tests/stand.test.ts',
     broke: 'the lightning on the pad holding its first crack for good',
     guard: 'the Thunderbolt’s lightning crackles on the pad',
@@ -42,7 +42,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0556',
+    decision: '0557',
     suite: 'tests/shields.test.ts',
     broke: 'the frame standing every shell at the shared orbit whatever its row says',
     guard: 'THE OWN SHELL: every ship flies in its own plates',
@@ -53,7 +53,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0556',
+    decision: '0557',
     suite: 'tests/shields.test.ts',
     broke: 'the storm back on the bike at the shared orbit',
     guard: 'the Thunderbolt’s storm stands clear of the bike',

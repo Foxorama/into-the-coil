@@ -26,7 +26,7 @@ export interface RimFrame {
 }
 
 /**
- * How a rim's wheels move — `docs/decisions/0556-the-marmot-crackles.md`. A picture of its own stands over
+ * How a rim's wheels move — `docs/decisions/0557-the-marmot-crackles.md`. A picture of its own stands over
  * each wheel the car's row names (`stepWheels` in the fight, `paintStand` on the pad), and this is what
  * it does there: the spinners roll; the lightning strikes, a new crack each flash, somewhere else.
  *
@@ -76,7 +76,7 @@ export interface RimRow {
   from: ShipKind | null;
   /** What it costs at Cosmo's, in Star Shards, or `null` for one that comes on a car. */
   price: number | null;
-  /** How its wheels move, or `null` for a rim baked still into the hull — 0527, 0556. */
+  /** How its wheels move, or `null` for a rim baked still into the hull — 0527, 0557. */
   wheel: RimWheel | null;
 }
 
@@ -97,7 +97,7 @@ export const RIMS: Record<RimKind, RimRow> = {
     wheel: { frames: [{ base: 'spinnerWheel', hit: 'spinnerWheelHit' }], hold: 0, turn: [0.7, 0.8], jump: 0 },
   },
   /*
-    The Thunderbolt's — 0545: the predecessor's chopper wore bright rims; these are its lightning. 0556:
+    The Thunderbolt's — 0545: the predecessor's chopper wore bright rims; these are its lightning. 0557:
     played, *"they just look like a teal bar, they don't even look like lightning"* — asked to *"crackle
     like lightning"*. Three cracks, each held a sixteenth of a second and struck at a new angle from the
     last, never rolling: lightning does not turn, it lands somewhere else.

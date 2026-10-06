@@ -95,7 +95,7 @@ export const SPRITE_KINDS = [
   // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
   'spinnerWheel',
   'spinnerWheelHit',
-  // 0556: the Thunderbolt's lightning, three cracks the frame strikes in turn over each wheel.
+  // 0557: the Thunderbolt's lightning, three cracks the frame strikes in turn over each wheel.
   'boltWheel0',
   'boltWheel0Hit',
   'boltWheel1',
@@ -1665,7 +1665,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   spinnerWheel: 3.6 * 0.062 * SHIP_BOX,
   spinnerWheelHit: 3.6 * 0.062 * SHIP_BOX,
-  // 0556: in the spinner's box, so one swell stands any rim's picture over any tyre.
+  // 0557: in the spinner's box, so one swell stands any rim's picture over any tyre.
   boltWheel0: 3.6 * 0.062 * SHIP_BOX,
   boltWheel0Hit: 3.6 * 0.062 * SHIP_BOX,
   boltWheel1: 3.6 * 0.062 * SHIP_BOX,

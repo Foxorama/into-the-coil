@@ -935,7 +935,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
   spinnerWheel: 'player',
   spinnerWheelHit: 'hazard',
-  // 0556: and the lightning's, on the same terms.
+  // 0557: and the lightning's, on the same terms.
   boltWheel0: 'player',
   boltWheel0Hit: 'hazard',
   boltWheel1: 'player',
@@ -2891,7 +2891,7 @@ function thunderboltOutline(stage: number, own = true): Pt[] {
     [4, -8.2],
     [6, -9.4],
     /*
-      0556: the bar swept back to him from the top of a riser raked back off the fork crown — played: *"tilt
+      0557: the bar swept back to him from the top of a riser raked back off the fork crown — played: *"tilt
       the handlebars closer to the marmot because he's got super long arms now"*. The grip was out over the
       front wheel at nine, and is at six, where his reach ends.
     */
@@ -3436,7 +3436,7 @@ export function paintRim(ctx: Pen, f: Frame, palette: Palette, rim: RimKind, cx:
     }
     /*
       The Thunderbolt's — 0545, drawn as one fat slash of cyan, half a radius thick on the spinner's terms.
-      0556, played: *"they just look like a teal bar, they don't even look like lightning"*. Now the first
+      0557, played: *"they just look like a teal bar, they don't even look like lightning"*. Now the first
       of its three cracks (`paintCrackle`), still in the hull, and the frame strikes all three over it.
     */
     case 'bolts':
@@ -3462,7 +3462,7 @@ interface Crack {
 }
 
 /**
- * The Thunderbolt's three cracks — 0556, struck in turn over each wheel (`RIMS.bolts.wheel`). Each is a
+ * The Thunderbolt's three cracks — 0557, struck in turn over each wheel (`RIMS.bolts.wheel`). Each is a
  * different count, spacing and set of forks, so three in a row never read as one picture blinking.
  */
 const CRACKS: readonly (readonly Crack[])[] = [
@@ -3516,7 +3516,7 @@ function ribbon(path: readonly Pt[], width: number, tip: number): Pt[] {
 }
 
 /**
- * Lightning crackling across a dark dish round a chrome hub — `docs/decisions/0556-the-marmot-crackles.md`,
+ * Lightning crackling across a dark dish round a chrome hub — `docs/decisions/0557-the-marmot-crackles.md`,
  * crack `k` of `CRACKS`, in a tyre of radius `r` about `(cx, cy)`, turned `turn`.
  *
  * ⚠️ **THE BOLTS ARE LIGHT, AND THE DISH AND THE HUB ARE BODY** — 0227. A wheel is five pixels across at
@@ -3551,7 +3551,7 @@ function paintCrackle(ctx: Pen, f: Frame, palette: Palette, k: number, cx: numbe
   disc(ctx, f, shade(cyan, 0.8), cx, cy, r * 0.13, 0.85);
 }
 
-/** Crack `k` on its own at a radius of one, sealed in its dish as the spinner is — 0556. */
+/** Crack `k` on its own at a radius of one, sealed in its dish as the spinner is — 0557. */
 function drawBoltWheel(ctx: Pen, f: Frame, palette: Palette, k: number): void {
   ctx.fillStyle = shade(palette.trim, -0.55);
   ctx.beginPath();
@@ -13427,7 +13427,7 @@ interface PlateAt {
   readonly edge: number;
 }
 
-// 0556: at the shell's own orbit (`shellOrbit`), which is every ship's but the Thunderbolt's.
+// 0557: at the shell's own orbit (`shellOrbit`), which is every ship's but the Thunderbolt's.
 function plateAt(size: number, extent: number, angle: number, orbit: number): PlateAt {
   const half = size / 2;
   const unit = size / extent;
@@ -13589,7 +13589,7 @@ function drawStormPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette
   const cyan = palette.player;
   const { radius, edge, unit, angle } = at;
   /*
-    0556: stood further out than the shared orbit, at the same LENGTH of arc — it was moved off the bike
+    0557: stood further out than the shared orbit, at the same LENGTH of arc — it was moved off the bike
     because it overwhelmed it, and the same sweep further out would have been a bigger cage.
   */
   const across = (SHIELD_ORBIT * unit) / radius;
@@ -13968,7 +13968,7 @@ export function drawKind(
       seal(ctx);
       paintRim(ctx, f, palette, 'spinner', 0, 0, 1, 0);
       return;
-    // 0556: the Thunderbolt's cracks, each its own body on the spinner's terms; the frame strikes them in turn.
+    // 0557: the Thunderbolt's cracks, each its own body on the spinner's terms; the frame strikes them in turn.
     case 'boltWheel0':
     case 'boltWheel0Hit':
       drawBoltWheel(ctx, f, palette, 0);

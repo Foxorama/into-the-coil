@@ -5220,7 +5220,7 @@ function stepShields(w: World): void {
     // Carried by hand, because nothing else steps this pool — and the renderer interpolates from it.
     orb.prevAlong = orb.along;
     orb.prevAcross = orb.across;
-    // 0556: at the shell's own orbit, which the bake curved the plate round.
+    // 0557: at the shell's own orbit, which the bake curved the plate round.
     const orbit = shellOrbit(w.shipRow.shield);
     orb.along = w.ship.along + Math.cos(angle) * orbit;
     orb.across = w.ship.across + Math.sin(angle) * orbit;
@@ -5257,7 +5257,7 @@ function stepWheels(w: World): void {
   }
   const hurt = w.ship.sprite === w.ship.spriteHit;
   /*
-    0556: on the run's own clock, read by the rim's row as the pad reads it (`wheelFrame`, `wheelTurn`) —
+    0557: on the run's own clock, read by the rim's row as the pad reads it (`wheelFrame`, `wheelTurn`) —
     a roll interpolated between steps like any turn, and a strike NOT: a crack that lands somewhere new
     is there at once, where a turn swept between two would be a wheel spinning through it.
   */

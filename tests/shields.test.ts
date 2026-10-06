@@ -643,14 +643,14 @@ describe('0492 — the shell is the ship’s own', () => {
           SHIPS[kind].shield.places.some((p) => p.includes(sprite)),
           `${kind} flies in ${SPRITE_KINDS[sprite]}, which is not its own plate`,
         ).toBe(true);
-        // 0556: and at the orbit its plates were curved round, which is the row's own where it says one.
+        // 0557: and at the orbit its plates were curved round, which is the row's own where it says one.
         const out = Math.hypot(orb.along - world.ship.along, orb.across - world.ship.across);
         expect(out, `${kind}'s plate ${i} stands off the orbit its picture curves round`).toBeCloseTo(shellOrbit(SHIPS[kind].shield), 6);
       }
     }
   });
 
-  it('0556 — the Thunderbolt’s storm stands clear of the bike, and the other shells where they were', () => {
+  it('0557 — the Thunderbolt’s storm stands clear of the bike, and the other shells where they were', () => {
     // Played: *"the lightning shield cosmetic … overwhelms the ship itself"*. Further out on its row alone.
     expect(shellOrbit(SHIPS.thunderbolt.shield), 'the storm is no further from the bike than every shell is').toBeGreaterThan(SHIELD_ORBIT);
     for (const kind of SHIP_KINDS) if (kind !== 'thunderbolt') expect(shellOrbit(SHIPS[kind].shield), kind).toBe(SHIELD_ORBIT);
@@ -660,7 +660,7 @@ describe('0492 — the shell is the ship’s own', () => {
     /*
       ⚠️ **IN WORLD UNITS ABOUT THE SHIP**, which is what the player sees: every mark of every plate,
       at every place, lies within a unit of the shell's orbit from the ship's centre — `SHIELD_ORBIT`, or
-      the row's own since 0556. A look drawn about the tile's centre would sit within a unit of the
+      the row's own since 0557. A look drawn about the tile's centre would sit within a unit of the
       TILE's centre, five units out, and fail this.
     */
     const ink = PALETTES[DEFAULT_PALETTE];

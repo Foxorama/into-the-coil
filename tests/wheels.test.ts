@@ -155,7 +155,7 @@ describe('the run', () => {
   });
 });
 
-describe('0556 — the lightning crackles', () => {
+describe('0557 — the lightning crackles', () => {
   it('strikes a new crack over each wheel every sixteenth of a second, somewhere new, and never sweeps between two', () => {
     /*
       Played: *"they just look like a teal bar, they don't even look like lightning"* — asked: *"make them

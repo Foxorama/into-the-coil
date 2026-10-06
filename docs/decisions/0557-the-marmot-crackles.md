@@ -1,4 +1,4 @@
-# 0556 — The Marmot crackles
+# 0557 — The Marmot crackles
 
 **Accepted 2026-10-06.** A play of the Thunderbolt after [0546](0546-the-marmot-rides.md). Amends
 [0527](0527-the-wheels-turn.md)'s turning wheels, [0492](0492-the-shields-wear-the-ship.md)'s one orbit for
@@ -77,7 +77,7 @@ of the ask.
   of its plates is within a unit of it in the bake. The storm is further out than `SHIELD_ORBIT`, and every
   other shell is at it.
 
-Each is broken by a probe in `scripts/probes/0556-the-marmot-crackles.mjs`, five of them, all seen red.
+Each is broken by a probe in `scripts/probes/0557-the-marmot-crackles.mjs`, five of them, all seen red.
 0527's and 0540's probes that anchored on the old rates are re-pointed at the new lines, and all eleven
 still go red.
 

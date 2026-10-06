@@ -108,7 +108,7 @@ export const PORT_KINDS = [
   'contrail',
   'veil',
   /*
-    0540: a turning rim, at hangar size, for a car on its pad while a tab stands in the port. 0556: one
+    0540: a turning rim, at hangar size, for a car on its pad while a tab stands in the port. 0557: one
     for each picture a rim shows in turn (`WHEEL_FRAMES`), baked off the rim the car is fitted with.
   */
   'blueWheel0',

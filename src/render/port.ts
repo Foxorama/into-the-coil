@@ -56,7 +56,7 @@ import { SCROLL_PER_STEP } from '../sim/flight.ts';
 import { paintSky, type Sky } from './scene.ts';
 import { screenX, screenY, type Surface } from './surface.ts';
 
-/** The pad's wheel pictures, in the order a rim shows its own — 0556. */
+/** The pad's wheel pictures, in the order a rim shows its own — 0557. */
 // @setup: three indices for the lifetime of the module.
 const BLUE_WHEELS: readonly number[] = [PORT_SPRITE.blueWheel0, PORT_SPRITE.blueWheel1, PORT_SPRITE.blueWheel2];
 
@@ -164,7 +164,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
     picture over each tyre its row names, swelled to that tyre — the spinners rolling front and back at
-    their own rates, the lightning striking a new crack each flash (0556). Its pictures are baked off the
+    their own rates, the lightning striking a new crack each flash (0557). Its pictures are baked off the
     fitted rim into `BLUE_WHEELS` (`bakePortShip`).
   */
   const wheels = ship.wheels;

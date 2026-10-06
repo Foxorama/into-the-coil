@@ -160,7 +160,7 @@ describe('the picture', () => {
       paintStand(stand, viewOf(NARROW.width, NARROW.height), 0, SKY, fitted(SHIPS.firebird, SHIPS.firebird.weapon, 'spinner'), keeper);
       for (const b of stand.blits) seen.add(b.sprite);
     }
-    // 0556: and every picture of the lightning, which strikes them in turn over a second on the pad.
+    // 0557: and every picture of the lightning, which strikes them in turn over a second on the pad.
     for (let t = 0; t < 60; t++) {
       paintStand(stand, viewOf(NARROW.width, NARROW.height), t, SKY, SHIPS.thunderbolt, null);
       for (const b of stand.blits) seen.add(b.sprite);
