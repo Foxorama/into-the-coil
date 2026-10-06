@@ -114,6 +114,11 @@ mid-fight moves the wall, the mark and the clamp on the same step.
 | the boss left at the 16:9 station | `tests/level.test.ts` — *on a phone it holds the same place from the screen's front edge* |
 | the flanker's ceiling back at the horizon | `tests/spawns.test.ts` — *a flanker never enters behind the ship*, now asked over every ship position in the device's box |
 
+⚠️ **0080's first probe was re-aimed, and that is a finding.** It put the aspect floor back at 1.5 and
+expected the strip guard to go red; it no longer can, because the box follows the view and a lower floor
+leaves none of a 16:9 screen out of reach. What the floor still breaks is `PLAYER_LEAD` being the 16:9
+screen's wall, and *the ship really is against it* is the guard that says so.
+
 `scripts/probes/0552-the-box-is-every-screen.mjs`. **Owed: a play on a phone**, and a look at a boss
 entrance on one.
 
