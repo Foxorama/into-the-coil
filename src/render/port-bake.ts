@@ -855,73 +855,220 @@ function paintBench(ctx: CanvasRenderingContext2D, palette: Palette): void {
 }
 
 /**
- * MMXXVI's booth — 0550: a paint shop's counter in the stall's box, under an awning striped in the inks
- * the shop paints with and dripping them off its edge. A dark front with the name in white, a row of
- * colour chips along its foot, and on the top two paint tins, a spray can and a rim — the parts.
+ * MMXXVI's booth — 0550, made a painter's mess in 0555: a paint shop's counter in the stall's box, under
+ * a scalloped awning striped in the inks the shop paints with, every scallop dripping its own ink — short
+ * over the middle, where the keeper's helmet is. Paint run down both posts and a roller leant on one. A
+ * dark front with the name on a framed plaque, paint run over its top edge, and a row of colour chips
+ * along its foot. On the top: a tin with a drip down its side, another tipped over and pouring off the
+ * edge, a spray can, and a tyre on its rim — the parts.
  */
 function paintBooth(ctx: CanvasRenderingContext2D, palette: Palette): void {
   const counter = shade(palette.player, -0.62);
   const paints = [palette.enemy, palette.hazard, palette.acid, palette.player, palette.void, palette.bullet];
-  // The posts.
-  ctx.fillStyle = PORT_INK.woodLight;
-  ctx.fillRect(-13, -12, 1, 13);
-  ctx.fillRect(12, -12, 1, 13);
-  // The awning, a stripe of each paint, and every stripe dripping a little of itself.
+  const outline = palette.space;
+  // A run of paint straight down from (`x`, `y`), `length` long and `width` wide, beaded at its end.
+  const run = (ink: string, x: number, y: number, length: number, width: number) => {
+    ctx.fillStyle = ink;
+    ctx.fillRect(x - width / 2, y, width, length);
+    ctx.beginPath();
+    ctx.arc(x, y + length, width * 0.68, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  // The posts, and paint run down each from where a brush was wiped on it.
+  for (const x of [-13, 12]) {
+    ctx.fillStyle = PORT_INK.woodLight;
+    ctx.fillRect(x, -12, 1, 13);
+    ctx.fillStyle = PORT_INK.woodDark;
+    ctx.fillRect(x + 0.72, -12, 0.28, 13);
+  }
+  run(palette.acid, -12.6, -11, 4.2, 0.36);
+  run(palette.enemy, -12.3, -11, 2.2, 0.3);
+  run(palette.void, 12.35, -11, 3.1, 0.36);
+  run(palette.hazard, 12.7, -11, 5.6, 0.28);
+  // A roller leant on the near post, wet with the shop's own ink: the handle, its wire, and the nap.
+  ctx.strokeStyle = PORT_INK.woodDark;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 0.55;
+  ctx.beginPath();
+  ctx.moveTo(14.4, 0.2);
+  ctx.lineTo(13.7, -3.6);
+  ctx.stroke();
+  ctx.strokeStyle = palette.blade;
+  ctx.lineWidth = 0.22;
+  ctx.beginPath();
+  ctx.moveTo(13.7, -3.6);
+  ctx.lineTo(13.5, -5.2);
+  ctx.lineTo(14.3, -5.6);
+  ctx.lineTo(14.3, -6.2);
+  ctx.stroke();
+  ctx.fillStyle = palette.player;
+  ctx.fillRect(13.55, -9.4, 1.35, 3.4);
+  ctx.fillStyle = shade(palette.player, -0.3);
+  ctx.fillRect(14.5, -9.4, 0.4, 3.4);
+  run(palette.player, 14, -6.2, 1, 0.3);
+  // The awning: a stripe of each paint, scalloped at its lower edge, and every scallop dripping.
+  const stripe = 29 / 9;
   for (let i = 0; i < 9; i++) {
     const ink = paints[i % paints.length]!;
-    const x = -14.5 + i * (29 / 9);
+    const x = -14.5 + i * stripe;
     ctx.fillStyle = ink;
-    ctx.fillRect(x, -14.5, 29 / 9 + 0.05, 2.6);
-    const drip = 0.8 + ((i * 7) % 5) * 0.45;
-    ctx.fillRect(x + 1.1, -12, 0.7, drip);
+    ctx.fillRect(x, -14.5, stripe + 0.05, 2.6);
     ctx.beginPath();
-    ctx.arc(x + 1.45, -12 + drip, 0.45, 0, Math.PI * 2);
+    ctx.arc(x + stripe / 2, -11.9, stripe / 2, 0, Math.PI);
     ctx.fill();
+    // Over the middle three, where the helmet stands, only a bead; out at the sides, a long run.
+    const middle = i >= 3 && i <= 5;
+    const length = middle ? 0.25 : 0.9 + ((i * 7) % 5) * 0.5;
+    run(ink, x + stripe * (0.35 + ((i * 3) % 4) * 0.1), -10.7, length, 0.5);
   }
+  ctx.fillStyle = rgba(palette.impact, 0.35);
+  ctx.fillRect(-14.5, -14.2, 29, 0.4);
   ctx.fillStyle = PORT_INK.woodDark;
   ctx.fillRect(-14.8, -14.9, 29.6, 0.5);
   // The counter, its top board, and a light line under it.
   ctx.fillStyle = counter;
   ctx.fillRect(-13.5, 1, 27, 14);
+  ctx.fillStyle = shade(counter, -0.25);
+  ctx.fillRect(-13.5, 1.8, 27, 0.9);
   ctx.fillStyle = PORT_INK.woodLight;
   ctx.fillRect(-14, 0.4, 28, 1.4);
   ctx.fillStyle = palette.player;
   ctx.fillRect(-13.5, 2.3, 27, 0.35);
+  // The name on a framed plaque: a shade up from the front, its frame in the shop's ink, a bolt at each corner.
+  ctx.fillStyle = shade(counter, 0.18);
+  ctx.strokeStyle = palette.player;
+  ctx.lineWidth = 0.3;
+  ctx.beginPath();
+  ctx.roundRect(-8.4, 3.7, 16.8, 7.6, 0.8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = palette.blade;
+  for (const x of [-7.6, 7.6]) {
+    for (const y of [4.5, 10.5]) {
+      ctx.beginPath();
+      ctx.arc(x, y, 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
   paintSign(ctx, KEEPERS.mmxxvi.sign, palette.impact, palette.player);
+  // Paint run over the top board's edge and down the front, at both ends, clear of the plaque.
+  run(palette.enemy, -12.4, 1.6, 2.6, 0.45);
+  run(palette.acid, 11.1, 1.6, 1.4, 0.4);
+  run(palette.void, 12.4, 1.6, 3.4, 0.5);
   // The chips along its foot.
   for (let i = 0; i < paints.length; i++) {
     ctx.fillStyle = paints[i]!;
     ctx.fillRect(-10.5 + i * 3.7, 12.2, 2.4, 1.6);
+    ctx.fillStyle = rgba(palette.impact, 0.3);
+    ctx.fillRect(-10.5 + i * 3.7, 12.2, 2.4, 0.35);
   }
-  // On the top: two tins, a spray can, and a rim stood on its edge.
-  for (const [x, ink] of [
-    [-12, palette.enemy],
-    [-8.6, palette.player],
-  ] as const) {
-    ctx.fillStyle = ink;
-    ctx.fillRect(x, -2.2, 2.8, 2.6);
+  // On the top, at the bar's end: a tin stood up, a run of its paint down its side, its wire handle up.
+  const tin = (x: number, ink: string) => {
     ctx.fillStyle = palette.blade;
+    ctx.fillRect(x, -2.2, 2.8, 2.6);
+    ctx.fillStyle = shade(palette.blade, -0.3);
+    ctx.fillRect(x + 2.2, -2.2, 0.6, 2.6);
+    ctx.fillStyle = ink;
+    ctx.fillRect(x, -1.4, 2.8, 1.2);
+    ctx.fillStyle = shade(palette.blade, -0.15);
     ctx.beginPath();
     ctx.ellipse(x + 1.4, -2.2, 1.4, 0.45, 0, 0, Math.PI * 2);
     ctx.fill();
-  }
-  ctx.fillStyle = palette.void;
-  ctx.fillRect(6, -2.8, 1.4, 3.2);
-  ctx.fillStyle = palette.blade;
-  ctx.fillRect(6.2, -3.5, 1, 0.7);
-  ctx.strokeStyle = palette.blade;
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  ctx.arc(10.8, -1.6, 2, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.lineWidth = 0.3;
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
+    ctx.fillStyle = ink;
     ctx.beginPath();
-    ctx.moveTo(10.8, -1.6);
-    ctx.lineTo(10.8 + Math.cos(a) * 1.8, -1.6 + Math.sin(a) * 1.8);
+    ctx.ellipse(x + 1.4, -2.2, 1.1, 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    run(ink, x + 0.5, -2.2, 0.9, 0.35);
+    ctx.strokeStyle = outline;
+    ctx.lineWidth = 0.14;
+    ctx.beginPath();
+    ctx.moveTo(x, -2.1);
+    ctx.quadraticCurveTo(x + 1.4, -4.3, x + 2.8, -2.1);
+    ctx.stroke();
+  };
+  tin(-12.8, palette.enemy);
+  // And beside it a tin tipped on its side, its mouth to the bar, pouring over the edge and down the front.
+  ctx.fillStyle = palette.blade;
+  ctx.fillRect(-8.6, -1.9, 2.9, 2.3);
+  ctx.fillStyle = shade(palette.blade, -0.3);
+  ctx.fillRect(-8.6, -0.1, 2.9, 0.5);
+  ctx.fillStyle = palette.player;
+  ctx.fillRect(-8.1, -1.4, 1.9, 1.1);
+  ctx.fillStyle = shade(palette.blade, -0.15);
+  ctx.beginPath();
+  ctx.ellipse(-8.6, -0.75, 0.5, 1.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = shade(palette.player, -0.35);
+  ctx.beginPath();
+  ctx.ellipse(-8.6, -0.75, 0.32, 0.9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = palette.player;
+  ctx.beginPath();
+  ctx.moveTo(-8.7, 0.1);
+  ctx.quadraticCurveTo(-9.8, 0.2, -10.2, 0.4);
+  ctx.lineTo(-10.2, 1.6);
+  ctx.lineTo(-8.4, 1.6);
+  ctx.lineTo(-8.4, 0.4);
+  ctx.closePath();
+  ctx.fill();
+  run(palette.player, -9.6, 1.6, 4.6, 0.9);
+  run(palette.player, -8.8, 1.6, 2.2, 0.55);
+  ctx.beginPath();
+  ctx.arc(-9.6, 8.1, 0.32, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = rgba(palette.impact, 0.45);
+  ctx.fillRect(-9.95, 1.8, 0.22, 3.6);
+  // A spray can, its cap off and a puff of its ink off the nozzle.
+  ctx.fillStyle = palette.void;
+  ctx.beginPath();
+  ctx.roundRect(5.2, -3.2, 1.5, 3.6, 0.35);
+  ctx.fill();
+  ctx.fillStyle = rgba(palette.impact, 0.35);
+  ctx.fillRect(5.4, -2.9, 0.3, 3);
+  ctx.fillStyle = palette.blade;
+  ctx.fillRect(5.45, -3.8, 1, 0.65);
+  ctx.fillRect(5.75, -4.15, 0.4, 0.4);
+  ctx.fillStyle = rgba(palette.void, 0.45);
+  for (const [x, y, r] of [
+    [6.8, -4.4, 0.45],
+    [7.5, -4.7, 0.6],
+    [8.3, -4.5, 0.4],
+  ] as const) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // The parts: a tyre stood on its edge, a chrome rim in it, five spokes and a hub.
+  ctx.fillStyle = shade(palette.blade, -0.7);
+  ctx.beginPath();
+  ctx.arc(10.2, -1.9, 2.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = shade(palette.blade, -0.5);
+  ctx.lineWidth = 0.25;
+  ctx.beginPath();
+  ctx.arc(10.2, -1.9, 1.95, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = palette.blade;
+  ctx.beginPath();
+  ctx.arc(10.2, -1.9, 1.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = shade(palette.blade, -0.45);
+  ctx.beginPath();
+  ctx.arc(10.2, -1.9, 1.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = palette.blade;
+  ctx.lineWidth = 0.32;
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(10.2, -1.9);
+    ctx.lineTo(10.2 + Math.cos(a) * 1.15, -1.9 + Math.sin(a) * 1.15);
     ctx.stroke();
   }
+  ctx.fillStyle = palette.player;
+  ctx.beginPath();
+  ctx.arc(10.2, -1.9, 0.35, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /**
