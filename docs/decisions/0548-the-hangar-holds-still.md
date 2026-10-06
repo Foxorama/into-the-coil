@@ -38,6 +38,11 @@ pad; at 1.4 the ship is about three fifths that size. The ask was one zoom, and 
 stall and the ship at every size is Cosmo's. `rig/looks.html` still shows the looks close. If the close-up
 is missed on play, the answer is a tab whose camera is its own, which 0548 leaves room for.
 
+**On a phone Cosmo is a face and one line.** The pilots under him put Buy and Back four pixels under a
+667x375's fold on CI's wider letters. His name goes there — his stall is beside the plate — and his line
+is cut short where it must be; the shelf's own line still says what the balance is short by. Reproduced
+locally with every letter spaced 0.05em wider, which gave CI's exact numbers before the fix.
+
 **Cosmo's opens on the pilots**, not the aisle: the walk starts at the first band, as the other two tabs'
 does.
 
