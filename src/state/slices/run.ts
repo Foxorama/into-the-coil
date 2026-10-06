@@ -227,7 +227,9 @@ export type RunAction =
   | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
   | { slice: 'run'; type: 'levelCleared' }
   // A cleared level's account, banked — 0428. Before `levelCleared`, which moves the level on.
-  | { slice: 'run'; type: 'scored'; tally: LevelTally };
+  | { slice: 'run'; type: 'scored'; tally: LevelTally }
+  // 0555: a run left for the title, which a quit and a win both are.
+  | { slice: 'run'; type: 'ended' };
 
 /**
  * No run in progress.
@@ -474,6 +476,12 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         continues: state.continues,
         credits: state.credits,
       };
+    /*
+      0555: the run over, by a quit or a win — no lives, which is `initialRun`'s *no run in progress*. The
+      rest is left as a run out of lives leaves it: the screens that read the run's account already have.
+    */
+    case 'ended':
+      return state.lives === 0 ? state : { ...state, lives: 0 };
     default: {
       // Adding a member to `RunAction` fails to compile HERE, per
       // `docs/decisions/0016-a-hub-enumerates-kinds.md`'s fifth defeat.
