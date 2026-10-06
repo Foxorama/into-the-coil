@@ -5,12 +5,12 @@ import { DEFAULT_CREDIT } from '../src/content/credits.ts';
 import { SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 
 /**
- * A RUN AT THE TITLE IS OVER — `docs/decisions/0555-a-run-at-the-title-is-over.md`.
+ * A RUN AT THE TITLE IS OVER — `docs/decisions/0558-a-run-ends-at-the-title.md`.
  *
- * Played: *"the spinning wheels were spinning happily … when I looked a little later, didn't matter where
- * it was the wheels didn't spin"*, and right again in a fresh tab. A quit and a victory went to the title
- * with the run's lives still up, and the shell reads lives above nought as *a run is flying*, so the
- * hangar's pad kept the last run's ship for the rest of the tab and never wore a fitting again.
+ * Asked: *"fix the lives bug and the run ending properly so that things reset correctly."* A quit and a
+ * victory went to the title with the run's lives still up — measured, ×3 on the title after a quit — and
+ * the shell reads lives above nought as *a run is flying*, so the world kept the last run's ship for the
+ * rest of the tab: the pad stood its spinners over the next pilot's caddie (`tests/run-ends.browser.test.ts`).
  *
  * ⚠️ **HELD ON EVERY SCREEN A RUN CAN BE LEFT FROM, NOT ON THE TWO BUTTONS FOUND**: the title is reached
  * from wherever, and the rule is the title's.

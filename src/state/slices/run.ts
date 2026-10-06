@@ -228,7 +228,7 @@ export type RunAction =
   | { slice: 'run'; type: 'levelCleared' }
   // A cleared level's account, banked — 0428. Before `levelCleared`, which moves the level on.
   | { slice: 'run'; type: 'scored'; tally: LevelTally }
-  // 0555: a run left for the title, which a quit and a win both are.
+  // 0558: a run left for the title, which a quit and a win both are.
   | { slice: 'run'; type: 'ended' };
 
 /**
@@ -477,7 +477,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         credits: state.credits,
       };
     /*
-      0555: the run over, by a quit or a win — no lives, which is `initialRun`'s *no run in progress*. The
+      0558: the run over, by a quit or a win — no lives, which is `initialRun`'s *no run in progress*. The
       rest is left as a run out of lives leaves it: the screens that read the run's account already have.
     */
     case 'ended':

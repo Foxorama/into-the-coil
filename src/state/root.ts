@@ -67,7 +67,7 @@ export function reduce(state: State, action: Action): State {
     const screen = reduceScreen(state.screen, action);
     if (screen === state.screen) return agree(state);
     /*
-      THE THIRD AGREEMENT: a run that arrives at the title is over — `docs/decisions/0555-a-run-at-the-title-is-over.md`.
+      THE THIRD AGREEMENT: a run that arrives at the title is over — `docs/decisions/0558-a-run-ends-at-the-title.md`.
 
       ⚠️ **ON THE TITLE, NOT ON THE BUTTONS THAT GO THERE.** A quit and a victory both left for the title
       with the run's lives still up, and lives above nought is what the shell reads as *a run is flying*:
@@ -106,7 +106,7 @@ const SHOW_GAME_OVER: ScreenAction = { slice: 'screen', type: 'show', screen: 'g
 const SHOW_ENDED: ScreenAction = { slice: 'screen', type: 'show', screen: 'ended' };
 // The run finished goes to the finale, which expires into the victory screen — 0418.
 const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outro' };
-// A run that reaches the title is over — 0555.
+// A run that reaches the title is over — 0558.
 const END_RUN: RunAction = { slice: 'run', type: 'ended' };
 
 /**
