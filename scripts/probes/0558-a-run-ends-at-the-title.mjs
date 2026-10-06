@@ -22,9 +22,10 @@ export const PROBES = [
     suite: 'tests/run-ends.browser.test.ts',
     broke: 'the run told it has ended and keeping its lives',
     guard: 'a pilot chosen after a quit stands on the pad in their own ship',
+    // ⚠️ Re-pointed by 0559: the slice's answer is the whole run gone, not its lives.
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '      return state.lives === 0 ? state : { ...state, lives: 0 };',
+      find: '      return initialRun;',
       replace: '      return state;',
     },
   },

@@ -5,7 +5,8 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { choose, fly, openHangar, shown } from './title.ts';
+import { choose, credit, fly, openHangar, shown } from './title.ts';
+import { SCORES_KEY } from '../src/save/scores.ts';
 import { seedOnce } from './seed.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
@@ -83,6 +84,31 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
     await page.waitForTimeout(800);
     const turned = await turnedPerSecond(page);
     expect(turned, `${GOLFERS[GOLFER_KINDS[wheelless]!].ship} has no wheels, and the pad turned ${turned} pictures a second over it — the last run's spinners`).toBe(0);
+    await context.close();
+  });
+
+  it('a continue left to run out goes on the table, written before the title ends the run', async () => {
+    /*
+      ⚠️ **MOVED BY THIS DECISION, AND IT HAD NO GUARD.** A run over whose offer runs out onto the title
+      goes on the score table — 0438. It was written as the title arrived, off the run; since 0559 the
+      title empties the run, so it is written as the title is asked for, before the reducer moves. Held
+      here in what the player keeps: a row in the saved table.
+    */
+    browser ??= await launchChromium({ headless: true });
+    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(dist);
+    await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+    await pastIntro(page);
+    await credit(page, 'free');
+    await fly(page);
+    // Nobody at the stick: the run runs out, and the offer is left to.
+    await page.waitForSelector(shown('gameOver'), { state: 'attached', timeout: 90_000 });
+    await page.waitForSelector(shown('title'), { state: 'attached', timeout: 30_000 });
+    const table = await page.evaluate((key) => localStorage.getItem(key), SCORES_KEY);
+    const rows = table === null ? [] : (JSON.parse(table) as { entries?: unknown[] } | unknown[]);
+    const count = Array.isArray(rows) ? rows.length : (rows.entries?.length ?? 0);
+    expect(count, `the run left to run out is not on the table: ${String(table)}`).toBe(1);
     await context.close();
   });
 });

@@ -477,11 +477,12 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         credits: state.credits,
       };
     /*
-      0558: the run over, by a quit or a win — no lives, which is `initialRun`'s *no run in progress*. The
-      rest is left as a run out of lives leaves it: the screens that read the run's account already have.
+      0558, 0559: the run over, however it ended — gone, not stood down: `initialRun`, *no run in progress*.
+      Every screen that reads the run's account has read it by now; a continue walked away from onto the
+      title is put on the table by the shell before this arrives.
     */
     case 'ended':
-      return state.lives === 0 ? state : { ...state, lives: 0 };
+      return initialRun;
     default: {
       // Adding a member to `RunAction` fails to compile HERE, per
       // `docs/decisions/0016-a-hub-enumerates-kinds.md`'s fifth defeat.
