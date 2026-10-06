@@ -1598,6 +1598,65 @@ ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
 */
 ${banded((p) => `.${p}option:disabled`)} { opacity: 0.38; border-style: dashed; cursor: not-allowed; }
 /*
+  ── WHAT AN OPTION IS, SAID BY ITS SHAPE — 0561 ───────────────────────────────────────────────────
+
+  On a band that tries, four things an option can be, each told by a form and never by a hue alone
+  (0024): fitted is filled and ticked; tried on is ringed, on the option and not the row; shut is
+  dashed and padlocked, and still somewhere the cursor may stand; refused is the band shaking once.
+  A shut option was told by its dash alone, which read as an empty slot.
+*/
+${banded((p) => `.${p}option.${p}option-shut`)} { opacity: 0.45; border-style: dashed; cursor: not-allowed; position: relative; padding-right: 1.5em; }
+${banded((p) => `.${p}option-shut::before`)} {
+  content: '';
+  position: absolute;
+  right: 0.45em;
+  top: 50%;
+  width: 0.42em;
+  height: 0.38em;
+  margin-top: -0.5em;
+  border: 0.12em solid currentColor;
+  border-bottom: 0;
+  border-radius: 0.3em 0.3em 0 0;
+}
+${banded((p) => `.${p}option-shut::after`)} {
+  content: '';
+  position: absolute;
+  right: 0.35em;
+  top: 50%;
+  width: 0.66em;
+  height: 0.5em;
+  margin-top: -0.12em;
+  border-radius: 0.1em;
+  background: currentColor;
+}
+${banded((p) => `.${p}option-look`)} {
+  opacity: 1;
+  outline: 3px solid var(--itc-ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 45%, transparent);
+}
+${banded((p) => `.${p}option-shut.${p}option-look`)} { opacity: 0.8; }
+/* The tick sits in the fitted option's corner, so it takes no line of its own from the label. */
+.itc-hangar-option-on:not(.itc-hangar-option-face), .itc-parts-option-on:not(.itc-parts-option-face) { position: relative; }
+.itc-hangar-option-on:not(.itc-hangar-option-face)::before, .itc-parts-option-on:not(.itc-parts-option-face)::before {
+  content: '✓';
+  position: absolute;
+  left: 0.3em;
+  top: 0.1em;
+  font-size: 0.75em;
+  font-weight: 800;
+}
+${banded((p) => `.${p}band-refused`)} { animation: itc-refused 0.32s ease-out; }
+@keyframes itc-refused {
+  0%, 100% { translate: 0; }
+  20% { translate: -0.35em; }
+  45% { translate: 0.3em; }
+  70% { translate: -0.18em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  ${banded((p) => `.${p}band-refused`)} { animation: none; }
+}
+/*
   A pilot not yet open — 0546: their face as a silhouette, a dark shape on the card, so the player sees
   someone is there and not who. The band's line says what opens them.
 */
@@ -1965,8 +2024,11 @@ ${each('-tab-key[hidden]')} { display: none; }
 */
 .itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-options,
 .itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-options { grid-template-columns: minmax(0, 1fr); }
-.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option:not(.itc-parts-option-on),
-.itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
+.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look),
+.itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look) { display: none; }
+/* 0561: and while one is tried on, it is the one shown, in the fitted one's place. */
+.itc-parts-band:has([${SETTING_ATTR}="livery"]):has(.itc-parts-option-look) .itc-parts-option-on:not(.itc-parts-option-look),
+.itc-parts-band:has([${SETTING_ATTR}="flame"]):has(.itc-parts-option-look) .itc-parts-option-on:not(.itc-parts-option-look) { display: none; }
 /*
   0530: Cosmo's shelf in rows of three, as what hangs is — five wares since the thrusters joined, and in
   one row CI's wider type put the fifth off a 667x375's edge.
@@ -2090,6 +2152,11 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
 }
 .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { white-space: nowrap; padding: 0.35em 0.9em 0.3em; border-radius: 0.55em 0.55em 0 0; border-bottom-width: 0; }
 .itc-hangar-tab:not(.itc-hangar-tab-on), .itc-parts-tab:not(.itc-parts-tab-on), .itc-shop-tab:not(.itc-shop-tab-on) { opacity: 0.6; }
+/*
+  0561: the cursor on the open tab is the ring every other control wears. The ring is the text's colour,
+  and the open tab's text is the void, so it was drawn black.
+*/
+.itc-hangar-tab-on.itc-hangar-action-cursor, .itc-parts-tab-on.itc-parts-action-cursor, .itc-shop-tab-on.itc-shop-action-cursor { outline-color: var(--itc-ink); }
 /* Settings' bands and its two buttons, at the title's column width. */
 .itc-settings-settings-box, .itc-settings-choices { width: min(100%, 34em); }
 .itc-settings-choices { flex-direction: row; justify-content: center; gap: min(0.8rem, 2cqw); }
@@ -2366,7 +2433,14 @@ ${each('-band[hidden]')} { display: none; }
     the player there is more to win or buy. One line, cut short rather than wrapped.
   */
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: flex; justify-content: center; }
-  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on), .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on):not(.itc-hangar-option-look), .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look) { display: none; }
+  /*
+    0561: the one tried on in the fitted one's place; and a band with neither — the tone of a ship in the
+    factory's paint — shows its first, shut, so the row is not two arrows round nothing.
+  */
+  .itc-hangar-band:has(.itc-hangar-option-look) .itc-hangar-option-on:not(.itc-hangar-option-look), .itc-parts-band:has(.itc-parts-option-look) .itc-parts-option-on:not(.itc-parts-option-look) { display: none; }
+  .itc-hangar-band:not(.itc-hangar-band-faces):not(:has(.itc-hangar-option-on, .itc-hangar-option-look)) .itc-hangar-option:first-child,
+  .itc-parts-band:not(.itc-parts-band-faces):not(:has(.itc-parts-option-on, .itc-parts-option-look)) .itc-parts-option:first-child { display: block; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { width: 100%; white-space: nowrap; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The balance a step smaller on a phone, in the stand's corner where it stands on a desktop (0539). */
@@ -3248,6 +3322,8 @@ interface Band {
   open: readonly boolean[];
   /** Why the shut ones are shut, said on the hint line in place of the option's hint, or `null`. */
   why: string | null;
+  /** 0561: why each shut one is shut, by position, said when it is tried on; `null` defers to `why`. */
+  whys: readonly (string | null)[];
   /** The row itself: what the cursor rings and what holds the keyboard's focus. */
   root: HTMLElement;
   less: HTMLButtonElement;
@@ -3264,7 +3340,14 @@ interface Band {
   /** Which devices it is offered on — 0512, the row's `on`. */
   on: 'all' | 'touch';
   /** What a press on it does — 0513, the row's `press`. */
-  press: 'steps' | 'takes';
+  press: 'steps' | 'takes' | 'tries';
+  /**
+   * The option the cursor has tried on and not fitted — 0561, on a band that tries. −1 when the band
+   * shows what is fitted. A step moves it, a press fits it, and leaving the band puts it back to −1.
+   */
+  look: number;
+  /** The options themselves, so a try can be drawn on the one tried and refused on a shut one. */
+  buttons: readonly HTMLButtonElement[];
   /**
    * What its segments show — the row's `faces`; a band of faces has the pilot card under it (0513), and
    * a chip is one button among the actions (0517).
@@ -3653,7 +3736,8 @@ export interface Chrome {
    * Which of a band's options may be landed on, and why the rest may not — 0521, a hangar slot the ship
    * has not been won in for. The shut ones are drawn and cannot be pressed, and a step passes over them.
    */
-  setOpen(name: ChoiceName, open: readonly boolean[], why: string | null): void;
+  /** 0561: `whys` says why each shut option is shut, for a band that tries; the band's `why` stands in where it says nothing. */
+  setOpen(name: ChoiceName, open: readonly boolean[], why: string | null, whys?: readonly (string | null)[]): void;
   /**
    * What a band's options are called and what each means — 0528, for a slot whose options are the ship's
    * own: the art band's three places are the looks of whichever ship is on the stand. Position for
@@ -3848,6 +3932,8 @@ export function spatially(
 /** The three things a player can be holding — 0458, How to play's columns. */
 export type GuideDevice = 'keyboard' | 'pad' | 'touch';
 const GUIDE_DEVICES: readonly GuideDevice[] = ['keyboard', 'pad', 'touch'];
+/** How an option tried on is fitted, in the words of the hand holding the game — 0561. */
+const FITS: Record<GuideDevice, string> = { keyboard: 'Enter or a click fits it', pad: 'A fits it', touch: 'tap it to fit it' };
 const GUIDE_DEVICE_LABELS: Record<GuideDevice, string> = { keyboard: 'Keyboard', pad: 'Pad', touch: 'Touch' };
 /** The standard mapping's face buttons by index, as an Xbox-style pad prints them. */
 const PAD_FACE_NAMES: readonly string[] = ['A', 'B', 'X', 'Y'];
@@ -4280,6 +4366,11 @@ export function makeChrome(
   onTab: (screen: Screen) => void,
   // 0511: the pause button, pressed. The shell decides whether the screen it was pressed on may pause.
   onPause: () => void,
+  /*
+    0561: an option tried on a band that tries — its index, or −1 when the band goes back to what is
+    fitted. The shell puts it on the ship on the stand and fits nothing.
+  */
+  onLook: (name: ChoiceName, index: number) => void,
 ): Chrome {
   const style = document.createElement('style');
   style.textContent = STYLE;
@@ -4862,13 +4953,48 @@ export function makeChrome(
         if (chip) button.title = option.hint;
         const target = chip ? (index + 1) % choice.options.length : index;
         // A pointer's press, which a band of pilots reads differently from the cursor's — 0513.
-        const press = (): void => onChoice(choice.name, target, true);
+        const press = (): void => {
+          /*
+            ⚠️ **ON A BAND THAT TRIES, A POINTER'S PRESS IS THE DECISION — 0561.** A click or a tap fits the
+            option at once, because a pointer chose it; a shut one is tried on and refused, so the player
+            sees what it is and reads what opens it.
+          */
+          const band = choiceBands.find((b) => b.root === line);
+          if (band !== undefined && band.press === 'tries') {
+            if (band.open[index] === false) {
+              tryOn(band, index);
+              refuse(band);
+              return;
+            }
+            band.look = -1;
+            paintLook(band);
+          }
+          onChoice(choice.name, target, true);
+        };
         button.addEventListener('click', press);
         listeners.push(() => button.removeEventListener('click', press));
+        // 0561: and a mouse over an option on a band that tries puts it on the ship, as the cursor's step does.
+        if (choice.press === 'tries') {
+          const hover = (event: PointerEvent): void => {
+            const band = choiceBands.find((b) => b.root === line);
+            if (event.pointerType === 'mouse' && band !== undefined) tryOn(band, index);
+          };
+          button.addEventListener('pointerenter', hover);
+          listeners.push(() => button.removeEventListener('pointerenter', hover));
+        }
         box.append(button);
         buttons.push(button);
       });
       options[choice.name] = buttons;
+      // 0561: the mouse leaving a band's options puts back what is fitted, as the cursor leaving it does.
+      if (choice.press === 'tries') {
+        const away = (event: PointerEvent): void => {
+          const band = choiceBands.find((b) => b.root === line);
+          if (event.pointerType === 'mouse' && band !== undefined && atCursor() !== line) putBack(band);
+        };
+        box.addEventListener('pointerleave', away);
+        listeners.push(() => box.removeEventListener('pointerleave', away));
+      }
       const band: Band = {
         name: choice.name,
         root: line,
@@ -4879,9 +5005,12 @@ export function makeChrome(
         hints: choice.options.map((option) => (choice.faces === 'portraits' ? option.label + ' — ' + option.hint : option.hint)),
         open: choice.options.map(() => true),
         why: null,
+        whys: [],
         index: 0,
         on: choice.on,
         press: choice.press,
+        look: -1,
+        buttons,
         faces: choice.faces,
       };
       choiceBands.push(band);
@@ -5440,6 +5569,8 @@ export function makeChrome(
     bossBar.classList.toggle('itc-playing-boss-shown', shownScreen !== null && SCREENS[shownScreen].steps && bossFraction >= 0);
   };
 
+  /** The hand the player is holding the game in — 0458's `setDevice`, kept since 0561 for a band's words. */
+  let device: GuideDevice = 'keyboard';
   /** The control under the cursor on the shown screen, or `undefined` on a screen with none. */
   const atCursor = (): HTMLElement | undefined => {
     const panel = shownScreen === null ? undefined : panels[shownScreen];
@@ -5487,13 +5618,65 @@ export function makeChrome(
    * shown as going nowhere.
    */
   const sayBand = (band: Band): void => {
+    /*
+      ⚠️ **A BAND THAT TRIES SAYS WHAT IS UNDER THE CURSOR — 0561**: the option tried on, or the one
+      fitted. A shut one says what opens it, and one that can be fitted says how, in the hand's words.
+      Its steps go to its ends, shut options and all, because a shut one is somewhere to look.
+    */
+    if (band.press === 'tries') {
+      const shown = band.look >= 0 ? band.look : band.index;
+      const fits = band.look >= 0 && band.open[band.look] !== false;
+      // With nothing tried on the band says 0521's sentence, why some are shut, which is what tells the player there is more.
+      const said = band.look < 0 ? (band.why ?? band.hints[shown] ?? '') : band.open[shown] === false ? (band.whys[shown] ?? band.why ?? '') : (band.hints[shown] ?? '');
+      band.hint.textContent = fits ? said + ' · ' + FITS[device] : said;
+      band.less.disabled = shown <= 0;
+      band.more.disabled = shown >= band.hints.length - 1;
+      return;
+    }
     band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
     band.less.disabled = !band.open.some((open, i) => open && i < band.index);
     band.more.disabled = !band.open.some((open, i) => open && i > band.index);
   };
+  /** Draw which option of a band that tries is tried on — 0561: the ring on the option, not the row. */
+  const paintLook = (band: Band): void => {
+    const look = band.buttons[0]?.className.split(' ')[0] + '-look';
+    band.buttons.forEach((button, i) => button.classList.toggle(look, i === band.look));
+  };
+  /** Try an option on — 0561. Trying on the fitted one is putting back. */
+  const tryOn = (band: Band, index: number): void => {
+    const look = index === band.index ? -1 : index;
+    if (look === band.look) return;
+    band.look = look;
+    paintLook(band);
+    sayBand(band);
+    onLook(band.name, look);
+  };
+  /** Put back what is fitted — 0561, when the cursor or the mouse leaves the band. */
+  const putBack = (band: Band): void => {
+    if (band.look < 0) return;
+    band.look = -1;
+    paintLook(band);
+    sayBand(band);
+    onLook(band.name, -1);
+  };
+  /** A press on a shut option is refused, and seen to be — 0561: the band shakes once. */
+  const refuse = (band: Band): void => {
+    const shake = band.root.className.split(' ')[0] + '-refused';
+    band.root.classList.remove(shake);
+    // Read a layout so the animation starts again; a press, nowhere near a frame (0022).
+    void band.root.offsetWidth;
+    band.root.classList.add(shake);
+  };
   const stepBand = (band: Band, delta: number, round: boolean): void => {
     const count = band.hints.length;
     if (count === 0) return;
+    // 0561: a band that tries moves its look to the next option that way, shut or not, and fits nothing.
+    if (band.press === 'tries') {
+      const from = band.look >= 0 ? band.look : band.index >= 0 ? band.index : delta > 0 ? -1 : count;
+      const next = from + delta;
+      if (next >= 0 && next < count) tryOn(band, next);
+      return;
+    }
     let next = band.index;
     for (let tried = 0; tried < count; tried++) {
       let at = next + delta;
@@ -5860,6 +6043,18 @@ export function makeChrome(
       // 0458: the screen being left keeps where its cursor was, for the player who comes back to it.
       if (shownScreen !== null && panels[shownScreen] !== undefined) remembered[shownScreen] = { row: cursor.row, col: cursor.col };
       /*
+        0561: and whatever it had tried on is let go. Nothing is called back: the shell lets go of its own
+        try when the screen changes, and a call here would refit a stand that is about to go.
+      */
+      if (shownScreen !== null && shownScreen !== screen) {
+        for (const band of panels[shownScreen]?.bands ?? []) {
+          if (band.look < 0) continue;
+          band.look = -1;
+          paintLook(band);
+          sayBand(band);
+        }
+      }
+      /*
         0548: and a tab opened from its strip keeps the cursor on the strip. It went to the new tab's first
         band, so crossing two tabs on a pad was up, along, press and up again — Cosmo's to Hangin' Out
         was a walk the player had to know.
@@ -5876,7 +6071,14 @@ export function makeChrome(
       const panel = screen === null ? undefined : panels[screen];
       if (panel !== undefined && screen !== null) {
         const kept = remembered[screen];
-        const bandsFrom = panel.tabs.length > 0 ? 1 : 0;
+        /*
+          0561: a screen that opens on its choices opens on the first one that is the screen's own. A band
+          of faces with only a line under it is whose ship is being dressed (0539's `'line'`), said over
+          the content and not the content: Paint & Parts and Cosmo's open on what they fit and sell.
+        */
+        const lineFaces = new Set(SCREENS[screen].choices.filter((c) => c.faces === 'portraits' && c.card === 'line').map((c) => c.name));
+        const own = panel.rows.findIndex((r) => panel.bands.some((b) => b.root === r[0] && !lineFaces.has(b.name)));
+        const bandsFrom = own >= 0 ? own : panel.tabs.length > 0 ? 1 : 0;
         const opens = SCREENS[screen].opensOn === 'choice' && panel.bands.length > 0 ? bandsFrom : panel.rows.length - 1;
         cursor.row = fromStrip && panel.tabs.length > 0 ? 0 : kept !== undefined && kept.row < panel.rows.length ? kept.row : Math.max(0, opens);
         cursor.col = kept !== undefined && kept.col < (panel.rows[cursor.row]?.length ?? 0) ? kept.col : 0;
@@ -5937,6 +6139,8 @@ export function makeChrome(
           return;
         }
       }
+      // 0561: leaving a band that tries puts back what is fitted — only a press fits.
+      if (found !== undefined && found.press === 'tries') putBack(found);
       // Off the row, to the next one up or down, round the ends — a ring of rows, as the list was.
       const from = atCursor()?.getBoundingClientRect();
       /*
@@ -5975,7 +6179,21 @@ export function makeChrome(
       const band = bandAtCursor();
       // 0513: unless the band takes its own option on a press, which is the pilot band's — A flies them.
       if (band !== undefined && band.press === 'takes') onChoice(band.name, band.index, false);
-      else if (band !== undefined) stepBand(band, 1, true);
+      /*
+        0561: a band that tries fits the one tried on, or refuses a shut one; with nothing tried on, the
+        fitted one is already fitted and a press has nothing to do.
+      */
+      else if (band !== undefined && band.press === 'tries') {
+        const look = band.look;
+        if (look < 0) return;
+        if (band.open[look] === false) {
+          refuse(band);
+          return;
+        }
+        band.look = -1;
+        paintLook(band);
+        onChoice(band.name, look, false);
+      } else if (band !== undefined) stepBand(band, 1, true);
       else atCursor()?.click();
     },
     tab(delta: number): void {
@@ -5986,11 +6204,14 @@ export function makeChrome(
       const next = tabs[(at + delta + tabs.length) % tabs.length];
       if (next !== undefined && next !== shownScreen) onTab(next);
     },
-    setDevice(device: GuideDevice): void {
+    setDevice(hand: GuideDevice): void {
+      device = hand;
       for (const each of GUIDE_DEVICES) {
         for (const cell of guideDevices[each]) cell.classList.toggle(prefixFor('guide') + 'controls-device-on', each === device);
       }
       for (const key of tabKeys) key.hidden = device !== 'pad';
+      // 0561: a band that tries says how to fit in the hand's words, so it says it again.
+      for (const panel of Object.values(panels)) for (const band of panel?.bands ?? []) if (band.press === 'tries') sayBand(band);
     },
     setTimer(seconds: number | null): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];
@@ -6014,6 +6235,11 @@ export function makeChrome(
         const band = panel.bands.find((b) => b.name === name);
         if (band === undefined) continue;
         band.index = index;
+        // 0561: a try that has become the fitted one is no longer a try.
+        if (band.look === index) {
+          band.look = -1;
+          paintLook(band);
+        }
         sayBand(band);
         // 0513: a band of faces says who the one on it is, on the card under it.
         if (band.faces === 'portraits') paintPilot(screen, GOLFER_KINDS[index]);
@@ -6034,7 +6260,7 @@ export function makeChrome(
         }
       }
     },
-    setOpen(name: ChoiceName, open: readonly boolean[], why: string | null): void {
+    setOpen(name: ChoiceName, open: readonly boolean[], why: string | null, whys: readonly (string | null)[] = []): void {
       for (const screen of Object.keys(panels) as Screen[]) {
         const panel = panels[screen];
         const buttons = panel?.options[name];
@@ -6042,8 +6268,20 @@ export function makeChrome(
         if (buttons === undefined || band === undefined) continue;
         band.open = open;
         band.why = why;
+        band.whys = whys;
         // A shut option is shown and cannot be pressed: `disabled` takes it off the pointer and the reader.
-        for (let i = 0; i < buttons.length; i++) buttons[i]!.disabled = open[i] === false;
+        /*
+          ⚠️ **EXCEPT ON A BAND THAT TRIES — 0561**, where a shut option is somewhere to look: it is marked
+          shut for the reader and the stylesheet and stays pressable, and a press on it is refused.
+        */
+        const shut = prefixFor(screen) + 'option-shut';
+        for (let i = 0; i < buttons.length; i++) {
+          const closed = open[i] === false;
+          if (band.press === 'tries') {
+            buttons[i]!.classList.toggle(shut, closed);
+            buttons[i]!.setAttribute('aria-disabled', closed ? 'true' : 'false');
+          } else buttons[i]!.disabled = closed;
+        }
         sayBand(band);
       }
     },

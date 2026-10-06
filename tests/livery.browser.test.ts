@@ -55,7 +55,8 @@ describe.runIf(chromePath)('0529 — a ship painted on Paint & Parts is painted 
     await page.waitForSelector(shown('parts'), { state: 'attached' });
 
     const tones = page.locator(`${shown('parts')} [${SETTING_ATTR}="tone"] .${PARTS}option`);
-    const shut = async (): Promise<boolean[]> => tones.evaluateAll((els) => els.map((el) => (el as HTMLButtonElement).disabled));
+    // 0561: a shut tone is marked `aria-disabled` and stays pressable, so it can be tried on.
+    const shut = async (): Promise<boolean[]> => tones.evaluateAll((els) => els.map((el) => el.getAttribute('aria-disabled') === 'true'));
     expect(await shut(), 'a tone is open on the factory’s paint').toEqual([true, true, true]);
 
     // 0540: the ship on its pad in the port behind the tab, which replaced the card's — `tests/stand.ts`.

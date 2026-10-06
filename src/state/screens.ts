@@ -111,7 +111,12 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 // 0528: and what it wears on its nose, its dome or its flank.
 // 0529: and the colour its body is painted, a hue and a tone.
 // 0530: and what its engines burn.
-export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim' | 'art' | 'livery' | 'tone' | 'flame';
+export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame'] as const;
+export type SlotName = (typeof SLOT_NAMES)[number];
+/** Whether a band's name is a slot of the ship — 0561, so the shell can fit or try on any slot in one arm. */
+export function isSlot(name: ChoiceName): name is SlotName {
+  return SLOT_NAMES.some((slot) => slot === name);
+}
 
 /**
  * Cosmo's shelves — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
@@ -187,8 +192,13 @@ interface ChoiceRow {
    * band's: the cursor on a pilot is the highlight, and A or Enter on it flies them.
    *
    * ⚠️ **A FACT ABOUT THE CHOICE, ON `faces`'s TERMS**: the chrome reads it and never the band's name.
+   *
+   * `'tries'` since 0561 is a slot of the ship on a stand: a step puts the option on the ship and fits
+   * nothing, a press fits the one tried on, and leaving the band puts the fitted one back — *"seeing how
+   * it immediately looks is good, but it shouldn't auto-equip when scrolling menus."* A step reaches a
+   * shut option too, so the player can see what it is and read what opens it.
    */
-  press: 'steps' | 'takes';
+  press: 'steps' | 'takes' | 'tries';
 }
 
 /**
@@ -520,6 +530,44 @@ export function rimWhy(ship: ShipKind, wheeled: boolean, won: boolean, borrowabl
   return sentence === null ? null : sentence + ', or buy a set at Cosmo’s';
 }
 
+/**
+ * Why one shut option of a slot is shut — 0561, said when the cursor tries it on. The band's sentence
+ * said why the slot had shut options; a shut option the player is looking at says what opens it.
+ */
+export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Readonly<Record<ShipKind, boolean>>): string | null {
+  const what = { plate: 'dash', special: 'special', gun: 'gun' } as const;
+  switch (name) {
+    case 'plate':
+    case 'special':
+    case 'gun': {
+      const from = SHIP_KINDS[index];
+      if (from === undefined) return null;
+      if (!won[ship]) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its ' + what[name];
+      return 'Beat the jellyfish in the ' + plainLabel(from) + ' to borrow its ' + what[name];
+    }
+    case 'rim': {
+      const rim = RIM_KINDS[index];
+      if (rim === undefined) return null;
+      if (SHIPS[ship].wheels === null) return 'The ' + plainLabel(ship) + ' flies on no wheels';
+      if (RIMS[rim].from === null) return 'Sold at Cosmo’s, the next tab';
+      if (!won[ship]) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its wheels';
+      return 'Beat the jellyfish in the ' + plainLabel(RIMS[rim].from) + ' to borrow its wheels';
+    }
+    case 'dangle':
+    case 'flame':
+      return 'Sold at Cosmo’s, the next tab';
+    // The band's own sentence covers these: a ship not yet won, or a factory paint with no tone.
+    case 'art':
+    case 'livery':
+    case 'tone':
+      return null;
+    default: {
+      const unhandled: never = name;
+      return unhandled;
+    }
+  }
+}
+
 /** A ship's own slot, shut: why, in the one sentence every such slot uses — 0521's, since 0524 shared. */
 function slotWhy(ship: ShipKind, won: boolean, borrowable: boolean, what: string): string | null {
   if (!won) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its ' + what;
@@ -834,7 +882,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     stand: {
       groups: [
         { label: 'Loadout', bands: ['gun', 'special'] },
-        { label: 'Dash', bands: ['plate', 'dangle'] },
+        // 0561: *Cockpit*, answered 2026-10-07 — a band named *Dash* stood under a heading named *Dash*.
+        { label: 'Cockpit', bands: ['plate', 'dangle'] },
       ],
       // 0548: the port's one camera, the pad and the keeper's counter in it — it was on the pad at 1.5 (0540).
       camera: PORT_CAMERA,
@@ -858,7 +907,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: SHIP_KINDS.map((kind) => ({ label: SHIPS[kind].hud.name, hint: 'The dash from the ' + plainLabel(kind) })),
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
       /*
         0523: what hangs from the dash — nothing first, then every dangle in the table's order, the ones
@@ -867,10 +916,11 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       {
         name: 'dangle',
         label: 'Hanging',
-        options: [{ label: 'Nothing', hint: 'A clear dash' }, ...DANGLE_KINDS.map((kind) => ({ label: DANGLES[kind].name, hint: DANGLES[kind].hint }))],
+        // 0561: the empty hook, said as one, so it does not stand among the wares as though it were one.
+        options: [{ label: 'Empty hook', hint: 'A clear dash' }, ...DANGLE_KINDS.map((kind) => ({ label: DANGLES[kind].name, hint: DANGLES[kind].hint }))],
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
       /*
         0526: the gun the ship flies — each ship's own, in the ship table's order, named as the pilot
@@ -885,7 +935,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         }),
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
       /*
         0524: the special a run opens with two of — each ship's own gun's, in the ship table's order,
@@ -900,7 +950,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         }),
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
     ],
     steps: false,
@@ -968,7 +1018,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         }),
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
       /*
         0528: the look on its nose, its dome or its flank — three places, because every ship authors its
@@ -981,7 +1031,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: artOptions('fighter'),
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
       /*
         0529: the body's colour — the factory's first, then every hue round the wheel — and its tone. Two
@@ -994,7 +1044,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: [{ label: 'Factory', hint: 'The paint it came in' }, ...HUES.map((hue) => ({ label: hue.name, hint: hue.name + ' paint, over the whole body' }))],
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
       {
         name: 'tone',
@@ -1002,7 +1052,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: TONES.map((tone) => ({ label: tone.name, hint: 'The colour ' + tone.name.toLowerCase() })),
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
       // 0530: what the engines burn — the standard, then every flame Cosmo's sells. Built by walking `FLAME_KINDS`.
       {
@@ -1011,7 +1061,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: FLAME_KINDS.map((kind) => ({ label: FLAMES[kind].name, hint: FLAMES[kind].hint })),
         faces: 'words',
         on: 'all',
-        press: 'steps',
+        press: 'tries',
       },
     ],
     steps: false,
