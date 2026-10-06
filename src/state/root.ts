@@ -71,8 +71,8 @@ export function reduce(state: State, action: Action): State {
 
       ⚠️ **ON THE TITLE, NOT ON THE BUTTONS THAT GO THERE.** A quit and a victory both left for the title
       with the run's lives still up, and lives above nought is what the shell reads as *a run is flying*:
-      the hangar's pad kept the last run's ship for the rest of the tab, and spinners fitted after it never
-      turned. Every way off a run arrives here, including the ones not written yet.
+      the world kept the last run's ship for the rest of the tab, and the pad stood its spinners on the
+      next pilot's caddie. Every way off a run arrives here, including the ones not written yet.
 
       ⚠️ **ON ARRIVING, NOT ON BEING THERE**, so it lives on this route and not in `agree`: *Fly* begins
       the run with the title still up, and a rule about standing on the title ended every run it began.

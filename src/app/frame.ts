@@ -11644,6 +11644,44 @@ export function resetCreditScore(score: LevelScore): void {
   resetLevelScore(score);
 }
 
+/**
+ * The rest of a run, gone — `docs/decisions/0558-a-run-ends-at-the-title.md`, after `startLevel` has
+ * swept the level's script and put the ship back at the start. What a level boundary keeps and a new run
+ * never needed to clear, because `begin` came straight after it: what the ship's own weapons left on the
+ * field, the run's clock, the stick's last reading, this step's logs, the readout's latches, and where
+ * the last boss was.
+ *
+ * ⚠️ **EVERY LAYER BUT THE SHIP'S, BY THE LIST AND NOT BY NAME.** `startLevel` clears the pools it knows;
+ * the bolts a lightning gun had in flight outlived a run, because nothing there named them. Walking
+ * `layers` clears a pool added next month as well, and `tests/run-ends.test.ts` puts a body in every
+ * one before a run ends and asks that the world is then the one no run touched.
+ */
+export function closeRun(w: World): void {
+  for (let i = 0; i < w.layers.length; i++) {
+    const layer = w.layers[i]!;
+    if (layer !== w.shipPool) layer.clear();
+  }
+  w.steps = 0;
+  w.intent.along = 0;
+  w.intent.across = 0;
+  w.intent.specials.fill(0);
+  w.deaths.count = 0;
+  w.deaths.along.fill(0);
+  w.deaths.across.fill(0);
+  w.deaths.kind.fill(0);
+  w.collected.count = 0;
+  w.collected.kind.fill(0);
+  w.collected.face.fill(0);
+  w.shownHealth = w.ship.health;
+  w.shownBoss = -1;
+  w.shownPoints = 0;
+  w.shownStreak = 0;
+  w.bossEntryAt = 0;
+  w.bossOffset = 0;
+  w.bossAcross = ACROSS_SPAN / 2;
+  w.bossFullHealth = w.bossRow.health;
+}
+
 export function resetScene(w: World): void {
   w.cameraAlong = 0;
   w.prevCameraAlong = 0;

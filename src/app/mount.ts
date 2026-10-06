@@ -1743,8 +1743,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setBoard(boardLines(scoreTable), freshPlace);
     return placed.place;
   };
-  /** What a screen shows of the score as it arrives — `was` is where the player came from. */
-  const enterScreen = (was: Screen, now: Screen): void => {
+  /** What a screen shows of the score as it arrives. */
+  const enterScreen = (now: Screen): void => {
     if (now === 'cleared') {
       const tally = state.run.tallies[state.run.tallies.length - 1];
       chrome.setSheet('cleared', tally === undefined ? null : levelSheet(tally, state.run));
@@ -1760,12 +1760,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     } else if (now === 'victory') {
       const place = recordRun(true);
       chrome.setSheet('victory', runSheet(state.run, place, bank()));
-    } else if (now === 'title' && was === 'gameOver') {
-      // The continue ran out, or was walked away from: the run is over and it goes on the table.
-      recordRun(false);
-      bank();
     }
+    /*
+      ⚠️ **NOT `now === 'title' && was === 'gameOver'` ANY MORE — 0558.** A continue that ran out or was
+      walked away from goes on the table, but by the time this runs the title has ended the run and its
+      account is gone, so `dispatch` writes it before the reducer moves (`walkedAway`).
+    */
   };
+
+  /** A credit's continue walked away from: on the table, and the run paid — 0438, 0522. */
+  function walkedAway(): void {
+    recordRun(false);
+    bank();
+  }
 
   /** Whether a run has begun since the shell last left one — 0558. Set when a run begins, spent by `leaveRun`. */
   let runOnField = false;
@@ -1774,23 +1781,31 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
     The lifecycle's four verbs begin, go on, arrive and resume a run, and nothing ended one: a quit and a
     win went to the title with the run's lives still up, so the shell went on reading *a run is flying*
-    for the rest of the tab — `fitPilot` refused, `fitAtlasGun` baked the run's ship as the one flying, and a pilot chosen after
-    a quit stood on the pad under the last run's wheels. The run's half is the reducer's
-    (`src/state/root.ts`: a run that arrives at the title has no lives); this is the shell's, on the
-    title's arrival whichever screen it came from: the world flies the pilot's ship, fitted from the
-    hangar, as it did before the run began.
+    for the rest of the tab — `fitPilot` refused, `fitAtlasGun` baked the run's ship as the one flying,
+    and a pilot chosen after a quit stood on the pad under the last run's wheels. The run's half is the
+    reducer's (`src/state/root.ts`: a run that arrives at the title is gone, back to `initialRun`); this is
+    the rest, on the title's arrival whichever screen it came from: the field closed (`lifecycle.end`),
+    and the world flying the pilot's ship, fitted from the hangar, as it did before the run began.
 
-    ⚠️ **NOT THE FIELD.** The title is drawn on the void (`placeOnScreen`), so the run's remains are never
-    seen there, and the next thing that shows the field sweeps it itself — a run (`begin`) and the music
-    room (`enterRoom`). A sweep here was written and taken out again: it changed nothing on the screen.
+    ⚠️ **THE WHOLE RUN, AND NOT ONLY WHAT THE TITLE SHOWS.** The title is drawn on the void, and the next
+    run and the music room each sweep the field before they show it, so a first version left the field
+    alone. Played back: *"we should clear-out the whole run and not rely on the music room and next run
+    to tidy up for us."* What a run leaves is closed where it ends.
   */
   function leaveRun(): void {
     runOnField = false;
+    lifecycle.end();
     fitPilot();
     syncHud();
   }
 
   const dispatch = (action: Action): void => {
+    /*
+      A continue that ran out, or was walked away from, onto the title: the run is over and it goes on the
+      table — written HERE, off the run as it stands, because the title the reducer is about to show ends
+      the run and empties its account (0558). `bank` dispatches the shards before this one moves.
+    */
+    if (action.slice === 'screen' && action.type === 'show' && action.screen === 'title' && state.screen.current === 'gameOver') walkedAway();
     const next = reduce(state, action);
     if (next === state) return;
     const moved = next.screen !== state.screen;
@@ -1916,7 +1931,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       fitHangar();
     }
     // The account goes on before the screen is shown, so its lines animate in as it appears — 0428.
-    if (moved) enterScreen(was, state.screen.current);
+    if (moved) enterScreen(state.screen.current);
     // 0558: and a run that has come back to the title leaves the field as the title found it.
     if (moved && state.screen.current === 'title' && runOnField) leaveRun();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch

@@ -1,5 +1,6 @@
 /**
- * THE THREE WAYS A RUN MOVES: it begins, it goes onward a level, and it is resumed after it ran out.
+ * THE WAYS A RUN MOVES: it begins, it goes onward a level, it is resumed after it ran out, and since
+ * 0558 it ends.
  *
  * `docs/decisions/0068-a-run-over-is-a-continue.md`. Each one is a pair of statements — one to the
  * reducer about the run, one to the world about the field — and the whole of what separates them is
@@ -11,6 +12,7 @@
  * | `onward` | untouched | untouched — the burn begins | kept |
  * | `arrive` | carried forward untouched | **left exactly as it was** — 0076; the script changes | kept |
  * | `resume` | back to a full complement, level UNTOUCHED | left exactly as it was | dropped |
+ * | `end`    | gone — `initialRun`, at the title (0558) | **closed**: as no run had touched it | dropped |
  *
  * ⚠️ **`onward` WAS ONE VERB AND IS TWO, AND THE BURN IS WHAT WENT BETWEEN THEM** —
  * [0340](../../docs/decisions/0340-the-coil-is-a-route.md). It used to enter the next level and end
@@ -56,7 +58,7 @@ import type { SpecialKind } from '../content/specials.ts';
 import { makeRng } from '../sim/rng.ts';
 import type { Action } from '../state/root.ts';
 import type { RunState } from '../state/slices/run.ts';
-import { advanceLevel, respawn, startLevel, type World } from './frame.ts';
+import { advanceLevel, closeRun, respawn, startLevel, type World } from './frame.ts';
 
 export interface Lifecycle {
   /**
@@ -77,6 +79,12 @@ export interface Lifecycle {
   arrive(): void;
   /** The run picked up where it ran out. A new ship, a full complement, and the same field. */
   resume(): void;
+  /**
+   * The run over, however it ended — 0558: the field swept back to level one's opening with the camera
+   * at zero, the ship back at the start, and nothing the run did left anywhere in the world. The run's
+   * half is the reducer's (a run arriving at the title is over); the shell calls this as it arrives.
+   */
+  end(): void;
 }
 
 export function makeLifecycle(world: World, dispatch: (action: Action) => void, runOf: () => RunState): Lifecycle {
@@ -203,6 +211,21 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       */
       respawn(world);
       dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
+    },
+
+    end(): void {
+      /*
+        ⚠️ **THE WHOLE OF IT, NOT WHAT THE TITLE SHOWS.** The title is drawn on the void, so a run's
+        remains would never be seen there, and the next run and the music room each sweep the field
+        before they show it. That was the first version of this, and the ask that replaced it:
+        *"we should clear-out the whole run and not rely on the music room and next run to tidy up for
+        us … there's a very real chance we implement something in the future that hangs around."* So the
+        world a run ends in is the world no run had touched, and `tests/run-ends.test.ts` holds that by
+        comparing the two whole, so a field added to the world later is held without being named.
+      */
+      startLevel(world, LEVELS[LEVEL_KINDS[0]!]);
+      closeRun(world);
+      world.rng = makeRng('proof-scene').stream('spawns');
     },
   };
 }
