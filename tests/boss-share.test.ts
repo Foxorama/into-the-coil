@@ -122,21 +122,26 @@ describe('a gun on a boss is weighed by its own row', () => {
   /*
     ⚠️ **ON A BOSS THAT AUTHORS NO WEIGHT OF ITS OWN, WHICH THE FISH WAS UNTIL 0477** — a boss's own
     entry wins over the gun's row, so patching the row reaches only a boss without one. The frost ship
-    authors none.
+    authored none until 0549 weighed the Catherine wheel on every boss it flies past, so its own entries
+    are taken away for the one fight and put back: the premise held by the test, not by the content.
   */
   const PLAIN = 'hoarfrost';
 
   /** Seconds to kill the frost ship with `gun` at `weight`, the row patched for the one fight and put back. */
   function fightAt(gun: WeaponKind, weight: number): number {
     const row = WEAPONS[gun] as { bossWeight: number };
+    const boss = BOSSES[PLAIN] as { gunWeights?: Partial<Record<WeaponKind, number>> };
     const was = row.bossWeight;
+    const own = boss.gunWeights;
     row.bossWeight = weight;
+    boss.gunWeights = undefined;
     try {
       const { seconds } = flyFight(PLAIN, gun, { lane: 'boss', short: 45, cap: 200 });
       if (seconds === null) throw new Error(`${gun} never killed the ${PLAIN}`);
       return seconds;
     } finally {
       row.bossWeight = was;
+      boss.gunWeights = own;
     }
   }
 
