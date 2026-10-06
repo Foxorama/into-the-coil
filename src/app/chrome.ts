@@ -3031,7 +3031,13 @@ ${each('-band[hidden]')} { display: none; }
   /* A chip with a picture stands the picture over its name, so a long name has the chip's width. */
   .itc-hangar-option-thumbed, .itc-parts-option-thumbed { flex-direction: column; gap: 0.05em; line-height: 1.05; }
   .itc-hangar-option-thumb, .itc-parts-option-thumb { width: 2em; height: 1.15em; margin: -0.15em 0 -0.05em; object-fit: contain; }
-  .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { white-space: nowrap; }
+  /*
+    The balance keeps to its own cell: each line whole, and the second (Cosmo's *After*) under the first when
+    the cell is narrow. One unbroken line ran under Buy on CI's letters and took its click.
+  */
+  .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { flex-wrap: wrap; align-items: center; row-gap: 0; min-width: 0; max-width: 100%; justify-self: stretch; }
+  .itc-hangar-sheet-label, .itc-parts-sheet-label, .itc-shop-sheet-label { line-height: 1.05; min-width: 0; }
+  .itc-hangar-sheet-value, .itc-parts-sheet-value, .itc-shop-sheet-value { white-space: nowrap; }
   /* The aisle is the shelf's own tabs, across the plate's width. */
   .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more'; }
   .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-band-label { display: none; }
