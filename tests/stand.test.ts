@@ -61,7 +61,7 @@ function standColumn(width: number, height: number): { left: number; width: numb
   return { left: width * 0.02, width: width * 0.31, top: 0, height };
 }
 
-function drawStand(screen: (typeof STANDING)[number], width: number, height: number, t = 0, ship = SHIPS.firebird, camera = SCREENS[screen].stand!.camera): Blit[] {
+function drawStand(screen: (typeof STANDING)[number], width: number, height: number, t = 0, ship = SHIPS.firebird, camera = SCREENS[screen].stand!.camera, spot = 0): Blit[] {
   const base = viewOf(width, height);
   const view = { ...base };
   /*
@@ -74,7 +74,7 @@ function drawStand(screen: (typeof STANDING)[number], width: number, height: num
   fitStand(camera, base, width, box, SCREENS[screen].stand!.keeper, fitted, height);
   standViewInto(base, fitted, width, height, view);
   const surface = new RecordingSurface();
-  paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper);
+  paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper, -1e9, spot);
   return surface.blits;
 }
 
@@ -215,7 +215,7 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
         // Behind their counter, it is drawn over them; on it, as Unity stands on their bench (0554), under them.
         const counter = blits.indexOf(all(blits, keeper.counter)[0]!);
         const figure = blits.indexOf(all(blits, keeper.figure)[0]!);
-        if (keeper.stands === 'behind') expect(counter, `${at}: ${keeper.name} is drawn over the counter they stand behind`).toBeGreaterThan(figure);
+        if (keeper.spots[0].drawn === 'behind') expect(counter, `${at}: ${keeper.name} is drawn over the counter they stand behind`).toBeGreaterThan(figure);
         else expect(figure, `${at}: ${keeper.name} is drawn under the counter they stand on`).toBeGreaterThan(counter);
       }
     }
@@ -324,5 +324,39 @@ describe('0567 — a fitting is felt', () => {
     const lifted = shipY(t, t - Math.round(STEPS_PER_SECOND / 5));
     expect(still - lifted, `the ship stood ${(still - lifted).toFixed(1)}px up a fifth of a second after a fitting`).toBeGreaterThan(6);
     expect(Math.abs(shipY(t, t - STEPS_PER_SECOND / 2) - still), 'the ship had not settled half a second after a fitting').toBeLessThan(0.5);
+  });
+});
+
+describe('0569 — the keepers move about between runs', () => {
+  /*
+    *"after a run finishes the position of the figure can be in a few different random locations, behind the
+    stall, working the ship, out for coffee"*. Asked of every keeper's every spot, in the picture: at the
+    counter they stand by it; at the ship they are drawn within a ship's length of it, on the screen; away,
+    the counter stands empty. And every keeper has somewhere to be other than their counter, with a line.
+  */
+  it('draws each keeper where their spot says, and every keeper has somewhere else to be', () => {
+    for (const screen of STANDING) {
+      const kind = SCREENS[screen].stand!.keeper!;
+      const row = KEEPERS[kind];
+      expect(row.spots[0].at, `${row.name}'s first spot is not their counter`).toBe('counter');
+      expect(row.spots.some((s) => s.at !== 'counter' && s.line !== null), `${row.name} is only ever at their counter`).toBe(true);
+      row.spots.forEach((place, i) => {
+        const blits = drawStand(screen, 1280, 720, 0, SHIPS.firebird, SCREENS[screen].stand!.camera, i);
+        const figure = all(blits, row.figure);
+        const at = `${row.name} ${place.at}`;
+        expect(all(blits, row.counter), `${at}: the counter is not there`).toHaveLength(1);
+        if (place.at === 'away') {
+          expect(figure, `${at}: they are drawn while they are out`).toEqual([]);
+          return;
+        }
+        expect(figure, `${at}: they are not drawn`).toHaveLength(1);
+        if (place.at === 'ship') {
+          const ship = all(blits, 'blueSide')[0]!;
+          const reach = PORT_EXTENT.blueSide * ship.scale;
+          expect(Math.abs(figure[0]!.x - ship.x), `${at}: they are not by the ship`).toBeLessThan(reach);
+          expect(figure[0]!.y, `${at}: they are off the top of the screen`).toBeGreaterThan(0);
+        }
+      });
+    }
   });
 });

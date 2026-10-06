@@ -132,7 +132,7 @@ import { HUES, TONES, liveryFor, liveryInk } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, WARES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
-import { COSMO } from '../content/keepers.ts';
+import { COSMO, KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import {
@@ -1838,6 +1838,33 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     lifecycle.end();
     fitPilot();
     syncHud();
+    // 0569: and the keepers have moved about while the run was flown.
+    moveKeepers();
+  }
+  /*
+    ── THE KEEPERS MOVE ABOUT — 0569 ─────────────────────────────────────────────────────────────────
+
+    *"after a run finishes the position of the figure can be in a few different random locations, behind
+    the stall, working the ship, out for coffee"*. Each keeper's place is drawn from their row's spots after
+    every run, from a stream of its own (0021), so nothing else's draw moves when a keeper does. Seeded by
+    the clock, once: the shell's to be random, and nothing a save or a seeded test reads. Before any run of
+    the visit every keeper is at their counter, the first of their spots.
+  */
+  const keeperRng = makeRng('keepers:' + String(Date.now())).stream('spots');
+  const spots = Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, 0])) as Record<KeeperKind, number>;
+  world.standSpots = spots;
+  function moveKeepers(): void {
+    for (const kind of KEEPER_KINDS) spots[kind] = keeperRng.int(0, KEEPERS[kind].spots.length - 1);
+    sayKeepers();
+  }
+  /** What the keepers' cards say: a keeper away or at the ship says so; at the counter, their greeting. */
+  function sayKeepers(): void {
+    for (const screen of ['hangar', 'parts'] as const) {
+      const kind = SCREENS[screen].stand?.keeper ?? null;
+      if (kind === null) continue;
+      const row = KEEPERS[kind];
+      chrome.setKeeperLine(screen, row.spots[spots[kind]]?.line ?? row.greet);
+    }
   }
 
   const dispatch = (action: Action): void => {
@@ -2436,6 +2463,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * far the balance is from it, or the greeting.
    */
   function keeperLine(ware: OwnableKind, owned: boolean, ship: ShipKind): string {
+    // 0569: Cosmo away or at the ship says so on arrival, in place of a greeting.
+    const away = COSMO.spots[spots.cosmo]?.line ?? null;
+    if (arriving && away !== null) return away;
     if (arriving) return COSMO.shop.arrive[shopVisits % COSMO.shop.arrive.length]!;
     if (justFitted === ware) return COSMO.shop.fitted;
     if (justSold === ware) return COSMO.shop.sold;

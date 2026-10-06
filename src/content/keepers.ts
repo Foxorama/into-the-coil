@@ -51,17 +51,32 @@ export interface KeeperRow {
   /** Their figure in the port's atlas — a bust behind the counter or a whole one on it — and the counter. */
   readonly figure: PortKind;
   readonly counter: PortKind;
-  /**
-   * Where their figure's box is centred against the counter's, in world units, and whether they stand
-   * behind it, the counter drawn over them, or on its top, drawn over it — 0554. Each keeper's own,
-   * because Unity stands on their bench and the other two behind theirs (0282).
-   */
-  readonly at: { readonly along: number; readonly across: number };
-  readonly stands: 'behind' | 'on';
   /** The two lines on the counter's front: the name, large, and what is done there, under it. */
   readonly sign: readonly [string, string];
   /** What they say of a ware in the window — a shop's, and `null` for a keeper with nothing to sell. */
   readonly shop: ShopLines | null;
+  /**
+   * Where they may be found when the hangar is opened — 0569: *"after a run finishes the position of the
+   * figure can be in a few different random locations, behind the stall, working the ship, out for coffee,
+   * something else"*. The first is where they stand before any run. Each keeper's own (0282): a whole figure
+   * may stand on the ship's roof, a bust can only look over it.
+   */
+  readonly spots: readonly [KeeperSpot, ...KeeperSpot[]];
+}
+
+/**
+ * One place a keeper may be standing — 0569. Their figure's centre in the port's units from the place
+ * named, drawn behind or over what is there; or nowhere, gone from the counter, which stands empty. The line
+ * is what their card says while they are there, and `null` keeps their greeting.
+ *
+ * At the counter it is 0554's: where their box is centred against the counter's and whether they stand
+ * behind it, the counter drawn over them, or on its top — Unity on their bench, the other two behind theirs.
+ */
+export interface KeeperSpot {
+  readonly at: 'counter' | 'ship' | 'away';
+  readonly offset: { readonly along: number; readonly across: number };
+  readonly drawn: 'behind' | 'over';
+  readonly line: string | null;
 }
 
 /** Cosmo, whose lines the shell reads by name — `src/app/mount.ts`'s `keeperLine`. */
@@ -70,9 +85,6 @@ export const COSMO = {
   greet: 'Try it on, no charge for looking.',
   figure: 'cosmo',
   counter: 'stall',
-  // 0542: a head over the counter, a unit to the bar's side of its middle.
-  at: { along: -1, across: -5 },
-  stands: 'behind',
   sign: ['COSMO’S', 'COSMETICS'],
   shop: {
     owned: 'That one’s yours already — fit it in {where}.',
@@ -88,6 +100,13 @@ export const COSMO = {
     fitted: 'There. Wear it well.',
     soldOut: 'You’ve cleaned me out, friend. More stock soon.',
   },
+  spots: [
+    // At the stall, a head over the counter, a unit to the bar's side of its middle, as 0542 stood them.
+    { at: 'counter', offset: { along: -1, across: -5 }, drawn: 'behind', line: null },
+    // Looking the ship over from behind it, the head over its roof.
+    { at: 'ship', offset: { along: 4, across: -7.5 }, drawn: 'behind', line: 'Just admiring the lines on her. Shop’s open — I’ll be right there.' },
+    { at: 'away', offset: { along: 0, across: 0 }, drawn: 'behind', line: 'Out on a stock run — honesty box is on the counter, friend.' },
+  ],
 } as const satisfies KeeperRow;
 
 export const KEEPERS: Record<KeeperKind, KeeperRow> = {
@@ -111,10 +130,15 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     greet: 'I bring it all together.',
     figure: 'unity',
     counter: 'bench',
-    at: { along: 7, across: -4.5 },
-    stands: 'on',
     sign: ['UNITY’S', 'TRADE & REPAIR'],
     shop: null,
+    spots: [
+      // On the bench, against the wrench, as 0554 stood them.
+      { at: 'counter', offset: { along: 7, across: -4.5 }, drawn: 'over', line: null },
+      // Up on the ship's roof, wrench and all — small enough to stand there.
+      { at: 'ship', offset: { along: -2, across: -9.5 }, drawn: 'over', line: 'Just tightening a few things up top. She’ll be right.' },
+      { at: 'away', offset: { along: 0, across: 0 }, drawn: 'over', line: 'Gone for a flat white. Back in a tick.' },
+    ],
   },
   /*
     ⚠️ **MMXXVI: THE SPACE DUCK — 0550.** *"for paints and parts a space duck named MMXXVI - we'll make it
@@ -132,9 +156,14 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     greet: 'We’ll make it look good.',
     figure: 'mmxxvi',
     counter: 'booth',
-    at: { along: -1, across: -3 },
-    stands: 'behind',
     sign: ['MMXXVI', 'PAINT & PARTS'],
     shop: null,
+    spots: [
+      // Behind the booth, as 0556 lowered them.
+      { at: 'counter', offset: { along: -1, across: -3 }, drawn: 'behind', line: null },
+      // Behind the ship, looking over its roof at the paint.
+      { at: 'ship', offset: { along: 6, across: -7.5 }, drawn: 'behind', line: 'Checking the finish. Hold still — it’s nearly perfect.' },
+      { at: 'away', offset: { along: 0, across: 0 }, drawn: 'behind', line: 'Out for more paint. Touch nothing wet.' },
+    ],
   },
 };
