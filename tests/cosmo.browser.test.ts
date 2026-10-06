@@ -11,7 +11,7 @@ import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { DANGLE_KINDS, type DangleKind } from '../src/content/dangles.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, WARES, type OwnableKind } from '../src/content/wares.ts';
-import { COSMO } from '../src/content/cosmo.ts';
+import { COSMO } from '../src/content/keepers.ts';
 import { SCREENS } from '../src/state/screens.ts';
 
 /**
@@ -104,13 +104,13 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
     expect(await buy.isVisible(), 'Buy is still offered on a ware already owned').toBe(false);
     expect(await shelfLine(page, 'golfball')).toContain('Yours');
     // 0542: Cosmo thanks the player, and the ware's face says it is theirs.
-    expect(await keeperLine(page), 'Cosmo did not thank the player for the sale').toBe(COSMO.sold);
+    expect(await keeperLine(page), 'Cosmo did not thank the player for the sale').toBe(COSMO.shop.sold);
     expect(await face.innerText(), 'the golf ball still says its price once it is owned').toContain('yours');
 
     // The next is out of reach, and the shelf says by how much; a press of Buy cannot buy it.
     await pickWare(page, 'family');
     expect(await shelfLine(page, 'family')).toBe('Need 200 more Star Shards');
-    expect(await keeperLine(page), 'Cosmo does not say how far off the balance is').toBe(COSMO.short.replace('{short}', '200'));
+    expect(await keeperLine(page), 'Cosmo does not say how far off the balance is').toBe(COSMO.shop.short.replace('{short}', '200'));
     await buy.click();
     kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.owned.family, 'a ware was bought on credit').toBe(false);

@@ -69,12 +69,12 @@ export const PROBES = [
     decision: '0542',
     suite: 'tests/stand.test.ts',
     // The stall gone from the room, Cosmo standing at nothing. 0548 drew it on every tab, where this probe
-    // was the stall drawn on every tab and its guard said it must not be.
-    broke: 'Cosmo’s stall not drawn by the pad',
-    guard: 'stands Cosmo at the stall beside the pad on every tab',
+    // was the stall drawn on every tab and its guard said it must not be. 0550: every tab's keeper's counter.
+    broke: 'the counter not drawn by the pad',
+    guard: 'stands the tab’s keeper at their counter beside the pad',
     edit: {
       path: 'src/render/port.ts',
-      find: '  put(surface, view, PORT_SPRITE.stall, STAGE.stall.along, STAGE.stall.across);',
+      find: '    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);',
       replace: '',
     },
   },

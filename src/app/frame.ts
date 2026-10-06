@@ -87,6 +87,7 @@ import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import { ROWS_OF } from '../content/arms.ts';
+import type { KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, SHIELD_ORBIT, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
@@ -1764,6 +1765,8 @@ export interface World {
   stand: number | null;
   /** The camera the stand is seen through — 0540: the screen's own view moved by its tab's camera, written by the shell. */
   standView: View;
+  /** Whose counter stands by the pad — 0550: the tab's own keeper, written by the shell with the camera. */
+  standKeeper: KeeperKind | null;
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
@@ -2776,7 +2779,7 @@ export class GameFrame implements Frame {
     }
     // And the hangar's tabs, standing in the same room — 0540.
     if (w.stand !== null) {
-      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow);
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.

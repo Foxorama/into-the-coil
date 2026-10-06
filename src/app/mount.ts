@@ -132,7 +132,7 @@ import { HUES, TONES, liveryFor } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
-import { COSMO } from '../content/cosmo.ts';
+import { COSMO } from '../content/keepers.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import {
@@ -1190,6 +1190,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0540: the stand's clock and its camera, written as a tab that stands in the port is shown.
     stand: null,
     standView: { ...view },
+    standKeeper: null,
     outro: null,
     finale: makeFinaleScene(),
     // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
@@ -1515,6 +1516,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       }
       if (world.stand === null) world.stand = 0;
       standViewInto(view, stand.camera, viewportWidth(host), viewportHeight(host), world.standView);
+      world.standKeeper = stand.keeper;
       // And no bar over the room: the bar is the play readout's (0500), and here the readout is in the dash.
       surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, 0);
       showPort();
@@ -2221,12 +2223,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * far the balance is from it, or the greeting.
    */
   function keeperLine(ware: OwnableKind, owned: boolean, ship: ShipKind): string {
-    if (justSold === ware) return COSMO.sold;
+    if (justSold === ware) return COSMO.shop.sold;
     const hangs = DANGLE_KINDS.some((kind) => kind === ware);
-    if (owned) return COSMO.owned.replace('{where}', hangs ? SCREENS.hangar.heading : SCREENS.parts.heading);
-    if (RIM_KINDS.some((kind) => kind === ware) && SHIPS[ship].wheels === null) return COSMO.noWheels;
+    if (owned) return COSMO.shop.owned.replace('{where}', hangs ? SCREENS.hangar.heading : SCREENS.parts.heading);
+    if (RIM_KINDS.some((kind) => kind === ware) && SHIPS[ship].wheels === null) return COSMO.shop.noWheels;
     const price = OWNABLES[ware].price ?? 0;
-    if (state.hangar.shards < price) return COSMO.short.replace('{short}', String(price - state.hangar.shards));
+    if (state.hangar.shards < price) return COSMO.shop.short.replace('{short}', String(price - state.hangar.shards));
     return COSMO.greet;
   }
   function showPilot(): void {

@@ -37,7 +37,7 @@ import { ART } from '../content/art.ts';
 import { HUES, TONES } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
-import { COSMO, type KeeperRow } from '../content/cosmo.ts';
+import type { KeeperKind } from '../content/keepers.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
 
@@ -208,10 +208,11 @@ export interface StandRow {
    */
   camera: StandCamera;
   /**
-   * Who keeps the counter on this tab, whose face and line head its plate — 0542: Cosmo, on Cosmo's;
-   * `null` on a tab with no counter. A row of the keepers' content, so a second shop is a second keeper.
+   * Who keeps the counter on this tab, whose face and line head its plate and whose counter stands by the
+   * pad — 0542: Cosmo, on Cosmo's; since 0550 Unity on Hangin' Out and MMXXVI on Paint & Parts. `null` on a
+   * tab with no counter. A kind of the keepers' table, so a fourth tab names its own.
    */
-  keeper: KeeperRow | null;
+  keeper: KeeperKind | null;
 }
 
 export interface ScreenRow {
@@ -835,9 +836,10 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         { label: 'Loadout', bands: ['gun', 'special'] },
         { label: 'Dash', bands: ['plate', 'dangle'] },
       ],
-      // 0548: the port's one camera, the pad and Cosmo's stall in it — it was on the pad at 1.5 (0540).
+      // 0548: the port's one camera, the pad and the keeper's counter in it — it was on the pad at 1.5 (0540).
       camera: PORT_CAMERA,
-      keeper: null,
+      // 0550: Unity, who puts the loadout and the dash together.
+      keeper: 'unity',
     },
     actions: [{ label: 'Back', hint: '' }],
     choices: [
@@ -938,7 +940,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         to stop. The looks are still read close on rig/looks.html.
       */
       camera: PORT_CAMERA,
-      keeper: null,
+      // 0550: MMXXVI, who paints it.
+      keeper: 'mmxxvi',
     },
     actions: [{ label: 'Back', hint: '' }],
     choices: [
@@ -1042,7 +1045,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       stand a third of it wide: at the bar the ship stood under the plate. So Cosmo keeps a stall on the deck
       beside the pad, and the camera stands between the two — the port's one camera since 0548.
     */
-    stand: { groups: [], camera: PORT_CAMERA, keeper: COSMO },
+    stand: { groups: [], camera: PORT_CAMERA, keeper: 'cosmo' },
     // 0542: Buy names the price of the ware in the window, written by the shell — `Buy · 250 ✦`.
     actions: [
       { label: 'Buy', hint: '' },

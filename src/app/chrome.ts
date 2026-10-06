@@ -41,7 +41,8 @@ import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
 import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
-import { paintCosmo } from '../render/cosmo-art.ts';
+import { KEEPER_FACES } from '../render/keeper-art.ts';
+import { KEEPERS } from '../content/keepers.ts';
 import { SHELF_KINDS } from '../content/wares.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
@@ -1899,6 +1900,16 @@ ${each('-tab-key[hidden]')} { display: none; }
 @container (max-width: 1100px) and (min-height: 461px) {
   .itc-hangar-pilot-card { grid-column: 1 / -1; }
 }
+/*
+  0550: and where the card stands beside the faces, the keeper stands over them, the card beside both. The
+  bio is the row's height there, twice the faces', and the keeper across the plate on a row of its own put
+  the hangar tab's plate fourteen pixels taller than the other two on CI's wider letters.
+*/
+@container (min-width: 1101px) {
+  .itc-hangar-keeper { grid-column: 1; grid-row: 1; }
+  .itc-hangar-band-faces { grid-column: 1; grid-row: 2; }
+  .itc-hangar-pilot-card { grid-column: 2; grid-row: 1 / span 2; }
+}
 .itc-hangar-groups, .itc-parts-groups, .itc-shop-band:not(.itc-shop-band-faces) { grid-column: 1 / -1; }
 .itc-hangar-groups, .itc-parts-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: min(0.55rem, 1.3cqh) min(1.2rem, 2cqw); align-items: start; }
 .itc-hangar-group, .itc-parts-group { display: flex; flex-direction: column; gap: min(0.35rem, 0.9cqh); min-width: 0; }
@@ -1968,30 +1979,33 @@ ${each('-tab-key[hidden]')} { display: none; }
   The keeper at the plate's head — Cosmo's face in a ring of the ally's violet, the name, and the line —
   then the aisle, then a shelf a line: its name in a column, its wares in a row, each with its price on
   its face. A shelf's wares are in rows of three, so a shelf that grows wraps as the dangles' band does.
+  Since 0550 the card heads every tab's plate with that tab's keeper, one look for all three, and a step
+  smaller: the face a size down and the line beside the name, since on Hangin' Out the card at Cosmo's
+  old size put Back under the plate's foot.
 */
-.itc-shop-keeper {
+.itc-shop-keeper, .itc-hangar-keeper, .itc-parts-keeper {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.2em 0.9em;
-  padding: 0.35em 0.8em;
+  padding: 0.25em 0.8em;
   border-radius: 0.75em;
   background: color-mix(in srgb, var(--itc-ink) 6%, transparent);
   text-align: left;
 }
-.itc-shop-keeper-face {
+.itc-shop-keeper-face, .itc-hangar-keeper-face, .itc-parts-keeper-face {
   display: block;
-  width: clamp(2.4rem, 10cqh, 4.4rem);
+  width: clamp(2rem, 6cqh, 2.5rem);
   height: auto;
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 30%, var(--itc-void)), var(--itc-void));
   box-shadow: 0 0 0 2px var(--itc-ally, var(--itc-ink)), 0 0 0.8em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 40%, transparent);
 }
-.itc-shop-keeper-words { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
-.itc-shop-keeper-name { font-size: 1.15em; font-weight: 800; letter-spacing: 0.02em; }
-.itc-shop-keeper-line { margin: 0; font-size: 0.85em; font-style: italic; opacity: 0.92; }
+.itc-shop-keeper-words, .itc-hangar-keeper-words, .itc-parts-keeper-words { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1em 0.7em; min-width: 0; }
+.itc-shop-keeper-name, .itc-hangar-keeper-name, .itc-parts-keeper-name { font-size: 1.15em; font-weight: 800; letter-spacing: 0.02em; }
+.itc-shop-keeper-line, .itc-hangar-keeper-line, .itc-parts-keeper-line { margin: 0; font-size: 0.85em; font-style: italic; opacity: 0.92; }
 .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) { grid-template-columns: max-content auto minmax(0, 1fr) auto; grid-template-areas: 'label less track more' '. . hint .'; padding: 0.1em; }
 .itc-shop-plate .itc-shop-band-label { font-size: 0.66em; text-align: left; }
 /* The aisle says nothing under it: a shelf's line is the shelf's, so the line kept for one is not kept here. */
@@ -2279,16 +2293,22 @@ ${each('-band[hidden]')} { display: none; }
   .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   /* A step smaller still, for CI's wider letters, under which "Mothership" was ten pixels past its face. */
   .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-option { font-size: 0.76em; padding-left: 0.2em; padding-right: 0.2em; }
-  .itc-shop-keeper { padding: 0.2em 0.6em; gap: 0.1em 0.6em; }
-  .itc-shop-keeper-face { width: clamp(1.6rem, 7cqh, 2.2rem); }
+  .itc-shop-keeper, .itc-hangar-keeper, .itc-parts-keeper { padding: 0.2em 0.6em; gap: 0.1em 0.6em; }
+  .itc-shop-keeper-face, .itc-hangar-keeper-face, .itc-parts-keeper-face { width: clamp(1.6rem, 7cqh, 2.2rem); }
   /*
     ⚠️ **0548: AND ON A PHONE COSMO IS A FACE AND ONE LINE.** The pilots joined the plate under him, and on
     CI's wider letters at 667x375 his card's name and wrapped line put Buy and Back four pixels under the
     fold. The name is his stall in the picture beside the plate; the line is one line, cut short where it
     must be, and the shelf's own line under it still says what the balance is short by.
   */
-  .itc-shop-keeper-name { display: none; }
-  .itc-shop-keeper-line { font-size: 0.78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .itc-shop-keeper-name, .itc-hangar-keeper-name, .itc-parts-keeper-name { display: none; }
+  .itc-shop-keeper-line, .itc-hangar-keeper-line, .itc-parts-keeper-line { font-size: 0.78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /*
+    0550: and a keeper who only greets is not on a phone's plate at all. Paint's three bands are the plate's
+    whole height there, and the card put Back sixteen pixels under the fold at 480x320. Their bust and their
+    sign stand beside the plate; what Cosmo's card says is the shop's state, which nothing else says.
+  */
+  .itc-shop-keeper-greets, .itc-hangar-keeper-greets, .itc-parts-keeper-greets { display: none; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; padding: 0 0.1em; row-gap: 0.05em; }
   /* Paint has three bands to Parts' two, and its column is the plate's height: the headings' own spacing gives. */
@@ -4913,21 +4933,23 @@ export function makeChrome(
       ── THE KEEPER — 0542 ──────────────────────────────────────────────────────────────────────────
 
       Who stands behind the counter, at the head of the plate: their face, their name, and what they are
-      saying (`setKeeperLine`), as a pilot's card stands under the faces. The face is Cosmo's painter —
-      the one keeper there is; a second would bring a painter of their own with them.
+      saying (`setKeeperLine`), as a pilot's card stands under the faces. Since 0550 on every tab, each
+      keeper's face by their own painter (`KEEPER_FACES`), and the card's look one look for all three.
     */
     let keeper: Panel['keeper'] = null;
-    const keeperRow = row.stand?.keeper ?? null;
-    if (keeperRow !== null) {
+    const keeperKind = row.stand?.keeper ?? null;
+    if (keeperKind !== null) {
+      const keeperRow = KEEPERS[keeperKind];
       const card = document.createElement('div');
-      card.className = prefix + 'keeper';
+      // 0550: a keeper with no shop only greets, and on a phone their counter beside the plate says it.
+      card.className = prefix + 'keeper' + (keeperRow.shop === null ? ' ' + prefix + 'keeper-greets' : '');
       const face = document.createElement('canvas');
       face.className = prefix + 'keeper-face';
       face.width = KEEPER_FACE_PIXELS;
       face.height = KEEPER_FACE_PIXELS;
       face.setAttribute('aria-hidden', 'true');
       const pen = face.getContext('2d');
-      if (pen !== null) paintCosmo(pen, colours, KEEPER_FACE_PIXELS);
+      if (pen !== null) KEEPER_FACES[keeperKind](pen, colours, KEEPER_FACE_PIXELS);
       const words = document.createElement('div');
       words.className = prefix + 'keeper-words';
       const name = document.createElement('div');

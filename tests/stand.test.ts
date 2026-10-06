@@ -6,7 +6,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PORT_EXTENT, PORT_SPRITE, STAGE, type PortKind } from '../src/content/port.ts';
+import { PORT_EXTENT, PORT_KINDS, PORT_SPRITE, STAGE, type PortKind } from '../src/content/port.ts';
+import { KEEPERS, KEEPER_KINDS } from '../src/content/keepers.ts';
 import { SHIPS, fitted } from '../src/content/ships.ts';
 import { SKY } from '../src/app/mount.ts';
 import { paintStand, standViewInto } from '../src/render/port.ts';
@@ -50,7 +51,7 @@ function drawStand(screen: (typeof STANDING)[number], width: number, height: num
   const view = { ...base };
   standViewInto(base, camera, width, height, view);
   const surface = new RecordingSurface();
-  paintStand(surface, view, t, SKY, ship);
+  paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper);
   return surface.blits;
 }
 
@@ -132,12 +133,13 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     0548: and the stall is drawn on every tab, so every tab's camera is asked to hold it whole — the
     hangar's cut it in half at the frame's edge, which is why it was Cosmo's alone until the three shared one.
   */
-  it('0542 — stands Cosmo at the stall beside the pad on every tab, with Cosmo, the stall and the ship in view at every size', () => {
+  it('0542 — stands the tab’s keeper at their counter beside the pad on every tab, keeper, counter and ship in view at every size', () => {
     for (const screen of STANDING) {
+      const keeper = KEEPERS[SCREENS[screen].stand!.keeper!];
       for (const [width, height] of SIZES) {
         const blits = drawStand(screen, width, height);
         const at = `${screen} at ${width}x${height}`;
-        for (const kind of ['cosmo', 'stall', 'blueSide'] as const) {
+        for (const kind of [keeper.bust, keeper.counter, 'blueSide'] as const) {
           const drawn = all(blits, kind);
           expect(drawn, `${at}: ${kind} is not drawn once`).toHaveLength(1);
           const half = (PORT_EXTENT[kind] * drawn[0]!.scale) / 2;
@@ -146,8 +148,67 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
           expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeGreaterThan(0);
           expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeLessThan(height);
         }
-        // Behind his counter: the stall is drawn over him, so he stands at it rather than on it.
-        expect(blits.indexOf(all(blits, 'stall')[0]!), `${at}: the stall is drawn under Cosmo`).toBeGreaterThan(blits.indexOf(all(blits, 'cosmo')[0]!));
+        // Behind their counter: the counter is drawn over them, so they stand at it rather than on it.
+        expect(blits.indexOf(all(blits, keeper.counter)[0]!), `${at}: the counter is drawn under its keeper`).toBeGreaterThan(blits.indexOf(all(blits, keeper.bust)[0]!));
+      }
+    }
+  });
+
+  /*
+    ⚠️ **A KEEPER A TAB — 0550.** Played: *"Hangin Out, Paints & Parts and Cosmo's Cosmetics all show Cosmo"*.
+    Each tab's counter is its own keeper's and no other's is drawn, so stepping the tabs changes who is at
+    the counter; and no two tabs name one keeper, which is the defect this was.
+  */
+  it('0550 — draws each tab’s own keeper at the counter and nobody else’s, a different keeper on every tab', () => {
+    const named = STANDING.map((screen) => SCREENS[screen].stand!.keeper);
+    expect(named, 'a standing tab has nobody at its counter').not.toContain(null);
+    expect(new Set(named).size, 'two tabs show the same keeper').toBe(named.length);
+    for (const screen of STANDING) {
+      const blits = drawStand(screen, 1280, 720);
+      for (const kind of KEEPER_KINDS) {
+        const row = KEEPERS[kind];
+        const expected = kind === SCREENS[screen].stand!.keeper ? 1 : 0;
+        expect(all(blits, row.bust), `${screen}: ${row.name} is drawn ${all(blits, row.bust).length} times`).toHaveLength(expected);
+        expect(all(blits, row.counter), `${screen}: ${row.name}'s counter is drawn ${all(blits, row.counter).length} times`).toHaveLength(expected);
+      }
+    }
+  });
+
+  /*
+    ⚠️ **THE STARS THROUGH THE WALL — 0550.** *"we've lost the space background behind the spacestation
+    hanger — can we fit in a starry background to emphasise the space station nature of it?"* The bay is
+    behind the plate on every tab, so a viewport is cut in the back wall. Asked in pixels: the hole is on
+    the screen, in the stand's part of it, with no wall tile drawn over it and the sky drawn under it.
+  */
+  it('0550 — cuts a viewport in the back wall that every tab shows in the stand, the sky through it and no wall over it', () => {
+    for (const screen of STANDING) {
+      for (const [width, height] of SIZES) {
+        const at = `${screen} at ${width}x${height}`;
+        const blits = drawStand(screen, width, height);
+        const viewport = all(blits, 'viewport');
+        expect(viewport, `${at}: the viewport is not drawn once`).toHaveLength(1);
+        const v = viewport[0]!;
+        const unit = v.scale;
+        // The pane: two tiles wide, one high, about the viewport's centre.
+        const left = v.x - PORT_EXTENT.wall * unit;
+        const top = v.y - (PORT_EXTENT.wall / 2) * unit;
+        expect(left, `${at}: the pane starts off the left of the screen`).toBeGreaterThanOrEqual(0);
+        expect(v.x + PORT_EXTENT.wall * unit, `${at}: the pane reaches into the plate`).toBeLessThanOrEqual(width * 0.45);
+        // At least half the pane's height is on the screen, so stars are seen through it and not its frame.
+        const seen = Math.min(height, top + PORT_EXTENT.wall * unit) - Math.max(0, top);
+        expect(seen / (PORT_EXTENT.wall * unit), `${at}: less than half the pane is on the screen`).toBeGreaterThanOrEqual(0.5);
+        const half = (PORT_EXTENT.wall * unit) / 2;
+        const over = all(blits, 'wall').filter((b) => b.x > left && b.x < left + 2 * PORT_EXTENT.wall * unit && Math.abs(b.y - v.y) < half);
+        expect(over, `${at}: a wall tile is drawn over the pane`).toEqual([]);
+        /*
+          And the sky is under it: the first level's, which the atlas holds after the port's own kinds, all
+          drawn before the wall and the viewport go over it. ⚠️ Not "a sky blit inside the pane": the sky is
+          a dozen layer blits across the whole view, whose centres miss a pane the stars show through —
+          the first version of this asked that and went red on a picture with stars in it.
+        */
+        const sky = blits.filter((b) => b.sprite >= PORT_KINDS.length);
+        expect(sky.length, `${at}: no sky is drawn behind the room`).toBeGreaterThan(0);
+        expect(Math.max(...sky.map((b) => blits.indexOf(b))), `${at}: the sky is drawn over the wall`).toBeLessThan(blits.indexOf(all(blits, 'wall')[0]!));
       }
     }
   });

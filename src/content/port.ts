@@ -112,6 +112,13 @@ export const PORT_KINDS = [
   // 0542: Cosmo, and the stall by the pilot's pad they keep their counter at.
   'cosmo',
   'stall',
+  // 0550: Unity and their bench on Hangin' Out, MMXXVI and their booth on Paint & Parts, at Cosmo's spot.
+  'unity',
+  'bench',
+  'mmxxvi',
+  'booth',
+  // 0550: the viewport in the back wall, its frame and its glass — the stars are the sky behind the wall.
+  'viewport',
 ] as const;
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
@@ -182,6 +189,13 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   // 0542: a bust a head taller than the counter, and the stall's square box.
   cosmo: 14,
   stall: 30,
+  // 0550: every keeper a bust Cosmo's size, behind a counter in the stall's box.
+  unity: 14,
+  bench: 30,
+  mmxxvi: 14,
+  booth: 30,
+  // 0550: two wall tiles wide and a frame's width over, so the frame laps the wall round the hole.
+  viewport: 44,
 };
 
 /**
@@ -284,6 +298,14 @@ export const STAGE = {
    */
   stall: { along: 64, across: 85 },
   keeper: { along: 63, across: 80 },
+  /**
+   * The viewport in the back wall — 0550: *"can we fit in a starry background to emphasise the space
+   * station nature of it?"* The bay is behind the plate on every tab, so the stars were seen only past the
+   * plate's edge. The hole is two wall tiles wide and one high, on the tile grid — from `along` two tiles
+   * on, and from `across` one tile down — so the wall is drawn round it whole and the sky the room is
+   * painted over shows through it. Over the stall and the pad, between the truss and the awning.
+   */
+  viewport: { along: 60, across: 40 },
   /** The alarm beacons, which turn once the Viper has gone. */
   beacons: [
     [174, 30],

@@ -46,6 +46,7 @@ import {
   TRAIL_EVERY,
   TRAIL_SAMPLES,
 } from '../content/port.ts';
+import { KEEPERS, type KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { SPRITE_EXTENT } from '../content/sprites.ts';
@@ -123,7 +124,7 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
  *
  * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
  */
-export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow): void {
+export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null): void {
   surface.clear();
   paintRoom(surface, view, t, sky);
   paintLamps(surface, view);
@@ -132,13 +133,17 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
   paintDeck(surface, view);
   /*
-    0542: Cosmo behind the counter of their stall, by the pad — the bust first, so the counter is in front.
-    ⚠️ **ON EVERY TAB SINCE 0548, AND IT WAS COSMO'S ALONE.** The hangar's camera saw the deck from 58 units
-    along and would have cut the stall in half; the three tabs share Cosmo's camera now, so the stall is
-    whole in all of them and the room does not lose a shop when a tab is stepped. The intro never had it.
+    0542: the tab's keeper behind their counter, by the pad — the bust first, so the counter is in front.
+    ⚠️ **THE TAB'S OWN KEEPER SINCE 0550, AND IT WAS COSMO ON ALL THREE (0548).** Played: *"Hangin Out, Paints
+    & Parts and Cosmo's Cosmetics all show Cosmo."* The three share one camera, and it holds one counter
+    whole beside the pad, so the counter there is the tab's: Unity's bench, MMXXVI's booth, Cosmo's stall.
+    The intro never had one.
   */
-  put(surface, view, PORT_SPRITE.cosmo, STAGE.keeper.along, STAGE.keeper.across);
-  put(surface, view, PORT_SPRITE.stall, STAGE.stall.along, STAGE.stall.across);
+  if (keeper !== null) {
+    const row = KEEPERS[keeper];
+    put(surface, view, PORT_SPRITE[row.bust], STAGE.keeper.along, STAGE.keeper.across);
+    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);
+  }
   // The pilot's beam and pad, and the Viper's pad, empty.
   const beam = PORT_EXTENT.beam;
   put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck - beam / 2 + 2);
@@ -262,11 +267,15 @@ function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
   paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
   // The back wall, the truss and the lamps.
   const wall = PORT_EXTENT.wall;
+  const hole = STAGE.viewport;
   for (let along = wall / 2; along < STAGE.bay; along += wall) {
     for (let across = wall / 2; across < STAGE.deck + wall; across += wall) {
+      // 0550: no tile where the viewport is, so the sky under the room is what is seen through it.
+      if (along > hole.along && along < hole.along + 2 * wall && across > hole.across && across < hole.across + wall) continue;
       put(surface, view, PORT_SPRITE.wall, along, across, 1, 0, TILE_OVERLAP);
     }
   }
+  put(surface, view, PORT_SPRITE.viewport, hole.along + wall, hole.across + wall / 2);
   const ceiling = PORT_EXTENT.ceiling;
   for (let along = ceiling / 2; along < STAGE.bay; along += ceiling) {
     put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
