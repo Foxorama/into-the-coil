@@ -2142,25 +2142,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     a band does not bake the ship again on every press; the shelf of them is let go once it holds a few
     dozen, which is more fits than a visit tries.
   */
-  const thumbs: Record<string, HTMLCanvasElement> = {};
-  let thumbCount = 0;
+  // A list searched by ship and fit, never a table keyed by a string (0016): a few dozen at most.
+  const thumbs: { ship: ShipKind; fit: Fit; canvas: HTMLCanvasElement }[] = [];
   // A thumbnail's pixels across, for a picture two ems wide on a doubled screen; and how many are kept.
   const THUMB_PIXELS = 96;
   const THUMBS_KEPT = 48;
   function thumbOf(ship: ShipKind, fit: Fit): HTMLCanvasElement | null {
     const sprite = SPRITE_KINDS.find((kind) => kind === ship);
     if (sprite === undefined) return null;
-    const key = ship + '|' + String(fit.gun) + '|' + String(fit.rim) + '|' + String(fit.art) + '|' + String(fit.livery) + '|' + String(fit.flame);
-    const kept = thumbs[key];
-    if (kept !== undefined) return kept;
-    if (thumbCount > THUMBS_KEPT) {
-      for (const k of Object.keys(thumbs)) delete thumbs[k];
-      thumbCount = 0;
-    }
-    const baked = withFit(ship, fit, () => bakeGlyph(sprite, colours, THUMB_PIXELS / SPRITE_EXTENT[sprite]));
-    thumbs[key] = baked;
-    thumbCount++;
-    return baked;
+    const kept = thumbs.find((t) => t.ship === ship && sameFit(t.fit, fit) && t.fit.flame === fit.flame);
+    if (kept !== undefined) return kept.canvas;
+    if (thumbs.length > THUMBS_KEPT) thumbs.length = 0;
+    const canvas = withFit(ship, fit, () => bakeGlyph(sprite, colours, THUMB_PIXELS / SPRITE_EXTENT[sprite]));
+    thumbs.push({ ship, fit, canvas });
+    return canvas;
   }
   /** 0564: fitting `ware` to `ship` as an action, or `null` where it cannot go — wheels on a ship with none. */
   function fitNow(ware: OwnableKind, ship: ShipKind): HangarAction | null {

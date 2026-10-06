@@ -1291,8 +1291,8 @@ ${faceTurns()}
   0567: a balance that moved counts from where it was, over most of a second, the figure the reader hears
   said at once underneath — the shell's words are the truth and the count is what the eye sees.
 */
-@property --itc-sheet-from { syntax: '<integer>'; inherits: false; initial-value: 0; }
-@keyframes itc-shards-count { from { --itc-sheet-n: var(--itc-sheet-from); } }
+@property --itc-sheet-was { syntax: '<integer>'; inherits: false; initial-value: 0; }
+@keyframes itc-shards-count { from { --itc-sheet-n: var(--itc-sheet-was); } }
 .itc-hangar-sheet-moved, .itc-parts-sheet-moved, .itc-shop-sheet-moved { counter-reset: itc-shards var(--itc-sheet-n); animation: itc-shards-count 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 .itc-hangar-sheet-moved::after, .itc-parts-sheet-moved::after, .itc-shop-sheet-moved::after { content: counter(itc-shards); }
 .itc-hangar-sheet-moved > .itc-hangar-sheet-said, .itc-parts-sheet-moved > .itc-parts-sheet-said, .itc-shop-sheet-moved > .itc-shop-sheet-said {
@@ -6500,7 +6500,7 @@ export function makeChrome(
           value.classList.add(prefix + 'sheet-total');
           // 0567: and from the balance it last said, on a screen that stands.
           if (typeof line.value === 'number' && was !== undefined && was !== line.value && SCREENS[screen].stand !== null) {
-            value.style.setProperty('--itc-sheet-from', String(Math.round(was)));
+            value.style.setProperty('--itc-sheet-was', String(Math.round(was)));
             value.classList.add(prefix + 'sheet-moved');
           }
         }
