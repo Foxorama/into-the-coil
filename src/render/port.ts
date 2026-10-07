@@ -38,6 +38,7 @@ import {
   RUN_FRAME_STEPS,
   RUN_SPEED,
   STAGE,
+  DOCK,
   STAND_PAD_AT,
   STAND_SHIP_SHARE,
   STAND_SKY,
@@ -49,7 +50,7 @@ import {
   TRAIL_EVERY,
   TRAIL_SAMPLES,
 } from '../content/port.ts';
-import { KEEPERS, type KeeperKind } from '../content/keepers.ts';
+import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
 import { SPRITE_EXTENT } from '../content/sprites.ts';
@@ -131,52 +132,62 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
  *
  * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
  */
-export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP, spot = 0): void {
+export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP, spots: Readonly<Record<KeeperKind, number>> | null = null): void {
   surface.clear();
-  paintRoom(surface, view, t, sky);
-  paintLamps(surface, view);
-  // The bar, its door shut: nobody is coming out of it.
-  put(surface, view, PORT_SPRITE.door, STAGE.doorway.along, STAGE.doorway.across);
-  put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
-  paintDeck(surface, view);
   /*
-    0542: the tab's keeper at their counter, by the pad — a keeper behind it first, so the counter is in front.
-    ⚠️ **THE TAB'S OWN KEEPER SINCE 0550, AND IT WAS COSMO ON ALL THREE (0548).** Played: *"Hangin Out, Paints
-    & Parts and Cosmo's Cosmetics all show Cosmo."* The three share one camera, and it holds one counter
-    whole beside the pad, so the counter there is the tab's: Unity's bench, MMXXVI's booth, Cosmo's stall.
-    The intro never had one.
+    ── THE DOCK — 0570 ─────────────────────────────────────────────────────────────────────────────
+    *"a fun spaceship hangar set against a space backdrop, space for the tradie/merchant stalls to show, the
+    spaceship to show the changes"*. Space first, with a planet in the bay; a back wall that ends at the bay
+    under a truss that reaches out over it; a mezzanine along the wall with every keeper's shopfront on it in
+    the tabs' order, the open tab's lit and the others dimmed; the deck, and the ship on its cradle under it.
   */
-  /*
-    0569: and the keeper wherever they are this visit — at their counter, at the ship, or out, the counter
-    standing empty. Their row lists where they may be; the shell says which (`spot`), after every run.
-  */
-  const row = keeper === null ? null : KEEPERS[keeper];
-  const place = row === null ? null : (row.spots[spot] ?? row.spots[0]);
-  if (row !== null && place !== null) {
-    // 0554: at the counter, where they stand is theirs — behind it, or on it, as Unity stands on their bench.
-    const along = STAGE.stall.along + place.offset.along;
-    const across = STAGE.stall.across + place.offset.across;
-    if (place.at === 'counter' && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across);
-    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);
-    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across);
+  paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
+  put(surface, view, PORT_SPRITE.planet, DOCK.planet.along, DOCK.planet.across, 1, 0, DOCK.planetGrow);
+  const wall = PORT_EXTENT.wall;
+  for (let along = wall / 2; along < DOCK.bay; along += wall) {
+    for (let across = wall / 2; across < STAGE.deck + wall; across += wall) put(surface, view, PORT_SPRITE.wall, along, across, 1, 0, TILE_OVERLAP);
   }
+  const ceiling = PORT_EXTENT.ceiling;
+  for (let along = ceiling / 2; along < DOCK.bay + ceiling; along += ceiling) put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
+  const lamp = PORT_EXTENT.lamp;
+  for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lamp, DOCK.lamps[i]!, STAGE.ceiling - 2 + lamp / 2);
+  const deck = PORT_EXTENT.deck;
+  for (let along = deck / 2; along < DOCK.bay + deck; along += deck) {
+    for (let across = STAGE.deck + deck / 2; across < ACROSS_SPAN + deck / 2; across += deck) put(surface, view, PORT_SPRITE.deck, along, across, 1, 0, TILE_OVERLAP);
+  }
+  // The mezzanine's catwalk along the back wall, and each keeper's shopfront standing on it.
+  const walk = PORT_EXTENT.catwalk;
+  for (let along = DOCK.catwalkFrom + walk / 2; along < DOCK.catwalkTo; along += walk) put(surface, view, PORT_SPRITE.catwalk, along, DOCK.catwalk, 1, 0, TILE_OVERLAP);
   /*
-    0568: the pilot's ship on the pad by the bay — the Viper's, empty since she went — with the open bay
-    and the stars past it on its right, and the inner pad free for the keeper. On the inner pad it stood
-    in front of the counter, with the bay off the screen: *"the ship over lays the trade stand"*.
+    0569: every keeper wherever they are this visit — at their counter, at the ship, or out — and since 0570
+    all three are in the room at once. The open tab's shop is lit; the others stand back in the dim.
   */
-  const pad = STAGE.standPad;
-  const beam = PORT_EXTENT.beam;
-  put(surface, view, PORT_SPRITE.beam, pad, STAGE.deck - beam / 2 + 2);
-  // The ship's pad alone: the inner one stood under the keeper's counter, half under it — *"poorly aligned"*.
-  put(surface, view, PORT_SPRITE.pad, pad, STAGE.deck);
-  // Lit from the first frame and never going: its idle flame for as long as the stand is up.
-  const size = ship.intro.hangar;
+  for (let k = 0; k < KEEPER_KINDS.length; k++) {
+    const kind = KEEPER_KINDS[k]!;
+    const row = KEEPERS[kind];
+    const place = row.spots[spots === null ? 0 : spots[kind]] ?? row.spots[0];
+    const shop = DOCK.shops[kind];
+    const s = DOCK.shopScale;
+    put(surface, view, PORT_SPRITE.alcove, shop, DOCK.shopAcross, 1, 0, s);
+    // 0554: at the counter, where they stand is theirs — behind it, or on it, as Unity stands on their bench.
+    const along = shop + place.offset.along * s;
+    const across = DOCK.shopAcross + place.offset.across * s;
+    if (place.at === 'counter' && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
+    put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);
+    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
+    // The shops of the other tabs are there, in the dim: a shutter of the night over them, not a fade to the wall.
+    if (keeper !== null && kind !== keeper) put(surface, view, PORT_SPRITE.veil, shop, DOCK.shopAcross - 0.5, SHOP_DIM, 0, PORT_EXTENT.alcove * s);
+  }
+  // The pilot's ship on its cradle on the deck, under the shops.
+  const pad = DOCK.ship;
+  put(surface, view, PORT_SPRITE.cradle, pad, STAGE.deck - 1.5);
+  // Lit from the first frame and never going: its idle flame for as long as the stand is up. A size up
+  // from the intro's (`DOCK.shipGrow`): it is the picture of every change, and baked as much sharper.
+  const size = ship.intro.hangar * DOCK.shipGrow;
   // 0567: and up off it for a moment when something is fitted.
-  const across = STAGE.blueRide + blueBobAt(t) - hopAt(t - hop);
+  const across = DOCK.ride + blueBobAt(t) - hopAt(t - hop);
   // 0569: a keeper at the ship rides its bob — looking over it from behind, or standing on its roof.
-  const atShip = row !== null && place !== null && place.at === 'ship';
-  if (atShip && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], pad + place.offset.along, across + place.offset.across);
+  paintAtShip(surface, view, spots, 'behind', pad, across);
   paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
@@ -196,8 +207,26 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
       put(surface, view, sprite, pad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);
     }
   }
-  if (atShip && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], pad + place.offset.along, across + place.offset.across);
-  paintEdge(surface, view);
+  paintAtShip(surface, view, spots, 'over', pad, across);
+  // The bay's edge at the dock's end of the room.
+  put(surface, view, PORT_SPRITE.field, DOCK.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
+  put(surface, view, PORT_SPRITE.bayTop, DOCK.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
+  put(surface, view, PORT_SPRITE.bayBottom, DOCK.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
+}
+
+/** How lit a shop is while another tab is open — 0570: there, and plainly not the one being spoken to. */
+const SHOP_DIM = 0.5;
+
+/** The keepers whose place this visit is at the ship, drawn `drawn` it — behind it, or over it. */
+function paintAtShip(surface: Surface, view: View, spots: Readonly<Record<KeeperKind, number>> | null, drawn: 'behind' | 'over', pad: number, across: number): void {
+  for (let k = 0; k < KEEPER_KINDS.length; k++) {
+    const kind = KEEPER_KINDS[k]!;
+    const row = KEEPERS[kind];
+    const place = row.spots[spots === null ? 0 : spots[kind]] ?? row.spots[0];
+    if (place.at !== 'ship' || place.drawn !== drawn) continue;
+    // Where they stand is measured on the intro's ship, and the dock's is a size up: so are they placed.
+    put(surface, view, PORT_SPRITE[row.figure], pad + place.offset.along * DOCK.shipGrow, across + place.offset.across * DOCK.shipGrow);
+  }
 }
 
 /**
@@ -262,12 +291,13 @@ export function fitStand(
     0568: not the back wall's viewport any more — it was kept for its stars (0550), and the open bay shows
     them now, past the ship. Holding it in view held the camera back a third.
   */
-  let keep: number = STAGE.standPad;
-  if (keeper !== null) {
-    const kept = KEEPERS[keeper];
-    // At the counter's place; the counter is there wherever they are, and a figure elsewhere is by the ship.
-    keep = Math.min(keep, STAGE.stall.along - PORT_EXTENT[kept.counter] / 4, STAGE.stall.along + kept.spots[0].offset.along - PORT_EXTENT[kept.figure] / 4);
-  }
+  /*
+    0570: and the mezzanine's first shopfront, whole — every keeper's shop is in the room on every tab, the
+    first of them furthest from the ship. `keeper` is the tab's; the camera keeps them all, so it is unread.
+  */
+  void keeper;
+  let keep: number = DOCK.ship;
+  for (let k = 0; k < KEEPER_KINDS.length; k++) keep = Math.min(keep, DOCK.shops[KEEPER_KINDS[k]!] - PORT_EXTENT.alcove / 2);
   // Half a unit to spare, so what is kept is on the screen and not on its edge by a rounding.
   const reach = camera.along - keep + 0.5;
   const fitsShip = (box.width * STAND_SHIP_SHARE) / (PORT_EXTENT.blueSide * base.scale);

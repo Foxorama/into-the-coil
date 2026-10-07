@@ -12,8 +12,8 @@ export const PROBES = [
     guard: 'shows the end of the hangar and the open stars past it',
     edit: {
       path: 'src/state/screens.ts',
-      find: 'const PORT_CAMERA: StandCamera = { along: 142, across: 74, zoom: 1.15, x: 0.6, y: 0.5 };',
-      replace: 'const PORT_CAMERA: StandCamera = { along: 142, across: 74, zoom: 1.9, x: 0.6, y: 0.5 };',
+      find: 'const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };',
+      replace: 'const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.9, x: 0.6, y: 0.5 };',
     },
   },
   {
@@ -23,8 +23,8 @@ export const PROBES = [
     guard: 'shows the end of the hangar and the open stars past it',
     edit: {
       path: 'src/state/screens.ts',
-      find: 'const PORT_CAMERA: StandCamera = { along: 142, across: 74, zoom: 1.15, x: 0.6, y: 0.5 };',
-      replace: 'const PORT_CAMERA: StandCamera = { along: 94, across: 74, zoom: 1.15, x: 0.6, y: 0.5 };',
+      find: 'const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };',
+      replace: 'const PORT_CAMERA: StandCamera = { along: 40, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };',
     },
   },
   {

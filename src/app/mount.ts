@@ -97,7 +97,7 @@ import {
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
-import { INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
+import { DOCK, INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
 import { makeFinaleScene } from '../render/finale.ts';
@@ -1524,11 +1524,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const resolution = view.scale * dpr;
       const standing = GOLFERS[state.settings.pilot];
       // 0563: the ship and the keepers sharper by as much as the camera is closer — and the intro's port, baked plain, is baked again.
-      if (port === null || atlasIsStale(port, 'side', resolution) || portSharp !== stand.camera.zoom) {
+      if (port === null || atlasIsStale(port, 'side', resolution) || portSharp !== stand.camera.zoom * DOCK.shipGrow) {
         // 0542: in the fit the stand wears — the ware in Cosmo's window tried on, on the shop.
-        port = withFit(standing.ship, standFit(standing.ship), () => bakePort(colours, resolution, standing, stand.camera.zoom));
+        port = withFit(standing.ship, standFit(standing.ship), () => bakePort(colours, resolution, standing, stand.camera.zoom * DOCK.shipGrow));
         portFit = { ship: standing.ship, fit: standFit(standing.ship) };
-        portSharp = stand.camera.zoom;
+        portSharp = stand.camera.zoom * DOCK.shipGrow;
       }
       if (world.stand === null) world.stand = 0;
       // 0563: the row's camera until the chrome is laid out; `frameStand` fits it to the column once it is.

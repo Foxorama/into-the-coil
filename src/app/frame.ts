@@ -2786,7 +2786,7 @@ export class GameFrame implements Frame {
     }
     // And the hangar's tabs, standing in the same room — 0540.
     if (w.stand !== null) {
-      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP, w.standKeeper === null ? 0 : (w.standSpots?.[w.standKeeper] ?? 0));
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP, w.standSpots ?? null);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.

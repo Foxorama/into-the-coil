@@ -13,8 +13,8 @@ export const PROBES = [
     edit: {
       path: 'src/render/port.ts',
       // 0569: read off the keeper's spot at the counter, where it said `stands` on the row.
-      find: "    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);\n    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across);",
-      replace: "    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across);\n    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);",
+      find: "    put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);\n    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);",
+      replace: "    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);\n    put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);",
     },
   },
 ];

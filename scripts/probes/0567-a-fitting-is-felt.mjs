@@ -11,8 +11,8 @@ export const PROBES = [
     guard: 'hops the ship on its beam when it is fitted',
     edit: {
       path: 'src/render/port.ts',
-      find: '  const across = STAGE.blueRide + blueBobAt(t) - hopAt(t - hop);',
-      replace: '  const across = STAGE.blueRide + blueBobAt(t) - 0 * hopAt(t - hop);',
+      find: '  const across = DOCK.ride + blueBobAt(t) - hopAt(t - hop);',
+      replace: '  const across = DOCK.ride + blueBobAt(t) - 0 * hopAt(t - hop);',
     },
   },
 ];
