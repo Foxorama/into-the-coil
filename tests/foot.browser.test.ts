@@ -59,9 +59,13 @@ describe.runIf(chromePath)('0562 and 0568 — the plate is one size, and its foo
     expect(big / 1920, 'the plate takes a quarter of a 1920 screen or more').toBeLessThan(0.25);
   });
 
-  it('names the option tried on, large, on the card, and stands the balance in the plate beside Back', async () => {
-    // (The balance is read on its line, so a foot stacked again, balance over Back, fails here too.)
-    const page = await opened(1280, 720);
+  /*
+    ⚠️ **TURNED ROUND BY 0572.** The card stands on a phone's foot only: on a desktop each band says its own
+    under itself (`tests/dressed.browser.test.ts`), and the balance is in the stand's top right corner, not
+    beside Back. So the card is asked where the player sees it, a phone held sideways.
+  */
+  it('names the option tried on, on a phone’s card, and follows the cursor down', async () => {
+    const page = await opened(667, 375);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(150);
@@ -73,13 +77,7 @@ describe.runIf(chromePath)('0562 and 0568 — the plate is one size, and its foo
     await page.waitForTimeout(150);
     const special = await page.locator(`${shown('hangar')} [${SETTING_ATTR}="special"] .${HANGAR}option-look`).textContent();
     expect(await page.locator(`${shown('hangar')} .${HANGAR}focus-name`).textContent(), 'the card stayed on the gun when the cursor went down').toBe(special);
-    const plate = (await page.locator(`${shown('hangar')} .${HANGAR}plate`).boundingBox())!;
-    const sheet = (await page.locator(`${shown('hangar')} .${HANGAR}sheet`).boundingBox())!;
-    const back = (await page.locator(`${shown('hangar')} .${HANGAR}action`).first().boundingBox())!;
-    expect(sheet.x >= plate.x && sheet.x + sheet.width <= plate.x + plate.width, 'the balance is not on the plate').toBe(true);
-    // Beside Back, on its line and to its left.
-    const middle = (box: { y: number; height: number }): number => box.y + box.height / 2;
-    expect(Math.abs(middle(sheet) - middle(back)) < back.height / 2 && sheet.x + sheet.width <= back.x, 'the balance does not stand beside Back').toBe(true);
+    expect(await page.locator(`${shown('hangar')} .${HANGAR}focus-name`).isVisible(), 'the phone’s card is not drawn').toBe(true);
     await page.context().close();
   });
 });

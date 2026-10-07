@@ -20,7 +20,7 @@ import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
-import { fitStand, standViewInto } from '../render/port.ts';
+import { fitStand, standMarksInto, standViewInto } from '../render/port.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
 import { screenX, screenY } from '../render/surface.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
@@ -1633,6 +1633,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     plate that grows (0562) or a phone's narrower column is answered by the same line, and again on every
     resize: the stand's view was only written when a screen changed.
   */
+  // 0572: the stand's marks on the screen, written over on every framing.
+  const marks = { shipX: 0, shipY: 0, keeperX: 0, keeperY: 0 };
   function frameStand(): void {
     const stand = SCREENS[state.screen.current].stand;
     if (stand === null || world.stand === null || !playable) return;
@@ -1643,6 +1645,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     fitStand(stand.camera, view, width, box, stand.keeper, framed, height);
     // 0566: in portrait the plate is under the stand, and the deck may stop above the screen's foot.
     standViewInto(view, framed, width, height, world.standView, Math.max(0, height - (box.top + box.height)));
+    // 0572: and where the ship's foot and the keeper's head are on it, for the monitor and the bubble.
+    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks);
+    chrome.setStandMarks(state.screen.current, marks);
   }
 
   /**
@@ -1856,6 +1861,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   function moveKeepers(): void {
     for (const kind of KEEPER_KINDS) spots[kind] = keeperRng.int(0, KEEPERS[kind].spots.length - 1);
     sayKeepers();
+    // 0572: and the bubble moved to where the keeper now is.
+    frameStand();
   }
   /** What the keepers' cards say: a keeper away or at the ship says so; at the counter, their greeting. */
   function sayKeepers(): void {

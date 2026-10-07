@@ -246,6 +246,10 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'cradle':
     case 'planet':
     case 'alcove':
+    case 'lift':
+    case 'liftCar':
+    case 'hoverRing':
+    case 'moon':
     case 'bar':
     case 'door':
     case 'spill':
@@ -397,6 +401,18 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       return;
     case 'alcove':
       paintAlcove(ctx, palette);
+      return;
+    case 'lift':
+      paintLift(ctx, palette);
+      return;
+    case 'liftCar':
+      paintLiftCar(ctx, palette);
+      return;
+    case 'hoverRing':
+      paintHoverRing(ctx, palette);
+      return;
+    case 'moon':
+      paintMoon(ctx, palette);
       return;
     case 'door': {
       // A sliding hatch with a lit porthole: it slides behind the facade, so it is drawn whole.
@@ -862,45 +878,184 @@ function paintCradle(ctx: CanvasRenderingContext2D, palette: Palette): void {
     ctx.fill();
     radial(ctx, side * 15.6, -6.8, 1.6, palette.player, 0.9);
   }
+  // 0572: the field's column, rising off the plate to the ship it holds up, faint and fading as it rises.
+  const column = ctx.createLinearGradient(0, 0, 0, -20);
+  column.addColorStop(0, rgba(palette.player, 0.32));
+  column.addColorStop(1, rgba(palette.player, 0));
+  ctx.fillStyle = column;
+  ctx.beginPath();
+  ctx.moveTo(-15, 0);
+  ctx.lineTo(15, 0);
+  ctx.lineTo(12, -20);
+  ctx.lineTo(-12, -20);
+  ctx.closePath();
+  ctx.fill();
   // The field the ship rides on: a glow along the plate's top.
   radialEllipse(ctx, 0, -0.6, 17, 2.4, palette.player, 0.5);
   ctx.fillStyle = rgba(palette.player, 0.85);
   ctx.fillRect(-15, -0.4, 30, 0.4);
 }
 
-/** A planet in the bay: a lit disc, banded, with an atmosphere's rim on its sunward side. */
+/**
+ * A planet in the bay: a lit disc, banded, inside a tilted ring. 0572: *"move the planet more into the
+ * background and change its colour to make it more distinguishable from all the blue on screen… maybe give
+ * it some rings and a moon"* — a warm giant, smaller and dimmer than the room, so it sits far off behind it.
+ * The fire's ink toward the sky and the impact's cream, so it is nothing the screen's cyan already is, and
+ * not the hazard's gold the balance is counted in.
+ */
 function paintPlanet(ctx: CanvasRenderingContext2D, palette: Palette): void {
-  const r = 34;
+  const r = 17;
+  const tilt = -0.22;
+  const warm = mix(palette.fire, palette.sky, 0.3);
+  const ring = (from: number, to: number): void => {
+    // The ring in three bands, its far half drawn before the disc and its near half after it.
+    const bands = [
+      [r * 1.45, 0.3],
+      [r * 1.72, 0.45],
+      [r * 2.05, 0.22],
+    ] as const;
+    for (const [rx, alpha] of bands) {
+      ctx.strokeStyle = rgba(mix(palette.impact, warm, 0.35), alpha);
+      ctx.lineWidth = rx === bands[1][0] ? 3 : 1.6;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx, rx * 0.2, tilt, from, to);
+      ctx.stroke();
+    }
+  };
+  ring(Math.PI, Math.PI * 2);
   ctx.save();
   ctx.beginPath();
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.clip();
   const body = ctx.createRadialGradient(-r * 0.4, -r * 0.45, r * 0.1, 0, 0, r);
-  body.addColorStop(0, mix(palette.player, '#ffffff', 0.25));
-  body.addColorStop(0.5, shade(palette.player, -0.35));
-  body.addColorStop(1, shade(palette.space, 0.15));
+  body.addColorStop(0, mix(warm, palette.impact, 0.45));
+  body.addColorStop(0.55, shade(warm, -0.2));
+  body.addColorStop(1, shade(warm, -0.6));
   ctx.fillStyle = body;
   ctx.fillRect(-r, -r, r * 2, r * 2);
-  // Bands of cloud across it, a little lighter and darker in turn.
-  for (let i = 0; i < 7; i++) {
-    const y = -r + (i + 0.5) * ((r * 2) / 7);
-    ctx.fillStyle = rgba(i % 2 === 0 ? '#ffffff' : palette.space, i % 2 === 0 ? 0.08 : 0.12);
-    ctx.fillRect(-r, y - 2, r * 2, 3 + (i % 3));
+  // Bands of cloud across it, tilted with the ring, cream and rust in turn.
+  ctx.save();
+  ctx.rotate(tilt);
+  for (let i = 0; i < 9; i++) {
+    const y = -r + (i + 0.5) * ((r * 2) / 9);
+    ctx.fillStyle = rgba(i % 2 === 0 ? palette.impact : shade(warm, -0.45), i % 2 === 0 ? 0.13 : 0.2);
+    ctx.fillRect(-r * 1.2, y - 1, r * 2.4, 1.4 + (i % 3) * 0.6);
   }
-  // The night side.
+  ctx.restore();
+  // The night side, and the ring's shadow across the disc.
+  const night = ctx.createLinearGradient(-r, -r, r, r);
+  night.addColorStop(0.4, rgba(palette.space, 0));
+  night.addColorStop(1, rgba(palette.space, 0.85));
+  ctx.fillStyle = night;
+  ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.strokeStyle = rgba(palette.space, 0.35);
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.ellipse(0, 1.6, r * 1.6, r * 0.32, tilt, 0, Math.PI);
+  ctx.stroke();
+  ctx.restore();
+  ring(0, Math.PI);
+  // A thin rim of air toward the light, and no glow: a glow would bring it forward.
+  ctx.strokeStyle = rgba(mix(warm, palette.impact, 0.6), 0.45);
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.arc(0, 0, r + 0.2, Math.PI * 0.95, Math.PI * 1.7);
+  ctx.stroke();
+}
+
+/** 0572: the planet's moon — small, grey and cratered, lit from the planet's side. */
+function paintMoon(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const r = 4.2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.clip();
+  const body = ctx.createRadialGradient(-r * 0.4, -r * 0.4, r * 0.1, 0, 0, r);
+  body.addColorStop(0, mix(palette.blade, palette.impact, 0.4));
+  body.addColorStop(1, shade(palette.blade, -0.55));
+  ctx.fillStyle = body;
+  ctx.fillRect(-r, -r, r * 2, r * 2);
+  for (const [x, y, c] of [[-1.4, -0.8, 0.9], [1.1, 1.2, 0.7], [0.6, -1.9, 0.5], [-0.4, 2.1, 0.45]] as const) {
+    ctx.fillStyle = rgba(shade(palette.blade, -0.6), 0.45);
+    ctx.beginPath();
+    ctx.arc(x, y, c, 0, Math.PI * 2);
+    ctx.fill();
+  }
   const night = ctx.createLinearGradient(-r, -r, r, r);
   night.addColorStop(0.45, rgba(palette.space, 0));
-  night.addColorStop(1, rgba(palette.space, 0.75));
+  night.addColorStop(1, rgba(palette.space, 0.8));
   ctx.fillStyle = night;
   ctx.fillRect(-r, -r, r * 2, r * 2);
   ctx.restore();
-  // The atmosphere's rim, brightest toward the light.
-  ctx.strokeStyle = rgba(mix(palette.player, '#ffffff', 0.5), 0.55);
-  ctx.lineWidth = 1.2;
+}
+
+/**
+ * 0572: the hover-lift's shaft from the deck up to the catwalk — two rails on a backplate, a lit guide
+ * down each, and a hazard-striped landing at the deck. Its box's top is the catwalk's rail and its middle
+ * the catwalk's walk minus nothing: drawn so the platform's top meets the walk at the top of its travel.
+ */
+function paintLift(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const h = PORT_EXTENT.lift / 2;
+  // The backplate between the rails, darker than the wall, so the shaft reads as a way through it.
+  ctx.fillStyle = rgba(shade(PORT_INK.wallDark, -0.15), 0.45);
+  ctx.fillRect(-4, -h + 4, 8, h * 2 - 6);
+  // A lit strip down the backplate's middle, so the shaft is a way up and not a hole.
+  const glow = ctx.createLinearGradient(-4, 0, 4, 0);
+  glow.addColorStop(0, rgba(palette.player, 0));
+  glow.addColorStop(0.5, rgba(palette.player, 0.14));
+  glow.addColorStop(1, rgba(palette.player, 0));
+  ctx.fillStyle = glow;
+  ctx.fillRect(-4, -h + 4, 8, h * 2 - 6);
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = shade(PORT_INK.wall, 0.22);
+    ctx.fillRect(side * 4.6 - 0.7, -h + 1, 1.4, h * 2 - 2);
+    ctx.fillStyle = rgba(palette.player, 0.7);
+    ctx.fillRect(side * 4.6 - 0.15, -h + 2, 0.3, h * 2 - 5);
+    // Brackets to the wall up the rail.
+    ctx.fillStyle = PORT_INK.seam;
+    for (let y = -h + 5; y < h - 2; y += 8) ctx.fillRect(side * 4.6 - 1.2, y, 2.4, 0.7);
+  }
+  // A crossbar over the shaft, with a lamp under it.
+  ctx.fillStyle = shade(PORT_INK.wall, 0.22);
+  ctx.fillRect(-5.3, -h + 1, 10.6, 1.4);
+  radial(ctx, 0, -h + 3, 2.2, palette.player, 0.7);
+  // The landing at the deck: a plate with the hazard's stripes.
+  ctx.fillStyle = '#1b2132';
+  ctx.fillRect(-6, h - 3.2, 12, 1.6);
+  ctx.fillStyle = PORT_INK.hazard;
+  for (let x = -5.6; x < 5.5; x += 1.6) ctx.fillRect(x, h - 3, 0.8, 1.2);
+}
+
+/** 0572: the lift's platform — a deck with a rail, and the field it floats on glowing under it. */
+function paintLiftCar(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  // The platform's top is the box's middle line.
+  radialEllipse(ctx, 0, 2.6, 5.5, 2.2, palette.player, 0.75);
+  ctx.fillStyle = shade(PORT_INK.wall, 0.3);
+  ctx.fillRect(-5, 0, 10, 1.2);
+  ctx.fillStyle = PORT_INK.wallDark;
+  ctx.fillRect(-4.4, 1.2, 8.8, 0.9);
+  ctx.fillStyle = PORT_INK.hazard;
+  for (let x = -4.8; x < 4.8; x += 1.6) ctx.fillRect(x, 0, 0.8, 0.3);
+  // Two emitters under it.
+  for (const side of [-1, 1]) radial(ctx, side * 3, 2.3, 1.1, palette.player, 1);
+  // The rail round it, open toward the catwalk.
+  ctx.strokeStyle = shade(PORT_INK.wall, 0.35);
+  ctx.lineWidth = 0.4;
   ctx.beginPath();
-  ctx.arc(0, 0, r + 0.4, Math.PI * 0.9, Math.PI * 1.75);
+  ctx.moveTo(-4.6, 0);
+  ctx.lineTo(-4.6, -3.4);
+  ctx.lineTo(0, -3.4);
   ctx.stroke();
-  radial(ctx, 0, 0, r + 5, palette.player, 0.18);
+}
+
+/** 0572: a ring of the cradle's field, rising from it up under the ship — the hover made visible. */
+function paintHoverRing(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  radialEllipse(ctx, 0, 0, 13.5, 1.6, palette.player, 0.55);
+  ctx.strokeStyle = rgba(mix(palette.player, '#ffffff', 0.35), 0.9);
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 12.5, 1.1, 0, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 /** The alcove a keeper's counter stands in: a recess in the wall, its frame, shelves inside, lit from above. */
