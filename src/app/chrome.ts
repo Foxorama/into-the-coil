@@ -3091,7 +3091,12 @@ ${each('-band[hidden]')} { display: none; }
     justify-content: flex-start;
     overflow-x: auto;
     scrollbar-width: none;
-    scroll-behavior: smooth;
+    /*
+      ⚠️ **NOT SMOOTH — 0571.** A smooth scroll moves the chips under a pointer that has already aimed: a
+      click on a chip being scrolled into view landed on its neighbour while it slid, on CI's load a shut dash
+      tried on in place of the one pressed. A row that jumps is a row a click lands on.
+    */
+    scroll-behavior: auto;
     gap: 0.3em;
     padding: 0.55em 0.15em 0.2em;
   }
@@ -6341,10 +6346,15 @@ export function makeChrome(
     for (const panel of Object.values(panels)) if (panel !== undefined && panel.bands.includes(band)) paintCard(panel);
   };
   /** Draw which option of a band that tries is tried on — 0561: the ring on the option, not the row. */
-  const paintLook = (band: Band): void => {
+  const paintLook = (band: Band, scroll = false): void => {
     const look = band.buttons[0]?.className.split(' ')[0] + '-look';
     band.buttons.forEach((button, i) => button.classList.toggle(look, i === band.look));
-    // 0568: a band is a row that scrolls, so the one tried on is brought into it.
+    /*
+      0568: a band is a row that scrolls, so the one a STEP tries on is brought into it. ⚠️ **NEVER ONE THE
+      MOUSE TRIES (0571)**: the row moved under the pointer, the pointer was then over another chip, which was
+      tried on and scrolled to in turn — a row that never stood still for the click. A pointer scrolls itself.
+    */
+    if (!scroll) return;
     const tried = band.buttons[band.look];
     const track = tried?.parentElement;
     if (tried === undefined || !(track instanceof HTMLElement) || track.scrollWidth <= track.clientWidth) return;
@@ -6353,11 +6363,11 @@ export function makeChrome(
     else if (left + tried.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + tried.offsetWidth - track.clientWidth;
   };
   /** Try an option on — 0561. Trying on the fitted one is putting back. */
-  const tryOn = (band: Band, index: number): void => {
+  const tryOn = (band: Band, index: number, scroll = false): void => {
     const look = index === band.index ? -1 : index;
     if (look === band.look) return;
     band.look = look;
-    paintLook(band);
+    paintLook(band, scroll);
     sayBand(band);
     onLook(band.name, look);
   };
@@ -6384,7 +6394,7 @@ export function makeChrome(
     if (band.press === 'tries') {
       const from = band.look >= 0 ? band.look : band.index >= 0 ? band.index : delta > 0 ? -1 : count;
       const next = from + delta;
-      if (next >= 0 && next < count) tryOn(band, next);
+      if (next >= 0 && next < count) tryOn(band, next, true);
       return;
     }
     let next = band.index;
@@ -6975,6 +6985,8 @@ export function makeChrome(
         // 0458: the band says the live one's hint, and a step that has nowhere to go is shown as such.
         const band = panel.bands.find((b) => b.name === name);
         if (band === undefined) continue;
+        // 0571: only a choice that moved scrolls its row — the shell says the same choice again on every hover.
+        const moved = band.index !== index;
         band.index = index;
         // 0561: a try that has become the fitted one is no longer a try.
         if (band.look === index) {
@@ -6994,7 +7006,7 @@ export function makeChrome(
         */
         const chosen = buttons[index];
         const track = chosen?.parentElement;
-        if (chosen !== undefined && track instanceof HTMLElement && track.scrollWidth > track.clientWidth) {
+        if (moved && chosen !== undefined && track instanceof HTMLElement && track.scrollWidth > track.clientWidth) {
           const left = chosen.offsetLeft - track.offsetLeft;
           if (left < track.scrollLeft) track.scrollLeft = left;
           else if (left + chosen.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + chosen.offsetWidth - track.clientWidth;

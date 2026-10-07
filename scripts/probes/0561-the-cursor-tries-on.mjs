@@ -12,7 +12,7 @@ export const PROBES = [
     guard: 'steps the gun band without fitting',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '      if (next >= 0 && next < count) tryOn(band, next);',
+      find: '      if (next >= 0 && next < count) tryOn(band, next, true);',
       replace: '      if (next >= 0 && next < count) onChoice(band.name, next, false);',
     },
   },

@@ -56,7 +56,7 @@ async function open(width: number, height: number): Promise<Page> {
 }
 
 /** Where the readout is, what it says, and how it stands against the stand, the plate and the display. */
-async function readout(page: Page, p: string): Promise<{ parent: string; counts: string[]; inStand: boolean; clearOfPlate: boolean; onDisplay: boolean }> {
+async function readout(page: Page, p: string): Promise<{ parent: string; counts: string[]; inStand: boolean; inFrame: boolean; clearOfPlate: boolean; onDisplay: boolean }> {
   return page.evaluate((prefix: string) => {
     const hud = document.querySelector<HTMLElement>('.itc-playing-hud')!;
     const r = hud.getBoundingClientRect();
@@ -66,10 +66,13 @@ async function readout(page: Page, p: string): Promise<{ parent: string; counts:
     const counts = [...hud.querySelectorAll<HTMLElement>('.itc-playing-hud-group > span')].filter((s) => s.offsetParent !== null).map((s) => s.textContent ?? '');
     const within = (b: DOMRect | null): boolean => b !== null && r.left >= b.left - 0.5 && r.right <= b.right + 0.5 && r.top >= b.top - 0.5 && r.bottom <= b.bottom + 0.5;
     const meets = (b: DOMRect | null): boolean => b !== null && r.left < b.right - 0.5 && r.right > b.left + 0.5 && r.top < b.bottom - 0.5 && r.bottom > b.top + 0.5;
+    // 0571: and inside its own cockpit monitor's frame, which is the cell it is in — the frame the player sees.
+    const cell = hud.parentElement?.getBoundingClientRect() ?? null;
     return {
       parent: hud.parentElement?.className ?? '',
       counts,
       inStand: within(stand),
+      inFrame: within(cell),
       // On the narrowest the plate takes the width and the stand stands under it (0539), so it may meet it there.
       clearOfPlate: !meets(plate) || innerWidth <= 620,
       onDisplay: r.left >= -0.5 && r.top >= -0.5 && r.right <= innerWidth + 0.5 && r.bottom <= innerHeight + 0.5 && r.width > 0,
@@ -93,6 +96,7 @@ describe.runIf(chromePath)('0539 — the readout stands down on the hangar’s t
         expect(seen.parent, `${at}: the readout is not in the stand's dash`).toBe(prefixFor(screen) + 'dash');
         expect(seen.onDisplay, `${at}: the dash is off the display`).toBe(true);
         expect(seen.inStand, `${at}: the dash runs out of its stand`).toBe(true);
+        expect(seen.inFrame, `${at}: the dash runs out of its cockpit monitor`).toBe(true);
         expect(seen.clearOfPlate, `${at}: the dash runs under the plate`).toBe(true);
       }
       await page.context().close();

@@ -7,13 +7,13 @@ export const PROBES = [
   {
     decision: '0563',
     suite: 'tests/stand.test.ts',
-    // 0568: the row's zoom no longer decides the camera — the bay does — so the break is the ship let shrink.
-    broke: 'the ship allowed a twelfth of its column, the camera drawn back to suit it',
+    // 0571: the ship's size in the dock is the dock's own, so the break is the ship drawn small on its cradle.
+    broke: 'the ship drawn at half its size on the dock’s cradle',
     guard: 'draws the pilot’s ship past a sixth',
     edit: {
       path: 'src/content/port.ts',
-      find: 'export const STAND_SHIP_SHARE = 0.34;',
-      replace: 'export const STAND_SHIP_SHARE = 0.08;',
+      find: '  shipGrow: 1.35,',
+      replace: '  shipGrow: 0.6,',
     },
   },
 ];

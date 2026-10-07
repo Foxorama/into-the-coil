@@ -380,7 +380,6 @@ export const STAGE = {
  * than this share of the column, the camera drawn back from the row's zoom where it would be.
  */
 export const STAND_PAD_AT = 0.46;
-export const STAND_SHIP_SHARE = 0.34;
 /**
  * 0568: how far past the bay the sky is painted for the stand, in world units — far enough that no
  * screen's edge ever comes before it, where on a phone the plate stands to the right of the column.

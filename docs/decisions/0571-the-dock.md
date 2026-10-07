@@ -53,6 +53,21 @@ becomes the bottom half of the screen (0566). That is the same order, read the s
 - The browser suites were run in Verdana, which is harsher than CI's font. Four timed out while another
   session ran its browser tests on this machine, and all four passed alone.
 
+## What CI found, and was fixed
+
+- **A click landed on the wrong chip.** The chip rows scrolled smoothly, so a chip being scrolled into
+  view slid under a pointer that had already aimed. On CI's load a press on the estate's dash tried on
+  the Firebird's beside it. A player would have met this too. The rows now jump. **That found the cause
+  underneath it:** a mouse over a chip tries it on, and a try scrolled its chip into view, so the row moved
+  under the pointer. The pointer was then over another chip, which was tried on and scrolled to in turn,
+  and the row never stood still for the click. Only a step of the cursor scrolls a row now. A hover never
+  does, and the fitted chip is scrolled to only when it changes.
+- **Two rules that never held, found by the proof (0019).** 0563's cap on the ship's share of its column
+  never decided the zoom once the dock held the camera to the room's height, so it went. 0563's probe now
+  draws the ship small on its cradle, which its guard sees. 0539's guard asked only that the readout stay
+  in the stand, so the monitor's wrap could break and nothing failed. It now asks that the readout stay
+  inside its cockpit monitor's frame, which is what the player sees.
+
 ## What is owed
 
 A look at 1920×1080, 1280×720 and a 4:3. Whether the planet, the shopfronts' shutters and the monitor's

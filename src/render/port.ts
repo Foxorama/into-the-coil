@@ -40,7 +40,6 @@ import {
   STAGE,
   DOCK,
   STAND_PAD_AT,
-  STAND_SHIP_SHARE,
   STAND_SKY,
   SURGE_CURVE,
   SURGE_STEPS,
@@ -266,7 +265,7 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
  *
  * The row's camera says where it stands and how close it would like to be. Fitted, the pad stands at
  * `STAND_PAD_AT` of the column, and the camera is drawn back from the row's zoom wherever it would put the
- * ship's box past `STAND_SHIP_SHARE` of the column, or the keeper, their counter or the viewport in the
+ * ship's box past a share of the column (gone in 0571), or the keeper, their counter or the viewport in the
  * back wall more than a quarter of their width off the screen's left — the keeper and the stars are each
  * the player's own ask (0550), and a camera close enough to lose them is too close.
  */
@@ -300,7 +299,11 @@ export function fitStand(
   for (let k = 0; k < KEEPER_KINDS.length; k++) keep = Math.min(keep, DOCK.shops[KEEPER_KINDS[k]!] - PORT_EXTENT.alcove / 2);
   // Half a unit to spare, so what is kept is on the screen and not on its edge by a rounding.
   const reach = camera.along - keep + 0.5;
-  const fitsShip = (box.width * STAND_SHIP_SHARE) / (PORT_EXTENT.blueSide * base.scale);
+  /*
+    0571: 0563's cap on the ship's share of the column is gone. In the dock the camera is held to the room's
+    whole height (`fills`, below), and with that floor the cap never once decided the zoom: its probe stayed
+    green on CI (0019). The ship's size is the dock's own, `DOCK.shipGrow`.
+  */
   // 0568: kept in the column, not the screen — the plate stands on its left, over the room.
   const keepsLeft = reach > 0 ? (out.x * width - box.left) / (reach * base.scale) : Number.POSITIVE_INFINITY;
   /*
@@ -312,7 +315,7 @@ export function fitStand(
   // ends only a panel's padding above it: the deck stands on its floor.
   const foot = (box.top ?? 0) + (box.height ?? 0);
   const fills = (screenHeight > 0 && screenHeight - foot < screenHeight * 0.05 ? screenHeight : foot) / (ACROSS_SPAN * base.scale);
-  out.zoom = Math.max(fills, Math.min(camera.zoom, fitsShip, keepsLeft));
+  out.zoom = Math.max(fills, Math.min(camera.zoom, keepsLeft));
 }
 
 /**
