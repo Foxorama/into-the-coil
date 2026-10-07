@@ -61,6 +61,13 @@ it shorter or longer** — the number is one constant.
 longer does. Eleven lines of faces put How to play 45–120 pixels under the fold on every phone size the
 layout guard holds, so a phone shows the faces' names and the row's label still says what each gives.
 
+**A fight is tuned for a run that drew its places at their odds.** The mid-bosses' healths are solved at
+the loadout a run carries in (`carriedAt`, 0406), which read each place's authored kind. A place is a
+third of a tube now, so the walk counts it as one — the thirds summed and floored — beside the mid-boss's
+drop, which is a tube every time. CI caught the first push reading the field the table no longer has:
+it counted no tubes at all and measured Ember Nebula's harrow at 21 seconds against its 18. At the odds
+every mid-boss is inside 0269's three seconds, and no health moved.
+
 ## Rollback
 
 None needed — no storage key, save field or shipped surface is touched.
