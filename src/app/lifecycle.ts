@@ -52,6 +52,7 @@ import { DIFFICULTIES, type DifficultyKind } from '../content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { SHIPS, fitted, type ShipKind } from '../content/ships.ts';
 import type { RimKind } from '../content/rims.ts';
+import type { MissileKind } from '../content/missiles.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { CreditKind } from '../content/credits.ts';
 import type { SpecialKind } from '../content/specials.ts';
@@ -69,7 +70,16 @@ export interface Lifecycle {
    * which is what the rig and the tests that fly a run begin on; the shell always passes the fitting.
    */
   // 0525: and the gun, the ship's own by default, as the special is.
-  begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind, rim?: RimKind | null): void;
+  // 0578: and the tubes the hangar's rack carries — none by default, which a missile pickup fills.
+  begin(
+    difficulty: DifficultyKind,
+    ship: ShipKind,
+    credits: CreditKind,
+    special?: SpecialKind,
+    gun?: WeaponKind,
+    rim?: RimKind | null,
+    tubes?: readonly MissileKind[],
+  ): void;
   /** The burn to the next place begins. Nothing about the run or the field moves — 0340. */
   onward(): void;
   /**
@@ -121,7 +131,15 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
   };
 
   return {
-    begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind, rim?: RimKind | null): void {
+    begin(
+      difficulty: DifficultyKind,
+      ship: ShipKind,
+      credits: CreditKind,
+      special?: SpecialKind,
+      gun?: WeaponKind,
+      rim?: RimKind | null,
+      tubes?: readonly MissileKind[],
+    ): void {
       /*
         ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same
         argument `enemyRows` and `pickupRows` make in `mount`: a per-spawn lookup by string key is a
@@ -159,7 +177,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       */
       // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
       // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
-      dispatch({ slice: 'run', type: 'begin', difficulty, ship, credits, special, gun });
+      dispatch({ slice: 'run', type: 'begin', difficulty, ship, credits, special, gun, tubes });
       // ⚠️ `false`: not seamless. A run begins on a swept field with the camera at zero, whatever
       // the last one ended as — 0058 and 0067.
       enterLevel(false);

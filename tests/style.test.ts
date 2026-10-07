@@ -135,8 +135,9 @@ describe('the chooser is the table', () => {
     // 0524: and the special a run opens with; 0526: and the gun it flies; 0527: and what its wheels wear.
     // 0528: and its art; 0529: and its paint, a colour and a tone; 0530: and its flame.
     // 0542: and Cosmo's shelf is a shelf a table and the aisle that steps them, every one read off the table.
+    // 0578: and the rack of tubes a ship carries in, beside its gun and its special.
     expect([...where.keys()].sort()).toEqual(
-      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'aisle', ...SHELF_KINDS].sort(),
+      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rack', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'aisle', ...SHELF_KINDS].sort(),
     );
   });
 });

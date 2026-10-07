@@ -12,20 +12,26 @@
 import { DANGLES, DANGLE_KINDS, type DangleKind } from './dangles.ts';
 import { RIMS, RIM_KINDS, type RimKind } from './rims.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from './flames.ts';
+import { TUBE_WARES, TUBE_WARE_KINDS, type TubeWareKind } from './racks.ts';
 
-/** Everything the hangar can own. Closed. */
-export const OWNABLE_KINDS = [...DANGLE_KINDS, ...RIM_KINDS, ...FLAME_KINDS] as const;
-export type OwnableKind = DangleKind | RimKind | FlameKind;
+/** Everything the hangar can own. Closed. 0578: and the tubes, the one ware the sim reads. */
+export const OWNABLE_KINDS = [...DANGLE_KINDS, ...RIM_KINDS, ...FLAME_KINDS, ...TUBE_WARE_KINDS] as const;
+export type OwnableKind = DangleKind | RimKind | FlameKind | TubeWareKind;
 
 /** What the shop needs of a thing: its name, its line, and its price, or `null` for one never sold. */
 export interface OwnableRow {
   readonly name: string;
   readonly hint: string;
   readonly price: number | null;
+  /**
+   * The ware that must be owned before this one is sold — 0578, where the second tube of a kind waits
+   * for the first. Absent for every ware sold on its own, which is every one before the tubes.
+   */
+  readonly needs?: OwnableKind | null;
 }
 
 /** Each ownable kind's row, read off its own table. */
-export const OWNABLES: Record<OwnableKind, OwnableRow> = { ...DANGLES, ...RIMS, ...FLAMES };
+export const OWNABLES: Record<OwnableKind, OwnableRow> = { ...DANGLES, ...RIMS, ...FLAMES, ...TUBE_WARES };
 
 /** What Cosmo's sells, in `OWNABLE_KINDS`'s order: everything with a price. */
 export const WARES: readonly OwnableKind[] = OWNABLE_KINDS.filter((kind) => OWNABLES[kind].price !== null);
@@ -39,7 +45,8 @@ export const WARES: readonly OwnableKind[] = OWNABLE_KINDS.filter((kind) => OWNA
  * `OWNABLE_KINDS` above, and a row here: a shelf, never a layout change. Nothing about the shop is a count
  * of shelves or of wares; the plate shows as many shelves as it has the height for, and the aisle steps.
  */
-export const SHELF_KINDS = ['hanging', 'wheels', 'flames'] as const;
+// 0578: and the tubes, last, so every shelf before it keeps its place on the aisle.
+export const SHELF_KINDS = ['hanging', 'wheels', 'flames', 'tubes'] as const;
 export type ShelfKind = (typeof SHELF_KINDS)[number];
 
 /** What a shelf is called on the plate and on the aisle, and its wares in its table's order. */
@@ -53,4 +60,5 @@ export const SHELVES: Record<ShelfKind, ShelfRow> = {
   hanging: { label: 'Hanging', wares: DANGLE_KINDS.filter((kind) => DANGLES[kind].price !== null) },
   wheels: { label: 'Wheels', wares: RIM_KINDS.filter((kind) => RIMS[kind].price !== null) },
   flames: { label: 'Flames', wares: FLAME_KINDS.filter((kind) => FLAMES[kind].price !== null) },
+  tubes: { label: 'Tubes', wares: TUBE_WARE_KINDS },
 };
