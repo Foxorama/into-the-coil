@@ -45,7 +45,7 @@
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP } from '../src/content/levels.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { DRAWN_KINDS, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -65,20 +65,25 @@ import { playableWorld } from '../tests/world.ts';
  * ⚠️ **THE TUBES ALONE SINCE 0441.** The gun is the ship's, whole from the first second, so what a
  * player carries in that the level can change is the missile ladder.
  *
+ * ⚠️ **A LEVEL'S PLACE IS A THIRD OF A TUBE SINCE 0575.** It read each place's authored kind, and a
+ * place has none now: it is drawn as the tubes one time in three (`drawKind`), so the run a fight is
+ * tuned for is the one that drew its places at those odds — a third each, summed and then floored —
+ * beside the mid-boss's drop, which is still one tube every time (*"mid-boss one of each"*). Reading a
+ * field the table no longer has counted nothing and left every fight solved for a bare ship.
+ *
  * @param {import('../src/content/levels.ts').LevelKind} kind
  * @returns {{ missileTier: number }}
  */
 export function carriedAt(kind) {
-  let missileTier = 0;
-  const take = (pickup) => {
-    if (pickup === 'missile') missileTier = Math.min(UPGRADE_TIERS, missileTier + 1);
-  };
+  const shares = DRAWN_KINDS.length;
+  // In thirds of a pickup, so the floor is taken once, at the end, on the whole run's sum.
+  let thirds = 0;
   for (const level of LEVEL_KINDS) {
     const row = LEVELS[level];
     const midAt = row.midBoss === null ? Number.POSITIVE_INFINITY : row.midBoss.at;
-    for (const p of row.pickups) if (level !== kind || p.at < midAt) take(p.kind);
-    if (level === kind) return { missileTier };
-    if (row.midBoss !== null) for (const p of MID_BOSS_DROP) take(p);
+    for (const p of row.pickups) if (level !== kind || p.at < midAt) thirds += 1;
+    if (level === kind) return { missileTier: Math.min(UPGRADE_TIERS, Math.floor(thirds / shares)) };
+    if (row.midBoss !== null) for (const p of MID_BOSS_DROP) if (p === 'missile') thirds += shares;
   }
   throw new Error(`${kind} is not a level`);
 }

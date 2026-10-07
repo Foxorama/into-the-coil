@@ -68,6 +68,7 @@ export const PROBES = [
     // is left is the opposite of the old one: the wait typed short for the drop alone.
     broke: 'the drop given a wait of its own, shorter than an authored pickup’s',
     guard: 'stays as long as an authored pickup does, and then leaves the same way',
-    edit: { path: 'src/app/frame.ts', find: '  item.holdFor = lingerFor(row);\n}', replace: '  item.holdFor = 60;\n}' },
+    // Re-anchored by 0575, which took `lingerFor` and gave every pickup the one wait.
+    edit: { path: 'src/app/frame.ts', find: '  item.holdFor = PICKUP_LINGER_STEPS;\n}', replace: '  item.holdFor = 60;\n}' },
   },
 ];

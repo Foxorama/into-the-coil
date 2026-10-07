@@ -1,5 +1,8 @@
 # 0432 — The key cycles
 
+⚠️ **SUPERSEDED BY [0575](0575-a-pickup-is-what-it-shows.md)**: a pickup no longer turns on the field,
+so the key no longer turns — every face stands side by side. Its probes went with the turning.
+
 **Accepted 2026-10-01.** The title screen's pickup key is one row per pickup, and each row turns
 through its faces the way the pickup does on the field. It replaces 0233's *one row per face*, and
 keeps the reason for it: every face is still named, and named by `faceOf`.

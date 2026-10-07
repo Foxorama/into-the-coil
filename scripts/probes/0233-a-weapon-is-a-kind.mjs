@@ -46,30 +46,18 @@ export const PROBES = [
   {
     decision: '0233',
     suite: 'tests/weapons.test.ts',
-    // The face advances and the picture does not: drawn as one gun, handed over as another — 0052's
-    // hardest case, made trivially wrong.
-    broke: 'the cycle turning the face without turning the sprite',
-    guard: 'THE CYCLE, in the real frame',
+    // The face set and the picture not: drawn as one gun, handed over as another — 0052's hardest
+    // case, made trivially wrong. Re-aimed by 0575 from the cycle's turn onto the draw's one face.
+    broke: 'the face drawn without the sprite that shows it',
+    guard: 'and hands over the face it shows',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      item.spriteBase = faces[item.face]!;\n      item.spriteHit = item.spriteBase;\n      item.faceIn = PICKUP_CYCLE_STEPS;',
-      replace: '      item.faceIn = PICKUP_CYCLE_STEPS;',
+      find: '  item.face = face;\n  item.spriteBase = row.faces[face]!;\n  item.spriteHit = item.spriteBase;\n  item.sprite = item.spriteBase;',
+      replace: '  item.face = face;',
     },
   },
-  {
-    decision: '0233',
-    suite: 'tests/weapons.test.ts',
-    // The wait typed short and without the faces. ⚠️ The floor alone cannot show it today: 0064's
-    // ten seconds already covers two turns of two faces, so a wait that ignored the faces would go
-    // on being long enough until a third gun landed — which is the day this guard is for.
-    broke: 'the wait typed short and without the faces, so a cycling pickup leaves before every gun has been seen twice',
-    guard: 'PICKUP_REPEATS full turns',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '  return cycles > PICKUP_LINGER_STEPS ? cycles : PICKUP_LINGER_STEPS;',
-      replace: '  return 200 + 0 * cycles;',
-    },
-  },
+  // `the wait typed short and without the faces` was here, on `lingerFor`; 0575 took the faces' share
+  // of the wait with the cycle, and 0064's probe breaks the one wait that is left.
   {
     decision: '0233',
     suite: 'tests/weapons.test.ts',

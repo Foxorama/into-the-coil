@@ -10,14 +10,13 @@
 
 import { describe, expect, it } from 'vitest';
 import { WEAPONS } from '../src/content/weapons.ts';
-import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS } from '../src/content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
 import { CUES } from '../src/content/cues.ts';
 import { cueSeconds } from '../src/app/sound.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { drawKind } from '../src/render/bake.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
-import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { tracingPen } from './paths.ts';
 
 describe('0236 — the guns answer the first play-test', () => {
@@ -77,11 +76,5 @@ describe('0236 — the guns answer the first play-test', () => {
       }
     }
   });
-
-  it('the cycle is a taste, measured in the register and never failed on', () => {
-    // *"The rotation needs to be 1sec longer."* Three seconds is the player's number; nothing
-    // about the game breaks at two, so it is advisory (0192): `tests/authored.test.ts` observes
-    // `0236-cycle` and prints it on every run. What is held here is only that the cycle exists.
-    expect(PICKUP_CYCLE_STEPS / STEPS_PER_SECOND).toBeGreaterThan(0);
-  });
+  // `the cycle is a taste` was here; the cycle went with 0575, and its taste with it.
 });

@@ -26,9 +26,9 @@ export const PROBES = [
       that only catches a total reversion is a guard that lets the density creep back one pickup at a
       time, which is how it got to twenty-four in the first place.
     */
-    broke: 'a level quietly given more missiles than the ask allows',
-    // ⚠️ Renamed by 0441, which took every level's weapon.
-    guard: 'THE BUDGET: a level authors one missile and nothing else',
+    broke: 'a level quietly given more pickups than the ask allows',
+    // ⚠️ Renamed by 0441, which took every level's weapon, and by 0575, which made a pickup a place.
+    guard: 'THE BUDGET: a level authors one place',
     edit: {
       path: 'src/content/levels.ts',
       /*
@@ -36,10 +36,11 @@ export const PROBES = [
         0083 gave the weapon count a guard of its own. 0256 cut a level to a weapon and a missile and
         moved the shields to the mid-boss's drop, so the budget guard is `THE BUDGET` now and the
         creep this models is a second missile in the middle of a level.
-        Re-anchored by 0503, which closed the level up: the Mire's missile is at 816.
+        Re-anchored by 0503, which closed the level up: the Mire's missile is at 816. And by 0575: a
+        level authors places, so the creep is a second place.
       */
-      find: "  { at: 816, kind: 'missile', lane: 42 },",
-      replace: "  { at: 816, kind: 'missile', lane: 42 },\n  { at: 2600, kind: 'missile', lane: 40 },",
+      find: '  { at: 816, lane: 42 },',
+      replace: '  { at: 816, lane: 42 },\n  { at: 2600, lane: 40 },',
     },
   },
   {

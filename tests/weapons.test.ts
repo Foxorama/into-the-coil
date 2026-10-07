@@ -30,14 +30,16 @@ import {
   BOMB_KINDS,
   FASTEST_FIRE,
   PICKUPS,
-  PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
-  PICKUP_REPEATS,
   UPGRADE_TIERS,
+  drawFace,
+  drawKind,
   faceOf,
   weaponFor,
+  type PickupKind,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
+import { makeRng } from '../src/sim/rng.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { BOSSES, gunWeightOn } from '../src/content/bosses.ts';
@@ -265,13 +267,13 @@ describe('0233 — a weapon is a kind', () => {
   */
 });
 
-describe('0233 — a pickup cycles', () => {
-  // The bomb pickup since 0441 — the cycling pickup in the weapon's place.
+describe('0575 — a pickup is what it shows', () => {
+  // One authored place; what it is is drawn on the fixture's stream (`tests/world.ts`).
   function oneBombPickup(): ReturnType<typeof playableWorld> {
     return playableWorld({
       waves: [],
       // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
-      pickups: [{ at: 200, kind: 'bomb', lane: 50 }],
+      pickups: [{ at: 200, lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -311,34 +313,43 @@ describe('0233 — a pickup cycles', () => {
     return { sprites, inView, waiting };
   }
 
-  it('THE CYCLE, in the real frame: a bomb pickup turns every PICKUP_CYCLE_STEPS, and is only ever drawn as one of its faces', () => {
-    const { sprites } = watch(oneBombPickup());
-    const turns: number[] = [];
-    for (let i = 1; i < sprites.length; i++) {
-      expect(PICKUPS.bomb.faces, 'the pickup was drawn as something that is not one of its faces').toContain(sprites[i]);
-      if (sprites[i] !== sprites[i - 1]) turns.push(i);
+  it('THE ASK, in the real frame: *"it doesn’t rotate"* — one face from its spawn to its leaving, and one of its row’s', () => {
+    // Over several runs' streams, so a fixture that happened to draw a one-face pickup proves nothing.
+    let many = 0;
+    for (let seed = 0; seed < 12; seed++) {
+      const built = oneBombPickup();
+      built.world.pickupRng = makeRng(seed).stream('pickups');
+      const { sprites } = watch(built);
+      const first = sprites[0]!;
+      const kind = PICKUP_KINDS.find((k) => PICKUPS[k].faces.includes(first));
+      expect(kind, 'the pickup was drawn as something that is no pickup’s face').toBeDefined();
+      if (PICKUPS[kind!].faces.length > 1) many++;
+      for (let i = 1; i < sprites.length; i++) expect(sprites[i], `the pickup turned on step ${i}`).toBe(first);
     }
-    expect(turns.length, 'the pickup never turned').toBeGreaterThan(1);
-    for (let t = 1; t < turns.length; t++) {
-      expect(turns[t]! - turns[t - 1]!, `turn ${t} came a different number of steps after the last`).toBe(PICKUP_CYCLE_STEPS);
-    }
-    // In the specials' own order, round and round.
-    const faces = PICKUPS.bomb.faces;
-    for (const at of turns) {
-      const before = faces.indexOf(sprites[at - 1]!);
-      expect(sprites[at], 'the faces did not turn in table order').toBe(faces[(before + 1) % faces.length]);
-    }
+    expect(many, 'no seed drew a pickup with more than one face, so no turn could have been seen').toBeGreaterThan(0);
   });
 
-  it('and it waits for at least PICKUP_REPEATS full turns of its faces, so the player sees every face twice', () => {
-    // Turns DURING THE WAIT. A pickup keeps turning on its way back out of the view once the wait
-    // is over, and those turns are ones the player has already decided against.
-    const { sprites, waiting } = watch(oneBombPickup());
-    let turns = 0;
-    for (let i = 1; i < sprites.length; i++) if (sprites[i] !== sprites[i - 1] && waiting[i]) turns++;
-    expect(turns, 'the pickup left before every face had been shown twice').toBeGreaterThanOrEqual(
-      PICKUP_REPEATS * PICKUPS.bomb.faces.length - 1,
-    );
+  it('draws a kind with even odds — a third tubes, a third gun specials, a third the shield side — and every face of each', () => {
+    /*
+      *"A random powerup that can be a shield/missile or special weapon."* Asked how, the player chose
+      the kind first: a face-for-face draw would make the tubes two chances in nine. Counted over the
+      run's own stream as the frame draws it — a kind, then a face of that kind.
+    */
+    const rng = makeRng('odds').stream('pickups');
+    const DRAWS = 6000;
+    const kinds: Partial<Record<PickupKind, number>> = {};
+    const faces = new Set<number>();
+    for (let i = 0; i < DRAWS; i++) {
+      const kind = drawKind(rng);
+      kinds[kind] = (kinds[kind] ?? 0) + 1;
+      faces.add(PICKUPS[kind].faces[drawFace(PICKUPS[kind], rng)]!);
+    }
+    expect(Object.keys(kinds).sort(), 'a pickup can be drawn as something the ask does not name').toEqual(['bomb', 'missile', 'shield']);
+    for (const kind of ['bomb', 'missile', 'shield'] as const) {
+      const share = kinds[kind]! / DRAWS;
+      expect(Math.abs(share - 1 / 3), `${kind} came up ${(share * 100).toFixed(1)}% of the time, not a third`).toBeLessThan(0.03);
+      for (const face of PICKUPS[kind].faces) expect(faces.has(face), `a face of the ${kind} pickup was never drawn`).toBe(true);
+    }
   });
 
   it('0294 — and a blade’s two frames are ONE size, so a spinning star does not pulse', () => {
@@ -392,31 +403,38 @@ describe('0233 — a pickup cycles', () => {
     expect(high, `the wait began at ${high.toFixed(1)}, well inside the box`).toBeGreaterThanOrEqual(PLAYER_LEAD - ACROSS_SPAN / 5);
   });
 
-  it('and hands over the face it was drawn as on the step it was taken, never the row', () => {
+  it('and hands over the face it shows, never the row’s first', () => {
     /*
       ⚠️ **THE HARDEST THING 0052 HAD TO GET RIGHT, and the whole reason `Collected` logs a face.**
-      A pickup drawn as one gun and collected as another is the failure the player reads as *the
-      game took my choice away*. Driven through the real frame: the ship flies into the pickup on a
-      step it is showing the storm — not its first face — and the shell is handed the storm.
+      A pickup shown as one thing and collected as another is the failure the player reads as *the
+      game took my choice away*. Driven through the real frame on a stream that draws a face past the
+      first, and the shell must be handed that face.
     */
-    const built = oneBombPickup();
-    const frame = new GameFrame(built.world);
-    built.world.fireIn = NEVER;
-    while (built.world.pickups.size === 0) frame.step();
-    const item = built.world.pickups.at(0);
-    expect(BOMB_KINDS.indexOf('storm'), 'the storm is the bomb pickup’s first face, so this proves nothing').toBeGreaterThan(0);
-    const wanted = SPECIALS.storm.face;
-    let steps = 0;
-    while (built.world.pickups.size > 0 && steps < 4000) {
-      if (item.sprite === wanted && item.along - built.world.cameraAlong < PLAYER_LEAD) {
-        built.world.ship.across = item.across;
-        built.world.ship.along = item.along;
+    let proved = false;
+    for (let seed = 0; seed < 40 && !proved; seed++) {
+      const built = oneBombPickup();
+      built.world.pickupRng = makeRng(seed).stream('pickups');
+      const frame = new GameFrame(built.world);
+      built.world.fireIn = NEVER;
+      while (built.world.pickups.size === 0) frame.step();
+      const item = built.world.pickups.at(0);
+      if (item.face === 0) continue;
+      const shown = item.sprite;
+      const kind = PICKUP_KINDS.find((k) => PICKUPS[k].faces.includes(shown))!;
+      let steps = 0;
+      while (built.world.pickups.size > 0 && steps < 4000) {
+        if (item.along - built.world.cameraAlong < PLAYER_LEAD) {
+          built.world.ship.across = item.across;
+          built.world.ship.along = item.along;
+        }
+        frame.step();
+        steps++;
       }
-      frame.step();
-      steps++;
+      expect(built.taken, 'the pickup was never taken').toEqual([kind]);
+      expect(built.faces, 'the shell was handed a face other than the one shown').toEqual([PICKUPS[kind].faces.indexOf(shown)]);
+      proved = true;
     }
-    expect(built.taken, 'the pickup was never taken').toEqual(['bomb']);
-    expect(built.faces, 'the shell was handed a face other than the one drawn').toEqual([BOMB_KINDS.indexOf('storm')]);
+    expect(proved, 'no stream drew a face past the first, so this proved nothing').toBe(true);
   });
 });
 

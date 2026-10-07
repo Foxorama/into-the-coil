@@ -36,7 +36,6 @@ export const AUTHORED_IDS = [
   '0198-aa-space',
   '0198-aa-backdrop',
   '0198-aa-clouds',
-  '0236-cycle',
   '0237-blade',
   '0285-throw',
   '0288-lean',
@@ -111,11 +110,7 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     correctly: 'two places that open alike and diverge later, which is a legal shape for a level to have',
     decision: '0172-a-place-opens-with-its-own-four',
   },
-  '0236-cycle': {
-    claim: 'a cycling pickup shows each face for at least three seconds',
-    correctly: 'a shorter turn a later play-test prefers, once more faces make a long wait too long',
-    decision: '0236-the-guns-answer-the-first-play-test',
-  },
+  // `0236-cycle` was here — a face shown for three seconds — and went with the cycle (0575).
   '0237-blade': {
     claim: 'a blade is drawn as big as the ship that threw it',
     correctly: 'a smaller star, once a dozen of them at the cap are judged to bury the lane',

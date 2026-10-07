@@ -684,7 +684,7 @@ describe('a pickup wanders', () => {
     // static straight line."*
     const level: LevelRow = {
       waves: [],
-      pickups: [{ at: 200, kind: 'bomb', lane: 50 }],
+      pickups: [{ at: 200, lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -718,8 +718,8 @@ describe('a pickup wanders', () => {
     const level: LevelRow = {
       waves: [],
       pickups: [
-        { at: 240, kind: 'bomb', lane: 6 },
-        { at: 312, kind: 'bomb', lane: 94 },
+        { at: 240, lane: 6 },
+        { at: 312, lane: 94 },
       ],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,

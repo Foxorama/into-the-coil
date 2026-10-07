@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DRAWN_KINDS,
   FASTEST_FIRE,
   MAX_BARRELS,
   MISSILE_BEAT_RATIO,
   PICKUPS,
-  PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
   UPGRADE_KINDS,
   UPGRADE_TIERS,
@@ -33,7 +33,7 @@ import {
 import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, dropPickups } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
-import { NO_SECTIONS, playableWorld } from './world.ts';
+import { NO_SECTIONS, dealing, playableWorld } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { Rng } from '../src/sim/rng.ts';
@@ -480,53 +480,41 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
     The first thing a level offers is now its tube, held below.
   */
 
-  it('THE TUBE: every level offers a missile about a fifth of the way in', () => {
+  it('THE FIRST PLACE: every level offers a pickup about a fifth of the way in', () => {
     /*
-      *"Missiles → 1 about 20% of the way into the level."* The base ship has no tube (0056), so
-      this is the second weapon arriving at all; a fifth, give or take a twentieth of the level.
+      *"Missiles → 1 about 20% of the way into the level."* The place stands; since 0575 what is in it is
+      drawn. A fifth, give or take a twentieth of the level.
     */
     for (const kind of LEVEL_KINDS) {
       const level = LEVELS[kind];
-      const missile = level.pickups.find((p) => p.kind === 'missile');
-      expect(missile, `${kind} offers no missile`).toBeDefined();
-      const share = missile!.at / level.bossAt;
-      expect(share, `${kind}'s missile is ${(share * 100).toFixed(0)}% of the way in, and the ask is about a fifth`).toBeGreaterThan(0.15);
-      expect(share, `${kind}'s missile is ${(share * 100).toFixed(0)}% of the way in, and the ask is about a fifth`).toBeLessThan(0.25);
+      const first = level.pickups[0];
+      expect(first, `${kind} offers no pickup`).toBeDefined();
+      const share = first!.at / level.bossAt;
+      expect(share, `${kind}'s first pickup is ${(share * 100).toFixed(0)}% of the way in, and the ask is about a fifth`).toBeGreaterThan(0.15);
+      expect(share, `${kind}'s first pickup is ${(share * 100).toFixed(0)}% of the way in, and the ask is about a fifth`).toBeLessThan(0.25);
     }
   });
 
-  it('THE BUDGET: a level authors one missile and nothing else, and level one a bomb and a second missile where the ask put them', () => {
+  it('THE BUDGET: a level authors one place, and level one two more where the ask put them', () => {
     /*
-      ⚠️ **THE WEAPON COUNT IS GONE, AND LEVEL ONE'S EXTRA IS A BOMB — 0441.** Each level's first
-      weapon was removed; level one's second, before its mid-boss, is the bomb pickup in its place.
+      ⚠️ **PLACES, NOT KINDS, SINCE 0575.** Level one's extras were a bomb *"before the miniboss appears"*
+      and a missile *"halfway between miniboss and level boss"*; what each is is drawn now, and where
+      each is is still the ask's — held against the level's own `midBoss.at` and `bossAt`, a tenth of
+      the level either side of the midpoint.
     */
     for (let i = 0; i < LEVEL_KINDS.length; i++) {
       const kind = LEVEL_KINDS[i]!;
-      const level = LEVELS[kind];
-      const counts = { bomb: 0, missile: 0, shield: 0, ward: 0 };
-      for (const entry of level.pickups) counts[entry.kind]++;
-      // The ward is only ever a shield's `bare` — 0447 — so no level authors one.
-      expect(counts.ward, `${kind} authors a ward pickup, which only stands in for a shield`).toBe(0);
-      const extra = i === 0 ? 1 : 0;
-      expect(counts.bomb, `${kind} authors ${counts.bomb} bombs, and the charge is the mid-boss's but for level one's`).toBe(extra);
-      expect(counts.missile, `${kind} authors ${counts.missile} missiles`).toBe(1 + extra);
-      // The shield is the fight's — `MID_BOSS_DROP`.
-      expect(counts.shield, `${kind} authors a shield, which is the mid-boss's to drop`).toBe(0);
+      expect(LEVELS[kind].pickups.length, `${kind} authors ${LEVELS[kind].pickups.length} pickups`).toBe(i === 0 ? 3 : 1);
     }
-    /*
-      ⚠️ **LEVEL ONE'S TWO EXTRAS ARE PLACED, NOT JUST COUNTED.** *"Before the miniboss appears"* and
-      *"halfway between miniboss and level boss"*, held against the level's own `midBoss.at` and
-      `bossAt` — a tenth of the level either side of the midpoint.
-    */
     const one = LEVELS[LEVEL_KINDS[0]!];
     expect(one.midBoss, 'level one has no mid-boss to place its extras against').not.toBeNull();
-    const bombs = one.pickups.filter((p) => p.kind === 'bomb');
-    expect(bombs[0]!.at, `level one's bomb at ${bombs[0]!.at} is not before its mid-boss at ${one.midBoss!.at}`).toBeLessThan(one.midBoss!.at);
-    const missiles = one.pickups.filter((p) => p.kind === 'missile');
+    const before = one.pickups[1]!;
+    expect(before.at, `level one's second pickup at ${before.at} is not before its mid-boss at ${one.midBoss!.at}`).toBeLessThan(one.midBoss!.at);
+    const between = one.pickups[2]!;
     const midpoint = (one.midBoss!.at + one.bossAt) / 2;
     expect(
-      Math.abs(missiles[1]!.at - midpoint),
-      `level one's second missile at ${missiles[1]!.at} is not halfway between the fights (${midpoint})`,
+      Math.abs(between.at - midpoint),
+      `level one's third pickup at ${between.at} is not halfway between the fights (${midpoint})`,
     ).toBeLessThan(one.bossAt / 10);
   });
 
@@ -554,10 +542,11 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
       const pickups = LEVELS[kind].pickups;
       for (let i = 0; i < pickups.length; i++) {
         const item = pickups[i]!;
-        const radius = PICKUPS[item.kind].radius;
+        // Whatever it is drawn as — 0575 — so the widest of them.
+        const radius = Math.max(...PICKUP_KINDS.map((k) => PICKUPS[k].radius));
         // The spawner walks this list once and never looks back, exactly as it does for waves.
         if (i > 0) expect(item.at, `${kind} pickup ${i} is behind the one before it`).toBeGreaterThanOrEqual(pickups[i - 1]!.at);
-        expect(item.lane - radius, `${kind}'s ${item.kind} at ${item.at} hangs off the lane`).toBeGreaterThan(0);
+        expect(item.lane - radius, `${kind}'s pickup at ${item.at} hangs off the lane`).toBeGreaterThan(0);
         expect(item.lane + radius).toBeLessThan(ACROSS_SPAN);
       }
     }
@@ -587,8 +576,8 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
 
 describe('collecting one, in the real frame', () => {
   /** A level that is one pickup and nothing else, placed where the ship will fly through it. */
-  function onePickup(kind: PickupKind): ReturnType<typeof playableWorld> {
-    return playableWorld({
+  function onePickup(kind: PickupKind, face = 0): ReturnType<typeof playableWorld> {
+    const built = playableWorld({
       waves: [],
       /*
         ⚠️ **240, not 200, since `docs/decisions/0364-the-view-zooms-out.md`.** 200 was a spawn just
@@ -597,7 +586,7 @@ describe('collecting one, in the real frame', () => {
         and 0087's probes both came back STILL GREEN. ×1.2 puts it back beyond the view.
       */
       // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
-      pickups: [{ at: 240, kind, lane: 50 }],
+      pickups: [{ at: 240, lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -605,6 +594,9 @@ describe('collecting one, in the real frame', () => {
       boss: 'sentinel',
       theme: 'approach',
     });
+    // The place is the level's and what is in it is drawn — 0575 — so the fixture is dealt `kind`.
+    built.world.pickupRng = dealing(kind, face);
+    return built;
   }
 
 
@@ -651,7 +643,12 @@ describe('collecting one, in the real frame', () => {
       out of an index and an off-by-one in `PICKUP_KINDS` would hand over the neighbouring row — which
       is the bug `src/content/sprites.ts` records having shipped once already, in this exact shape.
     */
-    for (const kind of PICKUP_KINDS) {
+    /*
+      ⚠️ **SINCE 0575 THE KIND IS DRAWN AND NOT AUTHORED**, so the equality is *what the place was drawn
+      as is what the player is handed* — every kind a place can be drawn as. The ward is never drawn for
+      itself; it is a shield on a tier with no shell, and `tests/tier-shell.test.ts` hands that over.
+    */
+    for (const kind of DRAWN_KINDS) {
       const { world, taken } = onePickup(kind);
       flyInto(world, 600);
       expect(taken.length, `the ship flew through a ${kind} and nothing was reported`).toBe(1);
@@ -771,7 +768,7 @@ describe('collecting one, in the real frame', () => {
      * collect the whole ring on the first step and measure nothing at all** — which is what the
      * first version of the scatter fixture did.
      */
-    function dropped(seed: string, kinds: readonly PickupKind[] = MID_BOSS_DROP, along = SHIP_START_ALONG): ReturnType<typeof playableWorld> {
+    function dropped(seed: string, kinds: readonly PickupKind[] = MID_BOSS_DROP, along = SHIP_START_ALONG, dealt?: number): ReturnType<typeof playableWorld> {
       const built = playableWorld({
         waves: [],
         pickups: [],
@@ -783,6 +780,8 @@ describe('collecting one, in the real frame', () => {
         theme: 'approach',
       });
       built.world.dropRng = new Rng(seed);
+      // What the pieces' faces are drawn from — 0575 — when a guard asks about more than one run.
+      if (dealt !== undefined) built.world.pickupRng = new Rng(dealt);
       dropPickups(built.world, built.world.cameraAlong + along, ACROSS_SPAN / 2, kinds);
       built.world.ship.along = built.world.cameraAlong + PLAYER_MARGIN;
       built.world.ship.prevAlong = built.world.ship.along;
@@ -814,25 +813,31 @@ describe('collecting one, in the real frame', () => {
       expect(dropped('drop:nothing', []).world.pickups.size).toBe(0);
     });
 
-    it('and a dropped bomb cycles like an authored one, so it is an offer and not a return', () => {
+    it('0575 — and each dropped piece is drawn on a face of its own and keeps it', () => {
       /*
-        0243 had a scattered piece hold the face the player just lost, because what a death threw
-        back was what it took. A drop is the fight's offer, so the cycle costs the player nothing but
-        the choice — held here so the two rules cannot quietly swap back. The cycling piece is the
-        bomb since 0441, in the weapon's place.
+        *"Mid-boss one of each"*: the drop is still the list's three kinds, and since 0575 the face of each
+        is drawn rather than turned through. Over several runs' streams, so every face of the bomb shows
+        up somewhere, and through ten seconds of the real frame, so none of them turns.
       */
-      const { world } = dropped('drop:cycles');
-      let bomb: Entity | null = null;
-      for (let i = 0; i < world.pickups.size; i++) if (world.pickups.at(i).kind === world.pickupKinds.bomb) bomb = world.pickups.at(i);
-      expect(bomb, 'no bomb was dropped').not.toBeNull();
-      const shown = bomb!.sprite;
-      const frame = new GameFrame(world);
-      let turned = false;
-      for (let i = 0; i < PICKUP_CYCLE_STEPS * 2 && !turned; i++) {
-        frame.step();
-        if (bomb!.sprite !== shown) turned = true;
+      const seen = new Set<number>();
+      for (let dealt = 0; dealt < 24; dealt++) {
+        const { world } = dropped('drop:faces', MID_BOSS_DROP, SHIP_START_ALONG, dealt);
+        let bomb: Entity | null = null;
+        for (let i = 0; i < world.pickups.size; i++) if (world.pickups.at(i).kind === world.pickupKinds.bomb) bomb = world.pickups.at(i);
+        expect(bomb, 'no bomb was dropped').not.toBeNull();
+        const shown = bomb!.sprite;
+        expect(PICKUPS.bomb.faces, 'the bomb was dropped as something that is not one of its faces').toContain(shown);
+        seen.add(shown);
+        if (dealt > 2) continue;
+        const frame = new GameFrame(world);
+        for (let i = 0; i < PICKUP_LINGER_STEPS && world.pickups.size > 0; i++) {
+          frame.step();
+          if (bomb!.sprite !== shown && world.pickups.size === MID_BOSS_DROP.length) {
+            expect.fail(`a dropped bomb turned to another face on step ${i}`);
+          }
+        }
       }
-      expect(turned, 'a dropped bomb never turned to another face').toBe(true);
+      expect(seen.size, 'the drop never drew the bomb on more than one face, so nothing is drawn').toBe(PICKUPS.bomb.faces.length);
     });
 
     it('0100 — THE REPORTED ONE: a scatter never leaves a piece where the ship cannot reach it', () => {
@@ -1138,37 +1143,24 @@ describe('collecting one, in the real frame', () => {
         never a neighbour's row.
       */
       /*
-        ⚠️ **AND THE SHIELD TURNS TOO, SINCE 0447** — shield, void, nova — so there is no one-faced
-        pickup left to watch hold still. What is asked of it is the cycling half: whatever it is drawn
-        as is one of its own three faces, all the way to the cull.
+        ⚠️ **AND SINCE 0575 NOTHING TURNS, SO THE PROPERTY IS EXACT AGAIN**: a pickup dealt a face past
+        its first — the nova on a shield, the whirlpool on a bomb — is drawn as that face on every step to
+        the cull, never its row's first and never a neighbour's.
       */
-      const { world } = onePickup('shield');
-      const frame = new GameFrame(world);
-      while (world.pickups.size === 0) frame.step();
-      const item = world.pickups.at(0);
-      let steps = 0;
-      while (world.pickups.size > 0 && steps < 2000) {
-        frame.step();
-        steps++;
-        if (world.pickups.size === 0) break;
-        expect(PICKUPS.shield.faces, 'an authored shield was drawn as something that is not one of its faces').toContain(item.sprite);
+      for (const [kind, face] of [['shield', 2], ['bomb', 2]] as const) {
+        const { world } = onePickup(kind, face);
+        const frame = new GameFrame(world);
+        while (world.pickups.size === 0) frame.step();
+        const item = world.pickups.at(0);
+        let steps = 0;
+        while (world.pickups.size > 0 && steps < 2000) {
+          if (world.pickups.size === 0) break;
+          expect(item.sprite, `an authored ${kind} on step ${steps} is not the face it was dealt`).toBe(PICKUPS[kind].faces[face]);
+          frame.step();
+          steps++;
+        }
+        expect(steps, `the ${kind} never reached the field, so nothing was watched`).toBeGreaterThan(100);
       }
-      expect(steps, 'the pickup never reached the field, so nothing was watched').toBeGreaterThan(100);
-
-      const cycling = onePickup('bomb');
-      const turning = new GameFrame(cycling.world);
-      while (cycling.world.pickups.size === 0) turning.step();
-      const turned = cycling.world.pickups.at(0);
-      let watched = 0;
-      while (cycling.world.pickups.size > 0 && watched < 2000) {
-        turning.step();
-        watched++;
-        if (cycling.world.pickups.size === 0) break;
-        expect(PICKUPS.bomb.faces, 'a bomb pickup was drawn as something that is not one of its faces').toContain(
-          turned.sprite,
-        );
-      }
-      expect(watched, 'the bomb pickup never reached the field').toBeGreaterThan(100);
     });
   });
 
@@ -1281,7 +1273,7 @@ describe('collecting one, in the real frame', () => {
       const { world } = playableWorld({
         waves: [],
         // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
-        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'bomb' as const, lane: 50 })),
+        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, lane: 50 })),
         landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,

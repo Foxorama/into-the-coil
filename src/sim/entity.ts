@@ -425,18 +425,11 @@ export interface Entity extends Body {
   sprayGap: number;
   sprayAt: number;
   /**
-   * Which of its row's faces a cycling pickup is showing, and steps until it turns to the next —
-   * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
-   *
-   * ⚠️ **ON THE ENTITY, which is exactly what 0052's cycle refused and 0082 deleted.** That cycle
-   * was keyed to the CAMERA so the field would carry no state and a level author could say what a
-   * pickup was; this one is per pickup because the ask is per pickup — *"at least 2 repetitions of
-   * each weapon"* from the moment it appears — and because what it cycles between are kinds of one
-   * ladder, which a level author never chose between anyway. `faceIn` at zero is a pickup that does
-   * not turn, which is every pickup with one face.
+   * Which of its row's faces a pickup is showing — drawn when it spawns and kept since
+   * `docs/decisions/0575-a-pickup-is-what-it-shows.md`; it turned through them on 0233's clock, and
+   * `faceIn`, the steps until the next turn, went with the turning.
    */
   face: number;
-  faceIn: number;
   /**
    * Where a bolt STARTS, as an offset from where it lands — 0233. A link of chain lightning is an
    * entity at its landing point, drawn as a stroke from `along + fromAlong, across + fromAcross` to
@@ -647,7 +640,6 @@ export function makeEntity(): Entity {
     sprayGap: 0,
     sprayAt: 0,
     face: 0,
-    faceIn: 0,
     fromAlong: 0,
     fromAcross: 0,
     prevFromAlong: 0,
@@ -732,7 +724,6 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.sprayGap = 0;
   e.sprayAt = 0;
   e.face = 0;
-  e.faceIn = 0;
   e.fromAlong = 0;
   e.fromAcross = 0;
   e.prevFromAlong = 0;

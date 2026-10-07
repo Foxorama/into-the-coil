@@ -1,5 +1,8 @@
 # 0233 — A weapon is a kind, and a pickup cycles
 
+⚠️ **THE CYCLE IS SUPERSEDED BY [0575](0575-a-pickup-is-what-it-shows.md)**: a pickup is drawn on one
+face and keeps it. *A weapon is a kind* stands.
+
 **Accepted 2026-09-05.** The first of the new weapons, asked for the same day:
 
 > *"each new weapon needs thematically change the style of the ship so you have a visual indicator of

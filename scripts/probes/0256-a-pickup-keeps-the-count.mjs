@@ -50,49 +50,23 @@ export const PROBES = [
       replace: '  w.onCue(\'death\', w.ship.across);\n  w.onDeath();',
     },
   },
+  /*
+    `a level authoring a bomb of its own` and `a shield authored into a level` were here. Since 0575 a
+    level authors places and no kinds, so a bomb or a shield written into one is not a thing the table
+    can hold; what is left of both is a second place, which is 0082's probe.
+  */
   {
     decision: '0256',
     suite: 'tests/pickups.test.ts',
-    // A level quietly given a second authored weapon — 0083's nine, one pickup at a time.
-    /*
-      ⚠️ RE-AIMED BY 0441, which removed every level's weapon and made the weapon pickup the bomb
-      pickup: the budget is one missile a level, and the bomb is the mid-boss's but for level one's.
-      A `kind: 'weapon'` here names no kind any more and nothing in the guard counts it, so it could
-      not redden — the extra is a bomb, the pickup that took the weapon's place.
-    */
-    broke: 'a level authoring a bomb of its own, which is how nine a level came back',
-    guard: 'THE BUDGET: a level authors one missile and nothing else',
-    edit: {
-      path: 'src/content/levels.ts',
-      // The missiles' places are 0503's, which closed the levels up.
-      find: "  { at: 813, kind: 'missile', lane: 28 },",
-      replace: "  { at: 813, kind: 'missile', lane: 28 },\n  { at: 1700, kind: 'bomb', lane: 40 },",
-    },
-  },
-  {
-    decision: '0256',
-    suite: 'tests/pickups.test.ts',
-    // The shield authored back into a level, where it is the mid-boss's to drop.
-    broke: 'a shield authored into a level rather than dropped by its mid-boss',
-    // ⚠️ Renamed by 0441, which took the levels' weapons.
-    guard: 'THE BUDGET: a level authors one missile and nothing else',
-    edit: {
-      path: 'src/content/levels.ts',
-      find: "  { at: 804, kind: 'missile', lane: 56 },",
-      replace: "  { at: 804, kind: 'missile', lane: 56 },\n  { at: 1500, kind: 'shield', lane: 50 },",
-    },
-  },
-  {
-    decision: '0256',
-    suite: 'tests/pickups.test.ts',
-    // The missile pushed to the middle of the level — *"about 20% of the way in"* lost.
-    broke: 'a level’s missile moved to the middle of the level',
-    guard: 'THE TUBE: every level offers a missile about a fifth of the way in',
+    // The level's place pushed to the middle — *"about 20% of the way in"* lost.
+    broke: 'a level’s pickup place moved to the middle of the level',
+    // ⚠️ Renamed and re-anchored by 0575: the place is drawn, so it is not a missile's any more.
+    guard: 'THE FIRST PLACE: every level offers a pickup about a fifth of the way in',
     edit: {
       path: 'src/content/levels.ts',
       // 2100 is still past the middle of a level whose boss is at 3988.
-      find: "  { at: 798, kind: 'missile', lane: 36 },",
-      replace: "  { at: 2100, kind: 'missile', lane: 36 },",
+      find: '  { at: 798, lane: 36 },',
+      replace: '  { at: 2100, lane: 36 },',
     },
   },
   {
@@ -140,17 +114,6 @@ export const PROBES = [
     `weaponsOfferedBy`, which went with the gun's ladder; their guards went with tests/dial.test.ts
     and with the dial's half of `THE DROP`.
   */
-  {
-    decision: '0256',
-    suite: 'tests/pickups.test.ts',
-    // A dropped weapon holding its face, which was 0243's rule for a scattered piece.
-    // ⚠️ Renamed by 0441: the piece that cycles is the bomb pickup now.
-    broke: 'a dropped bomb holding one face, as a scattered piece did',
-    guard: 'and a dropped bomb cycles like an authored one',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '  startCycle(item, row, index % row.faces.length);\n  item.bobPhase = index * GOLDEN_ANGLE;',
-      replace: '  startCycle(item, row, index % row.faces.length);\n  item.faceIn = 0;\n  item.bobPhase = index * GOLDEN_ANGLE;',
-    },
-  },
+  // `a dropped bomb holding one face` was here; since 0575 every pickup holds one face, and a dropped
+  // piece put on its row's first face is 0575's own probe.
 ];

@@ -155,6 +155,7 @@ function stationKeepingWorld(surface: Surface): World {
     floatRng: makeRng('interp').stream('float'),
     bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     dropRng: makeRng('interp').stream('drop'),
+    pickupRng: makeRng('interp').stream('pickups'),
     view: viewOf(1280, 720),
     surface,
     rng: makeRng('interp').stream('spawns'),
