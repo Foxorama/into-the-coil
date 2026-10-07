@@ -12,19 +12,15 @@ export const PROBES = [
   {
     decision: '0256',
     suite: 'tests/run.test.ts',
-    // 0233's rule put back: a pickup of another kind starts its ladder at one rung.
-    broke: 'a switch starting the new kind’s ladder again at one rung',
-    guard: 'a pickup of another kind switches the kind and keeps the count',
+    // 0233's switch put back: a pickup of another kind re-fits what the ship already carries.
+    // ⚠️ Re-aimed by 0577, which took the ladder and the switch with it: a new tube re-fitting the
+    // tubes before it to its own kind is the switch in the one shape the tubes can still take.
+    broke: 'a new tube re-fitting the tubes before it to its kind',
+    guard: '0577 — a missile pickup fits its kind into the next empty tube',
     edit: {
       path: 'src/state/slices/run.ts',
-      // ⚠️ Re-anchored by 0266, which gave the reducer a count to apply: the clamp is the same
-      // clamp, asked once against the room left on the ladder rather than once per event.
-      // ⚠️ Re-anchored by 0372, which took the count away again: one rung a pickup.
-      find: '      const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;',
-      // ⚠️ Re-aimed by 0441: the tubes are the one ladder, so the fitted kind is the missile's.
-      replace:
-        '      const fitted = state.missile;\n' +
-        '      const upgrades = action.kind === fitted ? (room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades) : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];',
+      find: '      const tubes = [...state.tubes, action.kind];',
+      replace: '      const tubes = [...state.tubes.map(() => action.kind), action.kind];',
     },
   },
   /*

@@ -10,9 +10,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { GameFrame, type World } from '../src/app/frame.ts';
-import { MISSILES } from '../src/content/missiles.ts';
+import { MISSILES, type MissileKind } from '../src/content/missiles.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import { weaponFor } from '../src/content/pickups.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
@@ -22,12 +22,12 @@ import { NO_LEVEL, playableWorld } from './world.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
 
-/** A world with seekers fitted at `tier` rungs, the gun held off, and a tube about to fire. */
-function armed(tier: number): { world: World; frame: GameFrame } {
+/** A world with `tubes` seekers fitted — a count since 0577, not a rung — the gun held off, and a tube about to fire. */
+function armed(tubes: number): { world: World; frame: GameFrame } {
   const built = playableWorld(NO_LEVEL);
-  const carried: UpgradeKind[] = [];
-  for (let i = 0; i < tier; i++) carried.push('missile');
-  built.world.weapon = weaponFor(built.world.shipRow, carried, 'homing');
+  const carried: MissileKind[] = [];
+  for (let i = 0; i < tubes; i++) carried.push('homing');
+  built.world.weapon = weaponFor(built.world.shipRow, carried);
   built.world.fireIn = NEVER;
   built.world.missileIn = 1;
   return { world: built.world, frame: new GameFrame(built.world) };
@@ -68,7 +68,8 @@ describe('0235 — a seeker hunts the nearest body', () => {
       steps++;
     }
     expect(towards, 'the seeker never turned toward the body').toBe(true);
-    expect(body.health, 'the seeker never reached the body').toBe(999 - world.weapon.missileDamage);
+    // The seeker's own shot's damage — 0577 took the weapon's `missileDamage`, which was this copied out.
+    expect(body.health, 'the seeker never reached the body').toBe(999 - SHOTS[MISSILES.homing.shot].damage);
   });
 
   it('and a body BEHIND the ship is reached too, because the hunt is any direction', () => {
@@ -87,7 +88,7 @@ describe('0235 — a seeker hunts the nearest body', () => {
       steps++;
     }
     expect(world.missiles.size > 0 || body.health < 999, 'the seeker was lost before it could come about').toBe(true);
-    expect(body.health, 'a body behind the ship was never reached').toBe(999 - world.weapon.missileDamage);
+    expect(body.health, 'a body behind the ship was never reached').toBe(999 - SHOTS[MISSILES.homing.shot].damage);
     expect(steps, 'a body behind the ship was reached too fast to have been turned toward').toBeGreaterThan(10);
   });
 
@@ -215,7 +216,7 @@ describe('0246 — a seeker hunts on the screen, and burns out', () => {
 
   it('and the straight missile has no fuse: it lives to the far edge of the widest view', () => {
     const built = playableWorld(NO_LEVEL);
-    built.world.weapon = weaponFor(built.world.shipRow, ['missile'], 'straight');
+    built.world.weapon = weaponFor(built.world.shipRow, ['straight']);
     built.world.fireIn = NEVER;
     built.world.missileIn = 1;
     const frame = new GameFrame(built.world);

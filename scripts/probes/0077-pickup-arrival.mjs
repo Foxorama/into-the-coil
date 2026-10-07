@@ -84,7 +84,8 @@ export const PROBES = [
     broke: 'the launcher cap returned to three, which is a rung the ask does not have',
     // ⚠️ Re-aimed by 0233: the tube count is the missile kind's own ladder now, so a cap raised on
     // its own is the cap and the ladder disagreeing — THE FLOORS is the guard that sees that.
-    guard: 'THE FLOORS: the last tier lands exactly on them',
+    // Renamed by 0577, which took the tiers.
+    guard: 'THE FLOORS: a full rack lands exactly on them',
     edit: { path: 'src/content/pickups.ts', find: 'const MAX_LAUNCHERS = 2;', replace: 'const MAX_LAUNCHERS = 3;' },
   },
   {

@@ -154,7 +154,7 @@ import { FIRE_GRID, VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';
-import { UPGRADE_TIERS } from '../src/content/pickups.ts';
+import { MAX_LAUNCHERS } from '../src/content/pickups.ts';
 /*
   ⚠️ **THE ONE THING THIS SCRIPT TAKES FROM `rig/`, and the arrow points this way on purpose.**
   `rig/transport.ts` is the arithmetic of *what is sounding when*, guarded by `tests/dash.test.ts`;
@@ -879,7 +879,7 @@ if (args.has('play')) {
   const gridded = (kind, step) => (CUES[kind].onGrid === true ? (Math.floor(step / FIRE_GRID) + 1) * FIRE_GRID : step);
 
   /**
-   * Bars of `level`, with a ship at weapon/missile tier `tier` shooting and things dying.
+   * Bars of `level`, with a ship carrying `tier` tubes (0577; a ladder's rung until then) shooting and things dying.
    *
    * Returns the mix and the two halves of it separately, because *"background too quiet"* is a claim
    * about the RATIO and neither half alone can answer it.
@@ -1022,10 +1022,11 @@ if (args.has('play')) {
 
   const takes = [
     ['run', 0, 'a level opening'],
-    ['run', 2, 'mid level, two of each'],
-    ['surge', UPGRADE_TIERS, 'the surge, maxed'],
-    ['boss', UPGRADE_TIERS, 'the boss arrives, maxed'],
-    ['bossPeak', UPGRADE_TIERS, 'the boss at its peak, maxed'],
+    // A tier is a count of tubes since 0577, which took the ladder — so one is mid level and two the cap.
+    ['run', 1, 'mid level, one tube'],
+    ['surge', MAX_LAUNCHERS, 'the surge, maxed'],
+    ['boss', MAX_LAUNCHERS, 'the boss arrives, maxed'],
+    ['bossPeak', MAX_LAUNCHERS, 'the boss at its peak, maxed'],
     // Every special over a level, two bars apart — 0378. Its own file, named for what is in it.
     ['run', 2, 'the specials, in turn', 'specials'],
   ];

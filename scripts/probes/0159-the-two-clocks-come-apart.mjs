@@ -14,31 +14,10 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0159',
-    suite: 'tests/pickups.test.ts',
-    /*
-      ⚠️ AN UPGRADE THAT IS A DOWNGRADE, WHICH 0093's ARITHMETIC MADE NEARLY UNWRITEABLE AND 0159
-      MAKES ORDINARY. `docs/game.md` requires every rung to change something and none of them to make
-      the ship worse; the last rung here fires SLOWER than the one before it, which is a plausible
-      slip in a hand-authored list of five integers and was not expressible at all while the entries
-      were volleys-per-beat picked from a set of eight.
-
-      ⚠️ IT IS THE REPLACEMENT FOR ONE OF THE THREE PROBES 0159 RETIRED — see
-      scripts/probes/0093-gun-on-the-grid.mjs, which broke the same table to prove a claim about the
-      beat that no longer exists.
-    */
-    broke: 'the fire ladder authored so an upgrade slows the missiles down',
-    guard: 'every rung is a whole number of steps, and the ladder never gets SLOWER',
-    edit: {
-      // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
-      // ⚠️ Re-anchored by 0441, which took the gun's ladder: the tubes' is the one an upgrade climbs,
-      // and the never-SLOWER half of the guard now walks only it. The same slip, one table over.
-      path: 'src/content/missiles.ts',
-      find: '    missileEvery: [8, 8, 8, 6, 4],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
-      replace: '    missileEvery: [8, 8, 8, 6, 7],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
-    },
-  },
+  /*
+    `the fire ladder authored so an upgrade slows the missiles down` was here; 0577 took the tubes'
+    ladder, the last a pickup climbed, so there is no rung left to be slower than the one before it.
+  */
   {
     decision: '0159',
     suite: 'tests/pickups.test.ts',
@@ -56,10 +35,10 @@ export const PROBES = [
     edit: {
       // ⚠️ Re-anchored by 0233: the ladder is the missile kind's now, not the ship's.
       path: 'src/content/missiles.ts',
-      // ⚠️ Re-anchored by 0235: the seeker shares the ladder, so the straight row's `seek: 0` two
-      // lines down is what makes this the straight missile's.
-      find: '    missileEvery: [8, 8, 8, 6, 4],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
-      replace: '    missileEvery: [8, 8, 8, 6, 4.5],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
+      // ⚠️ Re-anchored by 0235: the seeker shares the ladder, so the straight row's `seek: 0` is
+      // what makes this the straight missile's. And by 0577, which made the ladder one note value.
+      find: '    missileEvery: 4,\n    seek: 0,',
+      replace: '    missileEvery: 4.5,\n    seek: 0,',
     },
   },
 ];

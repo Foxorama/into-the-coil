@@ -36,7 +36,7 @@ function flying(ship: ShipKind, tubes: number) {
   const built = playableWorld(NO_LEVEL);
   const w = built.world;
   w.shipRow = SHIPS[ship];
-  w.weapon = weaponFor(w.shipRow, Array.from({ length: tubes }, () => 'missile' as const));
+  w.weapon = weaponFor(w.shipRow, Array.from({ length: tubes }, () => 'straight' as const));
   w.fireIn = 1;
   w.missileIn = 1;
   return { w, frame: new GameFrame(w) };

@@ -28,8 +28,9 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/run.ts',
       // ⚠️ Re-anchored by 0525, which begins the run's gun beside its ship.
-      find: '        ship: action.ship,\n        gun: action.gun ?? SHIPS[action.ship].weapon,\n        missile: SHIPS[action.ship].missile,',
-      replace: '        ship: DEFAULT_SHIP,\n        gun: action.gun ?? SHIPS[action.ship].weapon,\n        missile: SHIPS[action.ship].missile,',
+      // ⚠️ And by 0577, which took the ship's own tube kind off the row.
+      find: '        ship: action.ship,\n        gun: action.gun ?? SHIPS[action.ship].weapon,',
+      replace: '        ship: DEFAULT_SHIP,\n        gun: action.gun ?? SHIPS[action.ship].weapon,',
     },
   },
   {

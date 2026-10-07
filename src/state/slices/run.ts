@@ -12,7 +12,7 @@
  */
 
 import { OPENING_CHARGES, SIDES, SPECIALS, type Side, type SpecialKind } from '../../content/specials.ts';
-import { UPGRADE_TIERS, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
+import { MAX_LAUNCHERS, tubeRoom } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 import { SHIPS, type ShipKind } from '../../content/ships.ts';
 import { WEAPONS, type WeaponKind } from '../../content/weapons.ts';
@@ -139,15 +139,17 @@ export interface RunState {
    */
   arsenal: Arsenal;
   /**
-   * Auto-fire upgrades, in the order they were taken.
+   * The missile tubes fitted, each a kind, top tube first — 0577.
    *
-   * ⚠️ **A LIST rather than a tier, for the same reason the arsenal is** — and this is where that
-   * shape stops being an argument and starts being used. `src/content/pickups.ts` resolves the whole
-   * list into a weapon every time it changes, so *"two rapids and a spread"* is a statement the save
-   * can hold and the reducer can compare. A running `fireEvery` on the run would be a number nobody
-   * could undo, and a death has to undo it.
+   * ⚠️ **A LIST rather than a count, for the same reason the arsenal is.** `src/content/pickups.ts`
+   * resolves it into a weapon every time it changes (`weaponFor`). It was `upgrades` — a ladder of four
+   * rungs — beside one `missile` kind for every tube; *"1 homing, 1 regular, 2 homing, 2 regular"* is a
+   * kind per tube, and *"full tier missiles or you don't"* leaves nothing for a rung to say.
+   *
+   * ⚠️ **What `begin` fits, then what a missile pickup fills** — *"the first two missile powerups lock
+   * in their tubes"* — and nothing takes one off: a death and a continue keep them (0372).
    */
-  upgrades: readonly UpgradeKind[];
+  tubes: readonly MissileKind[];
   /**
    * The ship this run is flown in — 0441.
    */
@@ -158,16 +160,7 @@ export interface RunState {
    * resolves the world's ship row from the two (`fitted`) every time the run is rearmed.
    */
   gun: WeaponKind;
-  /**
-   * Which tube the missile ladder is on — 0233.
-   *
-   * ⚠️ **In the RUN, beside the list, because the save has to hold it.** A missile pickup of a kind
-   * the ship is not carrying switches the tube, so *which tube* is a thing the list alone cannot say.
-   *
-   * ⚠️ **Nothing but a pickup changes it — 0372.** A death and a continue both keep the kind with the
-   * ladder, so the ship's own tube is only ever what `begin` issues.
-   */
-  missile: MissileKind;
+  // `missile`, the one kind every tube was fitted with (0233), went into `tubes` — 0577.
   /**
    * Every cleared level's account, in the order they were cleared — 0428. The run's score is these
    * added up (`bankedScore`); the level being flown counts on the frame and joins them at its clear.
@@ -215,16 +208,18 @@ export type RunAction =
     here, in shared code; the hangar's fitting is the instance, and the shell always passes it.
   */
   // 0525: and with the gun the hangar fitted, or — absent — the ship's own, on the special's terms.
-  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind; special?: SpecialKind; gun?: WeaponKind }
+  // 0577: and on the tubes the ship carries in, or — absent — none, which a pickup fills.
+  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind; special?: SpecialKind; gun?: WeaponKind; tubes?: readonly MissileKind[] }
   | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
   | { slice: 'run'; type: 'spent'; side: Side }
   /*
-    ⚠️ **AN UPGRADE NAMES ITS KIND SINCE 0233.** The pickup that was taken was showing one face of
-    its ladder, and the face is which tube it was offering. The gun's half went with its ladder (0441).
+    ⚠️ **AN UPGRADE NAMES ITS KIND SINCE 0233.** The pickup that was taken was showing one face, and the
+    face is which tube it fits — into the first empty one since 0577, which took the ladder and with it
+    the `upgrade` the action named. The gun's half went with its ladder (0441).
   */
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
+  | { slice: 'run'; type: 'upgraded'; kind: MissileKind }
   | { slice: 'run'; type: 'levelCleared' }
   // A cleared level's account, banked — 0428. Before `levelCleared`, which moves the level on.
   | { slice: 'run'; type: 'scored'; tally: LevelTally }
@@ -242,10 +237,9 @@ export const initialRun: RunState = {
   lives: 0,
   level: 0,
   arsenal: { gun: [], tubes: [], ward: [] },
-  upgrades: [],
+  tubes: [],
   ship: DEFAULT_SHIP,
   gun: SHIPS[DEFAULT_SHIP].weapon,
-  missile: SHIPS[DEFAULT_SHIP].missile,
   difficulty: DEFAULT_DIFFICULTY,
   tallies: [],
   continues: 0,
@@ -259,10 +253,10 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         lives: livesFor(action.difficulty),
         level: 0,
         arsenal: startingArsenal(action.ship, action.difficulty, action.special ?? ownSpecial(action.ship)),
-        upgrades: [],
+        // Two at most, whatever the shell hands in — `tubeRoom`'s cap, read the same way here.
+        tubes: (action.tubes ?? []).slice(0, MAX_LAUNCHERS),
         ship: action.ship,
         gun: action.gun ?? SHIPS[action.ship].weapon,
-        missile: SHIPS[action.ship].missile,
         difficulty: action.difficulty,
         tallies: [],
         continues: 0,
@@ -294,10 +288,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         lives: livesFor(state.difficulty),
         level: state.level,
         arsenal: state.arsenal,
-        upgrades: state.upgrades,
+        tubes: state.tubes,
         ship: state.ship,
         gun: state.gun,
-        missile: state.missile,
         difficulty: state.difficulty,
         /*
           ⚠️ **THE SCORE STARTS AGAIN — 0438**, reversing 0428's *a continue keeps it*: *"the score
@@ -328,10 +321,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             lives: state.lives - 1,
             level: state.level,
             arsenal: state.arsenal,
-            upgrades: state.upgrades,
+            tubes: state.tubes,
             ship: state.ship,
             gun: state.gun,
-            missile: state.missile,
             difficulty: state.difficulty,
             tallies: state.tallies,
             continues: state.continues,
@@ -347,10 +339,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         lives: state.lives,
         level: state.level,
         arsenal,
-        upgrades: state.upgrades,
+        tubes: state.tubes,
         ship: state.ship,
         gun: state.gun,
-        missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
@@ -370,10 +361,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         lives: state.lives,
         level: state.level,
         arsenal: withStack(state.arsenal, action.side, left),
-        upgrades: state.upgrades,
+        tubes: state.tubes,
         ship: state.ship,
         gun: state.gun,
-        missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
@@ -404,32 +394,25 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
     */
     case 'upgraded': {
       /*
-        ── A DIFFERENT KIND KEEPS THE COUNT — 0256, amending 0233 ─────────────────────────────────
+        ── A TUBE IS FITTED INTO THE FIRST EMPTY ONE — 0577 ──────────────────────────────────────
 
-        0233 started the new gun's ladder again at one rung, on *"they start from level one with
-        that weapon upgrade"*. Played with the mid-bosses in: *"picking up a new weapon/missile type
-        doesn't reset your power count — it's too punishing when you accidentally get a pickup with
-        a lot of enemies on screen or right before a boss."* The ladder is the ship's and the kind is
-        what it is fitted to: a pickup of another kind switches the kind and climbs the same ladder,
-        so the list never loses an entry here and the hull keeps its tier through a switch.
+        *"The first two missile powerups lock in their tubes."* The kind the pickup showed goes into
+        the next tube, and the ones already fitted stay as they are — 0233's switch, which re-fitted
+        every tube to the newest kind, is gone with the one kind the ship used to carry.
 
-        ⚠️ **CLAMPED AT THE CAP HERE rather than trusted to `tiersOf`.** A pickup of another kind
-        at a full ladder is an upgrade (`effectOf` — the ship changes), and it used to be the one
-        way the list could grow past `UPGRADE_TIERS` of a kind; it switches and adds nothing now, so
-        the list is the tier and the save holds nothing the ladder cannot read.
+        ⚠️ **REFUSED AT A FULL RACK HERE rather than trusted to `effectOf`**, which sends a full rack's
+        pickup to `took` as a surge; a stray `upgraded` past two changes nothing.
       */
-      // One rung a pickup: 0243's `count` went with the scatter that was its only sender — 0372.
-      // The tubes are the one ladder since 0441; the gun is the ship's.
-      const room = UPGRADE_TIERS - tiersOf(state.upgrades, action.upgrade);
-      const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;
+      // The same run, identity and all, so the shell rearms nothing (`rearmed` compares by reference).
+      if (!tubeRoom(state.tubes)) return state;
+      const tubes = [...state.tubes, action.kind];
       return {
         lives: state.lives,
         level: state.level,
         arsenal: state.arsenal,
-        upgrades,
+        tubes,
         ship: state.ship,
         gun: state.gun,
-        missile: action.kind,
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
@@ -452,10 +435,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         lives: state.lives,
         level: state.level + 1,
         arsenal: state.arsenal,
-        upgrades: state.upgrades,
+        tubes: state.tubes,
         ship: state.ship,
         gun: state.gun,
-        missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
@@ -467,10 +449,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         lives: state.lives,
         level: state.level,
         arsenal: state.arsenal,
-        upgrades: state.upgrades,
+        tubes: state.tubes,
         ship: state.ship,
         gun: state.gun,
-        missile: state.missile,
         difficulty: state.difficulty,
         tallies: [...state.tallies, action.tally],
         continues: state.continues,

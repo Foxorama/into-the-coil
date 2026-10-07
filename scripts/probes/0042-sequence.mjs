@@ -21,8 +21,9 @@ export const PROBES = [
       // refused the probe, which is the harness doing its job. `level + 1` is the one line in this
       // arm that says what a level boundary IS, so it is the part that will not move.
       // ⚠️ Re-anchored by 0372, which took the clear's charge away: the arsenal passes through.
-      find: '        level: state.level + 1,\n        arsenal: state.arsenal,\n        upgrades: state.upgrades,',
-      replace: '        level: state.level + 1,\n        arsenal: [],\n        upgrades: [],',
+      // ⚠️ And by 0577, which made the ladder the tubes.
+      find: '        level: state.level + 1,\n        arsenal: state.arsenal,\n        tubes: state.tubes,',
+      replace: '        level: state.level + 1,\n        arsenal: [],\n        tubes: [],',
     },
   },
   {

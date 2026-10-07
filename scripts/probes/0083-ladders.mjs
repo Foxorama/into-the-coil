@@ -18,33 +18,13 @@ export const PROBES = [
     a level — so the tier count and the pickup budget are no longer one decision, and moving one
     without the other is a tuning change rather than a defect.
   */
-  {
-    decision: '0083',
-    suite: 'tests/missiles.test.ts',
-    /*
-      ⚠️ THE INTERPOLATION DROPPED, which is what a ladder looks like when somebody "simplifies" the
-      hardpoints back to a constant. Every tier then buys the same ship, so a level hands out four
-      weapon pickups of which three change nothing — `docs/game.md`'s *an upgrade that cannot change
-      the outcome is worse than none*, four times over.
-    */
-    /*
-      ⚠️ RE-ANCHORED AGAIN ON 2026-08-10, WHEN `rung` WAS DELETED OUTRIGHT. The last interpolated
-      quantity — the launchers — became a capped count, because interpolating a count is what put the
-      second missile tube on the third pickup (*"missile tubes don't get a second firing till like the
-      3rd upgrade"*). There is no curve left in this file to flatten, so the break moves to the LIST
-      the flattening would now be written in.
-    */
-    broke: 'the missile rate ladder flattened, so the last two tiers resolve to the same ship',
-    guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long',
-    edit: {
-      // ⚠️ Re-anchored by 0233: the ladder is the missile kind's now, not the ship's.
-      path: 'src/content/missiles.ts',
-      // ⚠️ Re-anchored by 0235: the seeker shares the ladder, so the straight row's `seek: 0` two
-      // lines down is what makes this the straight missile's.
-      find: '    missileEvery: [8, 8, 8, 6, 4],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
-      replace: '    missileEvery: [8, 8, 8, 8, 8],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
-    },
-  },
+  /*
+    ── *the missile rate ladder flattened* WAS HERE, AND 0577 TOOK THE LADDER ──────────────────────
+
+    It flattened the tubes' rate steps so the last two tiers resolved to the same ship. *"You either
+    have full tier missiles or you don't"*: a tube fires at the old top rate from the moment it is
+    fitted, and `0577 — A TUBE IS FULL FROM THE MOMENT IT IS FITTED` is that rule's own probe.
+  */
   {
     decision: '0083',
     suite: 'tests/missiles.test.ts',
@@ -81,9 +61,9 @@ export const PROBES = [
     guard: 'fires one missile per launcher, and stops at two tubes',
     edit: {
       path: 'src/content/pickups.ts',
-      // ⚠️ Re-anchored by 0233: the tube count is read off the missile kind's ladder first.
-      find: '  const launchers = tubesAt > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubesAt;',
-      replace: '  const launchers = tubesAt > MAX_LAUNCHERS - 1 ? MAX_LAUNCHERS - 1 : tubesAt;',
+      // ⚠️ Re-anchored by 0233, and by 0577: the count is the fitted list's length, capped.
+      find: '  const launchers = tubes.length > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes.length;',
+      replace: '  const launchers = tubes.length > MAX_LAUNCHERS - 1 ? MAX_LAUNCHERS - 1 : tubes.length;',
     },
   },
   /*

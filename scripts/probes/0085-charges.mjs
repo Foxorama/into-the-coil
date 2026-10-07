@@ -32,8 +32,9 @@ export const PROBES = [
       // Anchored on the ARSENAL line rather than on the whole returned literal, for the reason
       // 0042's probe gives: a literal goes stale the day a field is added to it, and two have been.
       // The twelve-space indent is the `lifeLost` arm; `continued` has the same pair at eight.
-      find: '            arsenal: state.arsenal,\n            upgrades: state.upgrades,',
-      replace: '            arsenal: startingArsenal(),\n            upgrades: state.upgrades,',
+      // And the line under it is the tubes since 0577.
+      find: '            arsenal: state.arsenal,\n            tubes: state.tubes,',
+      replace: '            arsenal: startingArsenal(),\n            tubes: state.tubes,',
     },
   },
   /*
@@ -58,10 +59,10 @@ export const PROBES = [
     guard: 'and a death does not TOP UP an arsenal the player has emptied',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            arsenal: state.arsenal,\n            upgrades: state.upgrades,',
+      find: '            arsenal: state.arsenal,\n            tubes: state.tubes,',
       // ⚠️ Re-aimed by 0373: the arsenal is a stack, so topping up is an empty stack handed the kit.
       replace:
-        '            arsenal: state.arsenal.length > 0 ? state.arsenal : startingArsenal(),\n            upgrades: state.upgrades,',
+        '            arsenal: state.arsenal.length > 0 ? state.arsenal : startingArsenal(),\n            tubes: state.tubes,',
     },
   },
 ];

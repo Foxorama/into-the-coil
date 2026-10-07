@@ -165,7 +165,8 @@ dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
 const tubes = query.get('missile');
 if (tubes !== null && (MISSILE_KINDS as readonly string[]).includes(tubes)) {
   const rungs = Math.max(1, Number(query.get('tubes') ?? '1'));
-  for (let i = 0; i < rungs; i++) dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: tubes as MissileKind });
+  // A tube a dispatch since 0577, so `tubes=2` is two of the kind and a third is refused by the slice.
+  for (let i = 0; i < rungs; i++) dispatch({ slice: 'run', type: 'upgraded', kind: tubes as MissileKind });
 }
 along.max = String(Math.ceil(LEVELS[LEVEL_KINDS[0]!].bossAt));
 goTo(LEVEL_KINDS[0]!, 0);

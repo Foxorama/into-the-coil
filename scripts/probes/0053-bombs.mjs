@@ -96,8 +96,9 @@ export const PROBES = [
       path: 'src/state/slices/run.ts',
       // ⚠️ Re-anchored by 0256, 0266 and 0372: the line under the arsenal is the ladder a death keeps
       // now. The twelve-space indent is the `lifeLost` arm; `continued` has the same pair at eight.
-      find: '            arsenal: state.arsenal,\n            upgrades: state.upgrades,',
-      replace: '            arsenal: [],\n            upgrades: state.upgrades,',
+      // ⚠️ And by 0577, which made the ladder the tubes.
+      find: '            arsenal: state.arsenal,\n            tubes: state.tubes,',
+      replace: '            arsenal: [],\n            tubes: state.tubes,',
     },
   },
   {

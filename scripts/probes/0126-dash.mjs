@@ -148,10 +148,11 @@ export const PROBES = [
     // ⚠️ Re-aimed by 0441, which took the gun's ladder: the tubes are the one a tier climbs, so the
     // slider leaving them behind is a slider that moves nothing — the wrong ship over every mix.
     broke: 'a tier that leaves the tubes behind',
-    guard: 'A TIER IS THE TUBES’ LADDER, and it is the game’s own resolution of it',
+    // And by 0577, which took the ladder: a tier is how many tubes, and they are straight ones.
+    guard: 'A TIER IS HOW MANY TUBES, and it is the game’s own resolution of it',
     edit: {
       path: 'rig/transport.ts',
-      find: "  for (let i = 0; i < clamped; i++) carried.push('missile');",
+      find: "  for (let i = 0; i < clamped; i++) carried.push('straight');",
       replace: '  for (let i = 0; i < clamped; i++) void carried;',
     },
   },

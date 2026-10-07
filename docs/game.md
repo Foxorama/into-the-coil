@@ -183,7 +183,8 @@ Each ship carries:
   found. Always on, requires no input, and the only thing that fires itself.
 - **A starting special**: two charges of the ship's own gun's special. **Manual.**
 - **More specials, earned during the run.** The bomb pickup offers every gun's special to every ship,
-  and a full missile ladder's pickup buys a charge of that tube's own. Kept to the end of the run.
+  and a missile pickup taken with both tubes fitted buys a charge of its face's surge. Kept to the end
+  of the run.
 
 ⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials are triggered by the player — the
 Raiden II relationship between the shot you never think about and the bomb you have to spend.
@@ -227,19 +228,22 @@ seconds.
 | | a face buys | tiers | a level's places | the mid-boss drops | the end boss |
 |---|---|---|---|---|---|
 | **`bomb`** | one charge of the gun special its face shows — bomb, storm, whirlpool or candle | — | drawn | 1 | — |
-| **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | drawn | 1 | — |
+| **`missile`** | a tube of the kind its face shows, at the full rate, into the next empty one of two; with both fitted, a charge of that kind's surge | — | drawn | 1 | — |
 | **`shield`** | one hit that never reaches the hull, capped by the tier — 3, or none on Burn — or a charge of the void or the nova on the ward's trigger | — | drawn | 1; on Burn the `ward` in its place | — |
 | **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | a shield drawn on Burn | on Burn only, as the shield | — |
 
 A run starts with two charges of its own gun's special. **The bomb pickup is where the weapon pickup
 was** ([0441](decisions/0441-a-pilot-flies-their-own-ship.md)). Any ship can take any face for one
-charge of it. A missile pickup taken once its own ladder is full becomes a charge of that tube's special
+charge of it. A missile pickup taken with both tubes fitted becomes a charge of its face's special
 ([0373](decisions/0373-a-special-is-the-guns-own.md)). That is how *every upgrade is worth taking*
 survives a cap.
 
-**A missile pickup shows one tube**, and taking a different tube switches it and keeps the count
-([0256](decisions/0256-a-pickup-keeps-the-count.md)). **Every face of a pickup is its own glyph in its
-own ink**, inside the one bubble that says *pickup*:
+**The tubes are full or they are not** — [0577](decisions/0577-the-tubes-are-full.md). There is no
+ladder: a ship has two tube places, each empty, straight or homing, and a fitted tube fires at the full
+rate from the moment it is fitted. The first two missile pickups of a run fill the empty places with the
+kind their faces show, so a ship may carry one of each; a mixed rack fires one of each in a volley. A
+death and a continue keep them. **Every face of a pickup is its own glyph in its own ink**, inside the one
+bubble that says *pickup*:
 [0239](decisions/0239-the-guns-answer-the-third-play-test.md) and
 [0240](decisions/0240-the-blades-reach-the-boss.md).
 
@@ -253,10 +257,10 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | **shuriken** | the Firebird | steel blades, thrown in pairs from the front wheels. Each goes up the lane and swings across it, the two a half-turn apart, so their tracks are the two strands of a helix; they land on everything they cross, once per impact flash, and are not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0244](decisions/0244-a-blade-rides-a-helix.md) |
 | **ray** | the Little Green Caddie | four concentric lavender rings, one volley every eight steps, which burst where they land and hurt everything close by — [0442](decisions/0442-the-ray-gun.md) |
 
-| tube | what it does | a tier buys |
+| tube | what it does | its surge |
 |---|---|---|
-| **missiles** | fly the lane from the wings; three pulses each | a tube **and** a rate step, max 2 tubes |
-| **seekers** | hunt the nearest body on the screen — and only on the screen — from the moment they leave the tube, any direction, for a second and a half and then go out in a puff; two pulses each; in the ally ink — their own pickup face's — so a seeker is never mistaken for a missile, a bolt or the ship — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md), [0246](decisions/0246-a-seeker-hunts-on-the-screen.md) | the same |
+| **missiles** | fly the lane from the wings; three pulses each | overdrive |
+| **seekers** | hunt the nearest body on the screen — and only on the screen — from the moment they leave the tube, any direction, for a second and a half and then go out in a puff; two pulses each; in the ally ink — their own pickup face's — so a seeker is never mistaken for a missile, a bolt or the ship — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md), [0246](decisions/0246-a-seeker-hunts-on-the-screen.md) | hunt |
 
 | special | whose | what it does |
 |---|---|---|

@@ -8,16 +8,8 @@ import { MISSILES } from '../src/content/missiles.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import {
-  FASTEST_FIRE,
-  MAX_LAUNCHERS,
-  MISSILE_BEAT_RATIO,
-  UPGRADE_KINDS,
-  UPGRADE_TIERS,
-  missileEveryAt,
-  weaponFor,
-  type UpgradeKind,
-} from '../src/content/pickups.ts';
+import { FASTEST_FIRE, MAX_LAUNCHERS, MISSILE_BEAT_RATIO, weaponFor } from '../src/content/pickups.ts';
+import { MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
 /**
@@ -45,7 +37,7 @@ const A_WHILE = 200;
  * constant rather than a literal in eight places, because it is the same fact each time and it is
  * exactly the fact that just moved.
  */
-const ARMED: readonly UpgradeKind[] = ['missile'];
+const ARMED: readonly MissileKind[] = ['straight'];
 
 /*
   ⚠️ **EVERY SHIP'S HULL, SINCE 0441.** The tubes stand where `fireMissiles` puts them whatever ship
@@ -56,9 +48,9 @@ const HULL_EXTENTS = SHIP_KINDS.flatMap((kind) => SHIPS[kind].hulls.map((hull) =
 const NARROWEST_HULL = Math.min(...HULL_EXTENTS);
 const WIDEST_HULL = Math.max(...HULL_EXTENTS);
 
-function quietWorld(upgrades: readonly UpgradeKind[] = []): { world: World; frame: GameFrame } {
+function quietWorld(tubes: readonly MissileKind[] = []): { world: World; frame: GameFrame } {
   const built = playableWorld(NO_LEVEL);
-  built.world.weapon = weaponFor(built.world.shipRow, upgrades);
+  built.world.weapon = weaponFor(built.world.shipRow, tubes);
   built.world.fireIn = built.world.weapon.fireEvery;
   built.world.missileIn = built.world.weapon.missileEvery;
   return { world: built.world, frame: new GameFrame(built.world) };
@@ -166,19 +158,21 @@ describe('a launcher is a position on the ship', () => {
       ladder restated in a second place; this is a table of what the player gets, which is the thing a
       play-test can disagree with — and did.
     */
+    /*
+      ⚠️ **A COUNT OF TUBES SINCE 0577, AND IT WAS A COUNT OF RUNGS.** The ladder is gone; a list of
+      fitted kinds is what the weapon is resolved from, and past two the hull has nowhere to put one.
+    */
     const LAUNCHERS_AT: readonly (readonly [number, number])[] = [
       [1, 1],
       [2, 2],
       [3, 2],
-      [4, 2],
-      [6, 2],
       [12, 2],
     ];
-    for (const [upgradeCount, expected] of LAUNCHERS_AT) {
-      const upgrades: UpgradeKind[] = [];
-      for (let i = 0; i < upgradeCount; i++) upgrades.push('missile');
-      const { world, frame } = quietWorld(upgrades);
-      expect(world.weapon.launchers, `${upgradeCount} upgrades did not produce ${expected} launchers`).toBe(expected);
+    for (const [fittedCount, expected] of LAUNCHERS_AT) {
+      const fitted: MissileKind[] = [];
+      for (let i = 0; i < fittedCount; i++) fitted.push(MISSILE_KINDS[i % MISSILE_KINDS.length]!);
+      const { world, frame } = quietWorld(fitted);
+      expect(world.weapon.launchers, `${fittedCount} tubes did not produce ${expected} launchers`).toBe(expected);
 
       world.missileIn = 1;
       frame.step();
@@ -208,7 +202,7 @@ describe('a launcher is a position on the ship', () => {
       the whole atlas a quarter turn for portrait — and `tests/layout.browser.test.ts` is the file
       that owns that mapping.
     */
-    const one = quietWorld(['missile']);
+    const one = quietWorld(['straight']);
     one.world.missileIn = 1;
     one.frame.step();
     expect(one.world.missiles.size).toBe(1);
@@ -230,7 +224,7 @@ describe('a launcher is a position on the ship', () => {
     // upgrade kinds — the test above has the table, and this is the first place that shape is felt.
     // ⚠️ THREE, and it was two: 0083 interpolates two tubes across four tiers, so the second lands at
     // tier 3. The table in the test above is where that shape is stated.
-    const { world, frame } = quietWorld(['missile', 'missile', 'missile']);
+    const { world, frame } = quietWorld(['straight', 'straight']);
     world.missileIn = 1;
     frame.step();
     const across: number[] = [];
@@ -254,7 +248,7 @@ describe('a launcher is a position on the ship', () => {
     // upgrade kinds — the test above has the table, and this is the first place that shape is felt.
     // ⚠️ THREE, and it was two: 0083 interpolates two tubes across four tiers, so the second lands at
     // tier 3. The table in the test above is where that shape is stated.
-    const { world, frame } = quietWorld(['missile', 'missile', 'missile']);
+    const { world, frame } = quietWorld(['straight', 'straight']);
     world.missileIn = 1;
     frame.step();
     const shipAcross = world.ship.across;
@@ -387,87 +381,85 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
     */
     /** The fields belonging to each weapon, so neither list can quietly lose one. */
     const GUN = ['fireEvery', 'shots', 'spread', 'damage', 'kind', 'flight', 'links', 'reach', 'falloff', 'coil', 'turn'] as const;
-    const MISSILE = ['missileEvery', 'launchers', 'missileDamage'] as const;
+    const MISSILE = ['missileEvery', 'launchers', 'tubes'] as const;
 
     for (const ship of SHIP_KINDS) {
       const base = weaponFor(SHIPS[ship], []);
-      for (let tier = 1; tier <= UPGRADE_TIERS; tier++) {
-        const tube = weaponFor(SHIPS[ship], Array.from({ length: tier }, () => 'missile' as const));
-        expect(
-          MISSILE.some((f) => tube[f] !== base[f]),
-          `${ship}: ${tier} missile pickups changed nothing about the missiles`,
-        ).toBe(true);
-        for (const field of GUN) {
-          expect(tube[field], `${ship}: ${tier} missile pickups moved the gun's ${field}`).toBe(base[field]);
+      for (let count = 1; count <= MAX_LAUNCHERS; count++) {
+        for (const kind of MISSILE_KINDS) {
+          const tube = weaponFor(SHIPS[ship], Array.from({ length: count }, () => kind));
+          expect(
+            MISSILE.some((f) => JSON.stringify(tube[f]) !== JSON.stringify(base[f])),
+            `${ship}: ${count} ${kind} tubes changed nothing about the missiles`,
+          ).toBe(true);
+          for (const field of GUN) {
+            expect(tube[field], `${ship}: ${count} ${kind} tubes moved the gun's ${field}`).toBe(base[field]);
+          }
         }
       }
 
       // And the first tube is the second weapon ARRIVING, which 0056 must not lose.
       expect(
-        weaponFor(SHIPS[ship], ['missile']).launchers,
-        `${ship}: the first missile tier is not a tube, so the second weapon is not earned`,
+        weaponFor(SHIPS[ship], ['straight']).launchers,
+        `${ship}: the first tube is not a launcher, so the second weapon is not earned`,
       ).toBe(base.launchers + 1);
     }
   });
 
-  it('THE TIERS: each ladder is exactly UPGRADE_TIERS long, and every tier changes something', () => {
+  /*
+    ── `THE TIERS: each ladder is exactly UPGRADE_TIERS long` WAS HERE, AND 0577 TOOK THE LADDER ──────
+
+    It held that each of four rungs changed something and that a fifth did not. *"You either have full
+    tier missiles or you don't"*: there are no rungs to walk, and what a tube changes is held below.
+  */
+
+  it('0577 — A TUBE IS FULL FROM THE MOMENT IT IS FITTED: one tube fires at the old top rate, and a second adds a tube and nothing else', () => {
     /*
-      ⚠️ **THE NUMBER IS THE ASK AND IT IS NOW A CONSTANT** — *"4 tiers for weapons, 4 tiers for
-      missiles."* 0083 made `UPGRADE_TIERS` the statement and interpolated the cadences across it,
-      because under the old multiplicative ladder *how many tiers is a weapon* was whatever
-      `round(9 × 0.78ⁿ) ≥ 4` happened to produce — three, with nothing saying so.
-
-      ⚠️ **Every tier must change SOMETHING, which is `docs/game.md`'s rule and the thing rounding
-      threatens.** Tubes run 0 → 2 across four tiers, so some tiers buy a hardpoint and some buy rate
-      alone — but none may buy nothing, or a level is handing out a pickup that does not land. The
-      gun's ladder went in 0441, so the tubes are the one walked.
-
-      ⚠️ **And the ladder must STOP at the tier count**, or `effectOf`'s bomb conversion fires while
-      the ship is still improving.
+      *"Let's remove the missile upgrades, you either have full tier missiles or you don't."* The ladder
+      went tube, tube, rate, rate, so a single tube used to fire at a third of the top rate; now the
+      first tube fires at the counter-beat's floor, `MISSILE_BEAT_RATIO` times the fastest the gun may
+      fire, which is where the ladder's top rung stood — and the second changes only the count.
     */
-    // The tubes are the one ladder since 0441, and they are walked in every ship.
     for (const ship of SHIP_KINDS) {
-      for (const kind of UPGRADE_KINDS) {
-        const carried: UpgradeKind[] = [];
-        let previous = weaponFor(SHIPS[ship], carried);
-        for (let tier = 1; tier <= UPGRADE_TIERS; tier++) {
-          carried.push(kind);
-          const now = weaponFor(SHIPS[ship], carried);
-          expect(JSON.stringify(now), `${ship}: tier ${tier} of ${kind} changed nothing about the ship`).not.toBe(
-            JSON.stringify(previous),
-          );
-          previous = now;
-        }
-        const past = weaponFor(SHIPS[ship], [...carried, kind]);
-        expect(JSON.stringify(past), `${ship}: a ${kind} past tier ${UPGRADE_TIERS} still changed the ship`).toBe(
-          JSON.stringify(previous),
-        );
+      for (const kind of MISSILE_KINDS) {
+        const one = weaponFor(SHIPS[ship], [kind]);
+        const two = weaponFor(SHIPS[ship], [kind, kind]);
+        expect(one.missileEvery, `${ship}: one ${kind} tube does not fire at the top rate`).toBe(MISSILE_BEAT_RATIO * FASTEST_FIRE);
+        expect(two.missileEvery, `${ship}: a second ${kind} tube moved the rate`).toBe(one.missileEvery);
+        expect(two.launchers, `${ship}: a second ${kind} tube is not a second launcher`).toBe(one.launchers + 1);
       }
     }
   });
 
-  it('THE FLOORS: the last tier lands exactly on them, and nothing goes past', () => {
+  it('0577 — two tubes of two kinds each fire their own missile in one volley, top tube first', () => {
     /*
-      ⚠️ **Both floors are bounds rather than targets, and until 0083 the ladder stopped SHORT of
-      them** — a multiplicative step refuses the rung that would cross, so the fastest a fully-upgraded
-      ship ever fired was whatever the last legal multiply produced. Interpolating to the floor lands on
-      it, which is what makes *tier 4 is maxed* true rather than approximately true.
-
-      ⚠️ **Asserted against the ship's own base and the resolved maximum**, never against 4 and 20
-      typed here — those are `src/content/pickups.ts`'s numbers and this is a test of the RELATIONSHIP.
+      *"1 homing, 1 regular, 2 homing, 2 regular etc."* The volley is one cue and one clock; what leaves
+      each tube is that tube's own kind — its shot, its hunt and its fuse.
     */
+    for (const order of [['homing', 'straight'], ['straight', 'homing']] as const) {
+      const { world, frame } = quietWorld(order);
+      world.missileIn = 1;
+      frame.step();
+      expect(world.missiles.size, 'a mixed rack did not fire one missile per tube').toBe(2);
+      const fired = [world.missiles.at(0), world.missiles.at(1)].sort((a, b) => a.across - b.across);
+      order.forEach((kind, i) => {
+        const row = MISSILES[kind];
+        expect(fired[i]!.sprite, `tube ${i} fired something other than its ${kind}`).toBe(SHOTS[row.shot].sprite);
+        expect(fired[i]!.seekTurn, `tube ${i}'s ${kind} does not hunt as its row says`).toBe(row.seek);
+        expect(fired[i]!.damage, `tube ${i}'s ${kind} does not land what its row says`).toBe(SHOTS[row.shot].damage);
+      });
+    }
+  });
+
+  it('THE FLOORS: a full rack lands exactly on them, and nothing goes past', () => {
     /*
-      ⚠️ **THE GUN'S HALF IS GONE — 0441.** *The pulse lands exactly on `FASTEST_FIRE` and
-      `MAX_BARRELS` at its last tier* had the gun's ladder for its subject; every gun is now the value
-      its last rung was, and `tests/pickups.test.ts` holds every gun's row against both budgets. What
-      is left is the tubes' half, in every ship, against the same floor: the counter-beat is
-      `MISSILE_BEAT_RATIO` times the fastest the gun may fire, which is what the pulse's cap was.
+      ⚠️ **THE GUN'S HALF IS GONE — 0441**, and the tubes' ladder with 0577: what is held is that a full
+      rack fires at the counter-beat and carries the hull's two tubes, and that a longer list is the
+      same ship.
     */
     for (const ship of SHIP_KINDS) {
       const base = weaponFor(SHIPS[ship], []);
-      const tubes: UpgradeKind[] = [];
-      for (let i = 0; i < UPGRADE_TIERS; i++) tubes.push('missile');
-      const maxTube = weaponFor(SHIPS[ship], tubes);
+      const maxTube = weaponFor(SHIPS[ship], ['straight', 'straight']);
 
     /*
       ⚠️ **EQUALITY, AND IT WAS `toBeLessThan` — WHICH IS NOT WHAT THIS TEST IS NAMED.** *"The last
@@ -492,15 +484,10 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
         MISSILE_BEAT_RATIO * FASTEST_FIRE,
       );
       expect(maxTube.launchers, `${ship}: the missiles never reach their tube cap`).toBe(MAX_LAUNCHERS);
-      /*
-        A twentieth is the same as the fourth — the ladder is a function of the tier, and the tier is
-        clamped. This is the property that replaced the `continue` the loop used to need.
-      */
-      const absurd: UpgradeKind[] = [];
-      for (let i = 0; i < 20; i++) absurd.push('missile');
-      expect(weaponFor(SHIPS[ship], absurd), `${ship}: the tube ladder kept climbing past its tiers`).toEqual(maxTube);
+      // A twentieth tube is the same as the second — the hull has two places, and the list is clamped.
+      const absurd: MissileKind[] = Array.from({ length: 20 }, () => 'straight');
+      expect(weaponFor(SHIPS[ship], absurd), `${ship}: the tubes kept climbing past the hull`).toEqual(maxTube);
       expect(maxTube.damage, `${ship}: the gun gains damage from the tubes`).toBe(base.damage);
-      expect(maxTube.missileDamage, `${ship}: the missile gains damage without a ceiling again`).toBe(base.missileDamage);
     }
   });
 
@@ -518,10 +505,9 @@ describe('the upgrades reach the weapon rather than the wrong one', () => {
     for (const ship of SHIP_KINDS) {
       const base = weaponFor(SHIPS[ship], []);
       expect(base.launchers, `${ship} still carries a launcher of its own`).toBe(0);
-      // 0093: the missile's cadence is derived from the pulse's, so the base is the ratio at tier 0.
-      // 0233: the note value is the missile KIND's own ladder at rung 0, not the pulse's.
-      expect(base.missileEvery).toBe(MISSILE_BEAT_RATIO * missileEveryAt(MISSILES[SHIPS[ship].missile], 0));
-      expect(base.missileDamage).toBe(SHOTS[MISSILES[SHIPS[ship].missile].shot].damage);
+      // 0577: a bare ship's clock is the slowest kind's — the one a surge's pods ride (0379).
+      expect(base.missileEvery).toBe(MISSILE_BEAT_RATIO * Math.max(...MISSILE_KINDS.map((k) => MISSILES[k].missileEvery)));
+      expect(base.tubes, `${ship} carries a tube kind with no tube`).toEqual([]);
     }
   });
 

@@ -48,7 +48,7 @@ import { MASTER_GAIN, SAMPLE_RATE, sampleCue, variantAt, velocitiesOf } from '..
 import { makeRng } from '../src/sim/rng.ts';
 import { loudest } from './spectrum.ts';
 import { ROWS as THROW_ROWS, THROW_VOICE_KINDS } from '../rig/throws.ts';
-import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { MAX_LAUNCHERS, weaponFor } from '../src/content/pickups.ts';
 
 /**
  * THE SOUND DASHBOARD, HELD TO THE GAME — `docs/decisions/0126-the-dashboard-is-the-instrument.md`.
@@ -315,11 +315,12 @@ describe('how long a layer is open, against how long its own loop is', () => {
 });
 
 describe('what plays over the top of it', () => {
-  it('A TIER IS THE TUBES’ LADDER, and it is the game’s own resolution of it', () => {
+  it('A TIER IS HOW MANY TUBES, and it is the game’s own resolution of it', () => {
     // Both ladders until 0441, which took the gun's away: the gun is the ship's, at its old cap. The
     // dashboard sounds the pulse, so it is the pulse's ship.
-    for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
-      const carried = Array.from({ length: tier }, () => 'missile' as const);
+    // ⚠️ The tubes' ladder of four was here; 0577 took it, so a tier is a count of straight tubes, 0 to 2.
+    for (let tier = 0; tier <= MAX_LAUNCHERS; tier++) {
+      const carried = Array.from({ length: tier }, () => 'straight' as const);
       expect(weaponAtTier(tier), `tier ${tier} is not what weaponFor resolves`).toEqual(
         weaponFor(SHIPS[shipCarrying('pulse')], carried),
       );
@@ -331,11 +332,11 @@ describe('what plays over the top of it', () => {
     // auto-weapon over a mix the player does not have one in.
     const missile = cueLines(0, 'run', 1.6).find((c) => c.kind === 'missile')!;
     expect(missile.sounds, 'the dashboard fires a missile the ship has not found yet').toBe(false);
-    expect(cueLines(UPGRADE_TIERS, 'run', 1.6).find((c) => c.kind === 'missile')!.sounds).toBe(true);
+    expect(cueLines(MAX_LAUNCHERS, 'run', 1.6).find((c) => c.kind === 'missile')!.sounds).toBe(true);
   });
 
   it('THE GUN’S CADENCE IS THE SHIP’S, never a number typed into the rig', () => {
-    for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
+    for (let tier = 0; tier <= MAX_LAUNCHERS; tier++) {
       const weapon = weaponAtTier(tier);
       const pulse = cueLines(tier, 'run', 1.6).find((c) => c.kind === 'pulse')!;
       expect(pulse.every, `tier ${tier}: the pulse is not on the ship's own fireEvery`).toBe(weapon.fireEvery);

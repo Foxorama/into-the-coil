@@ -51,7 +51,8 @@ import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { THEMES, THEME_KINDS, mixOf, rungIn, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
 import { SHIPS, type ShipKind } from '../src/content/ships.ts';
 import { cueOfFlight } from '../src/app/frame.ts';
-import { UPGRADE_TIERS, weaponFor, type UpgradeKind, type Weapon } from '../src/content/pickups.ts';
+import { MAX_LAUNCHERS, weaponFor, type Weapon } from '../src/content/pickups.ts';
+import type { MissileKind } from '../src/content/missiles.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import type { CueKind } from '../src/content/cues.ts';
 
@@ -737,7 +738,8 @@ export function loudestGain(theme: ThemeKind, layer: MusicLayer): number {
 }
 
 /**
- * The ship at upgrade tier `tier`, on both ladders.
+ * The ship carrying `tier` tubes, straight ones — 0577: there are no rungs, so a tier is how many tubes
+ * are fitted, nought to `MAX_LAUNCHERS`; it was the tubes' ladder of four.
  *
  * ⚠️ **One description, shared with `scripts/hear.mjs --play`**, which built this list inline. Two
  * copies of *what is a tier-two ship* is how the dashboard and the WAV rig end up disagreeing about
@@ -749,10 +751,10 @@ export function loudestGain(theme: ThemeKind, layer: MusicLayer): number {
  * `hear.mjs` and every call that never asked are unchanged.
  */
 export function weaponAtTier(tier: number, ship: ShipKind = 'fighter'): Weapon {
-  const carried: UpgradeKind[] = [];
-  const clamped = tier < 0 ? 0 : tier > UPGRADE_TIERS ? UPGRADE_TIERS : Math.floor(tier);
-  // The tubes only since 0441: the gun is the ship's, at the top of what was its ladder.
-  for (let i = 0; i < clamped; i++) carried.push('missile');
+  const carried: MissileKind[] = [];
+  const clamped = tier < 0 ? 0 : tier > MAX_LAUNCHERS ? MAX_LAUNCHERS : Math.floor(tier);
+  // The tubes only since 0441: the gun is the ship's. Every tube at the one rate since 0577.
+  for (let i = 0; i < clamped; i++) carried.push('straight');
   return weaponFor(SHIPS[ship], carried);
 }
 

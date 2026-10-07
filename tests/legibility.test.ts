@@ -4,11 +4,9 @@ import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import {
   MAX_LAUNCHERS,
-  UPGRADE_KINDS,
-  UPGRADE_TIERS,
-  type UpgradeKind,
   weaponFor,
 } from '../src/content/pickups.ts';
+import { MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { SHIPS, SHIP_KINDS, hullFor } from '../src/content/ships.ts';
 import { SHOTS, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
@@ -376,22 +374,29 @@ describe('the ship wears what it is carrying', () => {
       with the gun's tiers. What survives is the half a run can still break — the stage the ship is
       drawn at climbs with the tubes it carries, never goes backwards, and stops at the last hull.
     */
+    /*
+      ⚠️ **The scan over the tubes' ladder was here; 0577 took the ladder**, so the list is the kinds
+      fitted and its length is the count. Walked past the cap, over every kind in turn, so a list longer
+      than the rack, or a mixed one, cannot draw a hull the count does not name.
+    */
     for (const kind of SHIP_KINDS) {
       const row = SHIPS[kind];
-      const stageOf = (carried: readonly UpgradeKind[]): number => row.hulls.indexOf(hullFor(row, weaponFor(row, carried).launchers));
+      const stageOf = (carried: readonly MissileKind[]): number => row.hulls.indexOf(hullFor(row, weaponFor(row, carried).launchers));
       expect(stageOf([]), `the ${kind} opens on a hull with tubes it has not taken`).toBe(0);
-      let last = -1;
-      for (let n = 0; n <= UPGRADE_TIERS * UPGRADE_KINDS.length + 6; n++) {
-        const carried: UpgradeKind[] = [];
-        for (let i = 0; i < n; i++) carried.push(UPGRADE_KINDS[i % UPGRADE_KINDS.length]!);
-        const launchers = weaponFor(row, carried).launchers;
-        // ⚠️ The resolved count against the hulls there are, BEFORE `hullFor`'s clamp hides it.
-        expect(launchers, `the ${kind} resolved more tubes than it has hulls for`).toBeLessThanOrEqual(row.hulls.length - 1);
-        const stage = stageOf(carried);
-        expect(stage, `the ${kind}'s hull went backwards as it upgraded`).toBeGreaterThanOrEqual(last);
-        last = stage;
+      for (const first of MISSILE_KINDS.keys()) {
+        let last = -1;
+        for (let n = 0; n <= MAX_LAUNCHERS + 2; n++) {
+          const carried: MissileKind[] = [];
+          for (let i = 0; i < n; i++) carried.push(MISSILE_KINDS[(first + i) % MISSILE_KINDS.length]!);
+          const launchers = weaponFor(row, carried).launchers;
+          // ⚠️ The resolved count against the hulls there are, BEFORE `hullFor`'s clamp hides it.
+          expect(launchers, `the ${kind} resolved more tubes than it has hulls for`).toBeLessThanOrEqual(row.hulls.length - 1);
+          const stage = stageOf(carried);
+          expect(stage, `the ${kind}'s hull went backwards as it took ${carried.join(', ')}`).toBeGreaterThanOrEqual(last);
+          last = stage;
+        }
+        expect(last, `a fully fitted ${kind} never reaches its last hull`).toBe(MAX_LAUNCHERS);
       }
-      expect(last, `a fully upgraded ${kind} never reaches its last hull`).toBe(MAX_LAUNCHERS);
     }
   });
 
@@ -415,7 +420,7 @@ describe('the ship wears what it is carrying', () => {
       const bare = row.hulls[0].base;
       expect(recorder.blits.some((b) => b.sprite === bare), `the bare ${kind} was not drawn, so this measures nothing`).toBe(true);
 
-      built.world.weapon = weaponFor(row, [UPGRADE_KINDS[0]!, UPGRADE_KINDS[0]!]);
+      built.world.weapon = weaponFor(row, ['straight', 'straight']);
       wearHull(built.world);
       frame.draw(0);
       expect(

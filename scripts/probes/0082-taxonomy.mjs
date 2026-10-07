@@ -60,7 +60,8 @@ export const PROBES = [
     broke: 'the overflow damage written back, so a capped weapon keeps getting stronger forever',
     // ⚠️ The guard was `THE NERF: a weapon past its caps stops growing` and 0083 folded its assertions
     // into `THE FLOORS`, which now holds both halves: the ladder stops, and the damage does not climb.
-    guard: 'THE FLOORS: the last tier lands exactly on them',
+    // ⚠️ And renamed by 0577, which took the tiers: the floors are a full rack's.
+    guard: 'THE FLOORS: a full rack lands exactly on them',
     edit: {
       path: 'src/content/pickups.ts',
       /*
@@ -75,8 +76,9 @@ export const PROBES = [
         becomes weight. Runtime-valid, one line, and exactly as plausible — it is what somebody
         restoring `docs/game.md`'s *"every upgrade is worth taking"* would reach for.
       */
+      // ⚠️ Re-aimed by 0577: past the hull's two tubes, every further tube becomes weight.
       find: '    damage,\n    missileEvery,',
-      replace: '    damage: damage + Math.max(0, upgrades.length - 5),\n    missileEvery,',
+      replace: '    damage: damage + Math.max(0, tubes.length - 2),\n    missileEvery,',
     },
   },
   {
@@ -105,7 +107,8 @@ export const PROBES = [
       */
       // ⚠️ Re-anchored by 0233: the narrowing is the last line of `effectOf` now. The break is the
       // same — the cap never consulted, so the row's general answer is the whole answer.
-      find: "  return upgradeGrows(loadout.upgrades, kind) ? 'upgrade' : 'special';",
+      // ⚠️ And by 0577: the narrowing asks whether a tube is empty.
+      find: "  return tubeRoom(loadout.tubes) ? 'upgrade' : 'special';",
       replace: "  return 'upgrade';",
     },
   },

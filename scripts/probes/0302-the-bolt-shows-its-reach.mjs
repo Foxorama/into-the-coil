@@ -48,7 +48,8 @@ export const PROBES = [
     // And the same thing done in the table rather than in the code — a chaining row authored to
     // keep its whole reach at every link. The frame is untouched and correct; the content is not.
     broke: 'the arc’s falloff authored at 1, so the row asks for the chain that was reported',
-    guard: 'a ladder per rung',
+    // Renamed by 0577, which took the tubes' ladder: the falloff check stayed in the same test.
+    guard: 'every tube fitted changes the tubes',
     edit: {
       path: 'src/content/weapons.ts',
       find: '    falloff: 0.6,',

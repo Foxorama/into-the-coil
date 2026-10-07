@@ -23,7 +23,6 @@ import type { Body } from '../sim/entity.ts';
 import type { Ink } from './palette.ts';
 import { SHIP_BOX, SPRITE } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
-import type { MissileKind } from './missiles.ts';
 import type { DangleKind } from './dangles.ts';
 import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
@@ -40,12 +39,8 @@ export interface ShipRow extends Body {
    * only."* Nothing changes it: the pickup that once switched guns (0233) buys a special now.
    */
   weapon: WeaponKind;
-  /**
-   * The tube this ship opens with. The missile pickup still cycles the tubes and still switches
-   * them — *"missiles have no change currently"* — so which tube is fitted is the run's
-   * (`src/state/slices/run.ts`), and this is what a run begins on.
-   */
-  missile: MissileKind;
+  // `missile`, the tube kind every ship opened its ladder on, went with the ladder — 0577: a run opens
+  // on the tubes it carries in, and a missile pickup fits the kind its face shows.
   /**
    * The ship at no tubes, one tube and two, each with its hurt twin — 0441. A missile pickup changes
    * the picture by moving the ship along this, which is how 0081's *every upgrade changes how the ship
@@ -397,7 +392,6 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     health: 1,
     damage: 0,
     weapon: 'pulse',
-    missile: 'straight',
     hulls: [
       { base: SPRITE.fighter, hit: SPRITE.fighterHit },
       { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
@@ -448,7 +442,6 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     health: 1,
     damage: 0,
     weapon: 'ray',
-    missile: 'straight',
     hulls: [
       { base: SPRITE.caddie, hit: SPRITE.caddieHit },
       { base: SPRITE.caddieTube, hit: SPRITE.caddieTubeHit },
@@ -520,7 +513,6 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     health: 1,
     damage: 0,
     weapon: 'catherine',
-    missile: 'straight',
     hulls: [
       { base: SPRITE.firebird, hit: SPRITE.firebirdHit },
       { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
@@ -574,7 +566,6 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     health: 1,
     damage: 0,
     weapon: 'shuriken',
-    missile: 'straight',
     hulls: [
       { base: SPRITE.estate, hit: SPRITE.estateHit },
       { base: SPRITE.estateTube, hit: SPRITE.estateTubeHit },
@@ -628,7 +619,6 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     health: 1,
     damage: 0,
     weapon: 'arc',
-    missile: 'straight',
     hulls: [
       { base: SPRITE.thunderbolt, hit: SPRITE.thunderboltHit },
       { base: SPRITE.thunderboltTube, hit: SPRITE.thunderboltTubeHit },

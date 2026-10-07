@@ -17,7 +17,8 @@ export const PROBES = [
     suite: 'tests/wheel.test.ts',
     broke: 'two ships on the pulse and the shuriken on none',
     guard: 'and every gun is still exactly one ship’s own',
-    edit: { path: 'src/content/ships.ts', find: "    weapon: 'shuriken',\n    missile: 'straight',", replace: "    weapon: 'pulse',\n    missile: 'straight'," },
+    // Re-anchored by 0577, which took the row's `missile`: the hulls follow the gun now.
+    edit: { path: 'src/content/ships.ts', find: "    weapon: 'shuriken',\n    hulls: [", replace: "    weapon: 'pulse',\n    hulls: [" },
   },
   {
     decision: '0545',

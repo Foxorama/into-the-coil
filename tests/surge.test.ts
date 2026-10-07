@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { GameFrame, MUZZLE_ALONG, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
-import { BOMB_KINDS, PICKUPS, UPGRADE_TIERS, effectOf, specialOf, weaponFor, type Loadout, type UpgradeKind } from '../src/content/pickups.ts';
+import { MISSILES, MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
+import { BOMB_KINDS, MAX_LAUNCHERS, PICKUPS, effectOf, specialOf, weaponFor, type Loadout } from '../src/content/pickups.ts';
 import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, podSide, type Surge } from '../src/content/specials.ts';
 import { CAPACITY } from '../src/app/mount.ts';
@@ -27,9 +27,10 @@ import { NO_LEVEL, playableWorld } from './world.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
 
-function full(kind: UpgradeKind): UpgradeKind[] {
-  const out: UpgradeKind[] = [];
-  for (let i = 0; i < UPGRADE_TIERS; i++) out.push(kind);
+/** Both tubes fitted with `kind` — a full rack since 0577, which took the ladder of four. */
+function full(kind: MissileKind): MissileKind[] {
+  const out: MissileKind[] = [];
+  for (let i = 0; i < MAX_LAUNCHERS; i++) out.push(kind);
   return out;
 }
 
@@ -40,7 +41,7 @@ function full(kind: UpgradeKind): UpgradeKind[] {
 function fitted(gun: (typeof WEAPON_KINDS)[number], tube: (typeof MISSILE_KINDS)[number]): { world: World; frame: GameFrame } {
   const { world } = playableWorld(NO_LEVEL);
   world.shipRow = SHIPS[shipCarrying(gun)];
-  world.weapon = weaponFor(world.shipRow, full('missile'), tube);
+  world.weapon = weaponFor(world.shipRow, full(tube));
   wearHull(world);
   world.fireIn = NEVER;
   world.missileIn = NEVER;
@@ -55,10 +56,20 @@ describe('0373 — a full ladder buys the face’s own special', () => {
     `tests/pickups.test.ts`.
   */
   it('THE ASK: every tube, overflowed, stocks the special its row names', () => {
+    /*
+      ⚠️ **Overflowed was a full ladder of the face's own kind; since 0577 it is a full rack of any.**
+      *"Any following missile powerups give them the supercharge"* — so every face is held against
+      every pair of fitted kinds, mixed ones too, and a rack with a tube still empty is not overflowed.
+    */
     for (const tube of MISSILE_KINDS) {
-      const loadout: Loadout = { upgrades: full('missile'), missile: tube };
       const face = MISSILE_KINDS.indexOf(tube);
-      expect(effectOf('missile', face, loadout), `full ${tube} tubes did not overflow`).toBe('special');
+      for (const top of MISSILE_KINDS) {
+        for (const bottom of MISSILE_KINDS) {
+          const loadout: Loadout = { tubes: [top, bottom] };
+          expect(effectOf('missile', face, loadout), `a ${tube} face over ${top}+${bottom} tubes did not overflow`).toBe('special');
+        }
+        expect(effectOf('missile', face, { tubes: [top] }), `a ${tube} face overflowed one ${top} tube`).toBe('upgrade');
+      }
       expect(specialOf('missile', face), `full ${tube} tubes bought somebody else's special`).toBe(MISSILES[tube].special);
     }
   });
@@ -73,13 +84,13 @@ describe('0373 — a full ladder buys the face’s own special', () => {
       if (SPECIALS[WEAPONS[gun].special].side === 'ward') {
         const face = PICKUPS.shield.faces.indexOf(SPECIALS[WEAPONS[gun].special].face);
         expect(face, `the ${gun}'s ${WEAPONS[gun].special} is on no face of the shield pickup`).toBeGreaterThan(0);
-        expect(effectOf('shield', face, { upgrades: [], missile: 'straight' })).toBe('special');
+        expect(effectOf('shield', face, { tubes: [] })).toBe('special');
         expect(specialOf('shield', face), `a shield pickup showing the ${gun}'s special bought somebody else's`).toBe(WEAPONS[gun].special);
         continue;
       }
       const face = BOMB_KINDS.indexOf(WEAPONS[gun].special);
       expect(face, `the ${gun}'s ${WEAPONS[gun].special} is on no face of the bomb pickup`).toBeGreaterThanOrEqual(0);
-      expect(effectOf('bomb', face, { upgrades: [], missile: 'straight' }), `a bomb pickup showing the ${gun}'s special is not a special`).toBe('special');
+      expect(effectOf('bomb', face, { tubes: [] }), `a bomb pickup showing the ${gun}'s special is not a special`).toBe('special');
       expect(specialOf('bomb', face), `a bomb pickup showing the ${gun}'s special bought somebody else's`).toBe(WEAPONS[gun].special);
     }
   });
@@ -122,7 +133,7 @@ describe('0379 — a tube special fires its own, and the fitted tubes fire as th
         const { tubes, pods } = volley(world, frame, surge);
         expect(tubes.length, `${tube} tubes with ${kind} did not fire their own`).toBe(world.weapon.launchers);
         for (const m of tubes) {
-          expect(m.damage, `${kind} charged the ${tube} tubes it was not earned from`).toBe(world.weapon.missileDamage);
+          expect(m.damage, `${kind} charged the ${tube} tubes it was not earned from`).toBe(SHOTS[MISSILES[tube].shot].damage);
           expect(m.health, `${kind} made the ${tube} tubes pierce`).toBe(1);
           expect(m.sprite, `the fitted tubes fired something other than ${tube}`).toBe(SHOTS[MISSILES[tube].shot].sprite);
         }
