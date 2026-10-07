@@ -76,7 +76,8 @@ export const PROBES = [
     guard: 'stands the tab’s keeper at their counter beside the pad',
     edit: {
       path: 'src/render/port.ts',
-      find: '    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);',
+      // 0570: on the dock's mezzanine.
+      find: '    put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);',
       replace: '',
     },
   },

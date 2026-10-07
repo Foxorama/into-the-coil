@@ -36,6 +36,7 @@
  */
 
 import { SHIP_BOX, SPRITE_EXTENT } from './sprites.ts';
+import type { KeeperKind } from './keepers.ts';
 
 /**
  * How much bigger a ship is in the hangar than in flight — 0441, as 0450 corrected it.
@@ -124,6 +125,15 @@ export const PORT_KINDS = [
   'booth',
   // 0550: the viewport in the back wall, its frame and its glass — the stars are the sky behind the wall.
   'viewport',
+  /*
+    0570: the dock the hangar's tabs stand in — the mezzanine's catwalk, a tile of it; the cradle the
+    pilot's ship rides on; and the planet hung in the open bay.
+  */
+  'catwalk',
+  'cradle',
+  'planet',
+  // 0570: the alcove in the back wall each keeper's counter stands in — a shopfront, lit from inside.
+  'alcove',
 ] as const;
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
@@ -204,7 +214,48 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   booth: 30,
   // 0550: two wall tiles wide and a frame's width over, so the frame laps the wall round the hole.
   viewport: 44,
+  // 0570: a catwalk tile, the cradle under a ship's box with its clamps, and the planet — baked small and
+  // blitted up (`DOCK.planetGrow`): it is soft by nature, and a whole one at the screen's scale is megabytes.
+  catwalk: 20,
+  cradle: 44,
+  planet: 80,
+  alcove: 36,
 };
+
+/**
+ * ── THE DOCK — 0570 ──────────────────────────────────────────────────────────────────────────────
+ *
+ * Where the hangar's tabs stand: *"a fun spaceship hangar set against a space backdrop, space for the
+ * tradie/merchant stalls to show, the spaceship to show the changes"*. A shorter room than the intro's,
+ * open to space on the right with a planet in the bay; a mezzanine along the back wall carrying the three
+ * keepers' shopfronts side by side, in the tabs' order; and under it the pilot's ship on a cradle on the
+ * deck. Its own numbers, so the intro's room (`STAGE`) is the intro's.
+ */
+export const DOCK = {
+  /** Where the back wall ends and the open bay begins — a multiple of the wall's tile. */
+  bay: 160,
+  /** The mezzanine's walking surface, across, and how far along it runs. */
+  catwalk: 60,
+  catwalkFrom: 56,
+  catwalkTo: 160,
+  /**
+   * Each shopfront's centre along the mezzanine, in the tabs' order, and their centre across — standing on
+   * the catwalk, with the counter's front down to it (`PORT_EXTENT` of a counter is 30, its foot at +15).
+   */
+  shops: { unity: 80, mmxxvi: 112, cosmo: 144 } as Record<KeeperKind, number>,
+  /** How much the shops and their keepers are drawn down from the size they were baked for the floor. */
+  shopScale: 0.78,
+  shopAcross: 48.3,
+  /** The pilot's ship's centre on its cradle, along, how high it rides, and how much larger than the intro's. */
+  ship: 118,
+  ride: 87,
+  shipGrow: 1.35,
+  /** The planet's centre in the bay, and how much it is blitted up. */
+  planet: { along: 214, across: 116 },
+  planetGrow: 1.7,
+  /** The lamps under the truss. */
+  lamps: [70, 124] as readonly number[],
+} as const;
 
 /**
  * How many times its ship's box a flame's box is.

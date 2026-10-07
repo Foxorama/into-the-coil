@@ -8,14 +8,13 @@ export const PROBES = [
   {
     decision: '0550',
     suite: 'tests/stand.test.ts',
-    // Cosmo on all three tabs again, as 0548 left it.
-    broke: 'Cosmo at the counter on every tab',
-    guard: 'draws each tab’s own keeper at the counter',
+    // 0570: every shop is in the room, so the break is the tab's own shop dimmed with the rest.
+    broke: 'the open tab’s shop dimmed like the others',
+    guard: 'lights each tab’s own keeper’s shop',
     edit: {
       path: 'src/render/port.ts',
-      // 0569: the row is read once for the keeper and their spot.
-      find: '  const row = keeper === null ? null : KEEPERS[keeper];',
-      replace: "  const row = keeper === null ? null : KEEPERS['cosmo'];",
+      find: '    if (keeper !== null && kind !== keeper) put(surface, view, PORT_SPRITE.veil,',
+      replace: '    if (keeper !== null) put(surface, view, PORT_SPRITE.veil,',
     },
   },
   {
@@ -23,7 +22,7 @@ export const PROBES = [
     suite: 'tests/stand.test.ts',
     // Two tabs naming one keeper.
     broke: 'Paint & Parts kept by Unity',
-    guard: 'draws each tab’s own keeper at the counter',
+    guard: 'lights each tab’s own keeper’s shop',
     edit: {
       path: 'src/state/screens.ts',
       find: "      // 0550: MMXXVI, who paints it.\n      keeper: 'mmxxvi',",

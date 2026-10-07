@@ -36,7 +36,6 @@ import { SIDES, SIDE_LABELS } from '../content/specials.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
-import { STAND_PAD_AT } from '../content/port.ts';
 import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
@@ -1655,12 +1654,47 @@ ${banded((p) => `.${p}option-shut::after`)} {
   border-radius: 0.1em;
   background: currentColor;
 }
-${banded((p) => `.${p}option-look`)} {
-  opacity: 1;
-  outline: 3px solid var(--itc-ink);
-  outline-offset: 2px;
-  box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 45%, transparent);
+/*
+  ⚠️ **THE CURSOR IS CORNER BRACKETS, AND IT VANISHED ON THE FITTED OPTION — 0570.** Played: *"the focus
+  selector also disappears when you move focus over the 'selected item'"*. The cursor on a band that tries
+  was the try-on's ring, and with the cursor back on the fitted one there is no try-on, so there was no ring:
+  only the fill, which is the fitted one's and not the cursor's. The cursor is now four white corner brackets
+  round the option it is on — the one tried on, or the fitted one when nothing is — on the band the cursor
+  is on, and never the fill, so where the player is and what is fitted are told apart on every option.
+*/
+${banded((p) => `.${p}option-look`)} { opacity: 1; }
+${banded((p) => `.${p}band.${p}action-cursor .${p}option-look`)},
+${banded((p) => `.${p}band.${p}action-cursor:not(:has(.${p}option-look)) .${p}option-on`)} {
+  position: relative;
+  outline: none;
 }
+${banded((p) => `.${p}band.${p}action-cursor .${p}option-look::after`)},
+${banded((p) => `.${p}band.${p}action-cursor:not(:has(.${p}option-look)) .${p}option-on::after`)} {
+  content: '';
+  position: absolute;
+  inset: -0.32em;
+  pointer-events: none;
+  --itc-bracket: #ffffff;
+  background:
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top left / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top left / 0.16em 0.7em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top right / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top right / 0.16em 0.7em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom left / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom left / 0.16em 0.7em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom right / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom right / 0.16em 0.7em no-repeat;
+  filter: drop-shadow(0 0 0.2em color-mix(in srgb, var(--itc-ink) 70%, transparent));
+}
+@media (prefers-reduced-motion: no-preference) {
+  ${banded((p) => `.${p}band.${p}action-cursor .${p}option-look::after`)},
+  ${banded((p) => `.${p}band.${p}action-cursor:not(:has(.${p}option-look)) .${p}option-on::after`)} { animation: itc-bracket 1.1s ease-in-out infinite alternate; }
+}
+@keyframes itc-bracket { to { inset: -0.2em; } }
+/* The row's own ring under the cursor stands down: the brackets say which row and which option. */
+${banded((p) => `.${p}band.${p}action-cursor`)} { outline: none; }
+/* A shut option's padlock is its ::after, which the brackets take; under the cursor its line says it is shut. */
+${banded((p) => `.${p}band.${p}action-cursor .${p}option-shut.${p}option-look::before`)} { display: none; }
 ${banded((p) => `.${p}option-shut.${p}option-look`)} { opacity: 0.8; }
 /* The tick sits in the fitted option's corner, so it takes no line of its own from the label. */
 .itc-hangar-option-on:not(.itc-hangar-option-face), .itc-parts-option-on:not(.itc-parts-option-face) { position: relative; }
@@ -2662,6 +2696,20 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The balance a step smaller on a phone, in the stand's corner where it stands on a desktop (0539). */
   .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { font-size: 0.8em; }
+  /*
+    0570: on a phone held sideways the dash is a strip on the deck under the ship, in the stand's foot — at
+    0566's floor it stood in two rows over the ship. Twelve pixels, the floor's own size for a count.
+  */
+  .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { position: relative; }
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { position: absolute; left: 50%; bottom: 0.2rem; translate: -50% 0; margin: 0; padding-bottom: 1.6em; font-size: 0.75rem; max-width: none; }
+  .itc-hangar-dash > .itc-playing-hud, .itc-parts-dash > .itc-playing-hud, .itc-shop-dash > .itc-playing-hud { flex-wrap: nowrap; column-gap: 0.4em; padding-left: 0.4em; padding-right: 0.4em; }
+  /*
+    ⚠️ **AND ON A NARROW PHONE IT IS SMALLER THAN 0566'S FLOOR, ON PURPOSE.** The stand is a third of a
+    667's width, and the strip at twelve pixels is wider than that; in two rows it was a column over the
+    ship. So it is set by the width, one line under the ship, about ten pixels at 667 — the dash and what
+    hangs from it read, the counts are small. Owed the player's word.
+  */
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.56rem, 1.3cqw, 0.75rem); left: 0.3rem; translate: 0 0; }
   /* 0562: the card in one line on a phone — the option and what it is to the player; the rest is the band's. */
   .itc-hangar-focus, .itc-parts-focus, .itc-shop-focus { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'name' 'state'; padding: 0.2em 0.5em; font-size: 0.8em; }
   .itc-hangar-focus-state, .itc-parts-focus-state, .itc-shop-focus-state { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2987,7 +3035,37 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-plate > .itc-hangar-foot, .itc-parts-plate > .itc-parts-foot, .itc-shop-plate > .itc-shop-foot { flex: none; }
   .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { grid-area: stand; position: relative; }
   /* The balance is in the plate's foot; the dash on the deck under the ship, which stands in the stand's middle. */
-  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { position: absolute; left: ${STAND_PAD_AT * 100}%; bottom: 0.6rem; translate: -50% 0; margin: 0; padding-bottom: 2.2em; font-size: 0.85rem; }
+  /*
+    0570: the dash has a place of its own — *"The cockpit dash is still just … 'there'"*. A cockpit monitor
+    standing on the deck in the stand's near corner, clear of the ship: a framed screen titled *Cockpit*, the dash plate
+    on it and whatever hangs from it swinging below, as it would through the ship's windscreen.
+  */
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash {
+    position: absolute;
+    left: 1.5%;
+    bottom: 2%;
+    max-width: min(24rem, 26%);
+    margin: 0;
+    padding: 1.7em 1.1em 3.4em;
+    font-size: 0.85rem;
+    border-radius: 0.6em;
+    border: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 70%, var(--itc-ink));
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--itc-ink) 10%, transparent), transparent 40%),
+      color-mix(in srgb, var(--itc-void) 88%, transparent);
+    box-shadow: 0 0 1.4em color-mix(in srgb, var(--itc-ink) 22%, transparent), inset 0 0 1em rgba(0, 0, 0, 0.6);
+  }
+  .itc-hangar-dash::before, .itc-parts-dash::before, .itc-shop-dash::before {
+    content: 'Cockpit';
+    position: absolute;
+    left: 0.9em;
+    top: 0.45em;
+    font-size: 0.72em;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--itc-ally, var(--itc-ink));
+  }
   .itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs { font-size: 0.78rem; gap: 0.2em; }
   .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { flex: 1 1 auto; min-width: 0; padding: 0.35em 0.35em 0.3em; overflow: hidden; text-overflow: ellipsis; }
   /* The faces a size that fits the column, all five in view. */
