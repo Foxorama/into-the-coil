@@ -551,12 +551,14 @@ describe('how far up the ladder a run is', () => {
     const OPENS_AT: Record<LevelKind, readonly (readonly [string, number])[]> = {
       // ⚠️ 0503 — every level closed up by a tenth and every boundary put back on the nearest bar, a unit
       // short of it: the approach's `surge` was 44 bars (70.39 s) and is 42 (67.19 s). Pasted back.
-      approach: [['run', 0.0], ['push', 31.97], ['surge', 67.19], ['approach', 94.39]],
-      descent: [['run', 0.0], ['push', 33.58], ['surge', 68.78], ['approach', 95.97]],
-      coilward: [['run', 0.0], ['push', 31.97], ['surge', 67.19], ['approach', 94.39]],
-      shoal: [['run', 0.0], ['push', 31.97], ['surge', 65.58], ['approach', 94.39]],
-      batteries: [['run', 0.0], ['push', 31.97], ['surge', 65.58], ['approach', 94.39]],
-      gauntlet: [['run', 0.0], ['push', 33.58], ['surge', 68.78], ['approach', 95.97]],
+      // ⚠️ 0576 — everything past the mid-boss's window five seconds sooner: three bars and 7.2 units,
+      // so each boundary still lands just short of its bar, three bars earlier. Pasted back.
+      approach: [['run', 0.0], ['push', 31.97], ['surge', 62.19], ['approach', 89.39]],
+      descent: [['run', 0.0], ['push', 33.58], ['surge', 63.78], ['approach', 90.97]],
+      coilward: [['run', 0.0], ['push', 31.97], ['surge', 62.19], ['approach', 89.39]],
+      shoal: [['run', 0.0], ['push', 31.97], ['surge', 60.58], ['approach', 89.39]],
+      batteries: [['run', 0.0], ['push', 31.97], ['surge', 60.58], ['approach', 89.39]],
+      gauntlet: [['run', 0.0], ['push', 33.58], ['surge', 63.78], ['approach', 90.97]],
       // ⚠️ 0180 — driven on the desk. 39.97 → 20.67, and `push` and `surge` take what the opening
       // gave up. This is the number this guard printed, pasted back, which is what its note says to do.
       // ⚠️ AND THEN FOUR MOVEMENTS, EACH ON A PHRASE — 0331. The lament to bar 16, the same song faster to bar 36,

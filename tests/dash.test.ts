@@ -593,8 +593,11 @@ describe('0138 — a section boundary is a distance you can drag', () => {
       ⚠️ **2419 AND 3200, WHERE THEY WERE 2534 AND 3400 — 0503.** The level closed up by a tenth, so the
       shipped `surge` is 2419 and `approach` opens at 3398: 3400 would be dragged past it and clamped,
       which is the other claim. 3200 is the same kind of value, late and a bar clear of `approach`.
+
+      ⚠️ **2239 AND 3000 SINCE 0576**, which moved the back of the level five seconds sooner: `surge`
+      ships at 2239 and `approach` at 3218, so 3200 would be clamped; 3000 is late and a bar clear.
     */
-    for (const surge of [1400, 2000, 2419, 3200]) {
+    for (const surge of [1400, 2000, 2239, 3000]) {
       const at = dragSection(sections, 2, surge, bossAt);
       expect(at[2]!.at, `surge asked for ${surge} was clamped, so this is not testing a landing`).toBe(surge);
       const crossesAt = surge / UNITS_PER_SECOND;

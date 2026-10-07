@@ -1,5 +1,8 @@
 # 0502 — The window is the fight
 
+⚠️ **THE WINDOW IS TWENTY SECONDS SINCE [0576](0576-the-window-is-twenty.md)**, and every level's
+script after it three bars sooner. The rule below stands; its number moved.
+
 **Accepted 2026-10-04.** **Amends [0267](0267-a-fight-thins-the-waves-over-it.md)**: nothing is
 thinned while a mid-boss lives, and both its guards are deleted. **Amends
 [0472](0472-the-fights-thin.md)**: `FIGHT_LEAD` is kept and stops at the mid-boss's own place, and
