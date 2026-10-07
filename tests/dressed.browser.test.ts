@@ -99,6 +99,76 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
     await page.context().close();
   });
 
+  /*
+    Played on the first build: *"the speech bubbles should decay and disappear"*. Read in what the eye gets —
+    the bubble's opacity — a moment after the tab opens, once it has had time to be read, and again after the
+    tab is opened again.
+  */
+  it('lets a keeper’s bubble fade once it has been read, and says it again when the tab is opened', async () => {
+    const page = await opened(1280, 720);
+    const p = prefixFor('hangar');
+    const opacity = (): Promise<number> => page.locator(`${shown('hangar')} .${p}stand > .${p}keeper`).evaluate((el) => Number(getComputedStyle(el).opacity));
+    await page.waitForTimeout(1000);
+    expect(await opacity(), 'the bubble is not up when the tab opens').toBeGreaterThan(0.5);
+    await page.waitForTimeout(7000);
+    expect(await opacity(), 'the bubble is still up seven seconds on').toBeLessThan(0.05);
+    await toTab(page, 'parts');
+    await toTab(page, 'hangar');
+    await page.waitForTimeout(800);
+    expect(await opacity(), 'the bubble did not come back when its tab was opened again').toBeGreaterThan(0.5);
+    await page.context().close();
+  });
+
+  /*
+    And *"the menu items change size when the descriptions are too long, it makes the menu do the weird up and
+    down thing"*: stepped along every gun, the caption under the band stands at one height, so nothing under
+    it moves. At 1920x1080, where a caption is two lines.
+  */
+  it('holds a band’s caption at one height whichever option is under the cursor', async () => {
+    const page = await opened(1920, 1080);
+    const p = prefixFor('hangar');
+    const caption = `${shown('hangar')} .${p}band:has([${SETTING_ATTR}="gun"]) .${p}band-said`;
+    await page.keyboard.press('ArrowDown');
+    const heights: number[] = [];
+    const count = await page.locator(`${shown('hangar')} [${SETTING_ATTR}="gun"] .${p}option`).count();
+    // From the band's first option along to its last, the caption read at each.
+    for (let i = 0; i < count; i++) await page.keyboard.press('ArrowLeft');
+    for (let i = 0; i < count; i++) {
+      if (i > 0) await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(120);
+      heights.push((await box(page, caption)).height);
+    }
+    expect(heights.length, 'no guns, so this guard is measuring nothing').toBeGreaterThan(1);
+    expect(Math.max(...heights) - Math.min(...heights), `the caption's height moved as the cursor stepped: ${heights.join(', ')}`).toBeLessThan(1);
+    await page.context().close();
+  });
+
+  /*
+    And *"can we click/tap on a shop to select that shop rather than having to go to the menu tab?"* — a press
+    on each other shop in the picture opens its tab, at a desktop and a phone held sideways.
+  */
+  it('opens a shop’s tab when the shop in the picture is pressed', async () => {
+    for (const [width, height] of [
+      [1280, 720],
+      [667, 375],
+    ] as const) {
+      const page = await opened(width, height);
+      for (const [from, to] of [
+        ['hangar', 'shop'],
+        ['shop', 'parts'],
+        ['parts', 'hangar'],
+      ] as const) {
+        await toTab(page, from);
+        const p = prefixFor(from);
+        const door = page.locator(`${shown(from)} .${p}stand > .${p}shop-door[aria-label="${SCREENS[to].heading}"]`);
+        expect(await door.isVisible(), `${from} at ${width}x${height}: no door on ${to}'s shop`).toBe(true);
+        await door.click();
+        await page.waitForSelector(shown(to), { timeout: 5000 });
+      }
+      await page.context().close();
+    }
+  });
+
   it('stands the cockpit monitor under the ship, in the stand’s middle, not its corner', async () => {
     const page = await opened(1920, 1080);
     const stand = await box(page, `${shown('hangar')} .${HANGAR}stand`);

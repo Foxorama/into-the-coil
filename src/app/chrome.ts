@@ -43,7 +43,7 @@ import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
 import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
-import { KEEPERS } from '../content/keepers.ts';
+import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import { SHELF_KINDS, SHELVES, type OwnableKind } from '../content/wares.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
@@ -2595,11 +2595,9 @@ ${each('-band[hidden]')} { display: none; }
   /* 0566: Cosmo's line may take two on a phone — the shelf left the height (0564), and the line was cut mid-word. */
   .itc-shop-keeper-line { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.2; }
   /*
-    0550: and a keeper who only greets is not on a phone's plate at all. Paint's three bands are the plate's
-    whole height there, and the card put Back sixteen pixels under the fold at 480x320. Their bust and their
-    sign stand beside the plate; what Cosmo's card says is the shop's state, which nothing else says.
+    0550 hid a keeper who only greets from a phone's plate, where the card put Back under the fold. Since
+    0572 no keeper is on the plate: their words are a bubble in the stand, so the rule hid nothing and went.
   */
-  .itc-shop-keeper-greets, .itc-hangar-keeper-greets, .itc-parts-keeper-greets { display: none; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'label label label' 'less track more'; padding: 0 0.1em; row-gap: 0; }
   /* 0566: one chip a band, as wide as the band, its name cut rather than run past its edge. */
@@ -3735,6 +3733,17 @@ ${each('-action[hidden]')} { display: none; }
   top: var(--itc-say-y, 0px);
   translate: 0 -100%;
   visibility: visible;
+  opacity: 0;
+}
+/* Said, it comes up, holds long enough to read, and fades away; a tab opened or a new line says it again. */
+.itc-hangar-stand > .itc-hangar-keeper-placed.itc-hangar-keeper-said,
+.itc-parts-stand > .itc-parts-keeper-placed.itc-parts-keeper-said,
+.itc-shop-stand > .itc-shop-keeper-placed.itc-shop-keeper-said { animation: itc-say 6s ease-out both; }
+@keyframes itc-say {
+  0% { opacity: 0; }
+  5% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
 }
 .itc-hangar-stand > .itc-hangar-keeper::after, .itc-parts-stand > .itc-parts-keeper::after, .itc-shop-stand > .itc-shop-keeper::after {
   content: '';
@@ -3786,6 +3795,26 @@ ${each('-action[hidden]')} { display: none; }
   box-shadow: 0 0 1em color-mix(in srgb, var(--itc-gold, var(--itc-ink)) 25%, transparent);
 }
 .itc-hangar-stand .itc-hangar-sheet-value, .itc-parts-stand .itc-parts-sheet-value, .itc-shop-stand .itc-shop-sheet-value { font-size: 1.5em; color: var(--itc-gold, var(--itc-ink)); }
+/* A door over each other shop in the picture: nothing on it until a pointer is over it, then the shop lights. */
+.itc-hangar-stand > .itc-hangar-shop-door, .itc-parts-stand > .itc-parts-shop-door, .itc-shop-stand > .itc-shop-shop-door {
+  position: absolute;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.4em;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease-out, background-color 0.15s ease-out;
+}
+.itc-hangar-stand > .itc-hangar-shop-door[hidden], .itc-parts-stand > .itc-parts-shop-door[hidden], .itc-shop-stand > .itc-shop-shop-door[hidden] { display: none; }
+.itc-hangar-stand > .itc-hangar-shop-door:hover, .itc-parts-stand > .itc-parts-shop-door:hover, .itc-shop-stand > .itc-shop-shop-door:hover,
+.itc-hangar-stand > .itc-hangar-shop-door:focus-visible, .itc-parts-stand > .itc-parts-shop-door:focus-visible, .itc-shop-stand > .itc-shop-shop-door:focus-visible {
+  outline: none;
+  background-color: color-mix(in srgb, var(--itc-ink) 10%, transparent);
+  box-shadow: inset 0 0 0 2px var(--itc-ink), 0 0 1.2em color-mix(in srgb, var(--itc-ink) 45%, transparent);
+}
 /* A card's picture and a band's caption are a desktop's: a phone's band is one chip a line (0566). */
 .itc-hangar-option-pic, .itc-parts-option-pic, .itc-hangar-band-said, .itc-parts-band-said, .itc-shop-band-said { display: none; }
 @container (min-height: 461px) and (orientation: landscape) {
@@ -3818,7 +3847,22 @@ ${each('-action[hidden]')} { display: none; }
   }
   .itc-hangar-band-said-name, .itc-parts-band-said-name, .itc-shop-band-said-name { grid-area: name; font-weight: 800; color: var(--itc-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .itc-hangar-band-said-state, .itc-parts-band-said-state, .itc-shop-band-said-state { grid-area: state; font-size: 0.85em; font-weight: 700; opacity: 0.85; white-space: nowrap; }
-  .itc-hangar-band-said-said, .itc-parts-band-said-said, .itc-shop-band-said-said { grid-area: said; opacity: 0.8; }
+  /*
+    Always two lines high, a longer line cut at the second: *"the menu items change size when the
+    descriptions are too long, it makes the menu do the weird up and down thing"*. A caption that was one
+    line on one option and three on the next moved every band under it as the cursor stepped.
+  */
+  .itc-hangar-band-said-said, .itc-parts-band-said-said, .itc-shop-band-said-said {
+    grid-area: said;
+    opacity: 0.8;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    height: 2.5em;
+  }
+  .itc-hangar-band-said-name, .itc-parts-band-said-name, .itc-shop-band-said-name, .itc-hangar-band-said-state, .itc-parts-band-said-state, .itc-shop-band-said-state { height: 1.25em; }
+  .itc-hangar-band-said-state, .itc-parts-band-said-state, .itc-shop-band-said-state { overflow: hidden; text-overflow: ellipsis; max-width: 14em; }
   /* Tried on and not fitted: the state is the thing to read — how to fit it — so it is lit. */
   .itc-hangar-band-said-trying .itc-hangar-band-said-state, .itc-parts-band-said-trying .itc-parts-band-said-state, .itc-shop-band-said-trying .itc-shop-band-said-state { color: var(--itc-gold, var(--itc-ink)); opacity: 1; }
   .itc-hangar-band-said-shut, .itc-parts-band-said-shut, .itc-shop-band-said-shut { border-left-color: color-mix(in srgb, var(--itc-ink) 40%, transparent); }
@@ -3904,7 +3948,7 @@ ${each('-action[hidden]')} { display: none; }
     margin-top: 0.1em;
     padding: 0.2em 0.5em;
   }
-  .itc-hangar-band-said-said, .itc-parts-band-said-said, .itc-shop-band-said-said { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .itc-hangar-band-said-said, .itc-parts-band-said-said, .itc-shop-band-said-said { display: block; height: 1.25em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .itc-hangar-band-said-name, .itc-parts-band-said-name, .itc-shop-band-said-name { max-width: 9em; }
   .itc-hangar-pilot-card .itc-hangar-pilot-words { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.6em; }
   .itc-hangar-group-heading, .itc-parts-group-heading { padding-bottom: 0.1em; }
@@ -4278,6 +4322,22 @@ export interface NowPlaying {
  */
 const ICON_PIXELS_PER_UNIT = 28;
 
+/** 0572: a box on the screen, in CSS pixels — a shopfront, for the door over it. */
+interface ShopBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+/** 0572: where a stand's picture puts its ship, the open tab's keeper and every shopfront, on the screen. */
+export interface StandMarks {
+  shipX: number;
+  shipY: number;
+  keeperX: number;
+  keeperY: number;
+  shops: Record<KeeperKind, ShopBox>;
+}
+
 /**
  * 0572: a keeper's bubble — how near the stand's edge it may come, how far over the keeper's head its foot
  * hangs (the tail's length), and how near its own corner the tail may slide. CSS pixels.
@@ -4484,7 +4544,7 @@ export interface Chrome {
    * the keeper's bubble with its tail on their head, each kept inside the stand. Screen pixels, from the
    * stand's view (`standMarksInto`); a keeper mark that is not a number takes the bubble down.
    */
-  setStandMarks(screen: Screen, marks: { readonly shipX: number; readonly shipY: number; readonly keeperX: number; readonly keeperY: number }): void;
+  setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void;
   /**
    * What each ware's tile says under its name — 0564: its price, *Yours*, or its price short of the balance,
    * which is drawn in a warning ink as well as said. Position for position, as the shelf lists them.
@@ -5314,10 +5374,24 @@ export function makeChrome(
 
   const panels: Partial<Record<Screen, Panel>> = {};
   /** 0572: where each stand's ship and keeper last were on the screen, so a bubble that changes size is placed again. */
-  const standMarks = Object.fromEntries((Object.keys(SCREENS) as Screen[]).map((s) => [s, { shipX: Number.NaN, shipY: Number.NaN, keeperX: Number.NaN, keeperY: Number.NaN }])) as Record<
-    Screen,
-    { shipX: number; shipY: number; keeperX: number; keeperY: number }
-  >;
+  const standMarks = Object.fromEntries(
+    (Object.keys(SCREENS) as Screen[]).map((s) => [
+      s,
+      {
+        shipX: Number.NaN,
+        shipY: Number.NaN,
+        keeperX: Number.NaN,
+        keeperY: Number.NaN,
+        shops: Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, { left: Number.NaN, top: Number.NaN, right: Number.NaN, bottom: Number.NaN }])) as Record<KeeperKind, ShopBox>,
+      },
+    ]),
+  ) as Record<Screen, StandMarks>;
+  /**
+   * 0572: the doors into each shop on a stand — *"can we click/tap on a shop to select that shop rather than
+   * having to go to the menu tab?"* A button over each shopfront in the picture that opens its tab. Out of
+   * the tab order: the strip's tabs are the keyboard's and the pad's way across, and these are the hand's.
+   */
+  const standDoors: Partial<Record<Screen, { kind: KeeperKind; tab: Screen; button: HTMLButtonElement }[]>> = {};
   /*
     0572: the cockpit monitor centred under the ship, and the keeper's bubble over their head with its tail
     on it — each kept inside the stand, the bubble's tail sliding along it where the bubble meets an edge.
@@ -5337,6 +5411,17 @@ export function makeChrome(
       stand.style.setProperty('--itc-dash-x', String(Math.round(x)) + 'px');
       stand.style.setProperty('--itc-dash-y', String(Math.round(at.shipY - box.top)) + 'px');
     }
+    // The doors over the shopfronts, each where its shop is drawn; the open tab's own shop is no door.
+    for (const door of standDoors[screen] ?? []) {
+      const front = at.shops[door.kind];
+      const placed = Number.isFinite(front.left) && door.tab !== screen;
+      door.button.hidden = !placed;
+      if (!placed) continue;
+      door.button.style.left = String(Math.round(front.left - box.left)) + 'px';
+      door.button.style.top = String(Math.round(front.top - box.top)) + 'px';
+      door.button.style.width = String(Math.round(front.right - front.left)) + 'px';
+      door.button.style.height = String(Math.round(front.bottom - front.top)) + 'px';
+    }
     const say = panel.keeper?.root ?? null;
     if (say === null || say.parentElement !== stand) return;
     const placed = prefixFor(screen) + 'keeper-placed';
@@ -5352,6 +5437,19 @@ export function makeChrome(
     say.style.setProperty('--itc-say-y', String(Math.round(Math.max(say.offsetHeight + BUBBLE_EDGE, at.keeperY - box.top - BUBBLE_GAP))) + 'px');
     say.style.setProperty('--itc-say-tail', String(Math.round(tail)) + 'px');
     say.classList.add(placed);
+  };
+  /*
+    0572: *"the speech bubbles should decay and disappear"*. A bubble is said, held long enough to read,
+    and fades; saying it again — the tab opened, a new line — starts it over. Restarted by taking the class
+    off and putting it back after a reflow, which is what makes a finished animation run again.
+  */
+  const sayAgain = (screen: Screen): void => {
+    const say = panels[screen]?.keeper?.root;
+    if (say === undefined) return;
+    const said = prefixFor(screen) + 'keeper-said';
+    say.classList.remove(said);
+    void say.offsetWidth;
+    say.classList.add(said);
   };
   /** The ship that crosses the title's sky — 0437 — kept so `setShip` can put the pilot's own in it. */
   let titleFlyer: HTMLElement | null = null;
@@ -5480,6 +5578,26 @@ export function makeChrome(
       plate = document.createElement('div');
       plate.className = prefix + 'plate';
       panel.append(stand, plate);
+      // 0572: a door over every shopfront in the picture whose tab stands beside this one.
+      const doors: { kind: KeeperKind; tab: Screen; button: HTMLButtonElement }[] = [];
+      for (const tab of row.tabs) {
+        const kind = SCREENS[tab].stand?.keeper ?? null;
+        if (kind === null) continue;
+        const door = document.createElement('button');
+        door.type = 'button';
+        door.tabIndex = -1;
+        door.className = prefix + 'shop-door';
+        door.setAttribute('aria-label', SCREENS[tab].heading);
+        door.hidden = true;
+        const open = (): void => {
+          if (tab !== screen) onTab(tab);
+        };
+        door.addEventListener('click', open);
+        listeners.push(() => door.removeEventListener('click', open));
+        stand.appendChild(door);
+        doors.push({ kind, tab, button: door });
+      }
+      standDoors[screen] = doors;
     }
     // What the tabs, the bands and the actions go into: the plate on a stand, the panel everywhere else.
     const host = plate ?? panel;
@@ -7167,6 +7285,8 @@ export function makeChrome(
           honest moment to say *this is a new one*.
         */
         if (shown && panel.crossing !== null) panel.crossing.drawnFlown = -1;
+        // 0572: a keeper says their line again each time their tab is opened, and it fades.
+        if (shown && name !== shownScreen) sayAgain(name);
       }
       // 0564: a sheet asking goes with its screen, unanswered.
       if (asking !== null && shownScreen !== screen) {
@@ -7503,12 +7623,13 @@ export function makeChrome(
       const box = stand.getBoundingClientRect();
       return box.width > 0 ? { left: box.left, width: box.width, top: box.top, height: box.height } : null;
     },
-    setStandMarks(screen: Screen, marks: { readonly shipX: number; readonly shipY: number; readonly keeperX: number; readonly keeperY: number }): void {
+    setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void {
       const said = standMarks[screen];
       said.shipX = marks.shipX;
       said.shipY = marks.shipY;
       said.keeperX = marks.keeperX;
       said.keeperY = marks.keeperY;
+      for (const kind of KEEPER_KINDS) Object.assign(said.shops[kind], marks.shops[kind]);
       placeStand(screen);
     },
     setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void {
@@ -7664,6 +7785,8 @@ export function makeChrome(
       keeper.line.textContent = line;
       // 0572: a line of another length is a bubble of another size, so its place is worked out again.
       placeStand(screen);
+      // And a new line is said: the bubble comes back, and fades again.
+      sayAgain(screen);
     },
     setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {

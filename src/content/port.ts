@@ -278,9 +278,10 @@ export const DOCK = {
    * The planet's centre in the bay, and how much it is blitted up; its moon's centre. 0572: smaller and
    * further off, a warm ringed giant rather than the cyan the whole screen already is.
    */
-  planet: { along: 192, across: 36 },
-  planetGrow: 0.8,
-  moon: { along: 181, across: 86 },
+  planet: { along: 180, across: 34 },
+  planetGrow: 0.45,
+  /** 0572: the moon's orbit round the planet, its radius in world units, and how much it is drawn down. */
+  moon: { reach: 14, grow: 0.55 },
   /** The lamps under the truss. */
   lamps: [70, 124] as readonly number[],
 } as const;

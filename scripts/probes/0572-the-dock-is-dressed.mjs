@@ -52,6 +52,39 @@ export const PROBES = [
   {
     decision: '0572',
     suite: 'tests/dressed.browser.test.ts',
+    broke: 'a shop in the picture pressed and nothing opened',
+    guard: 'opens a shop’s tab when the shop in the picture is pressed',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '        const open = (): void => {\n          if (tab !== screen) onTab(tab);\n        };',
+      replace: '        const open = (): void => {};',
+    },
+  },
+  {
+    decision: '0572',
+    suite: 'tests/dressed.browser.test.ts',
+    broke: 'a bubble that never fades',
+    guard: 'lets a keeper’s bubble fade once it has been read',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '{ animation: itc-say 6s ease-out both; }',
+      replace: '{ opacity: 1; }',
+    },
+  },
+  {
+    decision: '0572',
+    suite: 'tests/dressed.browser.test.ts',
+    broke: 'a caption as tall as its words, so the bands under it jump as the cursor steps',
+    guard: 'holds a band’s caption at one height',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '    overflow: hidden;\n    height: 2.5em;\n  }',
+      replace: '    overflow: hidden;\n  }',
+    },
+  },
+  {
+    decision: '0572',
+    suite: 'tests/dressed.browser.test.ts',
     broke: 'the fitted card filled over its picture again',
     guard: 'draws a picture on every Hangin’ Out card',
     edit: {

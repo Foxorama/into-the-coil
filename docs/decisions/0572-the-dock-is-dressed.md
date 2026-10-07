@@ -25,6 +25,15 @@ earlier ones:
 | 9 | *"get his eyes adjusted so he's looking straight at the player"* | On an eye with no white, the glint is the pupil. Both glints sat left of their eye, so he looked aside. Each is in its eye's middle now, with a fleck under it. |
 | 10 | *"you can't actually see the graphic when you select the card and the cards are still mostly text"* | A fitted card is dark glass with a lit rim and a glow. It was the run's violet-into-cyan fill, the inks every picture is drawn in. Every Hangin' Out card has a picture over its name: the shot a gun fires, the face a special is thrown under, the readout's plate in that ship's dressing, and the dangle the dash hangs. Paint's wheels and art pictures are as large as a card's, and its flames are drawn as Cosmo draws them. |
 
+## Asked on the first build
+
+| asked | done |
+|---|---|
+| *"the speech bubbles should decay and disappear"* | A bubble comes up, holds about five seconds, and fades out. Opening its tab again, or a new line from the keeper, says it again. |
+| *"the menu items change size when the descriptions are too long, it makes the menu do the weird up and down thing"* | A caption is always the same height: two lines on a tall screen and one line below 900 px, with a longer description cut at the end. Stepping along a band moves nothing under it. |
+| *"can we click/tap on a shop to select that shop rather than having to go to the menu tab?"* | Each other shop in the picture is a button that opens its tab, and it lights up under the pointer. The open tab's own shop is not a button. The strip's tabs stay as the way across for the keyboard and the pad. |
+| *"the planet and moon are a bit too close still, and they're very static, they don't feel like part of the background starfield"* | Both are smaller and further into the haze. The planet drifts the way the stars do, slowly: one pass across the bay takes eight minutes, coming out of the haze at the start and going back into it at the end. The moon goes round it in the ring's plane every minute and a half, passing behind it and in front. |
+
 ## Kicked back
 
 Three items were taken differently from how they were asked. Each was the user's call to veto.
@@ -58,6 +67,10 @@ Three items were taken differently from how they were asked. Each was the user's
   read the picture one bob apart (`samePhase`, 0540), and that came to 104 steps one time and 105 the next.
   The dock's deeper bob and rising rings made that one step big enough to pass for a fitting. So 0541's
   flame probe stayed green on CI. The hover rings and the lift run on whole bobs too.
+- **0550's greeting-card probe and its rule are deleted.** No keeper is on a phone's plate any more, so
+  the rule hid nothing and the probe stayed green on CI.
+- **0566's upright guard waits for the room to turn, rather than for 800 ms.** It failed only under the
+  browser suites' own load, and passed alone every time (0044).
 - **0539's one-line probe is deleted.** The centred monitor may take most of the stand, and on one line
   the readout fits at every size the guard holds. The probe stayed green here and on CI (0019).
 - **Under 900 px tall, the cards are a size shorter, and each caption is one line.** On CI's wider letters,

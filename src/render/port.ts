@@ -141,9 +141,24 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     the tabs' order, the open tab's lit and the others dimmed; the deck, and the ship on its cradle under it.
   */
   paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
-  // 0572: the planet and its moon held back in the sky's haze, so they sit behind the room and not in it.
-  put(surface, view, PORT_SPRITE.planet, DOCK.planet.along, DOCK.planet.across, PLANET_HAZE, 0, DOCK.planetGrow);
-  put(surface, view, PORT_SPRITE.moon, DOCK.moon.along, DOCK.moon.across, PLANET_HAZE);
+  /*
+    0572: the planet and its moon held back in the sky's haze, so they sit behind the room and not in it —
+    and moving with the sky: *"they're very static, they don't feel like part of the background starfield"*.
+    The planet drifts the way the stars do, slower, out of the haze past the bay's far side and on behind
+    its edge, a loop of `PLANET_LOOP` steps; the moon goes round it in the ring's plane, behind it and in front.
+  */
+  // Half way through its pass when the stand is first drawn, so it is in the bay and not still in the haze.
+  const loop = ((t + PLANET_LOOP / 2) % PLANET_LOOP) / PLANET_LOOP;
+  const planetAlong = DOCK.planet.along + PLANET_REACH * (0.5 - loop);
+  // Into the haze at the end of its pass as it came out of it at the start, so the loop is never seen to jump.
+  const planetLit = PLANET_HAZE * Math.min(1, (loop * PLANET_LOOP) / PLANET_FADE, ((1 - loop) * PLANET_LOOP) / PLANET_FADE);
+  const orbit = (t / MOON_ORBIT) * Math.PI * 2;
+  const moonAlong = planetAlong + Math.cos(orbit) * DOCK.moon.reach;
+  const moonAcross = DOCK.planet.across + Math.sin(orbit) * DOCK.moon.reach * 0.22 - Math.cos(orbit) * DOCK.moon.reach * 0.08;
+  const behind = Math.sin(orbit) < 0;
+  if (behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit * 0.8, 0, DOCK.moon.grow);
+  put(surface, view, PORT_SPRITE.planet, planetAlong, DOCK.planet.across, planetLit, 0, DOCK.planetGrow);
+  if (!behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit, 0, DOCK.moon.grow);
   const wall = PORT_EXTENT.wall;
   for (let along = wall / 2; along < DOCK.bay; along += wall) {
     for (let across = wall / 2; across < STAGE.deck + wall; across += wall) put(surface, view, PORT_SPRITE.wall, along, across, 1, 0, TILE_OVERLAP);
@@ -235,10 +250,21 @@ export function standMarksInto(
   view: View,
   keeper: KeeperKind | null,
   spots: Readonly<Record<KeeperKind, number>> | null,
-  out: { shipX: number; shipY: number; keeperX: number; keeperY: number },
+  out: { shipX: number; shipY: number; keeperX: number; keeperY: number; shops: Record<KeeperKind, { left: number; top: number; right: number; bottom: number }> },
 ): void {
   out.shipX = screenX(view, DOCK.ship, STAGE.deck);
   out.shipY = screenY(view, DOCK.ship, STAGE.deck + 1);
+  // 0572: and each shopfront's box, its alcove's — what a click or a tap on the shop lands on.
+  const half = (PORT_EXTENT.alcove * DOCK.shopScale) / 2;
+  for (let k = 0; k < KEEPER_KINDS.length; k++) {
+    const kind = KEEPER_KINDS[k]!;
+    const front = out.shops[kind];
+    const shop = DOCK.shops[kind];
+    front.left = screenX(view, shop - half, DOCK.shopAcross);
+    front.right = screenX(view, shop + half, DOCK.shopAcross);
+    front.top = screenY(view, shop, DOCK.shopAcross - half);
+    front.bottom = screenY(view, shop, DOCK.shopAcross + half);
+  }
   if (keeper === null) {
     out.keeperX = Number.NaN;
     out.keeperY = Number.NaN;
@@ -489,7 +515,17 @@ function blueBobAt(t: number): number {
 const BLUE_BOB = 0.6;
 
 /** How lit the planet and its moon are, behind the sky's haze — 0572: far off, and not the brightest thing in the bay. */
-const PLANET_HAZE = 0.82;
+const PLANET_HAZE = 0.7;
+/**
+ * 0572: the planet's drift — one pass of `PLANET_REACH` world units in `PLANET_LOOP` steps, eight minutes,
+ * centred on `DOCK.planet.along`, slow enough to be seen moving only over a while, as the far stars are. It
+ * comes out of the haze over its first `PLANET_FADE` steps and goes back into it over its last, so it is never
+ * seen to appear or to jump. The moon's orbit, in steps: a minute and a half.
+ */
+const PLANET_LOOP = 60 * 60 * 8;
+const PLANET_REACH = 36;
+const PLANET_FADE = 60 * 30;
+const MOON_ORBIT = 60 * 90;
 
 /**
  * 0572: the cradle's field — how many rings are rising at once, how many steps one takes from the cradle

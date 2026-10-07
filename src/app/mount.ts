@@ -1634,7 +1634,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     resize: the stand's view was only written when a screen changed.
   */
   // 0572: the stand's marks on the screen, written over on every framing.
-  const marks = { shipX: 0, shipY: 0, keeperX: 0, keeperY: 0 };
+  const marks = {
+    shipX: 0,
+    shipY: 0,
+    keeperX: 0,
+    keeperY: 0,
+    shops: Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, { left: 0, top: 0, right: 0, bottom: 0 }])) as Record<KeeperKind, { left: number; top: number; right: number; bottom: number }>,
+  };
   function frameStand(): void {
     const stand = SCREENS[state.screen.current].stand;
     if (stand === null || world.stand === null || !playable) return;
