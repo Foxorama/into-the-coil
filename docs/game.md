@@ -265,6 +265,9 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | **nova** | ray, and the shield pickup's third face | on the ward's trigger: a lavender ring bursting from the ship to past every edge of the screen, popping every shot it touches, striking every body it crosses once and a boss once for a twentieth — [0447](decisions/0447-the-ward-is-a-third-trigger.md) |
 | **void** | the shield pickup's second face, and a shield at a full shell; one to open a Burn run unless the ship opens on novas | thrown up the lane on the ward's trigger as a turning swirl ([0447](decisions/0447-the-ward-is-a-third-trigger.md)); opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
 
+**Nothing the player fires hurts the player** — no special and no gun, the bomb's blast, the candle's
+fireworks and the ray's bursts included ([0574](decisions/0574-nothing-of-mine-hurts-me.md)). The
+strip stands its three triggers as the pad's buttons stand: the ward, the gun's, the tubes'.
 A thrown special that reaches the edge of the screen goes off there
 ([0377](decisions/0377-the-void.md)). Every special is heard as itself — its press, and for a
 thrown one what it sounds like going off, on the root like the bomb

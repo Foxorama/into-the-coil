@@ -227,7 +227,8 @@ describe.runIf(chromePath)('a press belongs to one screen', () => {
     await page.waitForTimeout(1000);
 
     // Still down: the run is under way and the thumb has not moved.
-    const bombs = '.itc-playing-hud-group[aria-label*="charge"]';
+    // The gun's stack by name: since 0574 the strip's first is the ward's.
+    const bombs = '.itc-playing-hud-group[data-side="gun"][aria-label*="charge"]';
     await page.waitForSelector(bombs, { timeout: 5_000 });
     const carried = await page.getAttribute(bombs, 'aria-label');
     expect(
