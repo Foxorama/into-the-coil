@@ -18,7 +18,8 @@ export const PROBES = [
       path: 'scripts/weigh-fight.mjs',
       // ⚠️ Re-anchored by 0441: the gun is whole from the first second, so the tubes are all a run
       // carries in that a level can change.
-      find: '    if (level === kind) return { missileTier };',
+      // And by 0575, which counts a level's place as a third of a tube.
+      find: '    if (level === kind) return { missileTier: Math.min(UPGRADE_TIERS, Math.floor(thirds / shares)) };',
       replace: '    if (level === kind) return { missileTier: 1 };',
     },
   },
