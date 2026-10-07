@@ -66,6 +66,8 @@ describe.runIf(chromePath)('0562 and 0568 — the plate is one size, and its foo
   */
   it('names the option tried on, on a phone’s card, and follows the cursor down', async () => {
     const page = await opened(667, 375);
+    // 0579: down past the sub-tabs, which stand between the pilots and the Loadout's first band.
+    await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(150);

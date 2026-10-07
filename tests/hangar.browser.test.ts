@@ -5,7 +5,7 @@ import type { Page } from 'playwright-core';
 import { chromePath } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { back, fly, openHangar, shown } from './title.ts';
+import { back, fly, inView, openHangar, shown } from './title.ts';
 import { keptContext, keyedOut, seeded } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
@@ -78,6 +78,8 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     expect(await page.locator(shown('hangar')).count(), 'a press on a pilot in the hangar flew them').toBe(1);
 
     // A shut dash cannot be pressed; the estate's is fitted, and the readout wears it at once.
+    // 0579: on the *Cockpit* sub-tab.
+    await inView(page, 'hangar', 'plate');
     await page.locator(`${dashes} >> nth=${SHIP_KINDS.indexOf('caddie')}`).click({ force: true });
     // 0561: a press on a shut dash tries it on — the readout wears it, to be seen — and fits nothing.
     const refused = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);

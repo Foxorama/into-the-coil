@@ -117,6 +117,19 @@ export async function back(page: Page, from: Screen): Promise<void> {
 }
 
 /**
+ * On a tabbed stand: bring the group holding `band` into view, as a player does — 0579: its sub-tab
+ * pressed. By the row's groups, so a band moved to another group moves the helper with it. Nothing to do
+ * on a stand that shows every group.
+ */
+export async function inView(page: Page, screen: Screen, band: ChoiceName): Promise<void> {
+  const stand = SCREENS[screen].stand;
+  if (stand === null || !stand.tabbed) return;
+  const group = stand.groups.findIndex((g) => g.bands.includes(band));
+  if (group < 0) throw new Error(`${band} is in no group on ${screen}`);
+  await page.locator(`${shown(screen)} [${SETTING_ATTR}="section"] .${prefixFor(screen)}option >> nth=${group}`).click();
+}
+
+/**
  * On Cosmo's: put `ware` in the window, as a player does — 0542: the aisle to the shelf it is on, then the
  * ware on that shelf. By the tables, so a ware moved to another shelf moves the helper with it.
  */
