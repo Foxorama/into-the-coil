@@ -138,6 +138,12 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
       await page.waitForTimeout(120);
       heights.push((await box(page, caption)).height);
     }
+    /*
+      And every other band's caption beside it: a dash's line is a few words on any letters, where a gun's runs to
+      two on CI's wider ones, which made every gun the same two lines there and this guard blind to the rule.
+    */
+    const all = await page.locator(`${shown('hangar')} .${p}band-said`).evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
+    heights.push(...all);
     expect(heights.length, 'no guns, so this guard is measuring nothing').toBeGreaterThan(1);
     expect(Math.max(...heights) - Math.min(...heights), `the caption's height moved as the cursor stepped: ${heights.join(', ')}`).toBeLessThan(1);
     await page.context().close();
