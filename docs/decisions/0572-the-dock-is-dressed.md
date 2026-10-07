@@ -52,6 +52,18 @@ Three items were taken differently from how they were asked. Each was the user's
   sees it.
 - **0567's probe** moved to the dock's deeper bob.
 
+## What CI found, and was fixed
+
+- **A bob is a whole 105 steps.** It was 0.06 radians a step, which is 104.7 steps. The stand's guards
+  read the picture one bob apart (`samePhase`, 0540), and that came to 104 steps one time and 105 the next.
+  The dock's deeper bob and rising rings made that one step big enough to pass for a fitting. So 0541's
+  flame probe stayed green on CI. The hover rings and the lift run on whole bobs too.
+- **0539's one-line probe is deleted.** The centred monitor may take most of the stand, and on one line
+  the readout fits at every size the guard holds. The probe stayed green here and on CI (0019).
+- **Under 900 px tall, the cards are a size shorter, and each caption is one line.** On CI's wider letters,
+  Hangin' Out's four bands ran about 170 px past a 1024×768's plate. A 1920×1080 keeps the full cards and
+  two-line captions.
+
 ## What is owed
 
 - A look at 1920, 1280 and an iPad.

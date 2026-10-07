@@ -3882,6 +3882,33 @@ ${each('-action[hidden]')} { display: none; }
   /* What hangs: the readout's dangle, set in the picture's box. */
   .itc-hangar-option-pic .itc-shop-art-dangle { position: absolute; left: 50%; top: 0; font-size: 0.8em; }
 }
+/*
+  Under 900 pixels tall the plate is the screen's height less its frame, and Hangin' Out's four bands with
+  pictures and captions ran 170 pixels past it on CI's wider letters. So the cards are a size shorter, their
+  names one line, and each caption is one line: the name, what it is cut where it must be, and its state.
+*/
+@container (min-height: 461px) and (max-height: 900px) and (orientation: landscape) {
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option.itc-hangar-option-pictured,
+  .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-pictured,
+  .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-thumbed { min-height: 0; padding-top: 0.25em; padding-bottom: 0.2em; gap: 0.1em; }
+  .itc-hangar-option-pic, .itc-parts-option-pic, .itc-parts-option-thumbed .itc-parts-option-thumb { height: 1.7em; }
+  .itc-hangar-option-pictured .itc-hangar-option-label, .itc-parts-option-pictured .itc-parts-option-label, .itc-parts-option-thumbed .itc-parts-option-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .itc-hangar-band-said, .itc-parts-band-said, .itc-shop-band-said {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'name said state';
+    margin-top: 0.1em;
+    padding: 0.2em 0.5em;
+  }
+  .itc-hangar-band-said-said, .itc-parts-band-said-said, .itc-shop-band-said-said { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .itc-hangar-band-said-name, .itc-parts-band-said-name, .itc-shop-band-said-name { max-width: 9em; }
+  .itc-hangar-pilot-card .itc-hangar-pilot-words { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.6em; }
+  .itc-hangar-group-heading, .itc-parts-group-heading { padding-bottom: 0.1em; }
+}
 @container (max-height: 460px) {
   .itc-hangar-stand > .itc-hangar-keeper, .itc-parts-stand > .itc-parts-keeper, .itc-shop-stand > .itc-shop-keeper { font-size: 0.72rem; max-width: min(15em, 60%); padding: 0.35em 0.6em 0.4em; }
   .itc-hangar-stand > .itc-hangar-sheet, .itc-parts-stand > .itc-parts-sheet, .itc-shop-stand > .itc-shop-sheet { top: 0.3rem; right: 0.4rem; font-size: 0.8rem; padding: 0.2em 0.7em; }

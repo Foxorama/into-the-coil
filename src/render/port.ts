@@ -474,8 +474,13 @@ function paintEdge(surface: Surface, view: View): void {
   put(surface, view, PORT_SPRITE.bayBottom, STAGE.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
 }
 
-/** How fast the pilot's ship bobs on its pad's beam, in radians a step — a period of about 105 steps. */
-export const BLUE_BOB_RATE = 0.06;
+/**
+ * How fast the pilot's ship bobs on its pad's beam, in radians a step — a period of exactly 105 steps.
+ * 0572: whole, and it was 0.06 (104.7 steps). The stand's guards read the picture a bob apart (`samePhase`),
+ * and a bob that was not a whole number of steps was 104 steps one time and 105 the next: with the dock's
+ * deeper bob and its rising rings, that one step moved enough of the stand to pass for a fitting on CI.
+ */
+export const BLUE_BOB_RATE = (Math.PI * 2) / 105;
 
 /** How far the pilot's ship bobs on its pad's beam at `t`, before it goes — `BLUE_BOB` either way. */
 function blueBobAt(t: number): number {
