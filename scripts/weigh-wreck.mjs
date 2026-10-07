@@ -56,7 +56,8 @@ export function flyWreck(loadout, { difficulty = 'savior', share = null } = {}) 
     const { world, wrecks } = playableWorld(level, difficulty);
     const frame = new GameFrame(world);
     world.shipRow = SHIPS[shipCarrying('pulse')];
-    world.weapon = weaponFor(world.shipRow, loadout.tubes > 0 ? ['missile'] : []);
+    // One straight tube — 0577: the list is the kinds fitted, where it was rungs of 'missile'.
+    world.weapon = weaponFor(world.shipRow, loadout.tubes > 0 ? ['straight'] : []);
     wearHull(world);
     const reach = SPECIALS.bomb.reach + MUZZLE_ALONG;
     let diedAt = -1;

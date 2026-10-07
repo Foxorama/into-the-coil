@@ -5,19 +5,17 @@ import {
   FASTEST_FIRE,
   MAX_BARRELS,
   MISSILE_BEAT_RATIO,
+  MAX_LAUNCHERS,
   PICKUPS,
   PICKUP_KINDS,
-  UPGRADE_KINDS,
-  UPGRADE_TIERS,
   weaponFor,
   type PickupKind,
-  type UpgradeKind,
 } from '../src/content/pickups.ts';
 
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP } from '../src/content/levels.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
-import { MISSILES } from '../src/content/missiles.ts';
+import { MISSILES, MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
@@ -108,26 +106,11 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       expect(Number.isInteger(steps), `the ${gun} fires every ${steps} steps, which the clock cannot do`).toBe(true);
       expect(steps, `the ${gun} fires every ${steps} steps, which is not a cadence`).toBeGreaterThan(0);
     }
-    const ladders = [
-      ['straight missile', MISSILES.straight.missileEvery],
-      ['homing missile', MISSILES.homing.missileEvery],
-    ] as const;
-    for (const [name, ladder] of ladders) {
-      for (let tier = 0; tier < ladder.length; tier++) {
-        const steps = ladder[tier]!;
-        expect(
-          Number.isInteger(steps),
-          `the ${name} ladder's tier ${tier} fires every ${steps} steps, which the clock cannot do`,
-        ).toBe(true);
-        expect(steps, `the ${name} ladder's tier ${tier} fires every ${steps} steps, which is not a cadence`).toBeGreaterThan(0);
-        if (tier > 0) {
-          expect(
-            steps,
-            `the ${name} ladder's tier ${tier} fires ${perSecond(steps).toFixed(2)}/s where tier ${tier - 1} fires ` +
-              `${perSecond(ladder[tier - 1]!).toFixed(2)}/s, so the upgrade is a downgrade`,
-          ).toBeLessThanOrEqual(ladder[tier - 1]!);
-        }
-      }
+    // Every tube kind's one note value since 0577, which took the tubes' ladder: whole steps, a cadence.
+    for (const kind of MISSILE_KINDS) {
+      const steps = MISSILES[kind].missileEvery;
+      expect(Number.isInteger(steps), `the ${kind} tube fires every ${steps} steps, which the clock cannot do`).toBe(true);
+      expect(steps, `the ${kind} tube fires every ${steps} steps (${perSecond(steps).toFixed(2)}/s), which is not a cadence`).toBeGreaterThan(0);
     }
   });
 
@@ -183,8 +166,9 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       pulse, and it is held against every gun a ship can fly.
     */
     for (const ship of SHIP_KINDS) {
-      for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
-        const missiles = Array.from({ length: tier }, () => 'missile' as const);
+      // Every count of tubes since 0577, which took the rungs: none, one and two.
+      for (let tier = 0; tier <= MAX_LAUNCHERS; tier++) {
+        const missiles = Array.from({ length: tier }, () => 'straight' as const);
         const weapon = weaponFor(SHIPS[ship], missiles);
         const cycles = weapon.missileEvery / VOLLEY_CYCLE;
         expect(
@@ -229,8 +213,8 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       the first thing to listen for if the counter-beat stops reading.
     */
     for (const ship of SHIP_KINDS) {
-      for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
-        const missiles = Array.from({ length: tier }, () => 'missile' as const);
+      for (let tier = 0; tier <= MAX_LAUNCHERS; tier++) {
+        const missiles = Array.from({ length: tier }, () => 'straight' as const);
         const weapon = weaponFor(SHIPS[ship], missiles);
         // Not of a wheel on a tether, on the claim above's terms — 0545: it has no volleys to cross.
         if (WEAPONS[SHIPS[ship].weapon].flight === 'tether') continue;
@@ -273,11 +257,12 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     for (const ship of SHIP_KINDS) {
       const base = weaponFor(SHIPS[ship], []);
       const fields = Object.keys(base) as (keyof typeof base)[];
-      for (const upgrade of UPGRADE_KINDS) {
-        const after = weaponFor(SHIPS[ship], [upgrade]);
+      // Every kind a tube pickup can fit — 0577: the upgrade is a tube of the face's kind.
+      for (const tube of MISSILE_KINDS) {
+        const after = weaponFor(SHIPS[ship], [tube]);
         expect(
-          fields.some((field) => after[field] !== base[field]),
-          `${ship}: taking a ${upgrade} changes nothing about the ship`,
+          fields.some((field) => JSON.stringify(after[field]) !== JSON.stringify(base[field])),
+          `${ship}: taking a ${tube} tube changes nothing about the ship`,
         ).toBe(true);
       }
     }
@@ -296,14 +281,14 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       ⚠️ **ON THE TUBES SINCE 0441, AND IT WAS ON THE GUN.** The gun has no ladder to stack on; the
       tubes are the one that does, so the second missile is what must not be swallowed by the first.
     */
-    const one = weaponFor(SHIPS.fighter, ['missile']);
-    const two = weaponFor(SHIPS.fighter, ['missile', 'missile']);
-    expect(JSON.stringify(two), 'a second missile did nothing').not.toBe(JSON.stringify(one));
+    const one = weaponFor(SHIPS.fighter, ['straight']);
+    const two = weaponFor(SHIPS.fighter, ['straight', 'straight']);
+    expect(JSON.stringify(two), 'a second tube did nothing').not.toBe(JSON.stringify(one));
 
     let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: 'fighter', credits: 'free' });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.fighter.missile });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.fighter.missile });
-    expect(state.run.upgrades, 'the run kept one missile where two were taken').toEqual(['missile', 'missile']);
+    state = reduce(state, { slice: 'run', type: 'upgraded', kind: 'straight' });
+    state = reduce(state, { slice: 'run', type: 'upgraded', kind: 'straight' });
+    expect(state.run.tubes, 'the run kept one tube where two were taken').toEqual(['straight', 'straight']);
   });
 
   /*
@@ -337,10 +322,9 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       out of this list would be a weapon whose pool nothing checks — which is the exact failure this
       test exists for, one table further back.
     */
-    const everything: UpgradeKind[] = [];
-    for (const kind of UPGRADE_KINDS) {
-      for (let i = 0; i < 15; i++) everything.push(kind);
-    }
+    // A full rack of the heavier kind, and a list past the hull's two — 0577 — which must clamp.
+    const everything: MissileKind[] = [];
+    for (let i = 0; i < 15; i++) everything.push('straight');
 
     /*
       ⚠️ **EVERY SHIP, SINCE 0441.** The strongest loadout is a ship's own gun with every tube, and

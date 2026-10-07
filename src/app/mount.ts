@@ -1916,14 +1916,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       runRecorded = false;
       resetCreditScore(world.score);
     }
-    // The list, the tube, or the SHIP — 0233, 0441. `upgraded` replaces the list on a switch too, so
-    // the first test would do alone; the other two are the claim written out rather than relied on.
-    // 0525: and the gun, which the hangar may fit from another ship.
-    const rearmed =
-      next.run.upgrades !== state.run.upgrades ||
-      next.run.ship !== state.run.ship ||
-      next.run.gun !== state.run.gun ||
-      next.run.missile !== state.run.missile;
+    // The tubes or the SHIP — 0441, 0577 — and the gun, which the hangar may fit from another ship (0525).
+    const rearmed = next.run.tubes !== state.run.tubes || next.run.ship !== state.run.ship || next.run.gun !== state.run.gun;
     const runChanged = next.run !== state.run;
     /*
       ⚠️ **Per FIELD rather than per slice, and it stopped being the same question at the second
@@ -1958,7 +1952,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       world.shipRow = fitted(SHIPS[state.run.ship], state.run.gun, state.hangar.rim[state.run.ship]);
       // 0526: and the atlas wearing it.
       fitAtlasGun();
-      world.weapon = weaponFor(world.shipRow, state.run.upgrades, state.run.missile);
+      world.weapon = weaponFor(world.shipRow, state.run.tubes);
       // The lives counter is the ship being flown — 0430 — and the run's ship is the pilot's (0441).
       // 0521: in the dash the hangar fitted to it.
       chrome.setShip(world.shipRow, SHIPS[state.hangar.plate[state.run.ship]], fitOf(state.run.ship, state.run.gun));
@@ -2685,7 +2679,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (state.run.lives > 0) return;
     // 0542: the wheels the stand wears, so a rim tried on at Cosmo's turns on the pad as a fitted one does.
     world.shipRow = state.screen.current === 'shop' ? fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, standFit(ship).rim) : row;
-    world.weapon = weaponFor(row, [], row.missile);
+    world.weapon = weaponFor(row);
     wearHull(world);
   }
   /*
@@ -4418,7 +4412,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `effect: 'upgrade'` rows, and the reducer's action union fails to compile for a kind added there
       and not here.
     */
-    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face) });
+    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', kind: missileFaceOf(face) });
   };
 
   /** The size the canvas was last fitted to, so a report of the same size does nothing. */

@@ -39,13 +39,15 @@ export interface MissileRow {
   shot: ShotKind;
   guidance: GuidanceKind;
   /**
-   * The note values the cadence is built from, one entry per rung. **Not the cadence itself** — the
-   * missile fires every `MISSILE_BEAT_RATIO` of these (`src/content/pickups.ts`), which is what
-   * makes it a counter-beat rather than a slower copy of the gun.
+   * The note value the cadence is built from. **Not the cadence itself** — the missile fires every
+   * `MISSILE_BEAT_RATIO` of these (`src/content/pickups.ts`), which is what makes it a counter-beat
+   * rather than a slower copy of the gun.
+   *
+   * ⚠️ **ONE NUMBER, AND IT WAS A LADDER OF FIVE — 0577.** *"Let's remove the missile upgrades, you
+   * either have full tier missiles or you don't."* Every tube fires at what was the ladder's top rung,
+   * 4, from the moment it is fitted. How many tubes a ship has is the run's (`tubes`), not a rung's.
    */
-  missileEvery: readonly number[];
-  /** Tubes, one entry per rung. Zero at the base: the missile is earned — 0056. */
-  launchers: readonly number[];
+  missileEvery: number;
   /**
    * The most a `homing` missile turns toward its target per step, in radians. Zero for a missile
    * that flies straight.
@@ -82,8 +84,8 @@ export interface MissileRow {
   /** The face the missile pickup shows when it is offering this kind — an index into the atlas. */
   pickup: number;
   /**
-   * What a pickup of this tube buys once its ladder is full —
-   * `docs/decisions/0373-a-special-is-the-guns-own.md`. Every row authors it.
+   * What a pickup of this tube buys once both tubes are fitted —
+   * `docs/decisions/0373-a-special-is-the-guns-own.md`, a full ladder's until 0577. Every row authors it.
    */
   special: SpecialKind;
 }
@@ -92,16 +94,15 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
   /**
    * The missile 0051 asked for: slower than the pulse, three times its damage, fired from the wings.
    *
-   * ⚠️ **Tube, tube, then rate** — *"upgrades for missiles should be 1 tube, 2 tubes, faster fire
-   * rate"* — and the ladders are `SHIPS.proof`'s own, moved here unchanged by 0233.
+   * ⚠️ **Tube, tube, then rate** was its ladder — *"upgrades for missiles should be 1 tube, 2 tubes,
+   * faster fire rate"* — and 0577 took the rate steps: a tube is fitted at the top rate.
    */
   straight: {
     label: 'Missiles',
-    hint: 'Tubes up a tier',
+    hint: 'A tube that fires straight',
     shot: 'missile',
     guidance: 'straight',
-    missileEvery: [8, 8, 8, 6, 4],
-    launchers: [0, 1, 2, 2, 2],
+    missileEvery: 4,
     seek: 0,
     fuse: 0,
     pickup: SPRITE.pickupMissile,
@@ -114,8 +115,8 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
    * bit less damage than regular missiles; home into the nearest target when fired (any direction)."*
    *
    * ⚠️ **The same tubes, the same clock, the same cue.** What differs is the shot (`seeker`, worth
-   * two pulses where the straight missile is worth three) and the guidance. A missile pickup of this
-   * kind switches the tubes and starts their ladder again at one rung, exactly as a gun does (0233).
+   * two pulses where the straight missile is worth three) and the guidance. Since 0577 a ship may fit
+   * one of each, and each tube fires its own.
    *
    * ⚠️ **ON THE SCREEN, AND ON A FUSE — 0246.** Played: *"they're way too strong, limit them to
    * screen space only and give them a shorter lifespan."* A seeker hunts only a body inside the
@@ -123,11 +124,10 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
    */
   homing: {
     label: 'Seekers',
-    hint: 'Missiles that hunt',
+    hint: 'A tube that hunts',
     shot: 'seeker',
     guidance: 'homing',
-    missileEvery: [8, 8, 8, 6, 4],
-    launchers: [0, 1, 2, 2, 2],
+    missileEvery: 4,
     // `fuse` was 90 until 0503: a tenth longer, with the desktop's view — see the field's note.
     seek: 0.09,
     fuse: 99,

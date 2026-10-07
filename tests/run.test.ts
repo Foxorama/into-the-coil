@@ -8,7 +8,6 @@ import { LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { OPENING_CHARGES, SIDES, SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
-import { UPGRADE_TIERS } from '../src/content/pickups.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 
 /**
@@ -56,10 +55,10 @@ function armed(): State {
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
     { slice: 'run', type: 'took', special: 'hunt' },
-    // On the OTHER tube, not the ship's own: a fixture on the base kind could not see a death or a
-    // continue putting it back to the base. `npm run prove` said so. The gun's ladder went with 0441.
-    { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
-    { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
+    // Two tubes of two kinds — 0577 — so a death or a continue that emptied, re-ordered or re-fitted
+    // them is a different answer from keeping them. The gun's ladder went with 0441.
+    { slice: 'run', type: 'upgraded', kind: 'homing' },
+    { slice: 'run', type: 'upgraded', kind: 'straight' },
   );
 }
 
@@ -100,15 +99,9 @@ describe('a run is lives', () => {
       chargesIn(before.run.arsenal),
       'the fixture never banked a charge, so a death cannot be seen to spare one',
     ).toBeGreaterThan(chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)));
-    expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
-      'missile',
-      'missile',
-    ]);
+    expect(before.run.tubes, 'the fixture has no tubes to lose, so this proves half of nothing').toEqual(['homing', 'straight']);
     expect(before.run.ship, 'the fixture flies the default ship, so a death putting it back would not show').not.toBe(
       initialRun.ship,
-    );
-    expect(SHIPS[SHIP].missile, 'the fixture took its ship’s own tube, so a death putting it back would not show').not.toBe(
-      before.run.missile,
     );
 
     const after = reduce(before, DIE);
@@ -119,10 +112,8 @@ describe('a run is lives', () => {
       is armed past the starting kit precisely so the two answers are different objects.
     */
     expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));
-    // On the OTHER tube, so a death that put the base tube back is a different answer from this one.
-    expect(after.run.upgrades, 'a death took rungs off a ladder').toEqual(before.run.upgrades);
+    expect(after.run.tubes, 'a death took or moved a tube').toEqual(['homing', 'straight']);
     expect(after.run.ship, 'a death changed the ship').toBe(SHIP);
-    expect(after.run.missile, 'a death put the base tube back on the ship').toBe('homing');
   });
 
   it('and on the LAST death too, so the rule has no hidden condition', () => {
@@ -133,30 +124,34 @@ describe('a run is lives', () => {
     for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.run.lives).toBe(0);
     expect(state.run.arsenal, 'the last death emptied the arsenal').toEqual(carried.arsenal);
-    expect(state.run.upgrades, 'the last death took the ladders').toEqual(carried.upgrades);
+    expect(state.run.tubes, 'the last death took the tubes').toEqual(carried.tubes);
   });
 
-  it('a pickup of another kind switches the kind and keeps the count — 0256', () => {
+  it('0577 — a missile pickup fits its kind into the next empty tube, and a full rack takes no third', () => {
     /*
-      *"Picking up a new weapon/missile type doesn't reset your power count → it's too punishing when
-      you accidentally get a pickup with a lot of enemies on screen or right before a boss."* 0233
-      started the new kind at one rung; the ladder is the ship's now and the kind is what it is
-      fitted to. Held at the cap too — where a switch adds nothing and the list stays the tier.
-
-      ⚠️ **The gun's half was deleted with 0441** (`docs/decisions/0441-a-pilot-flies-their-own-ship.md`):
-      the gun is the ship's and nothing switches it, so the tubes are the one ladder this can hold.
+      *"The first two missile powerups lock in their tubes."* Each fits the kind its face showed into
+      the next tube and leaves the one before it alone — 0233's switch, which re-fitted every tube to
+      the newest kind, went with the one kind a ship used to carry. A third is refused here; the shell
+      sends it to `took` as a surge (`effectOf`).
     */
     let state = play(BEGIN, PLAY);
-    for (let i = 0; i < UPGRADE_TIERS - 1; i++) {
-      state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' });
-    }
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' });
-    expect(state.run.missile, 'the run did not switch tubes').toBe('homing');
-    expect(state.run.upgrades.length, 'a tube switch reset the count').toBe(UPGRADE_TIERS);
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' });
-    expect(state.run.missile).toBe('straight');
-    expect(state.run.upgrades.length, 'a switch at the cap grew the list past the tier').toBe(UPGRADE_TIERS);
+    expect(state.run.tubes, 'a run with nothing fitted opened on a tube').toEqual([]);
+    state = reduce(state, { slice: 'run', type: 'upgraded', kind: 'straight' });
+    expect(state.run.tubes, 'the first pickup did not fit its tube').toEqual(['straight']);
+    state = reduce(state, { slice: 'run', type: 'upgraded', kind: 'homing' });
+    expect(state.run.tubes, 'the second pickup re-fitted the first tube, or fitted nothing').toEqual(['straight', 'homing']);
+    const full = state.run;
+    state = reduce(state, { slice: 'run', type: 'upgraded', kind: 'homing' });
+    expect(state.run.tubes, 'a third pickup changed a full rack').toEqual(['straight', 'homing']);
+    expect(state.run, 'a third pickup changed the run at all').toBe(full);
     expect(state.run.ship, 'a tube pickup changed the ship').toBe(SHIP);
+  });
+
+  it('0577 — and a run carries in the tubes it is begun with, two at most', () => {
+    const run = play({ ...BEGIN, tubes: ['homing', 'homing'] } as Action).run;
+    expect(run.tubes, 'the run did not open on the tubes it was begun with').toEqual(['homing', 'homing']);
+    const many = play({ ...BEGIN, tubes: ['straight', 'homing', 'straight'] } as Action).run;
+    expect(many.tubes, 'a run opened on more tubes than a hull carries').toEqual(['straight', 'homing']);
   });
 
   it('a run begins in the ship it is given, on OPENING_CHARGES of that ship’s own gun special — 0441', () => {
@@ -168,7 +163,7 @@ describe('a run is lives', () => {
     for (const ship of SHIP_KINDS) {
       const run = play({ slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship, credits: 'free' }).run;
       expect(run.ship, `a run begun in the ${ship} flies something else`).toBe(ship);
-      expect(run.missile, `the ${ship} opened on somebody else's tube`).toBe(SHIPS[ship].missile);
+      expect(run.tubes, `the ${ship} opened on a tube nobody fitted`).toEqual([]);
       const own = WEAPONS[SHIPS[ship].weapon].special;
       const side = SPECIALS[own].side;
       expect(run.arsenal[side], `the ${ship} did not open on ${OPENING_CHARGES} of its own ${own}`).toEqual(
@@ -301,9 +296,8 @@ describe('a run over is a continue', () => {
     expect(resumed.arsenal, 'the fixture holds the starting kit, so a reset would look the same').not.toEqual(
       startingArsenal(SHIP, DEFAULT_DIFFICULTY),
     );
-    expect(resumed.upgrades, 'the continue took the ladders').toEqual(before.upgrades);
+    expect(resumed.tubes, 'the continue took the tubes').toEqual(before.tubes);
     expect(resumed.ship, 'the continue changed the ship').toBe(before.ship);
-    expect(resumed.missile, 'the continue put the base tube back').toBe(before.missile);
   });
 
   it('carries the tier rather than re-choosing it', () => {
@@ -381,7 +375,7 @@ describe('a run is a sequence of levels', () => {
     expect(after.run.lives, 'clearing a level cost a life').toBe(before.run.lives);
     // Carried forward and NOT paid into — 0372 took away 0053's *"gains one per level cleared."*
     expect(after.run.arsenal, 'clearing a level moved the arsenal').toEqual(before.run.arsenal);
-    expect(after.run.upgrades, 'clearing a level took the weapon upgrades').toEqual(before.run.upgrades);
+    expect(after.run.tubes, 'clearing a level took the tubes').toEqual(before.run.tubes);
   });
 
   it('a level cleared with more still to come is not the end of the run', () => {

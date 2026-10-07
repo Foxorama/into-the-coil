@@ -153,7 +153,7 @@ describe('the run', () => {
       { slice: 'run', type: 'lifeLost' },
       { slice: 'run', type: 'took', special: 'bomb' },
       { slice: 'run', type: 'spent', side: 'gun' },
-      { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' },
+      { slice: 'run', type: 'upgraded', kind: 'straight' },
       { slice: 'run', type: 'levelCleared' },
       { slice: 'run', type: 'continued' },
     ];

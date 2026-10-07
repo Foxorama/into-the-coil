@@ -108,7 +108,7 @@ const SWEEPS = [7, 8, 9] as const;
 
 describe('0259 — the bullets stay on the screen', () => {
   const swept = new Map(LEVEL_KINDS.map((kind) => [kind, SWEEPS.map((sweepSeconds) => weighLevel(kind, { sweepSeconds }))] as const));
-  const levelOneEarly = SWEEPS.map((sweepSeconds) => weighLevel(LEVEL_KINDS[0], { missileTier: 1, sweepSeconds }));
+  const levelOneEarly = SWEEPS.map((sweepSeconds) => weighLevel(LEVEL_KINDS[0], { tubes: 1, sweepSeconds }));
   // The eight-second walk, which is the instrument's own default and what the share below is read off.
   const measured = new Map(LEVEL_KINDS.map((kind) => [kind, swept.get(kind)![1]!] as const));
 

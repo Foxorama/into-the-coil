@@ -34,7 +34,8 @@ import {
 import { SCROLL_PER_STEP, SHIP_SPEED, boxPastFor } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { MAX_BARRELS, MAX_LAUNCHERS, SPREAD_STEP, weaponFor } from '../src/content/pickups.ts';
+import { MISSILES, type MissileKind } from '../src/content/missiles.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, TUNED as TUNED_KIND } from '../src/content/difficulty.ts';
 
 /**
@@ -1665,8 +1666,7 @@ describe('0121 — a wave is close enough to die together', () => {
 });
 
 /**
- * Damage a second, everything landing, at `tier` of the missile ladder — the most of it any ship
- * puts out.
+ * Damage a second, everything landing, with `tier` tubes fitted — the most of it any ship puts out.
  *
  * ⚠️ **Hoisted out of 0124's block and shared with 0150's**, because the two ask the same question
  * about the same fight — *how long does this band of health last* — and two descriptions of the
@@ -1678,16 +1678,21 @@ describe('0121 — a wave is close enough to die together', () => {
  * can kill"* is a claim about all of them. Direct hits only — a chain's links and a ring's burst are
  * not in it, and `tests/serpent.test.ts` flies every gun for the fights where those count.
  */
+/*
+  ⚠️ **`tier` is a count of straight tubes since 0577**, which took the ladder: nought to
+  `MAX_LAUNCHERS`, each at the one rate. Straight, because a straight missile hits harder than a seeker
+  and this is the fastest kill. A tube's damage is its own shot's — `Weapon.missileDamage` went with
+  the ladder.
+*/
 const dpsAt = (tier: number): number =>
   Math.max(
     ...SHIP_KINDS.map((kind) => {
-      const upgrades: 'missile'[] = [];
-      for (let i = 0; i < tier; i++) upgrades.push('missile');
-      const w = weaponFor(SHIPS[kind], upgrades);
-      return (
-        (w.shots * w.damage) / (w.fireEvery / STEPS_PER_SECOND) +
-        (w.launchers > 0 ? (w.launchers * w.missileDamage) / (w.missileEvery / STEPS_PER_SECOND) : 0)
-      );
+      const tubes: MissileKind[] = [];
+      for (let i = 0; i < tier && i < MAX_LAUNCHERS; i++) tubes.push('straight');
+      const w = weaponFor(SHIPS[kind], tubes);
+      let volley = 0;
+      for (const tube of w.tubes) volley += SHOTS[MISSILES[tube].shot].damage;
+      return (w.shots * w.damage) / (w.fireEvery / STEPS_PER_SECOND) + volley / (w.missileEvery / STEPS_PER_SECOND);
     }),
   );
 
@@ -2186,7 +2191,8 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       wrong quantity, and it was green on this table before this line existed.
     */
     const floor = BOSS_DEATH_STEPS / STEPS_PER_SECOND;
-    const fastest = dpsAt(UPGRADE_TIERS - 1);
+    // Both tubes — 0577: it was the ladder's third rung, and a tube is fitted at the top rate now.
+    const fastest = dpsAt(MAX_LAUNCHERS);
     let found = 0;
     // The real bosses only, since 0269 — `REAL_BOSSES` above has why, and `tests/midboss.test.ts`
     // holds a mid-boss's window at the loadout its own fight is met with.
@@ -2341,7 +2347,8 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
     written at the design loadout would be met by a boss that evaporates for a player who has
     collected everything — and that player is the one who reported this.
   */
-  const FASTEST = dpsAt(UPGRADE_TIERS - 1);
+  // Both tubes — 0577: it was the ladder's third rung, and a tube is fitted at the top rate now.
+  const FASTEST = dpsAt(MAX_LAUNCHERS);
   const TUNED = DIFFICULTIES.savior;
 
   it('THE REPORTED ONE: a boss is not over before its music is', () => {
@@ -2473,6 +2480,9 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       is in `tests/serpent.test.ts`: every gun in its own ship, every held lane and distance, the
       quickest fight held to forty seconds and every phase of it to eight volleys. The player chose
       the fixes: three small health rises, and the arc's weight on the pterodactyl.
+
+      ⚠️ **AND 0577 PUT THE ARITHMETIC AT THE CAP.** With the ladder gone `FASTEST` is
+      `dpsAt(MAX_LAUNCHERS)`: two tubes, each at the top rate — no third rung left to read.
     */
     for (const level of LEVEL_KINDS) {
       const kind = LEVELS[level].boss;

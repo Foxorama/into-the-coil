@@ -158,7 +158,8 @@ export const PROBES = [
     // ⚠️ Re-aimed by 0233: the tube count is the missile kind's own ladder now and the cap is the
     // ceiling it is held against — so a cap that moves without the ladder is caught by THE FLOORS
     // (the two disagree) rather than by a ship growing a third tube, which the ladder never says.
-    guard: 'THE FLOORS: the last tier lands exactly on them',
+    // Renamed by 0577, which took the tiers.
+    guard: 'THE FLOORS: a full rack lands exactly on them',
     edit: {
       path: 'src/content/pickups.ts',
       /*

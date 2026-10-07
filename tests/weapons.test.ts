@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame, cueOfFlight, wearHull, type World } from '../src/app/frame.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { WEAPONS, WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
-import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
+import { MISSILES, MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { SHIPS, SHIP_KINDS, hullFor, shipCarrying } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPECIALS } from '../src/content/specials.ts';
@@ -29,15 +29,14 @@ import { SHIP_BOX, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts
 import {
   BOMB_KINDS,
   FASTEST_FIRE,
+  MAX_LAUNCHERS,
   PICKUPS,
   PICKUP_KINDS,
-  UPGRADE_TIERS,
   drawFace,
   drawKind,
   faceOf,
   weaponFor,
   type PickupKind,
-  type UpgradeKind,
 } from '../src/content/pickups.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
@@ -101,7 +100,7 @@ describe('0233 — a weapon is a kind', () => {
     the value its last rung was. What survives for a gun is what was true at ANY rung, held below on
     the one value; the tubes still climb and keep the whole of it.
   */
-  it('every gun fires in whole steps no faster than the flash, and every tube has a ladder per rung that changes the tubes', () => {
+  it('every gun fires in whole steps no faster than the flash, and every tube fitted changes the tubes', () => {
     for (const kind of WEAPON_KINDS) {
       const row = WEAPONS[kind];
       /*
@@ -121,16 +120,21 @@ describe('0233 — a weapon is a kind', () => {
       const ship = SHIPS[shipCarrying(kind)];
       expect(weaponFor(ship, []).kind, `the ${kind}'s ship does not fly the ${kind}`).toBe(kind);
     }
+    /*
+      ⚠️ **A LADDER PER RUNG, EACH RUNG CHANGING THE TUBES, WAS HERE; 0577 took the ladder.** A row's
+      cadence is one whole number now, and what climbs is the count: every tube fitted, up to the cap,
+      changes the tubes, and one past it changes nothing — the pickup is a surge by then.
+    */
     for (const kind of MISSILE_KINDS) {
       const row = MISSILES[kind];
-      expect(row.missileEvery.length, `${kind} has a cadence ladder that is not one rung per tier`).toBe(UPGRADE_TIERS + 1);
-      expect(row.launchers.length, `${kind} has a tube ladder that is not one rung per tier`).toBe(UPGRADE_TIERS + 1);
-      const carried: UpgradeKind[] = [];
-      let previous = tubesOf(weaponFor(SHIPS.fighter, carried, kind));
-      for (let tier = 1; tier <= UPGRADE_TIERS; tier++) {
-        carried.push('missile');
-        const now = tubesOf(weaponFor(SHIPS.fighter, carried, kind));
-        expect(now, `tier ${tier} of the ${kind} missile changed nothing about the tubes`).not.toBe(previous);
+      expect(Number.isInteger(row.missileEvery) && row.missileEvery > 0, `${kind} builds its cadence on ${row.missileEvery} steps`).toBe(true);
+      const carried: MissileKind[] = [];
+      let previous = tubesOf(weaponFor(SHIPS.fighter, carried));
+      for (let n = 1; n <= MAX_LAUNCHERS + 1; n++) {
+        carried.push(kind);
+        const now = tubesOf(weaponFor(SHIPS.fighter, carried));
+        if (n <= MAX_LAUNCHERS) expect(now, `a ${kind} tube ${n} changed nothing about the tubes`).not.toBe(previous);
+        else expect(now, `a ${kind} tube past the cap changed the tubes`).toBe(previous);
         previous = now;
       }
     }
@@ -138,7 +142,7 @@ describe('0233 — a weapon is a kind', () => {
 
   /** The tubes' half of a resolved weapon. */
   function tubesOf(w: ReturnType<typeof weaponFor>): string {
-    return JSON.stringify([w.missileEvery, w.launchers, w.missileDamage, w.guidance]);
+    return JSON.stringify([w.missileEvery, w.launchers, w.tubes]);
   }
 
   /*

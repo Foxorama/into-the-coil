@@ -70,7 +70,7 @@ import {
   rungIn,
   type ThemeKind,
 } from '../src/content/themes.ts';
-import { MISSILE_BEAT_RATIO, missileEveryAt } from '../src/content/pickups.ts';
+import { MISSILE_BEAT_RATIO } from '../src/content/pickups.ts';
 import { BOSSES, BOSS_KINDS, type BossAttack } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
@@ -1620,14 +1620,12 @@ describe('the synthesiser', () => {
     }
     for (const kind of MISSILE_KINDS) {
       const row = MISSILES[kind];
-      const soonest = Math.min(
-        ...row.missileEvery.map((_unused, tier) => MISSILE_BEAT_RATIO * missileEveryAt(row, tier)),
-      );
-      const missileGap = soonest / STEPS_PER_SECOND;
+      // ⚠️ The fastest of its rungs was here; 0577 took the ladder, so a tube's one cadence is its fastest.
+      const missileGap = (MISSILE_BEAT_RATIO * row.missileEvery) / STEPS_PER_SECOND;
       expect(
         cueSeconds(CUES.missile),
         `the ${kind} missile sounds for ${cueSeconds(CUES.missile).toFixed(3)}s and launches every ` +
-          `${missileGap.toFixed(3)}s at its fastest rung, so the counter-beat overlaps itself`,
+          `${missileGap.toFixed(3)}s, so the counter-beat overlaps itself`,
       ).toBeLessThanOrEqual(missileGap);
     }
   });

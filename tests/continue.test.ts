@@ -208,9 +208,9 @@ describe('a run over is a continue', () => {
     const built = shell();
     built.lifecycle.begin(TIER, SHIP, 'free');
     intoAFight(built);
-    // The tubes, the one ladder since 0441.
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' });
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' });
+    // The tubes, both fitted and one of each — 0577: a ladder no longer, so a mixed rack is the most to keep.
+    built.dispatch({ slice: 'run', type: 'upgraded', kind: 'homing' });
+    built.dispatch({ slice: 'run', type: 'upgraded', kind: 'straight' });
     // Banked past the starting kit, or a continue resetting the arsenal could not be seen — 0372.
     built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
     dieOutTheRun(built);
@@ -267,11 +267,11 @@ describe('a run over is a continue', () => {
     expect(carried.arsenal, 'the run reached the continue screen with a fresh kit, so a reset proves nothing').not.toEqual(
       startingArsenal(SHIP, TIER),
     );
-    expect(carried.upgrades.length, 'the run reached the continue screen with no ladder to keep').toBeGreaterThan(0);
+    expect(carried.tubes, 'the run reached the continue screen without the tubes it was fitted').toEqual(['homing', 'straight']);
     built.lifecycle.resume();
     expect(built.state().run.lives, 'the continue did not restock the lives').toBe(livesFor(TIER));
     expect(built.state().run.arsenal, 'the continue reset the arsenal').toEqual(carried.arsenal);
-    expect(built.state().run.upgrades, 'the continue took the ladders').toEqual(carried.upgrades);
+    expect(built.state().run.tubes, 'the continue took the tubes').toEqual(carried.tubes);
     expect(built.state().run.difficulty, 'the continue changed the tier under the player').toBe(TIER);
     expect(built.state().run.ship, 'the continue changed the ship under the player').toBe(SHIP);
     expect(built.world.shipRow, 'the continue flew a different ship’s row').toBe(SHIPS[SHIP]);

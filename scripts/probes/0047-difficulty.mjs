@@ -104,8 +104,9 @@ export const PROBES = [
       // its `difficulty` is the missile's.
       // ⚠️ Re-anchored by 0441: the tubes are the only thing upgraded, so the arm sets the missile
       // outright.
-      find: '        missile: action.kind,\n        difficulty: state.difficulty,',
-      replace: "        missile: action.kind,\n        difficulty: 'legendary',",
+      // ⚠️ Re-anchored by 0577: the arm appends the new tube, so the tier follows the gun there.
+      find: '        tubes,\n        ship: state.ship,\n        gun: state.gun,\n        difficulty: state.difficulty,',
+      replace: "        tubes,\n        ship: state.ship,\n        gun: state.gun,\n        difficulty: 'legendary',",
     },
   },
 ];

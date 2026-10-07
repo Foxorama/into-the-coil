@@ -248,12 +248,12 @@ describe('the ship comes apart, and the player watches it happen', () => {
     */
     const built = shell(NO_LEVEL);
     built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER, ship: shipOf(built.world), credits: 'free' });
-    // The tubes, the one ladder since 0441.
-    for (let i = 0; i < 3; i++) {
-      built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: built.world.shipRow.missile });
-    }
+    // The tubes, both fitted — 0577: there is no ladder, so two is everything a ship can carry.
+    built.dispatch({ slice: 'run', type: 'upgraded', kind: 'straight' });
+    built.dispatch({ slice: 'run', type: 'upgraded', kind: 'homing' });
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
-    const before = built.state().run.upgrades;
+    const before = built.state().run.tubes;
+    expect(before, 'the fixture fitted no tubes, so keeping them proves nothing').toEqual(['straight', 'homing']);
     killShip(built.world, built.frame);
     // The death is the END of the beat — 0079 — and nothing a death costs moves before it.
     expect(built.state().run.lives, 'the death was paid on the step the hull reached zero, before the beat').toBe(
@@ -264,7 +264,7 @@ describe('the ship comes apart, and the player watches it happen', () => {
     expect(built.state().run.lives, 'the fixture never died, so keeping the ladders proves nothing').toBe(
       livesFor(TIER) - 1,
     );
-    expect(built.state().run.upgrades, 'a death took rungs off the ladders').toEqual(before);
+    expect(built.state().run.tubes, 'a death took tubes off the ship').toEqual(before);
     expect(built.world.pickups.size, 'a death threw pieces onto the field').toBe(0);
   });
 

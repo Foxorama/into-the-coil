@@ -16,8 +16,9 @@ export const PROBES = [
       path: 'src/state/slices/run.ts',
       // The twelve-space indent is the `lifeLost` arm; every other arm has these at eight.
       // ⚠️ Re-anchored by 0441: the run carries its ship where it carried a gun.
-      find: '            upgrades: state.upgrades,\n            ship: state.ship,',
-      replace: '            upgrades: [],\n            ship: state.ship,',
+      // ⚠️ And by 0577, which made the ladders the tubes.
+      find: '            tubes: state.tubes,\n            ship: state.ship,',
+      replace: '            tubes: [],\n            ship: state.ship,',
     },
   },
   {
@@ -31,8 +32,9 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/run.ts',
       // ⚠️ Re-anchored by 0525, which carries the run's gun beside its ship.
-      find: '            ship: state.ship,\n            gun: state.gun,\n            missile: state.missile,',
-      replace: "            ship: 'fighter',\n            gun: state.gun,\n            missile: 'straight',",
+      // ⚠️ And by 0577, which took the ship's own tube kind: the base ship alone is put back.
+      find: '            ship: state.ship,\n            gun: state.gun,',
+      replace: "            ship: 'fighter',\n            gun: state.gun,",
     },
   },
   {
@@ -59,8 +61,9 @@ export const PROBES = [
       // Anchored on the continue's own note on the score (0438), the one text no other case has.
       // ⚠️ Re-anchored by 0441: the run carries its ship where it carried a gun.
       // ⚠️ And by 0525, which carries the run's gun beside its ship.
-      find: '        upgrades: state.upgrades,\n        ship: state.ship,\n        gun: state.gun,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
-      replace: '        upgrades: [],\n        ship: state.ship,\n        gun: state.gun,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
+      // ⚠️ And by 0577, which made the ladders the tubes.
+      find: '        tubes: state.tubes,\n        ship: state.ship,\n        gun: state.gun,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
+      replace: '        tubes: [],\n        ship: state.ship,\n        gun: state.gun,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
     },
   },
   {

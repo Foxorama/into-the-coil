@@ -21,9 +21,10 @@ export const PROBES = [
     */
     edit: {
       path: 'src/content/pickups.ts',
-      // ⚠️ Re-anchored by 0233: the tube count is read off the missile kind's ladder first.
-      find: '  const launchers = tubesAt > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubesAt;',
-      replace: '  const launchers = tubesAt + 1 > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubesAt + 1;',
+      // ⚠️ Re-anchored by 0233, and by 0577: a weapon is resolved from the tubes fitted, so a ship that
+      // opens with a launcher is one whose list defaults to a tube.
+      find: 'export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = []): Weapon {',
+      replace: "export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = ['straight']): Weapon {",
     },
   },
   {

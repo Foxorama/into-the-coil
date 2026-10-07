@@ -6,6 +6,7 @@
 //
 // `--difficulty` flies a tier rather than the content multiplied by nothing; `--carried` flies the
 // tubes a player who took every pickup carries in, `carriedAt`, rather than one rung — 0472.
+// `--missiles=N` is how many straight tubes, nought to two, since 0577 took the ladder.
 //
 // A gun is flown in the ship it is keyed to, whole — 0441; `--weapon=N` went with the gun's tiers.
 //
@@ -45,7 +46,7 @@
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP } from '../src/content/levels.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { DRAWN_KINDS, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { DRAWN_KINDS, MAX_LAUNCHERS, weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -71,8 +72,12 @@ import { playableWorld } from '../tests/world.ts';
  * beside the mid-boss's drop, which is still one tube every time (*"mid-boss one of each"*). Reading a
  * field the table no longer has counted nothing and left every fight solved for a bare ship.
  *
+ * ⚠️ **A COUNT OF TUBES SINCE 0577, which took the ladder.** It clamped at `UPGRADE_TIERS`; a missile
+ * pickup past the second tube is a surge now, so this clamps at `MAX_LAUNCHERS` and the rest buy
+ * nothing a fight is weighed by.
+ *
  * @param {import('../src/content/levels.ts').LevelKind} kind
- * @returns {{ missileTier: number }}
+ * @returns {{ tubes: number }}
  */
 export function carriedAt(kind) {
   const shares = DRAWN_KINDS.length;
@@ -82,7 +87,7 @@ export function carriedAt(kind) {
     const row = LEVELS[level];
     const midAt = row.midBoss === null ? Number.POSITIVE_INFINITY : row.midBoss.at;
     for (const p of row.pickups) if (level !== kind || p.at < midAt) thirds += 1;
-    if (level === kind) return { missileTier: Math.min(UPGRADE_TIERS, Math.floor(thirds / shares)) };
+    if (level === kind) return { tubes: Math.min(MAX_LAUNCHERS, Math.floor(thirds / shares)) };
     if (row.midBoss !== null) for (const p of MID_BOSS_DROP) if (p === 'missile') thirds += shares;
   }
   throw new Error(`${kind} is not a level`);
@@ -181,7 +186,8 @@ const shaped = (s) => ({
  * there, so the fight ends when the guns end it.
  */
 export function weighFight(kind, options = {}) {
-  const missileTier = options.missileTier ?? 1;
+  // Straight tubes, nought to two — 0577: a count, where it was a rung of the ladder.
+  const tubes = Math.min(MAX_LAUNCHERS, options.tubes ?? 1);
   const sweepSeconds = options.sweepSeconds ?? 8;
   const level = LEVELS[kind];
   const { world } = playableWorld(level, options.difficulty);
@@ -190,7 +196,7 @@ export function weighFight(kind, options = {}) {
   if (options.bosses !== undefined) world.difficulty = { ...world.difficulty, bossToughness: options.bosses };
   const frame = new GameFrame(world);
   const carried = [];
-  for (let i = 0; i < missileTier; i++) carried.push('missile');
+  for (let i = 0; i < tubes; i++) carried.push('straight');
   // The fighter's pulse unless a gun is named, flown in the ship it is keyed to — 0406, 0441.
   if (options.gun !== undefined) world.shipRow = SHIPS[shipCarrying(options.gun)];
   world.weapon = weaponFor(world.shipRow, carried);
@@ -316,7 +322,7 @@ if (isMain) {
   const kinds = named.length > 0 ? named : LEVEL_KINDS;
   const gun = args.find((a) => a.startsWith('--gun='));
   const options = {
-    missileTier: flag('missiles', 1),
+    tubes: flag('missiles', 1),
     sweepSeconds: flag('sweep', 8),
     gun: gun === undefined ? undefined : gun.slice('--gun='.length),
     difficulty: args.find((a) => a.startsWith('--difficulty='))?.slice('--difficulty='.length),
@@ -324,7 +330,7 @@ if (isMain) {
   const carried = args.includes('--carried');
   let unfought = 0;
   for (const kind of kinds) {
-    const r = weighFight(kind, carried ? { ...options, missileTier: carriedAt(kind).missileTier } : options);
+    const r = weighFight(kind, carried ? { ...options, tubes: carriedAt(kind).tubes } : options);
     if (r.midBoss === null) {
       console.log(`\n${kind}  — no mid-boss`);
       continue;

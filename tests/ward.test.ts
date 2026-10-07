@@ -55,7 +55,7 @@ describe('0447 — the ward is a third trigger', () => {
   });
 
   it('the shield pickup turns through the shield, the void and the nova, and each face gives what it shows', () => {
-    const loadout = { upgrades: [], missile: 'straight' } as const;
+    const loadout = { tubes: [] } as const;
     expect(PICKUPS.shield.faces).toEqual([SPRITE.pickupShield, SPRITE.pickupVoid, SPRITE.pickupNova]);
     expect(effectOf('shield', 0, loadout), 'the shield face is not a shield').toBe('shield');
     WARD_KINDS.forEach((kind, i) => {

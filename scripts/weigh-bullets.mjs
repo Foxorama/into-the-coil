@@ -16,6 +16,7 @@
 // THE LOADOUT IS THE CAP BY DEFAULT — the guns at four and two tubes — because that is what a player
 // carries from the second level on (0256) and the case the report is about: a player who kills what
 // fires before it fires. `--weapon=0 --missiles=0` is the base ship; `--sweep=0` parks it mid-lane.
+// `--missiles=N` is how many straight tubes, nought to two, since 0577 took the ladder.
 //
 // WHAT IT PRINTS, per level
 //
@@ -31,7 +32,7 @@
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { weaponFor } from '../src/content/pickups.ts';
+import { MAX_LAUNCHERS, weaponFor } from '../src/content/pickups.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -55,7 +56,8 @@ function bulletOnScreen(world) {
  * hold the rest.
  */
 export function weighLevel(kind, options = {}) {
-  const missileTier = options.missileTier ?? 2;
+  // Straight tubes, nought to two — 0577: a count, where it was a rung of the ladder.
+  const tubes = Math.min(MAX_LAUNCHERS, options.tubes ?? 2);
   const sweepSeconds = options.sweepSeconds ?? 8;
   const windowSeconds = options.windowSeconds ?? 2;
   const level = LEVELS[kind];
@@ -65,7 +67,7 @@ export function weighLevel(kind, options = {}) {
   const frame = new GameFrame(world);
   const carried = [];
   // The tubes only: the gun is the ship's and whole since 0441.
-  for (let i = 0; i < missileTier; i++) carried.push('missile');
+  for (let i = 0; i < tubes; i++) carried.push('straight');
   world.weapon = weaponFor(world.shipRow, carried);
   wearHull(world);
   const windowSteps = Math.round(windowSeconds * STEPS_PER_SECOND);
@@ -176,7 +178,7 @@ if (isMain) {
     return found === undefined ? fallback : Number(found.slice(name.length + 3));
   };
   const options = {
-    missileTier: flag('missiles', 2),
+    tubes: flag('missiles', 2),
     sweepSeconds: flag('sweep', 8),
     windowSeconds: flag('seconds', 2),
     tier: (() => {

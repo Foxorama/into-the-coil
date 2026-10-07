@@ -1,5 +1,8 @@
 # 0083 — Two ladders of four
 
+⚠️ **BOTH LADDERS ARE GONE**: the gun's with [0441](0441-a-pilot-flies-their-own-ship.md), and the
+tubes' with [0577](0577-the-tubes-are-full.md) — *"you either have full tier missiles or you don't."*
+
 **Accepted 2026-08-08**, the day after [0082](0082-a-pickup-is-rare-and-says-what-it-is.md) and
 before it had been played through.
 

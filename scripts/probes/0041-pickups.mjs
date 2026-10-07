@@ -59,8 +59,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0256: one arm again — a switch keeps the count — clamped at the cap.
       // ⚠️ Re-anchored by 0266, which put 0243's count back: the appended half is `rungs` again.
       // ⚠️ Re-anchored by 0372, which took the count away with the scatter: one rung a pickup.
-      find: '      const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;',
-      replace: '      const upgrades = room > 0 && !state.upgrades.includes(action.upgrade) ? [...state.upgrades, action.upgrade] : state.upgrades;',
+      // ⚠️ Re-anchored by 0577, which made the list the tubes: a second tube of a kind deduplicated away.
+      find: '      const tubes = [...state.tubes, action.kind];',
+      replace: '      const tubes = state.tubes.includes(action.kind) ? state.tubes : [...state.tubes, action.kind];',
     },
   },
   /*

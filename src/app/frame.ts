@@ -4969,8 +4969,10 @@ function fireMissiles(w: World): void {
   // ACROSS the beat rather than on it, which is the counter-beat. A counter-beat at a random phase is
   // just a second thing that is nearly right.
   w.missileIn = stepsToGrid(w.steps, w.weapon.missileEvery);
-  const row = SHOTS[MISSILES[w.weapon.missile].shot];
   for (let i = 0; i < w.weapon.launchers; i++) {
+    // Each tube its own kind — 0577: *"1 homing, 1 regular"* is two missiles of two rows in one volley.
+    const kind = MISSILES[w.weapon.tubes[i]!];
+    const row = SHOTS[kind.shot];
     const missile = w.missiles.spawn();
     // A volley one tube short is dropped rather than grown — `src/sim/pool.ts` has the argument.
     if (missile === null) return;
@@ -5007,7 +5009,7 @@ function fireMissiles(w: World): void {
     const tube = tubeOf(w.shipRow, w.weapon.launchers, i);
     reset(missile, w.ship.along + tube.along, w.ship.across + tube.across, row);
     missile.velAlong = row.speed + w.scrollPerStep;
-    missile.damage = w.weapon.missileDamage;
+    missile.damage = row.damage;
     /*
       The pop, as a crossing that stops — the flanker's mechanism exactly, and `steerMissiles` is
       where it ends.
@@ -5021,10 +5023,10 @@ function fireMissiles(w: World): void {
     missile.steerAcross = w.ship.across + LAUNCHER_POP * side;
     // How hard it hunts, copied onto the missile — zero for a straight one, and `steerMissiles`
     // reads it rather than the fitted tubes so a switch mid-flight changes nothing in the air. 0235.
-    missile.seekTurn = w.weapon.seek;
+    missile.seekTurn = kind.seek;
     // And how long it burns — 0246. Zero is *never*, which is the straight missile: it lives to the
     // edge of the view. A seeker's fuse is what keeps a screen from filling with things that hunt.
-    missile.lifeFor = w.weapon.fuse;
+    missile.lifeFor = kind.fuse;
   }
   if (surge === null) return;
   /*

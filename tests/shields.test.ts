@@ -7,15 +7,15 @@ import { MAX_SHIELDS, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, SHIP_KINDS, fullHealth
 import {
   PICKUPS,
   PICKUP_KINDS,
+  MAX_LAUNCHERS,
   UPGRADE_KINDS,
-  UPGRADE_TIERS,
   effectOf,
   type Loadout,
   isUpgrade,
   type PickupKind,
-  type UpgradeKind,
   weaponFor,
 } from '../src/content/pickups.ts';
+import { MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -516,48 +516,35 @@ describe('a pickup says which field it lands in', () => {
       last one is a bomb*.
     */
     /*
-      ⚠️ **ON THE BASE KIND'S OWN FACE, since 0233.** `effectOf` takes the face the pickup was showing
-      and the loadout it lands on; face 0 is the base tube, so these are the questions this test always
-      asked — a pickup of the FITTED kind at its cap. A pickup of another kind is never capped, and
-      `tests/weapons.test.ts` holds that half. The gun's ladder is gone since 0441, so the tubes are
-      the one ladder this walks; the loop stays over the kinds so a second ladder joins it as a row.
+      ⚠️ **TWO TUBES AND THEN A SURGE, ON EVERY FACE, SINCE 0577.** *"The first two missile powerups
+      lock in their tubes. Any following missile powerups give them the supercharge."* There is no
+      ladder: a missile pickup is an upgrade while a tube is empty, whatever its face, and a charge once
+      both are fitted, whatever is in them.
     */
-    const fitted = (upgrades: readonly UpgradeKind[]): Loadout => ({ upgrades, missile: SHIPS.fighter.missile });
     for (const kind of UPGRADE_KINDS) {
-      expect(effectOf(kind, 0, fitted([])), `a ship with nothing on it was refused a ${kind}`).toBe('upgrade');
-
-      const capped: UpgradeKind[] = [];
-      for (let i = 0; i < UPGRADE_TIERS; i++) capped.push(kind);
-      expect(effectOf(kind, 0, fitted(capped)), `a ${kind} at its cap is still filed as an upgrade`).toBe('special');
-
-      /*
-        ⚠️ **THE CROSS-CHECK: the OTHER ladder is untouched by this one being full.** This is the
-        assertion 0083 exists for, and nothing before it could have made it.
-      */
-      for (const other of UPGRADE_KINDS) {
-        if (other === kind) continue;
-        expect(effectOf(other, 0, fitted(capped)), `a full ${kind} ladder turned a ${other} pickup into a bomb`).toBe('upgrade');
+      for (let face = 0; face < PICKUPS[kind].faces.length; face++) {
+        expect(effectOf(kind, face, { tubes: [] }), `a bare ship was refused face ${face} of ${kind}`).toBe('upgrade');
+        expect(effectOf(kind, face, { tubes: ['homing'] }), `a ship with a tube empty was refused face ${face}`).toBe('upgrade');
+        expect(effectOf(kind, face, { tubes: ['homing', 'straight'] }), `face ${face} on a full rack is still an upgrade`).toBe('special');
       }
     }
 
     /*
-      ⚠️ **And the changeover is exactly where the ladder stops growing** — one upgrade either side,
-      checked against `weaponFor` rather than against a rung number. A ladder that stopped at tier
-      three while `effectOf` switched at tier five would leave two dead pickups, which is the defect
-      wearing a smaller number.
+      ⚠️ **And the changeover is exactly where the tubes stop changing the ship** — one pickup either
+      side, checked against `weaponFor` rather than against a count. A rack that stopped growing at one
+      while `effectOf` switched at two would leave a dead pickup, which is the defect wearing a smaller
+      number.
     */
-    // In every ship, since 0441: the ladder is the ship's tubes whatever gun it flies.
     for (const ship of SHIP_KINDS) {
-      for (const kind of UPGRADE_KINDS) {
-        for (let n = 0; n < UPGRADE_TIERS + 3; n++) {
-          const carried: UpgradeKind[] = [];
-          for (let i = 0; i < n; i++) carried.push(kind);
+      for (const tube of MISSILE_KINDS) {
+        for (let n = 0; n < MAX_LAUNCHERS + 3; n++) {
+          const carried: MissileKind[] = Array.from({ length: Math.min(n, MAX_LAUNCHERS) }, () => tube);
           const now = weaponFor(SHIPS[ship], carried);
-          const next = weaponFor(SHIPS[ship], [...carried, kind]);
+          const next = weaponFor(SHIPS[ship], [...carried, tube].slice(0, MAX_LAUNCHERS));
           const grew = JSON.stringify(next) !== JSON.stringify(now);
           expect(
-            effectOf(kind, 0, { upgrades: carried, missile: SHIPS[ship].missile }),
-            `${ship}: at ${n} ${kind}s the next one ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
+            effectOf('missile', 0, { tubes: carried }),
+            `${ship}: at ${carried.length} ${tube} tubes the next one ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
           ).toBe(grew ? 'upgrade' : 'special');
         }
       }
@@ -578,11 +565,10 @@ describe('a pickup says which field it lands in', () => {
       brought it back in the weapon's place, and the overflow stays named for the tubes.
     */
     const named = new Set<string>([...PICKUP_KINDS.map((k) => PICKUPS[k].effect), 'special']);
-    const everything: UpgradeKind[] = [];
-    for (let i = 0; i < UPGRADE_TIERS; i++) for (const k of UPGRADE_KINDS) everything.push(k);
+    const everything: MissileKind[] = ['straight', 'homing'];
     for (const kind of PICKUP_KINDS) {
       for (const carried of [[], everything]) {
-        const loadout: Loadout = { upgrades: carried, missile: SHIPS.fighter.missile };
+        const loadout: Loadout = { tubes: carried };
         expect(named.has(effectOf(kind, 0, loadout)), `${kind} can report an effect no row in the table names`).toBe(true);
       }
     }
