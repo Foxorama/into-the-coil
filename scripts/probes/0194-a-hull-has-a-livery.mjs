@@ -61,8 +61,10 @@ export const PROBES = [
     edit: {
       path: 'src/render/bake.ts',
       // ⚠️ Re-anchored by 0364, which widened the keel to ±0.075 to clear the pixel floor.
+      // ⚠️ Re-aimed by 0581: past 1.1 of the hull is the pulse's silhouette on the nose, which is hull, so the
+      // keel runs out to 1.3 — past the gun's mouth, over nothing — where it was past the nose's tip.
       find: '    [-0.34, -0.075],\n    [-0.1, -0.075],\n    [-0.1, 0.075],\n    [-0.34, 0.075],',
-      replace: '    [-0.34, -0.075],\n    [1.1, -0.075],\n    [1.1, 0.075],\n    [-0.34, 0.075],',
+      replace: '    [-0.34, -0.075],\n    [1.3, -0.075],\n    [1.3, 0.075],\n    [-0.34, 0.075],',
     },
   },
   {
