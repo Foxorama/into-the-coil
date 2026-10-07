@@ -2776,7 +2776,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * (`liveryFor`, which keeps the high-contrast look on its roles), as the hangar has them.
    */
   function fitOf(ship: ShipKind, gun: WeaponKind, h: HangarState = state.hangar): Fit {
-    return { gun, rim: h.rim[ship], art: h.art[ship], livery: liveryFor(h.livery[ship], palette), flame: h.flame[ship] };
+    // 0582: and the rack it carries, so the pad wears its tubes as the run will.
+    return { gun, rim: h.rim[ship], art: h.art[ship], livery: liveryFor(h.livery[ship], palette), flame: h.flame[ship], tubes: RACKS[h.rack[ship]].tubes };
   }
   /** How the hangar has fitted `ship` — 0527: its own fit, with the gun the hangar gave it; 0561: as the stand shows it. */
   function hangarFit(ship: ShipKind): Fit {

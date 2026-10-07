@@ -56,8 +56,9 @@ export const PROBES = [
     guard: 'the card and the readout’s ship both repainted',
     edit: {
       path: 'src/content/ships.ts',
-      find: '  return a.gun === b.gun && a.rim === b.rim && a.art === b.art && a.livery === b.livery;',
-      replace: '  return a.gun === b.gun && a.rim === b.rim && a.art === b.art;',
+      // ⚠️ Re-anchored by 0582, which compares the tubes too, a field to a line.
+      find: '    a.livery === b.livery &&\n',
+      replace: '',
     },
   },
 ];

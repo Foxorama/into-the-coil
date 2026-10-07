@@ -23,7 +23,7 @@ import type { Body } from '../sim/entity.ts';
 import type { Ink } from './palette.ts';
 import { LOADED_TUBE, SHIP_BOX, SPRITE } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
-import type { TubeLook } from './missiles.ts';
+import type { MissileKind, TubeLook } from './missiles.ts';
 import type { DangleKind } from './dangles.ts';
 import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
@@ -272,17 +272,30 @@ export interface Fit {
   readonly livery: string | null;
   // 0530: and what its engines burn.
   readonly flame: FlameKind;
+  /*
+    0582: and the tubes it carries, each a kind, in the order they are fitted — the rack the hangar fitted,
+    which the pad draws loaded in their inks. The fight's ship is baked per stage and its tubes laid on by
+    the frame (0581), so only a picture that is not the fight's reads this.
+  */
+  readonly tubes: readonly MissileKind[];
 }
 
-/** A ship as it comes: its own gun, its own rim, its own look, the factory's paint and the standard flame. */
+/** A ship as it comes: its own gun, its own rim, its own look, the factory's paint, the standard flame and no tubes. */
 export function ownFit(ship: ShipKind): Fit {
   const row = SHIPS[ship];
-  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: 'standard' };
+  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: 'standard', tubes: [] };
 }
 
-/** Whether two fits draw the same ship — its hull; the flame is baked apart from it (`bakeFlame`). */
+/** Whether two fits draw the same ship — its hull and, since 0582, its tubes; the flame is baked apart from it (`bakeFlame`). */
 export function sameFit(a: Fit, b: Fit): boolean {
-  return a.gun === b.gun && a.rim === b.rim && a.art === b.art && a.livery === b.livery;
+  return (
+    a.gun === b.gun &&
+    a.rim === b.rim &&
+    a.art === b.art &&
+    a.livery === b.livery &&
+    a.tubes.length === b.tubes.length &&
+    a.tubes.every((kind, i) => kind === b.tubes[i])
+  );
 }
 
 /** A car's wheels — 0527: each centre, front first, the tyre's radius, and the rim it comes on. */
