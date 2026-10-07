@@ -134,6 +134,14 @@ export const PORT_KINDS = [
   'planet',
   // 0571: the alcove in the back wall each keeper's counter stands in — a shopfront, lit from inside.
   'alcove',
+  /*
+    0572: the hover-lift from the deck up to the mezzanine — its shaft and the platform riding it; the ring
+    of the cradle's field rising under the ship; and the planet's moon.
+  */
+  'lift',
+  'liftCar',
+  'hoverRing',
+  'moon',
 ] as const;
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
@@ -220,6 +228,11 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   cradle: 44,
   planet: 80,
   alcove: 36,
+  // 0572: the lift's shaft from the deck to the catwalk's rail, its platform, a ring of the field, the moon.
+  lift: 48,
+  liftCar: 14,
+  hoverRing: 32,
+  moon: 12,
 };
 
 /**
@@ -236,23 +249,39 @@ export const DOCK = {
   bay: 160,
   /** The mezzanine's walking surface, across, and how far along it runs. */
   catwalk: 60,
-  catwalkFrom: 56,
+  catwalkFrom: 60,
   catwalkTo: 160,
+  /**
+   * 0572: the hover-lift at the catwalk's near end — *"need a hover-elevator or ladder or something leading
+   * up to the shops"* — its shaft's centre along, and the platform's top at the deck and at the catwalk.
+   */
+  lift: 64,
   /**
    * Each shopfront's centre along the mezzanine, in the tabs' order, and their centre across — standing on
    * the catwalk, with the counter's front down to it (`PORT_EXTENT` of a counter is 30, its foot at +15).
+   * 0572: a little closer together and on toward the bay, so the lift stands at the catwalk's end.
    */
-  shops: { unity: 80, mmxxvi: 112, cosmo: 144 } as Record<KeeperKind, number>,
+  shops: { unity: 86, mmxxvi: 115, cosmo: 144 } as Record<KeeperKind, number>,
   /** How much the shops and their keepers are drawn down from the size they were baked for the floor. */
   shopScale: 0.78,
   shopAcross: 48.3,
-  /** The pilot's ship's centre on its cradle, along, how high it rides, and how much larger than the intro's. */
+  /**
+   * The pilot's ship's centre on its cradle, along, how high it rides, and how much larger than the intro's.
+   * 0572: higher off the cradle — *"move the car slightly higher and hover it a bit more"* — and bobbing
+   * deeper than the intro's (`bob`, world units either way), on the field's rising rings.
+   */
   ship: 118,
-  ride: 87,
+  ride: 82,
+  bob: 1.3,
   shipGrow: 1.35,
-  /** The planet's centre in the bay, and how much it is blitted up. */
-  planet: { along: 214, across: 116 },
-  planetGrow: 1.7,
+  /**
+   * The planet's centre in the bay, and how much it is blitted up; its moon's centre. 0572: smaller and
+   * further off, a warm ringed giant rather than the cyan the whole screen already is.
+   */
+  planet: { along: 180, across: 34 },
+  planetGrow: 0.45,
+  /** 0572: the moon's orbit round the planet, its radius in world units, and how much it is drawn down. */
+  moon: { reach: 14, grow: 0.55 },
   /** The lamps under the truss. */
   lamps: [70, 124] as readonly number[],
 } as const;

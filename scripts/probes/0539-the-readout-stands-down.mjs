@@ -18,18 +18,13 @@ export const PROBES = [
       replace: '',
     },
   },
-  {
-    decision: '0539',
-    suite: 'tests/stand.browser.test.ts',
-    // One line, as wide as the strip, on a stand a third of a tablet.
-    broke: 'the dash kept on one line, so on a narrow stand it runs under the plate',
-    guard: 'is in each tab’s dash, whole, in its stand and clear of the plate, at every size',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: '{ flex-wrap: wrap; justify-content: center; row-gap: 0.7em; }',
-      replace: '{ justify-content: center; }',
-    },
-  },
+  /*
+    ⚠️ **THE ONE-LINE DASH'S PROBE IS GONE — 0572.** It kept the readout on one line, which ran under the
+    plate when the dash stood in a third of a tablet's stand. Since 0572 the monitor is centred under the
+    ship and may take most of the stand, and on one line the readout fits at every size the guard holds:
+    the probe stayed green here and on CI (0019). The wrap rule stays as a fallback; nothing at these
+    sizes can show it doing anything.
+  */
   {
     decision: '0539',
     suite: 'tests/stand.browser.test.ts',

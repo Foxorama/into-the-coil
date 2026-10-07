@@ -34,16 +34,9 @@ export const PROBES = [
     and that is guarded by tests/stand.test.ts's 0568 test and broken by 0568's own probes. The viewport is
     still drawn, where the camera sees it, and is no longer something the camera must keep in view.
   */
-  {
-    decision: '0550',
-    suite: 'tests/layout.browser.test.ts',
-    // A keeper who only greets kept on a phone's plate, which put Back under the fold on Paint & Parts.
-    broke: 'the greeting card on a phone’s plate',
-    guard: 'needs no scrolling on any of them',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: '  .itc-shop-keeper-greets, .itc-hangar-keeper-greets, .itc-parts-keeper-greets { display: none; }\n',
-      replace: '',
-    },
-  },
+  /*
+    ⚠️ **THE GREETING CARD'S PROBE IS GONE — 0572.** It put a keeper who only greets back on a phone's
+    plate. Since 0572 no keeper is on the plate, their words are a bubble in the stand, and the rule it
+    deleted hid nothing: the probe stayed green on CI (0019), and the rule went with it.
+  */
 ];

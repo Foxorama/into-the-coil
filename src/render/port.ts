@@ -141,7 +141,24 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     the tabs' order, the open tab's lit and the others dimmed; the deck, and the ship on its cradle under it.
   */
   paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
-  put(surface, view, PORT_SPRITE.planet, DOCK.planet.along, DOCK.planet.across, 1, 0, DOCK.planetGrow);
+  /*
+    0572: the planet and its moon held back in the sky's haze, so they sit behind the room and not in it —
+    and moving with the sky: *"they're very static, they don't feel like part of the background starfield"*.
+    The planet drifts the way the stars do, slower, out of the haze past the bay's far side and on behind
+    its edge, a loop of `PLANET_LOOP` steps; the moon goes round it in the ring's plane, behind it and in front.
+  */
+  // Half way through its pass when the stand is first drawn, so it is in the bay and not still in the haze.
+  const loop = ((t + PLANET_LOOP / 2) % PLANET_LOOP) / PLANET_LOOP;
+  const planetAlong = DOCK.planet.along + PLANET_REACH * (0.5 - loop);
+  // Into the haze at the end of its pass as it came out of it at the start, so the loop is never seen to jump.
+  const planetLit = PLANET_HAZE * Math.min(1, (loop * PLANET_LOOP) / PLANET_FADE, ((1 - loop) * PLANET_LOOP) / PLANET_FADE);
+  const orbit = (t / MOON_ORBIT) * Math.PI * 2;
+  const moonAlong = planetAlong + Math.cos(orbit) * DOCK.moon.reach;
+  const moonAcross = DOCK.planet.across + Math.sin(orbit) * DOCK.moon.reach * 0.22 - Math.cos(orbit) * DOCK.moon.reach * 0.08;
+  const behind = Math.sin(orbit) < 0;
+  if (behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit * 0.8, 0, DOCK.moon.grow);
+  put(surface, view, PORT_SPRITE.planet, planetAlong, DOCK.planet.across, planetLit, 0, DOCK.planetGrow);
+  if (!behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit, 0, DOCK.moon.grow);
   const wall = PORT_EXTENT.wall;
   for (let along = wall / 2; along < DOCK.bay; along += wall) {
     for (let across = wall / 2; across < STAGE.deck + wall; across += wall) put(surface, view, PORT_SPRITE.wall, along, across, 1, 0, TILE_OVERLAP);
@@ -157,6 +174,9 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   // The mezzanine's catwalk along the back wall, and each keeper's shopfront standing on it.
   const walk = PORT_EXTENT.catwalk;
   for (let along = DOCK.catwalkFrom + walk / 2; along < DOCK.catwalkTo; along += walk) put(surface, view, PORT_SPRITE.catwalk, along, DOCK.catwalk, 1, 0, TILE_OVERLAP);
+  // 0572: the hover-lift at the catwalk's near end, its platform riding between the deck and the walk.
+  put(surface, view, PORT_SPRITE.lift, DOCK.lift, STAGE.deck + 2.5 - PORT_EXTENT.lift / 2);
+  put(surface, view, PORT_SPRITE.liftCar, DOCK.lift, liftAt(t));
   /*
     0569: every keeper wherever they are this visit — at their counter, at the ship, or out — and since 0571
     all three are in the room at once. The open tab's shop is lit; the others stand back in the dim.
@@ -183,8 +203,15 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   // Lit from the first frame and never going: its idle flame for as long as the stand is up. A size up
   // from the intro's (`DOCK.shipGrow`): it is the picture of every change, and baked as much sharper.
   const size = ship.intro.hangar * DOCK.shipGrow;
-  // 0567: and up off it for a moment when something is fitted.
-  const across = DOCK.ride + blueBobAt(t) - hopAt(t - hop);
+  // 0567: and up off it for a moment when something is fitted. 0572: bobbing deeper than the intro's.
+  const across = DOCK.ride + blueBobAt(t) * (DOCK.bob / BLUE_BOB) - hopAt(t - hop);
+  // 0572: the field's rings rising off the cradle up under the ship, each fading in and out on its way.
+  const plate = STAGE.deck - 1.5;
+  const under = across + HOVER_UNDER;
+  for (let i = 0; i < HOVER_RINGS; i++) {
+    const u = (t / HOVER_RISE + i / HOVER_RINGS) % 1;
+    put(surface, view, PORT_SPRITE.hoverRing, pad, plate + (under - plate) * u, Math.sin(u * Math.PI) * 0.8, 0, 1 - u * 0.15);
+  }
   // 0569: a keeper at the ship rides its bob — looking over it from behind, or standing on its roof.
   paintAtShip(surface, view, spots, 'behind', pad, across);
   paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);
@@ -212,6 +239,55 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   put(surface, view, PORT_SPRITE.bayTop, DOCK.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
   put(surface, view, PORT_SPRITE.bayBottom, DOCK.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
 }
+
+/**
+ * Where on the screen the stand's two marks are, in CSS pixels — 0572, for the chrome to hang its words on
+ * the picture: the ship's foot (the cockpit monitor stands centred under it), and the head of `keeper`
+ * wherever they are this visit (their speech bubble points at it) — or, when they are out, the top of
+ * their shopfront. Written into `out`, by the same arithmetic `paintStand` places them with.
+ */
+export function standMarksInto(
+  view: View,
+  keeper: KeeperKind | null,
+  spots: Readonly<Record<KeeperKind, number>> | null,
+  out: { shipX: number; shipY: number; keeperX: number; keeperY: number; shops: Record<KeeperKind, { left: number; top: number; right: number; bottom: number }> },
+): void {
+  out.shipX = screenX(view, DOCK.ship, STAGE.deck);
+  out.shipY = screenY(view, DOCK.ship, STAGE.deck + 1);
+  // 0572: and each shopfront's box, its alcove's — what a click or a tap on the shop lands on.
+  const half = (PORT_EXTENT.alcove * DOCK.shopScale) / 2;
+  for (let k = 0; k < KEEPER_KINDS.length; k++) {
+    const kind = KEEPER_KINDS[k]!;
+    const front = out.shops[kind];
+    const shop = DOCK.shops[kind];
+    front.left = screenX(view, shop - half, DOCK.shopAcross);
+    front.right = screenX(view, shop + half, DOCK.shopAcross);
+    front.top = screenY(view, shop, DOCK.shopAcross - half);
+    front.bottom = screenY(view, shop, DOCK.shopAcross + half);
+  }
+  if (keeper === null) {
+    out.keeperX = Number.NaN;
+    out.keeperY = Number.NaN;
+    return;
+  }
+  const row = KEEPERS[keeper];
+  const place = row.spots[spots === null ? 0 : spots[keeper]] ?? row.spots[0];
+  const shop = DOCK.shops[keeper];
+  const s = DOCK.shopScale;
+  let along = shop;
+  let across = DOCK.shopAcross - (PORT_EXTENT.alcove * s) / 2;
+  if (place.at === 'counter') {
+    along = shop + place.offset.along * s;
+    across = DOCK.shopAcross + (place.offset.across - KEEPER_HEAD) * s;
+  } else if (place.at === 'ship') {
+    along = DOCK.ship + place.offset.along * DOCK.shipGrow;
+    across = DOCK.ride + place.offset.across * DOCK.shipGrow - KEEPER_HEAD;
+  }
+  out.keeperX = screenX(view, along, across);
+  out.keeperY = screenY(view, along, across);
+}
+/** How far over a keeper's centre the top of their head is, in the units they are baked in. */
+const KEEPER_HEAD = 6;
 
 /** How lit a shop is while another tab is open — 0571: there, and plainly not the one being spoken to. */
 const SHOP_DIM = 0.5;
@@ -295,7 +371,8 @@ export function fitStand(
     first of them furthest from the ship. `keeper` is the tab's; the camera keeps them all, so it is unread.
   */
   void keeper;
-  let keep: number = DOCK.ship;
+  // 0572: and the lift up to them, whole — it is the way to the shops, and a way up cut off goes nowhere.
+  let keep: number = DOCK.lift - LIFT_HALF;
   for (let k = 0; k < KEEPER_KINDS.length; k++) keep = Math.min(keep, DOCK.shops[KEEPER_KINDS[k]!] - PORT_EXTENT.alcove / 2);
   // Half a unit to spare, so what is kept is on the screen and not on its edge by a rounding.
   const reach = camera.along - keep + 0.5;
@@ -423,13 +500,59 @@ function paintEdge(surface: Surface, view: View): void {
   put(surface, view, PORT_SPRITE.bayBottom, STAGE.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
 }
 
-/** How fast the pilot's ship bobs on its pad's beam, in radians a step — a period of about 105 steps. */
-export const BLUE_BOB_RATE = 0.06;
+/**
+ * How fast the pilot's ship bobs on its pad's beam, in radians a step — a period of exactly 105 steps.
+ * 0572: whole, and it was 0.06 (104.7 steps). The stand's guards read the picture a bob apart (`samePhase`),
+ * and a bob that was not a whole number of steps was 104 steps one time and 105 the next: with the dock's
+ * deeper bob and its rising rings, that one step moved enough of the stand to pass for a fitting on CI.
+ */
+export const BLUE_BOB_RATE = (Math.PI * 2) / 105;
 
-/** How far the pilot's ship bobs on its pad's beam at `t`, before it goes. */
+/** How far the pilot's ship bobs on its pad's beam at `t`, before it goes — `BLUE_BOB` either way. */
 function blueBobAt(t: number): number {
-  return Math.sin(t * BLUE_BOB_RATE + 1.7) * 0.6;
+  return Math.sin(t * BLUE_BOB_RATE + 1.7) * BLUE_BOB;
 }
+const BLUE_BOB = 0.6;
+
+/** How lit the planet and its moon are, behind the sky's haze — 0572: far off, and not the brightest thing in the bay. */
+const PLANET_HAZE = 0.7;
+/**
+ * 0572: the planet's drift — one pass of `PLANET_REACH` world units in `PLANET_LOOP` steps, eight minutes,
+ * centred on `DOCK.planet.along`, slow enough to be seen moving only over a while, as the far stars are. It
+ * comes out of the haze over its first `PLANET_FADE` steps and goes back into it over its last, so it is never
+ * seen to appear or to jump. The moon's orbit, in steps: a minute and a half.
+ */
+const PLANET_LOOP = 60 * 60 * 8;
+const PLANET_REACH = 36;
+const PLANET_FADE = 60 * 30;
+const MOON_ORBIT = 60 * 90;
+
+/**
+ * 0572: the cradle's field — how many rings are rising at once, how many steps one takes from the cradle
+ * to the ship, and where under the ship's centre they meet it, in world units.
+ */
+const HOVER_RINGS = 3;
+/*
+  A whole number of bobs, so the rings stand where they stood one bob later — the stand's own guards read
+  the picture a bob apart to tell what a fitting changed from what moves by itself (`samePhase`, 0540).
+*/
+const BOB_STEPS = (Math.PI * 2) / BLUE_BOB_RATE;
+const HOVER_RISE = BOB_STEPS * HOVER_RINGS;
+const HOVER_UNDER = 4.5;
+
+/**
+ * 0572: the lift's platform at `t` — a round trip of `LIFT_TRIP` steps, waiting at the deck and at the
+ * catwalk a third of it each, and easing between. The platform's top, across.
+ */
+function liftAt(t: number): number {
+  const u = (t % LIFT_TRIP) / LIFT_TRIP;
+  const up = u < 1 / 3 ? 0 : u < 1 / 2 ? ease(u, 1 / 3, 1 / 2) : u < 5 / 6 ? 1 : 1 - ease(u, 5 / 6, 1);
+  return STAGE.deck - (STAGE.deck - DOCK.catwalk) * up;
+}
+// Seven bobs, about twelve seconds: a whole number of them, on `HOVER_RISE`'s terms.
+const LIFT_TRIP = BOB_STEPS * 7;
+/** The lift's half-width along, rails and landing — `paintLift`'s widest. */
+const LIFT_HALF = 6;
 
 /** A stand's `hopAt` before anything has been fitted: long enough ago that no hop is under way. */
 export const NO_HOP = -1e9;

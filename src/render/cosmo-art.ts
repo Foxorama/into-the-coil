@@ -80,7 +80,12 @@ export function paintCosmo(ctx: CanvasRenderingContext2D, palette: Palette, size
     ctx.arc((50 + side * 22) * u, 3 * u, 3.5 * u, 0, Math.PI * 2);
     ctx.fill();
   }
-  // The eyes: large, dark, tilted up at the outside, each with a glint.
+  /*
+    The eyes: large, dark, tilted up at the outside, each with a glint. 0572: *"can we get his eyes adjusted
+    so he's looking straight at the player"* — on an eye with no white the glint is the pupil, and both sat
+    to the left of their eye, so he looked off to the side. Each glint is at its own eye's middle now, a
+    little up, with a fleck under it: looking out of the screen.
+  */
   for (const side of [-1, 1] as const) {
     ctx.fillStyle = dark;
     ctx.beginPath();
@@ -88,8 +93,13 @@ export function paintCosmo(ctx: CanvasRenderingContext2D, palette: Palette, size
     ctx.fill();
     ctx.fillStyle = palette.impact;
     ctx.beginPath();
-    ctx.arc((50 + side * 13 - 3) * u, 36 * u, 1.8 * u, 0, Math.PI * 2);
+    ctx.arc((50 + side * 13) * u, 36.6 * u, 2 * u, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc((50 + side * 13 + 1.2) * u, 39.8 * u, 0.9 * u, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
   // A small smile.
   ctx.beginPath();

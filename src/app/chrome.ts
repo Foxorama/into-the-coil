@@ -32,7 +32,8 @@
 import { SCREENS, STEPS_PER_SECOND, type ChoiceName, type Screen } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
-import { SIDES, SIDE_LABELS } from '../content/specials.ts';
+import { SIDES, SIDE_LABELS, SPECIALS } from '../content/specials.ts';
+import { SHOTS } from '../content/shots.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
@@ -42,8 +43,7 @@ import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
 import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
-import { KEEPER_FACES } from '../render/keeper-art.ts';
-import { KEEPERS } from '../content/keepers.ts';
+import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import { SHELF_KINDS, SHELVES, type OwnableKind } from '../content/wares.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
@@ -2595,11 +2595,9 @@ ${each('-band[hidden]')} { display: none; }
   /* 0566: Cosmo's line may take two on a phone — the shelf left the height (0564), and the line was cut mid-word. */
   .itc-shop-keeper-line { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.2; }
   /*
-    0550: and a keeper who only greets is not on a phone's plate at all. Paint's three bands are the plate's
-    whole height there, and the card put Back sixteen pixels under the fold at 480x320. Their bust and their
-    sign stand beside the plate; what Cosmo's card says is the shop's state, which nothing else says.
+    0550 hid a keeper who only greets from a phone's plate, where the card put Back under the fold. Since
+    0572 no keeper is on the plate: their words are a bubble in the stand, so the rule hid nothing and went.
   */
-  .itc-shop-keeper-greets, .itc-hangar-keeper-greets, .itc-parts-keeper-greets { display: none; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'label label label' 'less track more'; padding: 0 0.1em; row-gap: 0; }
   /* 0566: one chip a band, as wide as the band, its name cut rather than run past its edge. */
@@ -3703,6 +3701,263 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
 .itc-splash-action, .itc-splash-action:hover { border-color: transparent; background: none; box-shadow: none; }
 /* An action the shell has taken off a screen for now, whatever display the action rule gives it. */
 ${each('-action[hidden]')} { display: none; }
+/*
+  ── THE STAND'S WORDS ON ITS PICTURE — 0572 ──────────────────────────────────────────────────────
+
+  Last in the sheet, so it is the last word in every layout. The keeper's words are a bubble over their
+  head, placed by the shell off the picture and hung from its foot; the balance is in the stand's top right
+  corner, large and in the score's gold; the cockpit monitor is centred under the ship.
+*/
+.itc-hangar-stand > .itc-hangar-keeper, .itc-parts-stand > .itc-parts-keeper, .itc-shop-stand > .itc-shop-keeper {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  visibility: hidden;
+  z-index: 2;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(18em, 44%);
+  margin: 0;
+  padding: 0.5em 0.85em 0.6em;
+  border: 0;
+  border-radius: 0.9em;
+  background: var(--itc-ink, #fff);
+  color: var(--itc-void, #000);
+  box-shadow: 0 0.25em 1em rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+/* Placed, it hangs from its foot over the keeper; before it is, it waits hidden in the stand's corner, inside the screen. */
+.itc-hangar-stand > .itc-hangar-keeper-placed, .itc-parts-stand > .itc-parts-keeper-placed, .itc-shop-stand > .itc-shop-keeper-placed {
+  left: var(--itc-say-x, 0px);
+  top: var(--itc-say-y, 0px);
+  translate: 0 -100%;
+  visibility: visible;
+  opacity: 0;
+}
+/* Said, it comes up, holds long enough to read, and fades away; a tab opened or a new line says it again. */
+.itc-hangar-stand > .itc-hangar-keeper-placed.itc-hangar-keeper-said,
+.itc-parts-stand > .itc-parts-keeper-placed.itc-parts-keeper-said,
+.itc-shop-stand > .itc-shop-keeper-placed.itc-shop-keeper-said { animation: itc-say 6s ease-out both; }
+@keyframes itc-say {
+  0% { opacity: 0; }
+  5% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.itc-hangar-stand > .itc-hangar-keeper::after, .itc-parts-stand > .itc-parts-keeper::after, .itc-shop-stand > .itc-shop-keeper::after {
+  content: '';
+  position: absolute;
+  left: var(--itc-say-tail, 50%);
+  bottom: -0.7em;
+  translate: -50% 0;
+  border-left: 0.5em solid transparent;
+  border-right: 0.5em solid transparent;
+  border-top: 0.75em solid var(--itc-ink, #fff);
+}
+.itc-hangar-stand .itc-hangar-keeper-words, .itc-parts-stand .itc-parts-keeper-words, .itc-shop-stand .itc-shop-keeper-words { display: block; }
+.itc-hangar-stand .itc-hangar-keeper-name, .itc-parts-stand .itc-parts-keeper-name, .itc-shop-stand .itc-shop-keeper-name {
+  display: block;
+  margin-bottom: 0.15em;
+  font-size: 0.68em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.itc-hangar-stand .itc-hangar-keeper-line, .itc-parts-stand .itc-parts-keeper-line, .itc-shop-stand .itc-shop-keeper-line {
+  display: block;
+  margin: 0;
+  font-size: 0.92em;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: normal;
+  overflow: visible;
+  opacity: 1;
+  -webkit-line-clamp: unset;
+}
+.itc-hangar-stand > .itc-hangar-sheet, .itc-parts-stand > .itc-parts-sheet, .itc-shop-stand > .itc-shop-sheet {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.8rem;
+  z-index: 2;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0 0.55em;
+  max-width: 60%;
+  margin: 0;
+  padding: 0.4em 1.1em;
+  font-size: 1.15rem;
+  background: color-mix(in srgb, var(--itc-void, #000) 82%, transparent);
+  border: 2px solid color-mix(in srgb, var(--itc-gold, var(--itc-ink)) 70%, transparent);
+  box-shadow: 0 0 1em color-mix(in srgb, var(--itc-gold, var(--itc-ink)) 25%, transparent);
+}
+.itc-hangar-stand .itc-hangar-sheet-value, .itc-parts-stand .itc-parts-sheet-value, .itc-shop-stand .itc-shop-sheet-value { font-size: 1.5em; color: var(--itc-gold, var(--itc-ink)); }
+/* A door over each other shop in the picture: nothing on it until a pointer is over it, then the shop lights. */
+.itc-hangar-stand > .itc-hangar-shop-door, .itc-parts-stand > .itc-parts-shop-door, .itc-shop-stand > .itc-shop-shop-door {
+  position: absolute;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.4em;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease-out, background-color 0.15s ease-out;
+}
+.itc-hangar-stand > .itc-hangar-shop-door[hidden], .itc-parts-stand > .itc-parts-shop-door[hidden], .itc-shop-stand > .itc-shop-shop-door[hidden] { display: none; }
+.itc-hangar-stand > .itc-hangar-shop-door:hover, .itc-parts-stand > .itc-parts-shop-door:hover, .itc-shop-stand > .itc-shop-shop-door:hover,
+.itc-hangar-stand > .itc-hangar-shop-door:focus-visible, .itc-parts-stand > .itc-parts-shop-door:focus-visible, .itc-shop-stand > .itc-shop-shop-door:focus-visible {
+  outline: none;
+  background-color: color-mix(in srgb, var(--itc-ink) 10%, transparent);
+  box-shadow: inset 0 0 0 2px var(--itc-ink), 0 0 1.2em color-mix(in srgb, var(--itc-ink) 45%, transparent);
+}
+/* A card's picture and a band's caption are a desktop's: a phone's band is one chip a line (0566). */
+.itc-hangar-option-pic, .itc-parts-option-pic, .itc-hangar-band-said, .itc-parts-band-said, .itc-shop-band-said { display: none; }
+@container (min-height: 461px) and (orientation: landscape) {
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { left: var(--itc-dash-x, 1.5%); bottom: 1.2%; max-width: min(24rem, 60%); }
+  /*
+    The foot's card stands down: each band says its own under itself (the caption), and the foot is the
+    actions and the keys. The card is still filled, for a reader and for the phone's foot, which keeps it.
+  */
+  .itc-hangar-focus, .itc-parts-focus, .itc-shop-focus { display: none; }
+  .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band, .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) {
+    grid-template-areas: 'label label label' 'less track more' 'said said said';
+  }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) { grid-template-areas: 'less track more'; }
+  .itc-hangar-band-said, .itc-parts-band-said, .itc-shop-band-said {
+    grid-area: said;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'name state' 'said said';
+    align-items: baseline;
+    column-gap: 0.6em;
+    margin: 0.15em 1.6em 0.1em;
+    padding: 0.3em 0.6em 0.35em;
+    border-left: 2px solid var(--itc-ink);
+    border-radius: 0 0.4em 0.4em 0;
+    background: color-mix(in srgb, var(--itc-ink) 7%, transparent);
+    font-size: 0.78em;
+    line-height: 1.25;
+    text-align: left;
+    min-width: 0;
+  }
+  .itc-hangar-band-said-name, .itc-parts-band-said-name, .itc-shop-band-said-name { grid-area: name; font-weight: 800; color: var(--itc-ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .itc-hangar-band-said-state, .itc-parts-band-said-state, .itc-shop-band-said-state { grid-area: state; font-size: 0.85em; font-weight: 700; opacity: 0.85; white-space: nowrap; }
+  /*
+    Always two lines high, a longer line cut at the second: *"the menu items change size when the
+    descriptions are too long, it makes the menu do the weird up and down thing"*. A caption that was one
+    line on one option and three on the next moved every band under it as the cursor stepped.
+  */
+  .itc-hangar-band-said-said, .itc-parts-band-said-said, .itc-shop-band-said-said {
+    grid-area: said;
+    opacity: 0.8;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    height: 2.5em;
+  }
+  .itc-hangar-band-said-name, .itc-parts-band-said-name, .itc-shop-band-said-name, .itc-hangar-band-said-state, .itc-parts-band-said-state, .itc-shop-band-said-state { height: 1.25em; }
+  .itc-hangar-band-said-state, .itc-parts-band-said-state, .itc-shop-band-said-state { overflow: hidden; text-overflow: ellipsis; max-width: 14em; }
+  /* Tried on and not fitted: the state is the thing to read — how to fit it — so it is lit. */
+  .itc-hangar-band-said-trying .itc-hangar-band-said-state, .itc-parts-band-said-trying .itc-parts-band-said-state, .itc-shop-band-said-trying .itc-shop-band-said-state { color: var(--itc-gold, var(--itc-ink)); opacity: 1; }
+  .itc-hangar-band-said-shut, .itc-parts-band-said-shut, .itc-shop-band-said-shut { border-left-color: color-mix(in srgb, var(--itc-ink) 40%, transparent); }
+  /*
+    ── THE CARD IS A PICTURE — 0572 ────────────────────────────────────────────────────────────────
+    *"you can't actually see the graphic when you select the card"*: the fitted card was filled with the
+    run's violet-into-cyan, and every picture on it is drawn in those inks. The fitted card is the dark
+    glass every card is, with a lit rim and a glow; the fill is gone from a card, and the brackets say
+    where the cursor is. And Hangin' Out's cards stand their picture over their name, as the rest do.
+  */
+  .itc-hangar-plate .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option-on,
+  .itc-parts-plate .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option-on:not(.itc-parts-option-swatch),
+  .itc-shop-plate .itc-shop-option-tile.itc-shop-option-on {
+    background-color: color-mix(in srgb, var(--itc-void, #000) 70%, transparent);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--itc-ink) 22%, transparent), color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 8%, transparent));
+    border: 2px solid var(--itc-ink);
+    color: var(--itc-ink);
+    box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 40%, transparent), inset 0 0 0.8em color-mix(in srgb, var(--itc-ink) 18%, transparent);
+  }
+  .itc-hangar-plate .itc-hangar-option-look, .itc-parts-plate .itc-parts-option-look:not(.itc-parts-option-swatch), .itc-shop-plate .itc-shop-option-tile.itc-shop-option-look {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--itc-gold, var(--itc-ink)) 16%, transparent), transparent);
+  }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option.itc-hangar-option-pictured,
+  .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-pictured {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.2em;
+    min-height: 4.6em;
+    padding: 0.35em 0.25em 0.3em;
+  }
+  .itc-hangar-option-pic, .itc-parts-option-pic { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 2.5em; flex: none; }
+  .itc-hangar-option-pic > canvas { width: auto; height: auto; max-width: 75%; max-height: 100%; }
+  .itc-hangar-option-pictured .itc-hangar-option-label, .itc-parts-option-pictured .itc-parts-option-label { font-size: 0.9em; line-height: 1.1; }
+  .itc-parts-option-pic .itc-shop-art-flame { font-size: 0.85em; }
+  /* The wheels and the art: the ship wearing them, as large as the card's picture box, over the name. */
+  .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-thumbed { justify-content: flex-start; min-height: 4.6em; padding-top: 0.3em; }
+  .itc-parts-option-thumbed .itc-parts-option-thumb { width: 100%; height: 2.5em; margin: 0 0 0.1em; object-fit: contain; flex: none; }
+  /* The empty hook: a hook and nothing on it. */
+  .itc-hangar-option-pic-hook::before { content: ''; width: 0.7em; height: 1.1em; border: 2px solid currentColor; border-top: 0; border-radius: 0 0 0.5em 0.5em; opacity: 0.6; clip-path: inset(0.3em 0 0 0); }
+  /* A dash: the readout's own plate in that ship's dressing, small and empty. */
+  .itc-hangar-option-plate {
+    position: relative;
+    isolation: isolate;
+    display: block;
+    width: 78%;
+    height: 1.25em;
+    box-sizing: border-box;
+    border: 1.5px solid transparent;
+    border-radius: 0.5em;
+    --itc-glass: color-mix(in srgb, var(--itc-void) 85%, transparent);
+    font-size: 0.8em;
+    background:
+      linear-gradient(var(--itc-glass), var(--itc-glass)) padding-box,
+      linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
+    box-shadow: 0 0 0.6em color-mix(in srgb, var(--itc-ink) 25%, transparent);
+  }
+  .itc-hangar-option-plate::before, .itc-hangar-option-plate::after { position: absolute; pointer-events: none; z-index: -1; }
+  .itc-hangar-option-plate.itc-playing-hud-checker { padding-left: 0; }
+  /* What hangs: the readout's dangle, set in the picture's box. */
+  .itc-hangar-option-pic .itc-shop-art-dangle { position: absolute; left: 50%; top: 0; font-size: 0.8em; }
+}
+/*
+  Under 900 pixels tall the plate is the screen's height less its frame, and Hangin' Out's four bands with
+  pictures and captions ran 170 pixels past it on CI's wider letters. So the cards are a size shorter, their
+  names one line, and each caption is one line: the name, what it is cut where it must be, and its state.
+*/
+@container (min-height: 461px) and (max-height: 900px) and (orientation: landscape) {
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option.itc-hangar-option-pictured,
+  .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-pictured,
+  .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-thumbed { min-height: 0; padding-top: 0.25em; padding-bottom: 0.2em; gap: 0.1em; }
+  .itc-hangar-option-pic, .itc-parts-option-pic, .itc-parts-option-thumbed .itc-parts-option-thumb { height: 1.7em; }
+  .itc-hangar-option-pictured .itc-hangar-option-label, .itc-parts-option-pictured .itc-parts-option-label, .itc-parts-option-thumbed .itc-parts-option-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .itc-hangar-band-said, .itc-parts-band-said, .itc-shop-band-said {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'name said state';
+    margin-top: 0.1em;
+    padding: 0.2em 0.5em;
+  }
+  .itc-hangar-band-said-said, .itc-parts-band-said-said, .itc-shop-band-said-said { display: block; height: 1.25em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .itc-hangar-band-said-name, .itc-parts-band-said-name, .itc-shop-band-said-name { max-width: 9em; }
+  .itc-hangar-pilot-card .itc-hangar-pilot-words { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.6em; }
+  .itc-hangar-group-heading, .itc-parts-group-heading { padding-bottom: 0.1em; }
+}
+@container (max-height: 460px) {
+  .itc-hangar-stand > .itc-hangar-keeper, .itc-parts-stand > .itc-parts-keeper, .itc-shop-stand > .itc-shop-keeper { font-size: 0.72rem; max-width: min(15em, 60%); padding: 0.35em 0.6em 0.4em; }
+  .itc-hangar-stand > .itc-hangar-sheet, .itc-parts-stand > .itc-parts-sheet, .itc-shop-stand > .itc-shop-sheet { top: 0.3rem; right: 0.4rem; font-size: 0.8rem; padding: 0.2em 0.7em; }
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { left: var(--itc-dash-x, 0.3rem); }
+}
 @media (prefers-reduced-motion: reduce) {
   .itc-playing-boss-fill { transition: none; }
   ${each('-action')}, .itc-intro-skip { transition: none; }
@@ -3801,6 +4056,8 @@ interface Band {
   more: HTMLButtonElement;
   /** The live option's hint, written under the track. */
   hint: HTMLElement;
+  /** 0572: on a screen that stands, the caption under the band — its option's name, what it is, and its state. */
+  caption: { root: HTMLElement; name: HTMLElement; said: HTMLElement; state: HTMLElement } | null;
   /**
    * The options' hints, by position — the row's, so the band says what the live one means; or since 0528
    * the shell's, for a band whose options are named by the ship on the stand (`setLabels`).
@@ -4065,8 +4322,29 @@ export interface NowPlaying {
  */
 const ICON_PIXELS_PER_UNIT = 28;
 
-/** The keeper's face on the plate, in canvas pixels — 0542: twice the largest it is drawn, so it is sharp at two to one. */
-const KEEPER_FACE_PIXELS = 160;
+/** 0572: a box on the screen, in CSS pixels — a shopfront, for the door over it. */
+interface ShopBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+/** 0572: where a stand's picture puts its ship, the open tab's keeper and every shopfront, on the screen. */
+export interface StandMarks {
+  shipX: number;
+  shipY: number;
+  keeperX: number;
+  keeperY: number;
+  shops: Record<KeeperKind, ShopBox>;
+}
+
+/**
+ * 0572: a keeper's bubble — how near the stand's edge it may come, how far over the keeper's head its foot
+ * hangs (the tail's length), and how near its own corner the tail may slide. CSS pixels.
+ */
+const BUBBLE_EDGE = 6;
+const BUBBLE_GAP = 14;
+const BUBBLE_TAIL = 16;
 
 /**
  * The studio's badge, as the shell already ships it — 0437. A sidecar of 0008's closed list and the
@@ -4262,6 +4540,12 @@ export interface Chrome {
    */
   standBox(screen: Screen): { left: number; width: number; top: number; height: number } | null;
   /**
+   * Hang the stand's words on its picture — 0572: the cockpit monitor centred under the ship's foot, and
+   * the keeper's bubble with its tail on their head, each kept inside the stand. Screen pixels, from the
+   * stand's view (`standMarksInto`); a keeper mark that is not a number takes the bubble down.
+   */
+  setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void;
+  /**
    * What each ware's tile says under its name — 0564: its price, *Yours*, or its price short of the balance,
    * which is drawn in a warning ink as well as said. Position for position, as the shelf lists them.
    */
@@ -4441,6 +4725,8 @@ const SWIPE_PIXELS = 36;
 const SWIPE_SETTLE_MS = 350;
 /** How many pixels across a rim's picture is baked for its tile — 0564; the card shows the same bitmap larger. */
 const WARE_ART_PIXELS = 160;
+/** 0572: a Hangin' Out card's picture, in canvas pixels across its sprite's box — sharp at two to one on the card. */
+const CARD_PIC_PIXELS = 112;
 /** How an option tried on is fitted, in the words of the hand holding the game — 0561. */
 const FITS: Record<GuideDevice, string> = { keyboard: 'Enter or a click fits it', pad: 'A fits it', touch: 'tap it to fit it' };
 /** The keys that do things on a plate, in the hand's words — 0562. Touch has none to name. */
@@ -5021,10 +5307,17 @@ export function makeChrome(
     const words = part('div', 'words');
     const name = part('div', 'name');
     const who = part('div', 'who');
-    const bio = part('p', 'bio');
+    /*
+      0572: and on a screen that stands, no bio. Played: *"the bio is cut off and doesn't really fit this
+      screen at all"* — clamped to two lines in a garage's column it was a sentence stopped mid-word, about
+      the pilot, on the screen that is about the ship. The title's card, where a pilot is chosen, keeps it.
+    */
+    const bio = standing ? null : part('p', 'bio');
     const craft = part('div', 'craft');
     const gun = part('div', 'gun');
-    words.append(name, who, bio, craft, gun);
+    words.append(name, who);
+    if (bio !== null) words.append(bio);
+    words.append(craft, gun);
     if (ship !== null) root.append(ship);
     root.append(words);
     return { root, ship, name, who, bio, craft, gun, card };
@@ -5080,6 +5373,84 @@ export function makeChrome(
   const tabKeys: HTMLElement[] = [];
 
   const panels: Partial<Record<Screen, Panel>> = {};
+  /** 0572: where each stand's ship and keeper last were on the screen, so a bubble that changes size is placed again. */
+  const standMarks = Object.fromEntries(
+    (Object.keys(SCREENS) as Screen[]).map((s) => [
+      s,
+      {
+        shipX: Number.NaN,
+        shipY: Number.NaN,
+        keeperX: Number.NaN,
+        keeperY: Number.NaN,
+        shops: Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, { left: Number.NaN, top: Number.NaN, right: Number.NaN, bottom: Number.NaN }])) as Record<KeeperKind, ShopBox>,
+      },
+    ]),
+  ) as Record<Screen, StandMarks>;
+  /**
+   * 0572: the doors into each shop on a stand — *"can we click/tap on a shop to select that shop rather than
+   * having to go to the menu tab?"* A button over each shopfront in the picture that opens its tab. Out of
+   * the tab order: the strip's tabs are the keyboard's and the pad's way across, and these are the hand's.
+   */
+  const standDoors: Partial<Record<Screen, { kind: KeeperKind; tab: Screen; button: HTMLButtonElement }[]>> = {};
+  /*
+    0572: the cockpit monitor centred under the ship, and the keeper's bubble over their head with its tail
+    on it — each kept inside the stand, the bubble's tail sliding along it where the bubble meets an edge.
+    Written as the stand's custom properties, so a layout that stands them elsewhere (a phone's) can ignore
+    them; the bubble hangs from its foot, so a longer line grows it upward and not over the keeper.
+  */
+  const placeStand = (screen: Screen): void => {
+    const panel = panels[screen];
+    const stand = panel?.dash?.parentElement ?? null;
+    if (panel === undefined || stand === null) return;
+    const box = stand.getBoundingClientRect();
+    if (box.width <= 0) return;
+    const at = standMarks[screen];
+    const dash = panel.dash!;
+    if (Number.isFinite(at.shipX)) {
+      const x = Math.min(Math.max(at.shipX - box.left - dash.offsetWidth / 2, 0), Math.max(0, box.width - dash.offsetWidth));
+      stand.style.setProperty('--itc-dash-x', String(Math.round(x)) + 'px');
+      stand.style.setProperty('--itc-dash-y', String(Math.round(at.shipY - box.top)) + 'px');
+    }
+    // The doors over the shopfronts, each where its shop is drawn; the open tab's own shop is no door.
+    for (const door of standDoors[screen] ?? []) {
+      const front = at.shops[door.kind];
+      const placed = Number.isFinite(front.left) && door.tab !== screen;
+      door.button.hidden = !placed;
+      if (!placed) continue;
+      door.button.style.left = String(Math.round(front.left - box.left)) + 'px';
+      door.button.style.top = String(Math.round(front.top - box.top)) + 'px';
+      door.button.style.width = String(Math.round(front.right - front.left)) + 'px';
+      door.button.style.height = String(Math.round(front.bottom - front.top)) + 'px';
+    }
+    const say = panel.keeper?.root ?? null;
+    if (say === null || say.parentElement !== stand) return;
+    const placed = prefixFor(screen) + 'keeper-placed';
+    if (!Number.isFinite(at.keeperX)) {
+      say.classList.remove(placed);
+      return;
+    }
+    const x = at.keeperX - box.left;
+    const width = say.offsetWidth;
+    const left = Math.min(Math.max(x - width / 2, BUBBLE_EDGE), Math.max(BUBBLE_EDGE, box.width - width - BUBBLE_EDGE));
+    const tail = Math.min(Math.max(x - left, BUBBLE_TAIL), Math.max(BUBBLE_TAIL, width - BUBBLE_TAIL));
+    say.style.setProperty('--itc-say-x', String(Math.round(left)) + 'px');
+    say.style.setProperty('--itc-say-y', String(Math.round(Math.max(say.offsetHeight + BUBBLE_EDGE, at.keeperY - box.top - BUBBLE_GAP))) + 'px');
+    say.style.setProperty('--itc-say-tail', String(Math.round(tail)) + 'px');
+    say.classList.add(placed);
+  };
+  /*
+    0572: *"the speech bubbles should decay and disappear"*. A bubble is said, held long enough to read,
+    and fades; saying it again — the tab opened, a new line — starts it over. Restarted by taking the class
+    off and putting it back after a reflow, which is what makes a finished animation run again.
+  */
+  const sayAgain = (screen: Screen): void => {
+    const say = panels[screen]?.keeper?.root;
+    if (say === undefined) return;
+    const said = prefixFor(screen) + 'keeper-said';
+    say.classList.remove(said);
+    void say.offsetWidth;
+    say.classList.add(said);
+  };
   /** The ship that crosses the title's sky — 0437 — kept so `setShip` can put the pilot's own in it. */
   let titleFlyer: HTMLElement | null = null;
   const elements: HTMLElement[] = [style];
@@ -5207,6 +5578,26 @@ export function makeChrome(
       plate = document.createElement('div');
       plate.className = prefix + 'plate';
       panel.append(stand, plate);
+      // 0572: a door over every shopfront in the picture whose tab stands beside this one.
+      const doors: { kind: KeeperKind; tab: Screen; button: HTMLButtonElement }[] = [];
+      for (const tab of row.tabs) {
+        const kind = SCREENS[tab].stand?.keeper ?? null;
+        if (kind === null) continue;
+        const door = document.createElement('button');
+        door.type = 'button';
+        door.tabIndex = -1;
+        door.className = prefix + 'shop-door';
+        door.setAttribute('aria-label', SCREENS[tab].heading);
+        door.hidden = true;
+        const open = (): void => {
+          if (tab !== screen) onTab(tab);
+        };
+        door.addEventListener('click', open);
+        listeners.push(() => door.removeEventListener('click', open));
+        stand.appendChild(door);
+        doors.push({ kind, tab, button: door });
+      }
+      standDoors[screen] = doors;
     }
     // What the tabs, the bands and the actions go into: the plate on a stand, the panel everywhere else.
     const host = plate ?? panel;
@@ -5363,7 +5754,14 @@ export function makeChrome(
       glyphs.className = prefix + 'glyphs';
       glyphs.setAttribute('aria-hidden', 'true');
       foot.append(card, glyphs);
-      if (sheet !== null) foot.appendChild(sheet);
+      /*
+        0572: the balance in the stand's top right corner, large — *"Starshards should be top right of the
+        screen and easy to see"* — where a game keeps its money. 0562 stood it beside Buy, because Buy spends
+        it; 0564's sheet asks before Buy does, with the balance before and after, so that is said where the
+        spending is, and the corner is free to be where the player looks for what they have.
+      */
+      if (sheet !== null && stand !== null) stand.appendChild(sheet);
+      else if (sheet !== null) foot.appendChild(sheet);
       foot.appendChild(choices);
       plate.appendChild(foot);
     }
@@ -5604,7 +6002,27 @@ export function makeChrome(
         look: -1,
         buttons,
         faces: choice.faces,
+        caption: null,
       };
+      /*
+        0572: on a screen that stands, a caption under the band — the option under the cursor or fitted, what
+        it is, and what it is to the player. Played: *"the detail for the equipped gun on the bottom left of
+        the menu feels out of place and weird"* — the foot's card said it at the plate's bottom, a column of
+        empty plate away from the row it was about. Said under the row it is about, each row says its own.
+      */
+      // Never the aisle: it is the shelf's tabs, and says which shelf is in view by the shelf.
+      if (row.stand !== null && choice.faces === 'words' && !chip && choice.name !== 'aisle') {
+        const root = document.createElement('div');
+        root.className = prefix + 'band-said';
+        root.setAttribute('aria-hidden', 'true');
+        const part = (name: string): HTMLElement => {
+          const element = document.createElement('span');
+          element.className = prefix + 'band-said-' + name;
+          root.appendChild(element);
+          return element;
+        };
+        band.caption = { root, name: part('name'), said: part('said'), state: part('state') };
+      }
       choiceBands.push(band);
       if (chip) {
         // 0517: the options alone, after the actions in the DOM and the walk; the stylesheet draws it first.
@@ -5613,6 +6031,7 @@ export function makeChrome(
         continue;
       }
       line.append(label, less, box, more, hint);
+      if (band.caption !== null) line.append(band.caption.root);
       settingsBox.appendChild(line);
       /*
         ⚠️ **AND UNDER A BAND OF FACES, WHO THE HIGHLIGHTED ONE IS — 0513.** *"Nothing anywhere says who
@@ -5665,20 +6084,20 @@ export function makeChrome(
       saying (`setKeeperLine`), as a pilot's card stands under the faces. Since 0550 on every tab, each
       keeper's face by their own painter (`KEEPER_FACES`), and the card's look one look for all three.
     */
+    /*
+      ⚠️ **0572: A SPEECH BUBBLE IN THE PICTURE, AND IT WAS A CARD AT THE PLATE'S HEAD.** Played: *"Tradie
+      quote is now super separated from the tradie"* — once 0571 put every keeper on a mezzanine across the
+      room, their words stood a column away from them, under a portrait of a face already in the picture.
+      So the card is a bubble in the stand, its tail on the keeper's head wherever they are this visit
+      (`setStandMarks`), and it carries no face: the keeper it points at is the face.
+    */
     let keeper: Panel['keeper'] = null;
     const keeperKind = row.stand?.keeper ?? null;
     if (keeperKind !== null) {
       const keeperRow = KEEPERS[keeperKind];
       const card = document.createElement('div');
-      // 0550: a keeper with no shop only greets, and on a phone their counter beside the plate says it.
+      // 0550: a keeper with no shop only greets.
       card.className = prefix + 'keeper' + (keeperRow.shop === null ? ' ' + prefix + 'keeper-greets' : '');
-      const face = document.createElement('canvas');
-      face.className = prefix + 'keeper-face';
-      face.width = KEEPER_FACE_PIXELS;
-      face.height = KEEPER_FACE_PIXELS;
-      face.setAttribute('aria-hidden', 'true');
-      const pen = face.getContext('2d');
-      if (pen !== null) KEEPER_FACES[keeperKind](pen, colours, KEEPER_FACE_PIXELS);
       const words = document.createElement('div');
       words.className = prefix + 'keeper-words';
       const name = document.createElement('div');
@@ -5689,8 +6108,9 @@ export function makeChrome(
       line.setAttribute('aria-live', 'polite');
       line.textContent = keeperRow.greet;
       words.append(name, line);
-      card.append(face, words);
-      settingsBox.prepend(card);
+      card.append(words);
+      if (stand !== null) stand.appendChild(card);
+      else settingsBox.prepend(card);
       keeper = { root: card, line };
     }
     // A screen with no bands has nothing in their box, and an empty flex child is a gap with no row.
@@ -5989,6 +6409,79 @@ export function makeChrome(
     return holder;
   };
   furnish();
+  /*
+    ── A PICTURE ON EVERY CARD — 0572 ──────────────────────────────────────────────────────────────
+
+    Played: *"the cards are still mostly text and hardly any picture at all"*. The wheels, the art, the
+    paints and Cosmo's wares had theirs (0564, 0565); Hangin' Out's four were names in pills. Each is the
+    thing's own drawing, never a second one: a gun is the shot it fires, a special is the face the readout
+    throws it under, a dash is the readout's plate in that ship's dressing, and what hangs is the readout's
+    own dangle, as Cosmo's tiles show it. Read off the rows the bands were built from, in the same order.
+  */
+  const furnishHangar = (screen: 'hangar' | 'parts'): void => {
+    const hangar = panels[screen];
+    if (hangar === undefined) return;
+    const prefix = prefixFor(screen);
+    const picture = (band: string, i: number): HTMLElement | null => {
+      const ship = SHIP_KINDS[i];
+      const holder = document.createElement('span');
+      holder.className = prefix + 'option-pic';
+      // The flame: the standard and every bought one, drawn as Cosmo's shelf draws it.
+      if (band === 'flame') {
+        const flame = FLAME_KINDS[i];
+        if (flame === undefined) return null;
+        holder.appendChild(wareArt(flame));
+        return holder;
+      }
+      holder.setAttribute('aria-hidden', 'true');
+      if (band === 'gun' && ship !== undefined) {
+        const glyph = SPRITE_KINDS[SHOTS[WEAPONS[SHIPS[ship].weapon].shot].sprite];
+        if (glyph === undefined) return null;
+        holder.appendChild(bakeGlyph(glyph, colours, CARD_PIC_PIXELS / SPRITE_EXTENT[glyph]));
+        return holder;
+      }
+      if (band === 'special' && ship !== undefined) {
+        const glyph = SPRITE_KINDS[SPECIALS[WEAPONS[SHIPS[ship].weapon].special].face];
+        if (glyph === undefined) return null;
+        holder.appendChild(bakeGlyph(glyph, colours, CARD_PIC_PIXELS / SPRITE_EXTENT[glyph]));
+        return holder;
+      }
+      if (band === 'plate' && ship !== undefined) {
+        const plate = document.createElement('span');
+        const theme = SHIPS[ship].hud;
+        plate.className = 'itc-hangar-option-plate itc-playing-hud-' + theme.motif;
+        plate.style.setProperty('--itc-ink', inkOf(theme.ink));
+        plate.style.setProperty('--itc-ally', inkOf(theme.trim));
+        plate.style.setProperty('--itc-lit', colours.impact);
+        holder.appendChild(plate);
+        return holder;
+      }
+      if (band === 'dangle') {
+        const dangle = DANGLE_KINDS[i - 1];
+        if (dangle === undefined) {
+          holder.classList.add(prefix + 'option-pic-hook');
+          return holder;
+        }
+        holder.appendChild(wareArt(dangle));
+        return holder;
+      }
+      return null;
+    };
+    for (const band of hangar.bands) {
+      band.buttons.forEach((button, i) => {
+        if (button.querySelector('.' + prefix + 'option-pic') !== null) return;
+        const pic = picture(band.name, i);
+        if (pic === null) return;
+        const label = document.createElement('span');
+        label.className = prefix + 'option-label';
+        label.textContent = button.textContent;
+        button.replaceChildren(pic, label);
+        button.classList.add(prefix + 'option-pictured');
+      });
+    }
+  };
+  furnishHangar('hangar');
+  furnishHangar('parts');
   wearShip(SHIPS.fighter);
   /** The ship whose dash the readout has on — 0521, so `setShip` can tell a new plate from the same one. */
   let wornPlate: ShipRow = SHIPS.fighter;
@@ -6300,11 +6793,8 @@ export function makeChrome(
    * Fill a plate's focus card — 0562: the band it speaks for, the option under the cursor or fitted, what
    * it is, and what it is to the player. The aisle speaks for the shelf it has in view.
    */
-  const paintCard = (panel: Panel): void => {
-    const card = panel.focus;
-    let band = panel.spoken;
-    if (card === null || band === null) return;
-    if (band.name === 'aisle') band = panel.bands.find((b) => b.name === inView.shop) ?? band;
+  /** What a band says of the option under the cursor, or the fitted one — the card's words and, since 0572, its caption's. */
+  const wordsOf = (band: Band): { shown: number; button: HTMLButtonElement | undefined; shut: boolean; name: string; state: string } => {
     const shown = band.look >= 0 ? band.look : band.index;
     const button = band.buttons[shown];
     const shut = shown >= 0 && band.open[shown] === false;
@@ -6315,6 +6805,26 @@ export function makeChrome(
     else state = band.why ?? '';
     const label = button?.querySelector('[class$="option-label"]');
     const name = button === undefined ? '' : (label?.textContent ?? button.getAttribute('aria-label') ?? button.textContent ?? '');
+    return { shown, button, shut, name, state };
+  };
+  /** 0572: fill a band's caption — its option's name, what it is, and what it is to the player. */
+  const paintCaption = (band: Band): void => {
+    const caption = band.caption;
+    if (caption === null) return;
+    const { shown, shut, name, state } = wordsOf(band);
+    const said = shown < 0 ? '' : (band.hints[shown] ?? '');
+    if (caption.name.textContent !== name) caption.name.textContent = name;
+    if (caption.said.textContent !== said) caption.said.textContent = said;
+    if (caption.state.textContent !== state) caption.state.textContent = state;
+    caption.root.classList.toggle(caption.root.className.split(' ')[0] + '-shut', shut);
+    caption.root.classList.toggle(caption.root.className.split(' ')[0] + '-trying', band.look >= 0 && !shut);
+  };
+  const paintCard = (panel: Panel): void => {
+    const card = panel.focus;
+    let band = panel.spoken;
+    if (card === null || band === null) return;
+    if (band.name === 'aisle') band = panel.bands.find((b) => b.name === inView.shop) ?? band;
+    const { shown, button, shut, name, state } = wordsOf(band);
     // 0564: and a ware's picture, large — a copy of its tile's, taken again when the ware changes.
     const art = button?.querySelector('[class$="option-art"]');
     const shownArt = card.art.dataset['ware'];
@@ -6343,6 +6853,7 @@ export function makeChrome(
   };
   /** Fill the card of whichever plate holds this band. */
   const paintCardOf = (band: Band): void => {
+    paintCaption(band);
     for (const panel of Object.values(panels)) if (panel !== undefined && panel.bands.includes(band)) paintCard(panel);
   };
   /** Draw which option of a band that tries is tried on — 0561: the ring on the option, not the row. */
@@ -6774,6 +7285,8 @@ export function makeChrome(
           honest moment to say *this is a new one*.
         */
         if (shown && panel.crossing !== null) panel.crossing.drawnFlown = -1;
+        // 0572: a keeper says their line again each time their tab is opened, and it fades.
+        if (shown && name !== shownScreen) sayAgain(name);
       }
       // 0564: a sheet asking goes with its screen, unanswered.
       if (asking !== null && shownScreen !== screen) {
@@ -7110,6 +7623,15 @@ export function makeChrome(
       const box = stand.getBoundingClientRect();
       return box.width > 0 ? { left: box.left, width: box.width, top: box.top, height: box.height } : null;
     },
+    setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void {
+      const said = standMarks[screen];
+      said.shipX = marks.shipX;
+      said.shipY = marks.shipY;
+      said.keeperX = marks.keeperX;
+      said.keeperY = marks.keeperY;
+      for (const kind of KEEPER_KINDS) Object.assign(said.shops[kind], marks.shops[kind]);
+      placeStand(screen);
+    },
     setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void {
       for (const screen of Object.keys(panels) as Screen[]) {
         const buttons = panels[screen]?.options[name];
@@ -7259,7 +7781,12 @@ export function makeChrome(
     },
     setKeeperLine(screen: Screen, line: string): void {
       const keeper = panels[screen]?.keeper;
-      if (keeper !== null && keeper !== undefined && keeper.line.textContent !== line) keeper.line.textContent = line;
+      if (keeper === null || keeper === undefined || keeper.line.textContent === line) return;
+      keeper.line.textContent = line;
+      // 0572: a line of another length is a bubble of another size, so its place is worked out again.
+      placeStand(screen);
+      // And a new line is said: the bubble comes back, and fades again.
+      sayAgain(screen);
     },
     setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {

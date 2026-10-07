@@ -45,7 +45,11 @@ describe.runIf(chromePath)('0566 — the hangar may be held upright, and nothing
     await pastIntro(page);
     await openHangar(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForTimeout(800);
+    /*
+      Waited for, not timed — 0572: an 800 ms wait failed under the browser suites' own load while the turned
+      room was still baking, and passed alone every time (0044). What is waited for is the room upright.
+    */
+    await page.waitForFunction(() => (document.querySelector('#app > canvas')?.getBoundingClientRect().height ?? 0) > 600, undefined, { timeout: 15_000 }).catch(() => undefined);
 
     expect(await gated(page), 'the rotate prompt stands over the hangar held upright').toBe(false);
     const canvas = (await page.locator('#app > canvas').first().boundingBox())!;
