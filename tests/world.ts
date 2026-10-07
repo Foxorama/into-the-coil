@@ -503,6 +503,7 @@ export function playableWorld(
     rainRng: makeRng('test').stream('rain'),
     breakerRng: makeRng('test').stream('breaker'),
     beamRng: makeRng('test').stream('beam'),
+    lobRng: makeRng('test').stream('lob'),
     rockRng: makeRng('test').stream('rock'),
     voidRng: makeRng('test').stream('void'),
     fuseRng: makeRng('test').stream('fuse'),

@@ -135,7 +135,8 @@ export const PROBES = [
     guard: 'THE LIGHTNING: a hostile bolt here',
     edit: {
       path: 'src/content/themes.ts',
-      find: "    bolt: '#ffe84a',",
+      // ⚠️ Re-anchored by 0573, which took the Black Heart's plasma to green off the player's amber.
+      find: "    bolt: '#5aff8c',",
       replace: '    bolt: null,',
     },
   },

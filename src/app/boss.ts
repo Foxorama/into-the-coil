@@ -29,7 +29,7 @@ import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
 import { faceAt, type Corridor } from '../sim/corridor.ts';
 import type { CueKind } from '../content/cues.ts';
-import { type DifficultyRow, crowdFor, fireGapFor } from '../content/difficulty.ts';
+import { type BossFight, type DifficultyRow, crowdFor, fireGapFor } from '../content/difficulty.ts';
 import { FIRE_GRID, onFireGrid } from '../content/cadence.ts';
 import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotRow } from '../content/shots.ts';
 
@@ -117,6 +117,55 @@ export function openBy(phase: BossPhase): number {
   // The bared window and the opened bell both take more — 0255; only the first stops throwing.
   const stance = phase.stance;
   return stance.kind === 'bare' || stance.kind === 'open' ? stance.damageScale : 1;
+}
+
+/**
+ * Where a boss's tail begins: its first phase whose `upTo` is at or under this share of the bar —
+ * `docs/decisions/0573-the-legend-bites.md`.
+ *
+ * ⚠️ **A SHARE OF THE BAR AND NOT A COUNT OF PHASES**, because *"the final 1-2 stages"* is one stage
+ * on a boss whose last opens at a quarter and two on the hydra, whose last two open at two fifths and a
+ * fifth. Read off the row, so a phase table re-cut moves its own tail with it.
+ */
+export const TAIL_FROM = 0.4;
+
+/**
+ * How far in from either side of the lane a lobbed ball may be aimed, and how much lane lies between
+ * the shares two balls of one throw roll in — both shares of the lane (0023), 0573.
+ *
+ * ⚠️ **A TENTH IN FROM THE EDGE** is twelve units, about two born balls' radius with the throw's roll on
+ * it, so a burst is never thrown against the wall. **An eighth between** is fifteen units, wider than a
+ * born ball at its biggest, so two of a throw cannot burst as one.
+ */
+const LOB_EDGE = 0.1;
+const LOB_GAP = 0.125;
+
+/** The share of the bar `row`'s tail spans: the `upTo` of its first phase at or under `TAIL_FROM`, or 0. */
+export function tailOf(row: BossRow): number {
+  for (let i = 0; i < row.phases.length; i++) {
+    const upTo = row.phases[i]!.upTo;
+    if (upTo <= TAIL_FROM) return upTo;
+  }
+  return 0;
+}
+
+/**
+ * How much of a hit lands on a boss of `row` at `health` of `full`, on `tier`, in `fight` — 0573.
+ *
+ * ⚠️ **`openBy` OF ITS PHASE, AND IN THE TAIL A FURTHER `span / (span + tail)`**, which is the tier's
+ * `bossTail` paid as health without moving a single threshold: the bar still turns each phase at its
+ * own `upTo`, and the stretch under the tail's first one takes `tail × full` more to cross. The one
+ * call every damage path in `src/app/frame.ts` makes, so no path can hold the tail and another skip it.
+ *
+ * ⚠️ **Nothing allocates** — a phase lookup and a loop over a handful of rows.
+ */
+export function landsOn(row: BossRow, health: number, full: number, tier: DifficultyRow, fight: BossFight): number {
+  const phase = phaseFor(row, health, full);
+  const open = openBy(phase);
+  const tail = tier.bossTail[fight];
+  if (tail <= 0 || phase.upTo > TAIL_FROM) return open;
+  const span = tailOf(row);
+  return span > 0 ? (open * span) / (span + tail) : open;
 }
 
 /**
@@ -545,6 +594,8 @@ export function stepBoss(
   breakerRng: Rng,
   /** How a jagged laser zigzags — 0388, its own stream on the same terms. */
   beamRng: Rng,
+  /** The height each ball of a lob is aimed at — 0573, its own stream on the same terms. */
+  lobRng: Rng,
   /** The floor under the hull, or `null` — what a `wade` stands in (0384). */
   corridor: Corridor | null,
   /**
@@ -908,7 +959,7 @@ export function stepBoss(
   const fraction = boss.health / (fullHealth > 0 ? fullHealth : row.health);
   // A many-headed boss's volley leaves its first head unless a round says which — 0384, `heads` below.
   boss.muzzleAt = mouths.length > 0 ? 0 : -1;
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, phase.cue, mouths, past);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, lobRng, onCue, phase.cue, mouths, past);
   return direction;
 }
 
@@ -988,6 +1039,8 @@ function throwAttack(
   breakerRng: Rng,
   /** How a jagged laser zigzags — 0388, its own stream on 0021's terms. */
   beamRng: Rng,
+  /** The height each ball of a lob is aimed at — 0573, its own stream on 0021's terms. */
+  lobRng: Rng,
   onCue: (kind: CueKind, across?: number) => void,
   /**
    * What this attack sounds like, or `undefined` for the crash every boss shares — 0308.
@@ -1088,18 +1141,40 @@ function throwAttack(
   switch (attack.kind) {
     case 'lob': {
       /*
-        ONE shot, straight down the lane — 0311. The arm that does not spend `phase.shots`, and
-        `src/content/bosses.ts` has the whole argument for why a ball the player is meant to shoot down
-        is the one object in this table whose difficulty must not be multiplied by a phase.
+        The row's `balls`, each to a height of its own — 0311 threw one straight down the lane, 0573 the
+        rest. The arm that does not spend `phase.shots`, and `src/content/bosses.ts` has the argument for
+        why a ball the player is meant to shoot down is not multiplied by a phase or a tier.
 
-        ⚠️ **`π` IS STRAIGHT BACK DOWN THE LANE**, the same centre every fan here is built around, so
-        nothing about this reacts to where the ship is — 0258.
+        ⚠️ **AIMED AT WHERE IT BURSTS, IN THE CAMERA'S FRAME.** A ball comes apart at its row's
+        `swallow.at` from the near edge of the view (0311), so each one leaves the mouth on the line to
+        that edge at its rolled height and is there, at that height, when it bursts — *"random heights
+        across the screen"* is where the burst is, which is the thing the player moves for. The velocity
+        is the camera's plus the aim, as every boss shot here is (0023). A bullet with no fuse is aimed
+        at the near edge itself.
+
+        ⚠️ **ONE HEIGHT PER SHARE OF THE LANE, WITH A BALL'S WIDTH BETWEEN THE SHARES.** Rolled anywhere,
+        two balls of a throw land on one height one time in a few, which is a wall the size of both; each
+        ball rolls within its own band instead, the bands `LOB_GAP` apart, and the whole inside
+        `LOB_EDGE` of either side — a burst against the lane's edge throws half its ring off the screen.
+
+        ⚠️ **NOTHING ABOUT IT REACTS TO WHERE THE SHIP IS — 0258.** The roll is `lobRng`'s alone (0021).
       */
-      const shot = shots.spawn();
-      if (shot === null) break;
-      reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
-      shot.velAlong = -speed + scrollPerStep;
-      shot.velAcross = 0;
+      const fuse = bullet.swallow !== undefined ? bullet.swallow.at : 0;
+      const toAlong = cameraAlong + fuse - muzzleAlong;
+      const lo = ACROSS_SPAN * LOB_EDGE;
+      const band = (ACROSS_SPAN * (1 - 2 * LOB_EDGE) - ACROSS_SPAN * LOB_GAP * (attack.balls - 1)) / attack.balls;
+      for (let b = 0; b < attack.balls; b++) {
+        const shot = shots.spawn();
+        if (shot === null) break;
+        reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
+        const height = lo + b * (band + ACROSS_SPAN * LOB_GAP) + lobRng.range(0, band);
+        const toAcross = height - muzzleAcross;
+        const length = Math.sqrt(toAlong * toAlong + toAcross * toAcross);
+        // A mouth already past its own fuse has nowhere to aim from, and throws straight, as 0311 did.
+        const ahead = toAlong < 0 && length > 0;
+        shot.velAlong = (ahead ? (toAlong / length) * speed : -speed) + scrollPerStep;
+        shot.velAcross = ahead ? (toAcross / length) * speed : 0;
+      }
       break;
     }
     case 'spray':
@@ -1486,7 +1561,7 @@ function throwAttack(
       boss.headAt++;
       // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
       // is the one place a per-attack cue was always going to have to be chosen.
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths, past);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, lobRng, onCue, head.cue, mouths, past);
       /*
         ⚠️ **AND THE HEAD'S OWN ROOM — 0322.** *"The void balls [need] to be spaced out slightly more
         between the acid sprays."* AFTER the recursion, which is the only place it works: a `sweep` sets

@@ -2430,13 +2430,14 @@ describe('0311 — the acid and the void come as one ball', () => {
     world.ship.across = ACROSS_SPAN - BALL_LANE;
   };
 
-  it('THE REPORTED ONE: the last third throws ONE ball where it threw twenty-four bullets', () => {
+  it('THE REPORTED ONE: the last third throws its balls where it threw twenty-four bullets', () => {
     /*
       ⚠️ **THE COUNT IS THE COMPLAINT.** *"They go on for too long and get boring"* — the sweep threw
       twenty-one globes over a second and the void head three more, so two volleys in every three were
       twenty-four bullets the player could only wait out. What is asserted is the shape of the round: no
-      sweep and no void fan left in it, and the ball's own volley putting exactly ONE thing on the field
-      however wide the phase's fan is authored. The phase says three.
+      sweep and no void fan left in it, and the ball's own volley putting exactly the lob's own `balls` on
+      the field however wide the phase's fan is authored. The phase says three; the lob says two since
+      0573 — *"a few more poison bubbles"* — and it was one.
     */
     const heads = round();
     expect(heads.length, 'the serpent’s last third grows no heads at all').toBeGreaterThan(1);
@@ -2457,11 +2458,61 @@ describe('0311 — the acid and the void come as one ball', () => {
     boss.fireIn = 1;
     frame.step();
     const thrown = onField(world);
-    expect(thrown, `the ball's volley put ${thrown.length} shots on the field: ${thrown.join(', ')}`).toEqual(['maw']);
+    const lobbed = heads.find((h) => h.shot === 'maw')!.attack as { kind: string; balls?: number };
+    const balls = lobbed.kind === 'lob' && lobbed.balls !== undefined ? lobbed.balls : Number.NaN;
+    expect(thrown, `the ball's volley put ${thrown.length} shots on the field: ${thrown.join(', ')}`).toEqual(Array.from({ length: balls }, () => 'maw'));
   });
 
-  it('and it EATS the player’s fire and grows, which is the only thing that says it is eating', () => {
-    // 0291's machinery, on a bullet with five times the appetite. What is asserted is that it applies.
+  it('and each ball of a throw bursts at a height of its own, a ball apart, and the heights are rolled', () => {
+    /*
+      ⚠️ **IN WORLD UNITS ACROSS THE LANE, AT THE PLACE IT BURSTS — 0573, 0027.** *"In random heights
+      across the screen."* Where a ball is aimed is a model quantity; where it is when it bursts is what
+      the player dodges. So the volley is flown to the burst line and read there: every pair of a throw
+      at least a born ball's width apart (two of them stacked are one wall), inside the lane, and the
+      heights differing from one throw to the next (a fixed pair of heights is not random).
+    */
+    const heads = round();
+    const at = heads.findIndex((h) => h.shot === 'maw');
+    const burstsAt = SHOTS.maw.swallow!.at;
+    const throws: number[][] = [];
+    for (let t = 0; t < 4; t++) {
+      const { world, frame } = serpentAt(0.2);
+      const boss = world.bossPool.at(0);
+      boss.headAt = at;
+      world.enemyShots.clear();
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      // Each fixture is the same seed, so the stream is walked on by `t` throws' worth of rolls.
+      for (let k = 0; k < t * 3; k++) world.lobRng.float();
+      boss.fireIn = 1;
+      frame.step();
+      /*
+        Each ball's height where its own flight crosses the burst line, off the velocity the frame gave it:
+        in the camera's frame a ball closes at `velAlong − scroll`, so the steps to the line are its
+        distance over that, and its height there is where it is plus that many steps of `velAcross`.
+      */
+      const heights: number[] = [];
+      for (let i = 0; i < world.enemyShots.size; i++) {
+        const ball = world.enemyShots.at(i);
+        if (SHOT_KINDS[ball.kind] !== 'maw') continue;
+        const closing = world.scrollPerStep - ball.velAlong;
+        const steps = (ball.along - world.cameraAlong - burstsAt) / closing;
+        heights.push(ball.across + ball.velAcross * steps);
+      }
+      expect(heights.length, `throw ${t} did not throw two balls`).toBeGreaterThanOrEqual(2);
+      throws.push(heights.slice(0, 2).sort((a, b) => a - b));
+    }
+    for (const [low, high] of throws) {
+      expect(low!, 'a ball burst off the lane').toBeGreaterThanOrEqual(0);
+      expect(high!, 'a ball burst off the lane').toBeLessThanOrEqual(ACROSS_SPAN);
+      expect(high! - low!, `a throw's two balls burst ${(high! - low!).toFixed(1)} units apart, which is one wall`).toBeGreaterThan(2 * SHOTS.maw.radius);
+    }
+    expect(new Set(throws.map(([low]) => Math.round(low!))).size, 'every throw burst at the same heights').toBeGreaterThan(1);
+  });
+
+  it('and it EATS the player’s fire and shrinks, which is the only thing that says it is eating', () => {
+    // 0291's machinery, on a bullet with five times the appetite. What is asserted is that it applies —
+    // and since 0573 it runs the other way: *"start bigger and then shrink as they get hit."*
     const { world, frame } = withBall();
     const wide = world.enemyShots.at(0).radius;
     const before = world.enemyShots.at(0).health;
@@ -2473,7 +2524,7 @@ describe('0311 — the acid and the void come as one ball', () => {
     }
     expect(world.enemyShots.size, 'the ball was gone after eight pulses, which is not an appetite').toBe(1);
     expect(before - world.enemyShots.at(0).health, 'the ball swallowed nothing at all').toBeGreaterThan(0);
-    expect(world.enemyShots.at(0).radius, 'the ball ate and did not grow').toBeGreaterThan(wide);
+    expect(world.enemyShots.at(0).radius, 'the ball ate and did not shrink').toBeLessThan(wide);
   });
 
   it('and if it is NOT killed it bursts where the row says, into acid and void together', () => {
@@ -2688,8 +2739,8 @@ describe('0322 — the ball is worth shooting', () => {
       `the same ${half} points of damage left the ball between ${narrowest.toFixed(2)} and ${widest.toFixed(2)} units of hurtbox — ` +
         `${runs.map((r) => `${r.damage}s: ${r.radius.toFixed(2)}`).join(', ')}`,
     ).toBeLessThan(0.01);
-    // And it grew, which is the tell 0291 put there: half the appetite, half the swell.
-    expect(narrowest, 'the ball ate half its appetite and did not grow at all').toBeGreaterThan(SHOTS.maw.radius);
+    // And it shrank, which is the tell 0291 put there turned round by 0573: half the appetite, half the swell.
+    expect(widest, 'the ball ate half its appetite and did not shrink at all').toBeLessThan(SHOTS.maw.radius);
   });
 
   it('and a fed ball is a TARGET rather than a wall, in the units the player flies in', () => {
@@ -2714,9 +2765,14 @@ describe('0322 — the ball is worth shooting', () => {
       ship-widths and leaves several more of them free on one side of it wherever it sits — *a thing to fly
       around*. The old per-bite growth reached **103.8 units across**, which is the lane.
     */
+    /*
+      ⚠️ **AT ITS BIGGEST, WHICH SINCE 0573 IS ITS BIRTH.** A ball that shrinks as it eats is widest
+      before the first bite, so the ceiling is read off whichever end of the swell is larger.
+    */
+    const biggest = Math.max(SHOTS.maw.radius, promised);
     expect(
-      promised * 2,
-      `a fully fed ball is ${(promised * 2).toFixed(1)} units across a ${ACROSS_SPAN}-unit lane, which is a wall and not a target`,
+      biggest * 2,
+      `a ball at its biggest is ${(biggest * 2).toFixed(1)} units across a ${ACROSS_SPAN}-unit lane, which is a wall and not a target`,
     ).toBeLessThan(ACROSS_SPAN / 8);
   });
 

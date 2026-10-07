@@ -1627,12 +1627,22 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: null, // Nothing to stand on. The place's whole character is absence — 0211.
     // Flesh and obsidian: blood-red, the place's ice-blue in the veins, a yellow eye.
     // The hulls here are RED, which is the one place a red bullet would be invisible — so plasma.
-    foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f', shot: '#ffe84a' },
+    /*
+      ⚠️ **GREEN PLASMA SINCE 0573, AND THE YELLOW WAS THE PLAYER'S OWN FIRE.** *"Jellyfish lightning and
+      bullets are really hard to see on the end of level 7 still."* Photographed, the fight is dark enough
+      for `#ffe84a` — 3.6:1 at its worst twentieth of ground — but it sat **25 ΔE from the player's amber
+      shot and 7 from the hazard yellow**, so the jellyfish's plasma and the ship's pulse were one stream
+      of yellow dots between them. `#5aff8c` keeps the ground (3.5:1, ΔE 56 at the worst twentieth) and
+      stands 50 ΔE off the player's fire, 36 off the player's hull and 41 off the bell's cold glass.
+      Near the acid's lime and the frost's teal, neither of which is thrown here.
+    */
+    foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f', shot: '#5aff8c' },
     // The jellyfish: a darker blood than the gaze, the bell's rim in a cold light, the heart gold.
     // Its glass is that cold light since 0459, so it stands off a sky that is the blood.
     lord: { hull: '#b8202e', plate: '#40060e', lit: '#9ad0f0', eye: '#ffd23f' },
     // The plasma its bullets already are — 0459: the `enemy` pink is the colour of this place's light.
-    bolt: '#ffe84a',
+    // Green with them since 0573, so the lasers are not the player's amber either.
+    bolt: '#5aff8c',
     /*
       ⚠️ **THE HIGHEST, BECAUSE HERE THE AURA IS THE PLACE.** The Black Heart is what the run has been
       travelling towards; 0170 already made it audible in its own fight, and this is the other half —

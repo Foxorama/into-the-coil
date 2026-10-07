@@ -96,7 +96,7 @@ import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKin
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
-import { type DifficultyRow, bossToughnessFor, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
+import { type BossFight, type DifficultyRow, bossToughnessFor, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, VOLLEY_CYCLE, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
@@ -111,7 +111,7 @@ import { TETHER_BOLT_KIND, WEAPONS, type CatherineWheel, type FlightKind } from 
 import { MISSILES } from '../content/missiles.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, muzzleAcrossOf, muzzleAlongOf, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
+import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { STEP_MS, type Frame } from './loop.ts';
 import { multiplierFor } from '../content/score.ts';
@@ -1099,6 +1099,8 @@ export interface World {
   breakerRng: Rng;
   /** How a jagged laser zigzags — 0388, on the same terms. */
   beamRng: Rng;
+  /** The height each ball of a lob is aimed at — 0573, on the same terms. */
+  lobRng: Rng;
   /** Where the volcanoes' rock falls — `docs/decisions/0251-the-volcanoes-belch.md`, on the same terms. */
   rockRng: Rng;
   /** Which way a pickup floats and how each bounce turns it — 0293, on 0021's own terms. */
@@ -2272,7 +2274,8 @@ export class GameFrame implements Frame {
       to *how open is it*, and 0053 says the bomb is the first thing the player spends.
     */
     // A wreck stands in no phase, so it is open by exactly one — 0475.
-    const open = w.bossPool.size > 0 && !w.bossBeaten ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
+    // And the tier's tail on top of it — 0573: `landsOn` is `openBy` of the phase, held longer at the end.
+    const open = w.bossPool.size > 0 && !w.bossBeaten ? landsOn(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth, w.difficulty, fightOf(w)) : 1;
     // And the gun's own weight on this boss — 0372; the missiles and the blast are not the gun's.
     const gunOpen = open * gunWeightOn(w.bossRow, w.weapon.kind);
     /*
@@ -4004,7 +4007,7 @@ function fireArc(w: World): void {
       onBoss = true;
       // The boss's own window scales a bolt as it scales a bullet — 0150. Read here rather than
       // remembered, on the collision section's own argument.
-      const open = openBy(phaseFor(w.bossRow, w.bossPool.at(boss).health, w.bossFullHealth));
+      const open = landsOn(w.bossRow, w.bossPool.at(boss).health, w.bossFullHealth, w.difficulty, fightOf(w));
       strike(w.bossPool, boss, w.weapon.damage * open * gunWeightOn(w.bossRow, w.weapon.kind), IMPACT_FLASH_STEPS, w.bossDeaths);
     } else {
       // Dry, and nothing ate it on the way.
@@ -4358,7 +4361,7 @@ function openRift(w: World, along: number, across: number, rift: Rift, sound: Cu
     let reaches = inRift(body, head, head.radius);
     for (let i = 0; !reaches && i < w.bossBody.size; i++) reaches = inRift(body, w.bossBody.at(i), w.bossBody.at(i).radius);
     if (reaches && head.invulnFor <= 0) {
-      const open = openBy(phaseFor(w.bossRow, head.health, w.bossFullHealth));
+      const open = landsOn(w.bossRow, head.health, w.bossFullHealth, w.difficulty, fightOf(w));
       strike(w.bossPool, 0, rift.bossShare * w.bossFullHealth * open, IMPACT_FLASH_STEPS, w.bossDeaths);
     }
   }
@@ -4448,7 +4451,7 @@ function stormStrike(w: World, fromAlong: number, fromAcross: number, reach: num
     struckAlong = target.along;
     struckAcross = target.across;
     spawnLink(w, SHOTS.arc, fromAlong, fromAcross, struckAlong, struckAcross);
-    const open = openBy(phaseFor(w.bossRow, target.health, w.bossFullHealth));
+    const open = landsOn(w.bossRow, target.health, w.bossFullHealth, w.difficulty, fightOf(w));
     const share = storm.bossShare * w.bossFullHealth;
     strike(w.bossPool, boss, (share > storm.damage ? share : storm.damage) * open, IMPACT_FLASH_STEPS, w.bossDeaths);
     return 2;
@@ -4744,7 +4747,7 @@ function stepNova(w: World): void {
     if (reaches) {
       w.novaBossHit = true;
       if (head.invulnFor <= 0) {
-        const open = openBy(phaseFor(w.bossRow, head.health, w.bossFullHealth));
+        const open = landsOn(w.bossRow, head.health, w.bossFullHealth, w.difficulty, fightOf(w));
         const share = nova.bossShare * w.bossFullHealth;
         strike(w.bossPool, 0, (share > nova.damage ? share : nova.damage) * open, IMPACT_FLASH_STEPS, w.bossDeaths);
       }
@@ -9260,6 +9263,7 @@ function driveBoss(w: World): void {
     w.rainRng,
     w.breakerRng,
     w.beamRng,
+    w.lobRng,
     w.corridor,
     // The mouths only for a boss that has them — 0384; every other throws from its row's muzzle.
     w.bossRow.necks !== undefined ? w.mouths : NO_MOUTHS,
@@ -11057,6 +11061,11 @@ function drainChain(w: World): number {
   return taken * hurt;
 }
 
+/** Which of the level's two fights is on — 0247's `fight`, named where a tier reads it (0532, 0573). */
+function fightOf(w: World): BossFight {
+  return w.fight === 0 ? 'mid' : 'end';
+}
+
 /**
  * Put the boss on the field, at the leading edge and in the middle of the lane.
  *
@@ -11070,7 +11079,7 @@ function spawnBoss(w: World): void {
   // which is the mid-boss's or the end boss's — 0247.
   reset(boss, fightAt(w) + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);
   // And by which fight it is, on the tier's own row — 0532.
-  boss.health = bossToughnessFor(w.bossRow.health, w.difficulty, w.fight === 0 ? 'mid' : 'end');
+  boss.health = bossToughnessFor(w.bossRow.health, w.difficulty, fightOf(w));
   // Recorded, because a phase is a fraction of what the boss STARTED with and the row no longer
   // says what that was. `src/app/boss.ts` takes it as an argument for exactly that reason.
   w.bossFullHealth = boss.health;

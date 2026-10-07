@@ -302,11 +302,17 @@ export type BossAttack =
    * bursts, and three of them at once is not a harder version of one, it is ninety points of shooting
    * the player cannot finish and three explosions they cannot all be away from.
    *
-   * ⚠️ **SO THE COUNT IS ONE BY CONSTRUCTION RATHER THAN BY A ROW SAYING `shots: 1`.** The phase's
-   * three are still read by the head beside this one, and a `spray` here would have thrown three balls
-   * — which is what `ring` would have done too, and was the first thing tried.
+   * ⚠️ **SO THE COUNT IS ITS OWN, `balls`, RATHER THAN THE PHASE'S `shots`.** The phase's three are
+   * still read by the head beside this one, and a `spray` here would have thrown three balls — which is
+   * what `ring` would have done too, and was the first thing tried.
+   *
+   * ⚠️ **AND IT WAS ONE BALL STRAIGHT DOWN THE LANE UNTIL 0573.** *"A few more poison bubbles happening
+   * and in random heights across the screen."* The argument above was made against the opening gun of
+   * 0311, which could not clear one; a ship has opened at its cap since 0441, and the count is now the
+   * row's to say. Each ball is aimed to arrive at a height of its own, rolled within its own share of
+   * the lane so two of a volley never stack — `src/app/boss.ts` has the roll.
    */
-  | { kind: 'lob' }
+  | { kind: 'lob'; balls: number }
   /**
    * The fan, centred on the lane, turning by `turn` radians every volley.
    *
@@ -2686,6 +2692,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   sentinel: {
     points: 5000,
+    /*
+      ⚠️ **THE ARC'S HIT ON A MID-BOSS IS WEIGHED PER HULL — 0573.** *"Minibosses … die really fast to
+      the lightning gun."* Flown on its lane at Legendary, held 30 units short, the arc at its row's 1.5
+      put each of the seven down in **2 to 8 s against 4 to 11 for the pulse, the shuriken and the ray**
+      — and at any distance inside its reach, where the others slow by half again at 60. Each row's
+      number is `1.5 × arc ÷ the median of those three`, so the arc is as quick as the others at their
+      best and no quicker; the decision has the table. The end bosses solved their own in 0372.
+    */
+    gunWeights: { arc: 1.06 },
     move: { kind: 'patrol' },
     // A spray since 0258 — *"minibosses need to be on their own pattern path and not actively
     // matching the player or aiming at the player."* One shot straight down the lane, then the fan.
@@ -2780,6 +2795,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   harrow: {
     points: 6000,
+    // The arc as quick as the other guns at their best — 0573, the sentinel's note.
+    gunWeights: { arc: 0.81 },
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.24 from 0111.
     move: { kind: 'bob', amplitude: 22, wavelength: 140, rear: 0 },
     attack: { kind: 'spray' },
@@ -2856,6 +2873,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   lattice: {
     points: 8000,
+    // The arc as quick as the other guns at their best — 0573, the sentinel's note. The lowest of the
+    // seven: at 1.5 it took this hull in 2 s against the others' 6.
+    gunWeights: { arc: 0.47 },
     move: { kind: 'patrol' },
     attack: { kind: 'wall', gap: 15 },
     uncoil: null,
@@ -2932,6 +2952,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   shoalMother: {
     points: 7000,
+    // The arc as quick as the other guns at their best — 0573, the sentinel's note.
+    gunWeights: { arc: 0.67 },
     move: { kind: 'bob', amplitude: 26, wavelength: 150, rear: 0 },
     // A wall since 0258: a mid-boss fires a pattern, and `bob/spray` is the harrow's pair. Its
     // phases widen the wall from one pair of lances either side of it to five, the hole in front.
@@ -2991,6 +3013,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   redoubt: {
     points: 9000,
+    // The arc as quick as the other guns at their best — 0573, the sentinel's note.
+    gunWeights: { arc: 1.19 },
     move: { kind: 'patrol' },
     attack: { kind: 'ring' },
     uncoil: null,
@@ -3050,6 +3074,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   chorus: {
     points: 10000,
+    // The arc as quick as the other guns at their best — 0573, the sentinel's note.
+    gunWeights: { arc: 0.78 },
     move: { kind: 'bob', amplitude: 22, wavelength: 110, rear: 0 },
     attack: { kind: 'rake', turn: 0.55 },
     /*
@@ -3144,6 +3170,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
   */
   axis: {
     points: 12000,
+    // The arc as quick as the other guns at their best — 0573, the sentinel's note.
+    gunWeights: { arc: 1.17 },
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.2 from 0111.
     move: { kind: 'bob', amplitude: 20, wavelength: 180, rear: 0 },
     attack: { kind: 'ring' },
@@ -3865,7 +3893,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
               apart, out of cues that already exist, and `burstMaw` in `src/app/frame.ts` names the
               second.
             */
-            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid', gap: 42 },
+            /*
+              ⚠️ **TWO BALLS A THROW, EACH TO ITS OWN HEIGHT — 0573.** *"Serpent boss phase 3 needs a few
+              more poison bubbles happening and in random heights across the screen."* Two a lob and the
+              round's growth (0365) on top: two in the round above 0.3, eight under 0.1. Each is born big
+              and shrinks as it is shot, so the pair is two targets rather than one wall.
+            */
+            { shot: 'maw', attack: { kind: 'lob', balls: 2 }, cue: 'bossVoid', gap: 42 },
             /*
               ⚠️ UNTOUCHED, AND SAID TWICE TWO PLAYS APART: *"don't change the lightning attack it's
               really good."* It is the one attack on this boss with a verdict already in.

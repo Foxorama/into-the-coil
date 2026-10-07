@@ -9,11 +9,11 @@ export const PROBES = [
     suite: 'tests/serpent.test.ts',
     // The state of `main`: the sweep and the void fan back in the round, which is what *boring* was.
     broke: 'the sweep put back in the last third, so two volleys in three are twenty-four bullets again',
-    guard: 'THE REPORTED ONE: the last third throws ONE ball where it threw twenty-four bullets',
+    guard: 'THE REPORTED ONE: the last third throws its balls where it threw twenty-four bullets',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0322, which gave the lob's head a gap of its own so the bolt does not tread on it.
-      find: "            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid', gap: 42 },",
+      find: "            { shot: 'maw', attack: { kind: 'lob', balls: 2 }, cue: 'bossVoid', gap: 42 },",
       replace:
         "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 } },",
     },
@@ -27,11 +27,11 @@ export const PROBES = [
       cannot all be away from — and it satisfies *the last third throws a ball* in every other respect.
     */
     broke: 'the ball thrown as a spray, so the phase’s three become three balls at once',
-    guard: 'THE REPORTED ONE: the last third throws ONE ball where it threw twenty-four bullets',
+    guard: 'THE REPORTED ONE: the last third throws its balls where it threw twenty-four bullets',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0322, as above: the head carries a gap now.
-      find: "            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid', gap: 42 },",
+      find: "            { shot: 'maw', attack: { kind: 'lob', balls: 2 }, cue: 'bossVoid', gap: 42 },",
       replace: "            { shot: 'maw', attack: { kind: 'spray' } },",
     },
   },
@@ -40,11 +40,12 @@ export const PROBES = [
     suite: 'tests/serpent.test.ts',
     // The appetite taken off, so the player cannot touch it at all — 0291's switch, not a tuning number.
     broke: 'the ball no longer swallowing, so the player cannot touch it',
-    guard: 'and it EATS the player’s fire and grows, which is the only thing that says it is eating',
+    guard: 'and it EATS the player’s fire and shrinks, which is the only thing that says it is eating',
     edit: {
       path: 'src/content/shots.ts',
-      // ⚠️ Re-anchored by 0322: an appetite is an object now, because it carries the swell it spends.
-      find: '    swallows: { swell: 1.5 },\n    /*\n      ⚠️ **35.6 IS',
+      // ⚠️ Re-anchored by 0322: an appetite is an object now, because it carries the swell it spends; and
+      // by 0573, which turned the swell under one.
+      find: '    swallows: { swell: 1 / 3 },\n    /*\n      ⚠️ **35.6 IS',
       replace: '    /*\n      ⚠️ **35.6 IS',
     },
   },

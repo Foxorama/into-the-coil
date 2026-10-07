@@ -34,7 +34,8 @@ export const PROBES = [
     guard: 'and a fed ball is a TARGET rather than a wall',
     edit: {
       path: 'src/content/shots.ts',
-      find: '    swallows: { swell: 1.5 },',
+      // ⚠️ Re-anchored by 0573, whose ball shrinks: four times is a ball that grows into a wall again.
+      find: '    swallows: { swell: 1 / 3 },',
       replace: '    swallows: { swell: 4 },',
     },
   },
@@ -62,8 +63,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/shots.ts',
       // ⚠️ Re-anchored by 0324, which took the appetite to 13.2 — *"about 10% more health."*
-      find: '    radius: 3.6,\n    health: 13.2,',
-      replace: '    radius: 3.6,\n    health: 240,',
+      // And by 0573, which bore the ball at 5.4.
+      find: '    radius: 5.4,\n    health: 13.2,',
+      replace: '    radius: 5.4,\n    health: 240,',
     },
   },
   {

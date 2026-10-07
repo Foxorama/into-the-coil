@@ -2350,15 +2350,15 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     the screen* is the rule and 0295 deleted the ranking guards that used to answer it in advance: this
     is a bullet the player is meant to SHOOT, held in front of them for three and a half seconds, and a
     thing you are asked to destroy has to look like a target rather than like a bullet to dodge. At 14.4
-    it is two and a half acid drops across and about half the width of the skull that spat it.
+    it was two and a half acid drops across and about half the width of the skull that spat it.
 
-    ⚠️ **AND IT GROWS FROM THERE** to half again as wide when its appetite is spent — 21.6 units — which
-    is its own row's `swallows.swell` and not a constant since 0322: `bite` in `src/app/frame.ts` scales
-    the blit and the hurtbox together (0291), and the per-bite version of that number reached **fifty-two
-    units of hurtbox** on this ball because the steps were the player's rate of fire rather than a size.
+    ⚠️ **21.6 SINCE 0573, THE SIZE IT USED TO GROW TO, AND IT SHRINKS FROM THERE** to a third as wide
+    when its appetite is spent — its own row's `swallows.swell`: *"start bigger and then shrink as they
+    get hit."* `bite` in `src/app/frame.ts` scales the blit and the hurtbox together (0291), so the
+    drawing stays four times the hurtbox the whole way down.
   */
-  maw: 14.4,
-  mawHit: 14.4,
+  maw: 21.6,
+  mawHit: 21.6,
   // A drop of what it was carrying — smaller and quicker than the acid globe, because sixteen leave at once.
   droplet: 3.6,
   /*
