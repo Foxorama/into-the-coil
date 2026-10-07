@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { back, fly, openHangar, shown } from './title.ts';
-import { seedOnce } from './seed.ts';
+import { seeded } from './seed.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
@@ -38,9 +38,7 @@ describe.runIf(chromePath)('0524 — a run opens on the special the hangar fitte
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     // The storm rides the lightning gun, the Thunderbolt's since 0545.
-    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, won: { ...initialHangar.won, fighter: true, thunderbolt: true } }));
-    const page = await context.newPage();
-    await page.goto(dist);
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, won: { ...initialHangar.won, fighter: true, thunderbolt: true } }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);

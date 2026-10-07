@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar, shown } from './title.ts';
-import { seedOnce } from './seed.ts';
+import { seeded } from './seed.ts';
 import { samePhase } from './stand.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
@@ -50,9 +50,7 @@ describe.runIf(chromePath)('0528 — every ship wears its own art', () => {
   it('the band names the ship on the stand’s three, and a look fitted is kept and drawn on the card', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, won: { ...initialHangar.won, firebird: true } }));
-    const page = await context.newPage();
-    await page.goto(dist);
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, won: { ...initialHangar.won, firebird: true } }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);

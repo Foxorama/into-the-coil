@@ -6,7 +6,7 @@ import { chromePath } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { choose, openSettings } from './title.ts';
-import { keptContext, keyedOut, seedOnce } from './seed.ts';
+import { keptContext, keyedOut, seeded } from './seed.ts';
 import { SETTINGS_KEY, serialiseSettings, settingsFrom } from '../src/save/settings.ts';
 import { initialSettings, type SettingsState } from '../src/state/slices/settings.ts';
 import { STYLE_KINDS } from '../src/content/styles.ts';
@@ -50,10 +50,8 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
   it('reads the key before it marks a band, and a band pressed is written for the next visit', async () => {
     // On disk, as a player's browser keeps it — `tests/seed.ts` says why not a fresh context's memory.
     const { context, close } = await keptContext({ width: 1280, height: 720 });
-    // Filled before the page's own script runs, and only once — a reload must read what the page wrote.
-    await seedOnce(context, SETTINGS_KEY, serialiseSettings(kept));
-    const page = context.pages()[0] ?? (await context.newPage());
-    await page.goto(dist);
+    // Filled before the game's page first runs — `tests/seed.ts` says why from a page and not a script.
+    const page = await seeded(context, dist, SETTINGS_KEY, serialiseSettings(kept));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
 
@@ -78,12 +76,10 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
       (2026-10-05). A key that lost the write and a band that does not show a kept value fail on the same
       line; the text read before anything is pressed tells the two apart.
 
-      ⚠️ **AND IT HAS ANSWERED, ONCE (2026-10-07, PR 580's third run): THE STORE EMPTIED.** The key held null
-      and the page's whole store had no keys — not this one lost but every one, the seed's included. Nothing
-      in the game empties the store (no clear, no remove), and the write was read back before the reload.
-      So it is the browser: a persistent profile's store read back empty across a reload that came hard on
-      a write, under CI's load. What is owed is a guard that does not race the browser's commit, without a
-      wait sized by guesswork (0245) — not a rerun.
+      ⚠️ **IT ANSWERED ONCE (2026-10-07, PR 580's third run): THE STORE EMPTIED**, the seed's key with the
+      page's. It was not a commit the reload raced, and no wait would have fixed it: looped on CI, a second
+      tab saw the same empty store and nothing was on disk, so the browser never had the key, only the tab.
+      The seed's init script was why, and `seeded` replaced it — 0570.
     */
     const reread = await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY);
     const store = await keyedOut(context, page);

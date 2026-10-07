@@ -51,4 +51,16 @@ export const PROBES = [
       replace: '    store.setItem(SETTINGS_KEY, serialiseSettings(settings));\n  } finally {',
     },
   },
+  {
+    // 0570: the browser test's reload line had never been seen red on purpose, only by accident.
+    decision: '0510',
+    suite: 'tests/settings-kept.browser.test.ts',
+    broke: 'the page booting on every kept setting but the crossing',
+    guard: 'a band pressed is written for the next visit',
+    edit: {
+      path: 'src/app/mount.ts',
+      find: '    settings: readSettings(keptStore, initialState.settings),',
+      replace: '    settings: { ...readSettings(keptStore, initialState.settings), travel: initialState.settings.travel },',
+    },
+  },
 ];
