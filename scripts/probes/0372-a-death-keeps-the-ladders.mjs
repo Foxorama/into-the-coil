@@ -32,9 +32,11 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/run.ts',
       // ⚠️ Re-anchored by 0525, which carries the run's gun beside its ship.
-      // ⚠️ And by 0577, which took the ship's own tube kind: the base ship alone is put back.
+      // ⚠️ And by 0577, which took the ship's own tube kind: the base ship alone is put back — the
+      // default one, since the fighter alone went STILL GREEN: the guard's fixture can be the fighter,
+      // and is flown away from the default by construction.
       find: '            ship: state.ship,\n            gun: state.gun,',
-      replace: "            ship: 'fighter',\n            gun: state.gun,",
+      replace: '            ship: DEFAULT_SHIP,\n            gun: state.gun,',
     },
   },
   {

@@ -22,9 +22,11 @@ export const PROBES = [
     edit: {
       path: 'src/content/pickups.ts',
       // ⚠️ Re-anchored by 0233, and by 0577: a weapon is resolved from the tubes fitted, so a ship that
-      // opens with a launcher is one whose list defaults to a tube.
-      find: 'export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = []): Weapon {',
-      replace: "export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = ['straight']): Weapon {",
+      // opens with a launcher is one whose empty list is read as a tube. Not the parameter's default,
+      // which the first anchor tried: every caller passes its list, so it went STILL GREEN.
+      find: '  const launchers = tubes.length > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes.length;',
+      replace:
+        "  tubes = tubes.length === 0 ? ['straight'] : tubes;\n  const launchers = tubes.length > MAX_LAUNCHERS ? MAX_LAUNCHERS : tubes.length;",
     },
   },
   {
