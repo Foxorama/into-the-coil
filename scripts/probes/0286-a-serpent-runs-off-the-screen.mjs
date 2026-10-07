@@ -85,8 +85,9 @@ export const PROBES = [
       // ⚠️ And by 0374, for the storm's bolts and the whirlpool's blades, by 0377 for the rifts, and by
       // 0379 for the surge's pods, and by 0403 for the jellyfish's tentacles, and by 0447 for the nova,
       // and by 0464 for the hydra's collars, and by 0479 for the slower flame's bullets and the longer rifts,
-      // and by 0527 for a car's two turning wheels, and by 0533 for the nova's two inner rings.
-      find: 'const WORST_CASE = 886;',
+      // and by 0527 for a car's two turning wheels, and by 0533 for the nova's two inner rings, and by
+      // 0581 for a ship's two loaded tubes.
+      find: 'const WORST_CASE = 888;',
       replace: 'const WORST_CASE = 500;',
     },
   },

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, MUZZLE_ALONG, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
+import { GameFrame, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { MISSILES, MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { BOMB_KINDS, MAX_LAUNCHERS, PICKUPS, effectOf, specialOf, weaponFor, type Loadout } from '../src/content/pickups.ts';
@@ -166,10 +166,11 @@ describe('0379 — a tube special fires its own, and the fitted tubes fire as th
       expect(pod, `${kind}'s missile leaves from ${pod.toFixed(2)} across, outside the tubes at ${low!.toFixed(2)} and ${high!.toFixed(2)}`).toBeGreaterThan(low!);
       expect(pod).toBeLessThan(high!);
       expect(Math.abs(pod), `${kind}'s missile is off the middle by ${pod.toFixed(2)}`).toBeLessThan(0.05);
-      // And ahead of the nose, where its barrel is drawn, rather than from inside the hull: past the
-      // fitted tubes' muzzle, launched the same step, by the barrel's length.
+      // And ahead of the nose, where its barrel is drawn, rather than from inside the hull: at the pod's
+      // nose, past the fitted tubes, launched the same step. 0581: the tubes are the row's own places (under
+      // the fighter's wings), where they stood at `MUZZLE_ALONG` for every ship until then.
       const ahead = pods[0]!.prevAlong - tubes[0]!.prevAlong;
-      expect(ahead, `${kind}'s missile leaves ${ahead.toFixed(2)} ahead of the tubes`).toBeCloseTo(POD_NOSE - MUZZLE_ALONG, 2);
+      expect(ahead, `${kind}'s missile leaves ${ahead.toFixed(2)} ahead of the tubes`).toBeCloseTo(POD_NOSE - world.shipRow.tubes[2][0]!.along, 2);
     }
   });
 

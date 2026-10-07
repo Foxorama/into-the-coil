@@ -102,6 +102,16 @@ export const SPRITE_KINDS = [
   'boltWheel1Hit',
   'boltWheel2',
   'boltWheel2Hit',
+  // 0581: a loaded tube of each kind, laid by the frame at each of the ship's tube places — gold and lavender.
+  'tubeMissile',
+  'tubeMissileHit',
+  'tubeSeeker',
+  'tubeSeekerHit',
+  // 0581: and the warhead a turret shows at its front, on the cars and the bike, in the same two inks.
+  'noseMissile',
+  'noseMissileHit',
+  'noseSeeker',
+  'noseSeekerHit',
   'drifter',
   'drifterHit',
   'lancer',
@@ -1578,6 +1588,12 @@ export const SHIP_BOX = 9.4;
 export const FIGHTER_HULL = 7;
 
 /**
+ * A loaded tube's length nose to fins, in world units — 0581: the missile under the fighter's wing, a little
+ * longer than the wing's chord at mid-span (1.1), so its warhead stands ahead of the leading edge.
+ */
+export const LOADED_TUBE = 1.7;
+
+/**
  * The kinds that are LIGHT rather than body — `docs/decisions/0520-the-light-is-loud.md`.
  *
  * A light is drawn ADDED to what is under it (`src/render/canvas.ts`): a spark over a hull brightens
@@ -1672,6 +1688,19 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boltWheel1Hit: 3.6 * 0.062 * SHIP_BOX,
   boltWheel2: 3.6 * 0.062 * SHIP_BOX,
   boltWheel2Hit: 3.6 * 0.062 * SHIP_BOX,
+  /*
+    0581: a loaded tube, nose to fins two of its frame's radii long — `LOADED_TUBE` units, which is the
+    fighter's under-wing missile; another ship's stands larger or smaller by its row's `tubeLength`.
+  */
+  tubeMissile: LOADED_TUBE / (2 * 0.42),
+  tubeMissileHit: LOADED_TUBE / (2 * 0.42),
+  tubeSeeker: LOADED_TUBE / (2 * 0.42),
+  tubeSeekerHit: LOADED_TUBE / (2 * 0.42),
+  // 0581: the warhead in the same box, so one swell (`tubeLength` over `LOADED_TUBE`) sizes either.
+  noseMissile: LOADED_TUBE / (2 * 0.42),
+  noseMissileHit: LOADED_TUBE / (2 * 0.42),
+  noseSeeker: LOADED_TUBE / (2 * 0.42),
+  noseSeekerHit: LOADED_TUBE / (2 * 0.42),
   drifter: 5.5,
   drifterHit: 5.5,
   /*

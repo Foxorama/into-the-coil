@@ -30,6 +30,13 @@ export type MissileKind = (typeof MISSILE_KINDS)[number];
  */
 export type GuidanceKind = 'straight' | 'homing';
 
+/**
+ * How a loaded tube is drawn on a ship — 0581: `dart`, the whole missile, hung under a wing or out of a pod;
+ * `nose`, its warhead at the front of a turret that holds the rest. Closed; a ship's row names its own.
+ */
+export const TUBE_LOOKS = ['dart', 'nose'] as const;
+export type TubeLook = (typeof TUBE_LOOKS)[number];
+
 export interface MissileRow {
   /** What the player would call it. */
   label: string;
@@ -84,6 +91,12 @@ export interface MissileRow {
   /** The face the missile pickup shows when it is offering this kind — an index into the atlas. */
   pickup: number;
   /**
+   * A tube of this kind loaded on the ship, in each look a ship may carry it in, with its hurt twin —
+   * 0581: what the frame lays at each tube place, in this kind's ink, so a rack of one of each reads as one
+   * of each (*"by ink"*). Which look is the ship's (`tubeLook` on its row).
+   */
+  loaded: Readonly<Record<TubeLook, { base: number; hit: number }>>;
+  /**
    * What a pickup of this tube buys once both tubes are fitted —
    * `docs/decisions/0373-a-special-is-the-guns-own.md`, a full ladder's until 0577. Every row authors it.
    */
@@ -106,6 +119,8 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     seek: 0,
     fuse: 0,
     pickup: SPRITE.pickupMissile,
+    // 0581: in the missile pickup's gold.
+    loaded: { dart: { base: SPRITE.tubeMissile, hit: SPRITE.tubeMissileHit }, nose: { base: SPRITE.noseMissile, hit: SPRITE.noseMissileHit } },
     // The golden aura since 0375 — *"change the autogun supercharge effect over to the regular
     // forward firing missiles."* It was the bomb (0373).
     special: 'overdrive',
@@ -132,6 +147,8 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     seek: 0.09,
     fuse: 99,
     pickup: SPRITE.pickupSeeker,
+    // 0581: in the seeker pickup's lavender.
+    loaded: { dart: { base: SPRITE.tubeSeeker, hit: SPRITE.tubeSeekerHit }, nose: { base: SPRITE.noseSeeker, hit: SPRITE.noseSeekerHit } },
     // The purple aura — 0373.
     special: 'hunt',
   },

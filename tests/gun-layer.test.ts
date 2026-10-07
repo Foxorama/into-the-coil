@@ -47,7 +47,9 @@ describe('a fitted ship', () => {
       const row = fitted(SHIPS[ship], gun);
       const mount = WEAPONS[gun].mount[SHIPS[ship].view];
       expect(row.weapon).toBe(gun);
-      expect(row.muzzle).toEqual({ along: SHIPS[ship].hardpoint.along + mount.along, across: SHIPS[ship].hardpoint.across + mount.across });
+      // 0581: at the ship's own scale for a mount, so a slimmer gun's mouth is that much nearer.
+      const s = SHIPS[ship].mountScale;
+      expect(row.muzzle).toEqual({ along: SHIPS[ship].hardpoint.along + mount.along * s, across: SHIPS[ship].hardpoint.across + mount.across * s });
       // Everything else about the ship is its own: the hull, the tubes, the engines, where its blades spread.
       expect({ ...row, weapon: SHIPS[ship].weapon, muzzle: SHIPS[ship].muzzle }).toEqual(SHIPS[ship]);
     }

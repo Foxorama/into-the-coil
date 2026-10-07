@@ -13,7 +13,8 @@ export const PROBES = [
     guard: 'fires it from its hardpoint plus the gun’s own mount',
     edit: {
       path: 'src/content/ships.ts',
-      find: '  return { ...row, wheels, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };',
+      // ⚠️ Re-anchored by 0581: the mount is drawn at the row's scale, and the muzzle with it.
+      find: '  return { ...row, wheels, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along * s, across: row.hardpoint.across + mount.across * s } };',
       replace: '  return { ...row, wheels, weapon: gun, muzzle: row.hardpoint };',
     },
   },
@@ -35,8 +36,9 @@ export const PROBES = [
     guard: 'muzzle is inside a mark its mount paints',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  MOUNTS[gun][row.view](ctx, f, palette, (x, y) => [hx + x, hy + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);',
-      replace: '  MOUNTS[gun][row.view](ctx, f, palette, (x, y) => [hx + x, hy + y], [0, 0]);',
+      // ⚠️ Re-anchored by 0581: drawn in a frame at the row's scale.
+      find: '  MOUNTS[gun][row.view](ctx, fs, palette, (x, y) => [hx + x, hy + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);',
+      replace: '  MOUNTS[gun][row.view](ctx, fs, palette, (x, y) => [hx + x, hy + y], [0, 0]);',
     },
   },
   {

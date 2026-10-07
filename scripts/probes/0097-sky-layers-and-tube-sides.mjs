@@ -119,9 +119,10 @@ export const PROBES = [
     edit: {
       // ⚠️ Re-anchored by 0448, which puts where each tube is on the ship's row; `side` in the frame
       // is only which path the missile pops to now. The fighter's single tube, put on the centreline.
+      // ⚠️ And by 0581, which hangs the fighter's tubes under its wings.
       path: 'src/content/ships.ts',
-      find: "const SIDE_TUBES: ShipRow['tubes'] = [[], [{ along: 3, across: -1.8 }],",
-      replace: "const SIDE_TUBES: ShipRow['tubes'] = [[], [{ along: 3, across: 0 }],",
+      find: "const FIGHTER_TUBES: ShipRow['tubes'] = [[], [{ along: -0.45, across: -1.76 }],",
+      replace: "const FIGHTER_TUBES: ShipRow['tubes'] = [[], [{ along: -0.45, across: 0 }],",
     },
   },
 ];
