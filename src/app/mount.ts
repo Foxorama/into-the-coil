@@ -72,9 +72,11 @@ import {
   effectOf,
   specialOf,
   missileFaceOf,
+  MAX_LAUNCHERS,
   type PickupKind,
   weaponFor,
 } from '../content/pickups.ts';
+import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS, rackCarrying, tubesOf } from '../content/racks.ts';
 import { AUTHORED, DIFFICULTIES, DIFFICULTY_KINDS, TUNED } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
@@ -125,7 +127,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rackWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor, liveryInk } from '../content/livery.ts';
@@ -153,7 +155,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { artOpen, flameOpen, gunOpen, plateOpen, reduceHangar, rimOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
+import { artOpen, flameOpen, gunOpen, needsFirst, plateOpen, rackOpen, reduceHangar, rimOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1956,6 +1958,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // The lives counter is the ship being flown — 0430 — and the run's ship is the pilot's (0441).
       // 0521: in the dash the hangar fitted to it.
       chrome.setShip(world.shipRow, SHIPS[state.hangar.plate[state.run.ship]], fitOf(state.run.ship, state.run.gun));
+      // 0578: and the tubes it carries, said after the gun.
+      chrome.setTubes(state.run.tubes);
       /*
         ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
         changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
@@ -2170,6 +2174,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         const from = SHIP_KINDS[index];
         return from === undefined ? null : { slice: 'hangar', type: name, ship, from };
       }
+      // 0578: the tubes, `RACK_KINDS` in order.
+      case 'rack': {
+        const rack = RACK_KINDS[index];
+        return rack === undefined ? null : { slice: 'hangar', type: 'rack', ship, rack };
+      }
       default: {
         const unhandled: never = name;
         return unhandled;
@@ -2203,11 +2212,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const rim = RIM_KINDS.find((kind) => kind === ware);
     if (rim !== undefined) return SHIPS[ship].wheels === null ? null : { slice: 'hangar', type: 'rim', ship, rim };
     const flame = FLAME_KINDS.find((kind) => kind === ware);
-    return flame === undefined ? null : { slice: 'hangar', type: 'flame', ship, flame };
+    if (flame !== undefined) return { slice: 'hangar', type: 'flame', ship, flame };
+    /*
+      0578: a tube goes into the ship's rack — beside what is fitted while there is room, else in place of
+      the bottom tube — as the rack of that shape. `null` where no rack is that shape.
+    */
+    const tube = TUBE_WARE_KINDS.find((kind) => kind === ware);
+    if (tube === undefined) return null;
+    const fitted = RACKS[state.hangar.rack[ship]].tubes;
+    const kept = fitted.length < MAX_LAUNCHERS ? fitted : fitted.slice(0, MAX_LAUNCHERS - 1);
+    const rack = rackCarrying([...kept, TUBE_WARES[tube].tube]);
+    return rack === null ? null : { slice: 'hangar', type: 'rack', ship, rack };
   }
-  /** 0564: whether `ship` has `ware` on already. */
+  /** 0564: whether `ship` has `ware` on already. 0578: a tube is on when the rack carries that many of its kind. */
   function wears(ware: OwnableKind, ship: ShipKind): boolean {
     const h = state.hangar;
+    const tube = TUBE_WARE_KINDS.find((kind) => kind === ware);
+    if (tube !== undefined) return tubesOf(h.rack[ship], TUBE_WARES[tube].tube) >= (TUBE_WARES[tube].needs === null ? 1 : 2);
     return h.hung[ship] === ware || h.rim[ship] === ware || h.flame[ship] === ware;
   }
   function standFit(ship: ShipKind): Fit {
@@ -2226,7 +2247,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const ship = GOLFERS[state.settings.pilot].ship;
     // 0524: on the special the hangar fitted that ship with — its own, until a win lets it borrow one.
     // 0526: and with the gun it fitted — the ship's own, until a win lets it borrow one.
-    lifecycle.begin(state.settings.difficulty, ship, state.settings.credits, ownSpecial(state.hangar.special[ship]), SHIPS[state.hangar.gun[ship]].weapon, state.hangar.rim[ship]);
+    // 0578: and on the tubes its rack carries — none, until tubes are bought and fitted.
+    lifecycle.begin(
+      state.settings.difficulty,
+      ship,
+      state.settings.credits,
+      ownSpecial(state.hangar.special[ship]),
+      SHIPS[state.hangar.gun[ship]].weapon,
+      state.hangar.rim[ship],
+      RACKS[state.hangar.rack[ship]].tubes,
+    );
   };
   function fly(): void {
     if (flownThisVisit) {
@@ -2482,9 +2512,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (justFitted === ware) return COSMO.shop.fitted;
     if (justSold === ware) return COSMO.shop.sold;
     if (WARES.every((w) => state.hangar.owned[w])) return COSMO.shop.soldOut;
+    // A tube is fitted in Paint & Parts, as a rim is — 0578; a dangle is hung in the hangar.
     const hangs = DANGLE_KINDS.some((kind) => kind === ware);
     if (owned) return COSMO.shop.owned.replace('{where}', hangs ? SCREENS.hangar.heading : SCREENS.parts.heading);
     if (RIM_KINDS.some((kind) => kind === ware) && SHIPS[ship].wheels === null) return COSMO.shop.noWheels;
+    // 0578: and the second tube of a kind waits for the first.
+    const waiting = needsFirst(state.hangar, ware);
+    if (waiting !== null) return COSMO.shop.first.replace('{first}', OWNABLES[waiting].name);
     const price = OWNABLES[ware].price ?? 0;
     if (state.hangar.shards < price) return COSMO.shop.short.replace('{short}', String(price - state.hangar.shards));
     return COSMO.greet;
@@ -2518,6 +2552,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const lent = SHIP_KINDS.some((from, i) => from !== ship && guns[i] === true);
     chrome.setOpen('gun', guns, gunWhy(ship, state.hangar.won[ship], lent), whysOf('gun', guns));
     chrome.setChoice('gun', SHIP_KINDS.indexOf(state.hangar.gun[ship]));
+    // 0578: the tubes — none always, and every rack the tubes owned are enough for, on any ship.
+    const racks = RACK_KINDS.map((rack) => rackOpen(state.hangar, rack));
+    chrome.setOpen('rack', racks, rackWhy(TUBE_WARE_KINDS.some((kind) => state.hangar.owned[kind])), whysOf('rack', racks));
+    chrome.setChoice('rack', RACK_KINDS.indexOf(state.hangar.rack[ship]));
     /*
       0527: the wheels, on Paint & Parts — every rim open to this car, why the rest are shut, and the one
       it wears. A ship with none shows every rim shut and says so, with no rim marked.
@@ -2593,7 +2631,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
           return { text: String(price) + ' ✦', tone: state.hangar.shards < price ? ('short' as const) : ('price' as const) };
         }),
       );
-      chrome.setOpen(kind, wares.map(() => true), kind === aisle && ware !== undefined ? wareWhy(ware, state.hangar.owned[ware], state.hangar.shards) : null);
+      chrome.setOpen(
+        kind,
+        wares.map(() => true),
+        kind === aisle && ware !== undefined ? wareWhy(ware, state.hangar.owned[ware], state.hangar.shards, needsFirst(state.hangar, ware)) : null,
+      );
       chrome.setChoice(kind, kind === aisle ? picked[kind] : -1);
     }
     chrome.setChoice('aisle', SHELF_KINDS.indexOf(aisle));
@@ -2607,7 +2649,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const owned = state.hangar.owned[ware];
       const price = OWNABLES[ware].price ?? 0;
       const fit = fitNow(ware, ship);
-      chrome.setActionShown('shop', 0, !owned || (fit !== null && !wears(ware, ship)));
+      // 0578: a ware waiting for another is not for sale yet, so there is nothing for the press to do.
+      const waiting = needsFirst(state.hangar, ware);
+      chrome.setActionShown('shop', 0, owned ? fit !== null && !wears(ware, ship) : waiting === null);
       chrome.setActionLabel('shop', 0, owned ? 'Fit it now' : state.hangar.shards < price ? 'Need ' + String(price - state.hangar.shards) + ' more ✦' : 'Buy · ' + String(price) + ' ✦');
       chrome.setKeeperLine('shop', keeperLine(ware, owned, ship));
     }
@@ -2679,7 +2723,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (state.run.lives > 0) return;
     // 0542: the wheels the stand wears, so a rim tried on at Cosmo's turns on the pad as a fitted one does.
     world.shipRow = state.screen.current === 'shop' ? fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, standFit(ship).rim) : row;
-    world.weapon = weaponFor(row);
+    // 0578: wearing the tubes its rack carries, so the ship on the field is the one a run will open in.
+    world.weapon = weaponFor(row, RACKS[h.rack[ship]].tubes);
     wearHull(world);
   }
   /*

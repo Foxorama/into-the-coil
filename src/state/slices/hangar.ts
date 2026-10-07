@@ -29,6 +29,8 @@ import { ART, type ArtKind } from '../../content/art.ts';
 import { HUES, TONES, type Livery } from '../../content/livery.ts';
 import type { FlameKind } from '../../content/flames.ts';
 import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
+import { TUBE_WARES, TUBE_WARE_KINDS, tubesOf, type RackKind } from '../../content/racks.ts';
+import { MISSILE_KINDS } from '../../content/missiles.ts';
 
 export interface HangarState {
   /**
@@ -92,6 +94,12 @@ export interface HangarState {
    * the moment it is bought, as a dangle hangs on any dash.
    */
   flame: Readonly<Record<ShipKind, FlameKind>>;
+  /**
+   * The tubes each ship carries into a run — 0578: a rack, none until tubes are bought, and any rack the
+   * tubes owned are enough for on any ship from the moment they are bought, as everything Cosmo's sells is.
+   * *"Equip them how you want on a ship."*
+   */
+  rack: Readonly<Record<ShipKind, RackKind>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -109,7 +117,9 @@ export type HangarAction =
   | { slice: 'hangar'; type: 'livery'; ship: ShipKind; hue: number | null }
   | { slice: 'hangar'; type: 'tone'; ship: ShipKind; tone: number }
   // 0530: what that ship's engines burn.
-  | { slice: 'hangar'; type: 'flame'; ship: ShipKind; flame: FlameKind };
+  | { slice: 'hangar'; type: 'flame'; ship: ShipKind; flame: FlameKind }
+  // 0578: the tubes that ship carries into a run.
+  | { slice: 'hangar'; type: 'rack'; ship: ShipKind; rack: RackKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -131,7 +141,21 @@ export const initialHangar: HangarState = {
   art: perShip((kind) => SHIPS[kind].arts[0]),
   livery: perShip(() => null),
   flame: perShip(() => 'standard'),
+  rack: perShip(() => 'bare'),
 };
+
+/**
+ * Whether a ship may carry `rack` — 0578: the tubes owned are enough of each kind for it. Any rack on any
+ * ship; none is always open.
+ */
+export function rackOpen(state: HangarState, rack: RackKind): boolean {
+  for (const kind of MISSILE_KINDS) {
+    let owned = 0;
+    for (const ware of TUBE_WARE_KINDS) if (TUBE_WARES[ware].tube === kind && state.owned[ware]) owned++;
+    if (tubesOf(rack, kind) > owned) return false;
+  }
+  return true;
+}
 
 /** Whether a ship may burn `flame` — 0530: the standard flame always, one bought on any ship. */
 export function flameOpen(state: HangarState, flame: FlameKind): boolean {
@@ -163,10 +187,18 @@ function perOwnable<T>(of: (kind: OwnableKind) => T): Record<OwnableKind, T> {
 /**
  * Whether `ware` can be bought now — 0523: it is for sale, not already owned, and the balance covers
  * it. The shop says why not when it cannot; this is the rule, and the reducer is held to it.
+ *
+ * 0578: and what it needs is owned — the second tube of a kind waits for the first (`needsFirst`).
  */
 export function canBuy(state: HangarState, ware: OwnableKind): boolean {
   const price = OWNABLES[ware].price;
-  return price !== null && !state.owned[ware] && state.shards >= price;
+  return price !== null && !state.owned[ware] && needsFirst(state, ware) === null && state.shards >= price;
+}
+
+/** The ware `ware` waits for, while it is not yet owned — 0578 — or `null` for a ware that waits for none. */
+export function needsFirst(state: HangarState, ware: OwnableKind): OwnableKind | null {
+  const needs = OWNABLES[ware].needs ?? null;
+  return needs !== null && !state.owned[needs] ? needs : null;
 }
 
 /**
@@ -273,6 +305,10 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'flame':
       if (state.flame[action.ship] === action.flame || !flameOpen(state, action.flame)) return state;
       return { ...state, flame: { ...state.flame, [action.ship]: action.flame } };
+    // 0578: a rack the tubes owned are enough for, on any ship.
+    case 'rack':
+      if (state.rack[action.ship] === action.rack || !rackOpen(state, action.rack)) return state;
+      return { ...state, rack: { ...state.rack, [action.ship]: action.rack } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

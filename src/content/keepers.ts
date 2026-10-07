@@ -32,6 +32,8 @@ export interface ShopLines {
   readonly sold: string;
   /** Said when the ware in the window is wheels and the ship on the pad has none to try them on. */
   readonly noWheels: string;
+  /** 0578: said when the ware in the window waits for another — `{first}` is the one to buy first. */
+  readonly first: string;
   /**
    * 0564: said when the shop is walked into, one a visit in turn, until the player looks at something — so
    * the first thing heard is a greeting and never a remark about whatever ware happens to be in the window.
@@ -91,6 +93,8 @@ export const COSMO = {
     short: 'Come back with {short} more Star Shards, friend.',
     sold: 'Pleasure doing business. It suits you.',
     noWheels: 'Lovely set — shame your ship has no wheels to try them on.',
+    // 0578: the second tube of a kind, which waits for the first.
+    first: 'That one goes beside the {first} — take that first, friend.',
     arrive: [
       'Welcome, welcome! Try anything on — no charge for looking.',
       'Back again? Have a browse, friend.',

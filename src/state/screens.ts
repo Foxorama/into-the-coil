@@ -37,6 +37,7 @@ import { ART } from '../content/art.ts';
 import { HUES, TONES } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
+import { RACKS, RACK_KINDS } from '../content/racks.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
@@ -111,7 +112,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 // 0528: and what it wears on its nose, its dome or its flank.
 // 0529: and the colour its body is painted, a hue and a tone.
 // 0530: and what its engines burn.
-export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame'] as const;
+// 0578: and the tubes it carries into a run — `rack`, since `tubes` is the shelf they are sold on.
+export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame', 'rack'] as const;
 export type SlotName = (typeof SLOT_NAMES)[number];
 /** Whether a band's name is a slot of the ship — 0561, so the shell can fit or try on any slot in one arm. */
 export function isSlot(name: ChoiceName): name is SlotName {
@@ -516,6 +518,11 @@ export function toneWhy(won: boolean, painted: boolean): string | null {
   return painted ? null : 'Choose a colour first: the factory’s paint has its own tone';
 }
 
+/** What the tubes band says while no tube is owned — 0578: where they are sold, and what a bare ship does. */
+export function rackWhy(boughtAny: boolean): string | null {
+  return boughtAny ? null : 'Tubes are sold at Cosmo’s, the next tab — without them, missile pickups fit yours';
+}
+
 /** What the flame band says while only the standard is had — 0530: where the rest are sold. */
 export function flameWhy(bought: boolean): string | null {
   return bought ? null : 'Ion Thrusters are at Cosmo’s, the next tab';
@@ -558,6 +565,9 @@ export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Re
     case 'dangle':
     case 'flame':
       return 'Sold at Cosmo’s, the next tab';
+    // 0578: a rack wants tubes, and Cosmo's sells them, the tab after Paint & Parts.
+    case 'rack':
+      return 'Buy the tubes for it at Cosmo’s, the next tab';
     // The band's own sentence covers these: a ship not yet won, or a factory paint with no tone.
     case 'art':
     case 'livery':
@@ -589,8 +599,13 @@ export function dangleWhy(boughtAny: boolean): string | null {
  * far the balance is from it, or `null` when it can be bought and the band says its price. 0527: a rim
  * is fitted on Paint & Parts, where a dangle hangs in the hangar — and since 0530 a flame is too.
  */
-export function wareWhy(ware: OwnableKind, owned: boolean, shards: number): string | null {
+/*
+  0578: a tube is fitted in Paint & Parts, as a rim is; and a second tube waits for the first, which the
+  shelf says before it says what the balance is short of — `waiting` is the ware it waits for.
+*/
+export function wareWhy(ware: OwnableKind, owned: boolean, shards: number, waiting: OwnableKind | null = null): string | null {
   if (owned) return DANGLE_KINDS.some((dangle) => dangle === ware) ? 'Yours — hang it in the hangar' : 'Yours — fit it in Paint & Parts';
+  if (waiting !== null) return 'Buy the ' + OWNABLES[waiting].name + ' first';
   const price = OWNABLES[ware].price ?? 0;
   return shards < price ? 'Need ' + String(price - shards) + ' more Star Shards' : null;
 }
@@ -983,7 +998,11 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // 0539: what is bolted on, and how it is painted.
     stand: {
       groups: [
-        { label: 'Parts', bands: ['rim', 'flame'] },
+        /*
+          0578: and the tubes, which are parts of the ship — and here, where Paint's three already set the
+          tab's height, rather than a fifth band on Hangin' Out, which put Back under every phone's fold.
+        */
+        { label: 'Parts', bands: ['rim', 'flame', 'rack'] },
         { label: 'Paint', bands: ['art', 'livery', 'tone'] },
       ],
       /*
@@ -1061,6 +1080,19 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         name: 'flame',
         label: 'Flame',
         options: FLAME_KINDS.map((kind) => ({ label: FLAMES[kind].name, hint: FLAMES[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'tries',
+      },
+      /*
+        0578: the tubes the ship carries into a run — none first, then every rack in the table's order, the
+        ones the tubes owned are not enough for shut and saying where to buy them. Built by walking
+        `RACK_KINDS`.
+      */
+      {
+        name: 'rack',
+        label: 'Tubes',
+        options: RACK_KINDS.map((kind) => ({ label: RACKS[kind].label, hint: RACKS[kind].hint })),
         faces: 'words',
         on: 'all',
         press: 'tries',

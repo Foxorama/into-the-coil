@@ -37,6 +37,8 @@ import { SHOTS } from '../content/shots.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
+import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS } from '../content/racks.ts';
+import { MISSILES, type MissileKind } from '../content/missiles.ts';
 import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
@@ -2896,6 +2898,12 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-guide-panel .itc-guide-section-heading { display: none; }
   /*
+    0578: and Paint & Parts' two group headings go, the room its Parts column's third band — the tubes —
+    needs: 480x320 put Back 10 px under the fold, and at 667x375 the plate stood 11 px taller than Hangin'
+    Out's, which 0548 holds still. Each band still says its own name over its track.
+  */
+  .itc-parts-group-heading { display: none; }
+  /*
     The panel's own gap is the one thing above the rows with any give, and it is already authored
     against the short axis, so tightening it here is the same argument one step further.
   */
@@ -3894,6 +3902,10 @@ ${each('-action[hidden]')} { display: none; }
   /* The wheels and the art: the ship wearing them, as large as the card's picture box, over the name. */
   .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-thumbed { justify-content: flex-start; min-height: 4.6em; padding-top: 0.3em; }
   .itc-parts-option-thumbed .itc-parts-option-thumb { width: 100%; height: 2.5em; margin: 0 0 0.1em; object-fit: contain; flex: none; }
+  /* 0578: a rack, on Paint & Parts — its tubes side by side, each its pickup's face; none an empty ring. */
+  .itc-parts-option-pic-rack { gap: 0.2em; }
+  .itc-parts-option-pic-rack > canvas { width: auto; height: auto; max-width: 40%; max-height: 100%; }
+  .itc-parts-option-pic-none::before { content: ''; width: 1em; height: 1em; border: 2px dashed currentColor; border-radius: 50%; opacity: 0.6; }
   /* The empty hook: a hook and nothing on it. */
   .itc-hangar-option-pic-hook::before { content: ''; width: 0.7em; height: 1.1em; border: 2px solid currentColor; border-top: 0; border-radius: 0 0 0.5em 0.5em; opacity: 0.6; clip-path: inset(0.3em 0 0 0); }
   /* A dash: the readout's own plate in that ship's dressing, small and empty. */
@@ -4365,6 +4377,11 @@ export interface Chrome {
    * when it has not changed.
    */
   setShip(ship: ShipRow, plate: ShipRow, fit: Fit): void;
+  /**
+   * The tubes the ship carries, named after its gun in the lives counter's label — 0578, so a reader hears
+   * what the ship flies with whole: *"3 lives, Pulse, Seekers and Missiles"*. Nothing for none.
+   */
+  setTubes(tubes: readonly MissileKind[]): void;
   /**
    * Whether the trigger discs are up — 0437. On a touch screen each disc says its stack's count, so the
    * readout's two stack groups are taken off the glass and kept for a reader, who cannot see a disc.
@@ -6201,6 +6218,8 @@ export function makeChrome(
     the hangar fits another ship's gun the picture is the one place that said which; set by `setShip`.
   */
   let livesGun: string = WEAPONS[SHIPS.fighter.weapon].label;
+  // 0578: and the tubes after it, said as the readout says the gun; empty for none.
+  let livesTubes = '';
   let livesIcon: HTMLElement = iconOf(livesSprite);
   livesIcon.className = 'itc-playing-hud-icon itc-playing-hud-ship';
   livesIcon.setAttribute('aria-hidden', 'true');
@@ -6395,6 +6414,14 @@ export function makeChrome(
       holder.appendChild(bakeGlyph(glyph, colours, WARE_ART_PIXELS / SPRITE_EXTENT[glyph]));
       return holder;
     }
+    // 0578: a tube, drawn as its missile pickup's face — the shape the field's pickup for it wears.
+    const tube = TUBE_WARE_KINDS.find((kind) => kind === ware);
+    if (tube !== undefined) {
+      holder.className = 'itc-shop-art-rim';
+      const glyph = SPRITE_KINDS[MISSILES[TUBE_WARES[tube].tube].pickup];
+      if (glyph !== undefined) holder.appendChild(bakeGlyph(glyph, colours, WARE_ART_PIXELS / SPRITE_EXTENT[glyph]));
+      return holder;
+    }
     const flame = FLAME_KINDS.find((kind) => kind === ware);
     holder.className = 'itc-shop-art-flame';
     if (flame !== undefined) {
@@ -6460,6 +6487,25 @@ export function makeChrome(
           return holder;
         }
         holder.appendChild(wareArt(dangle));
+        return holder;
+      }
+      /*
+        0578: the tubes, on Paint & Parts — each tube the rack carries, drawn as its missile pickup's face,
+        side by side; none an empty ring.
+      */
+      if (band === 'rack') {
+        const rack = RACK_KINDS[i];
+        if (rack === undefined) return null;
+        const tubes = RACKS[rack].tubes;
+        if (tubes.length === 0) {
+          holder.classList.add(prefix + 'option-pic-none');
+          return holder;
+        }
+        holder.classList.add(prefix + 'option-pic-rack');
+        for (const tube of tubes) {
+          const glyph = SPRITE_KINDS[MISSILES[tube].pickup];
+          if (glyph !== undefined) holder.appendChild(bakeGlyph(glyph, colours, CARD_PIC_PIXELS / tubes.length / SPRITE_EXTENT[glyph]));
+        }
         return holder;
       }
       return null;
@@ -6940,6 +6986,10 @@ export function makeChrome(
 
   return {
     elements,
+    setTubes(tubes: readonly MissileKind[]): void {
+      const names = tubes.map((tube) => MISSILES[tube].label);
+      livesTubes = names.length === 0 ? '' : ', ' + names.join(' and ');
+    },
     setShip(ship: ShipRow, plate: ShipRow, fit: Fit): void {
       /*
         ⚠️ **THE PLATE BEFORE THE NO-OP, BECAUSE IT CHANGES WITHOUT THE SHIP — 0521.** A dash fitted in the
@@ -7023,7 +7073,7 @@ export function makeChrome(
         slot.count.textContent = '×' + String(held);
         slot.group.setAttribute('aria-label', String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + stack.label);
       });
-      livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives, ' + livesGun);
+      livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives, ' + livesGun + livesTubes);
       // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
       // maximum is a table edit, not a rewrite of this.
       while (pips.length < maxHealth) {

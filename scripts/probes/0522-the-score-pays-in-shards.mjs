@@ -35,8 +35,9 @@ export const PROBES = [
     guard: 'is kept between visits, beside the wins',
     edit: {
       path: 'src/save/hangar.ts',
-      find: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame });',
-      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, owned, hung, special, gun, rim, art, livery, flame });',
+      // Re-anchored by 0578, which writes each ship's rack after its flame.
+      find: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack });',
+      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, owned, hung, special, gun, rim, art, livery, flame, rack });',
     },
   },
   {
