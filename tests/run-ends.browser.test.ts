@@ -7,7 +7,7 @@ import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { choose, credit, fly, openHangar, shown } from './title.ts';
 import { SCORES_KEY } from '../src/save/scores.ts';
-import { seedOnce } from './seed.ts';
+import { seeded } from './seed.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
@@ -48,7 +48,6 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
   it('a pilot chosen after a quit stands on the pad in their own ship, not under the last run’s wheels', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, owned: { ...initialHangar.owned, spinner: true }, rim: { ...initialHangar.rim, firebird: 'spinner' } }));
     await context.addInitScript(() => {
       const g = window as unknown as { itcTurned: number };
       g.itcTurned = 0;
@@ -58,8 +57,12 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
         return rotate.call(this, angle);
       };
     });
-    const page = await context.newPage();
-    await page.goto(dist);
+    const page = await seeded(
+      context,
+      dist,
+      HANGAR_KEY,
+      serialiseHangar({ ...initialHangar, owned: { ...initialHangar.owned, spinner: true }, rim: { ...initialHangar.rim, firebird: 'spinner' } }),
+    );
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
 

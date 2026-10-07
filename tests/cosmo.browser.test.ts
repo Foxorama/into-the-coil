@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { back, fly, openHangar, pickWare, shown } from './title.ts';
-import { seedOnce } from './seed.ts';
+import { seeded } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { DANGLE_KINDS, type DangleKind } from '../src/content/dangles.ts';
@@ -73,9 +73,7 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
   it('tries the ware on the dash, buys it once, says how far off the next is, and hangs it on the run', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 300 }));
-    const page = await context.newPage();
-    await page.goto(dist);
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 300 }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);

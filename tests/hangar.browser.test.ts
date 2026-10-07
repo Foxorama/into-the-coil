@@ -6,7 +6,7 @@ import { chromePath } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { back, fly, openHangar, shown } from './title.ts';
-import { keptContext, keyedOut, seedOnce } from './seed.ts';
+import { keptContext, keyedOut, seeded } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
@@ -53,12 +53,10 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
   it('shuts what is not won, fits what is, keeps it, and flies in it', async () => {
     // On disk, as a player's browser keeps it — `tests/seed.ts` says why not a fresh context's memory.
     const { context, close } = await keptContext({ width: 1280, height: 720 });
-    // The fighter and the estate won in; the default pilot's Firebird not. Filled once, before the page runs.
+    // The fighter and the estate won in; the default pilot's Firebird not. Filled before the page runs.
     const won = { ...initialHangar, won: { ...initialHangar.won, fighter: true, estate: true } };
-    // Once per tab — `tests/seed.ts` says why a seed that refilled an empty key overwrote this test's fitting.
-    await seedOnce(context, HANGAR_KEY, serialiseHangar(won));
-    const page = context.pages()[0] ?? (await context.newPage());
-    await page.goto(dist);
+    // From a page the browser has finished loading, so a reload finds it — `tests/seed.ts`, 0570.
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar(won));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);

@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { launch, openHangar, shown } from './title.ts';
-import { seedOnce } from './seed.ts';
+import { seeded } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { shardsFor } from '../src/content/score.ts';
@@ -59,9 +59,7 @@ describe.runIf(chromePath)('0522 — a run’s end pays its shards, and the hang
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const seed = 250;
-    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: seed }));
-    const page = await context.newPage();
-    await page.goto(dist);
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: seed }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
 

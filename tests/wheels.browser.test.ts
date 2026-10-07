@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar, shown } from './title.ts';
-import { seedOnce } from './seed.ts';
+import { seeded } from './seed.ts';
 import { samePhase } from './stand.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
@@ -37,9 +37,7 @@ describe.runIf(chromePath)('0527 — the spinners are bought, fitted, and turn',
   it('bought at Cosmo’s for 1000, fitted to the Firebird on Paint & Parts, turning on its pad', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 1000 }));
-    const page = await context.newPage();
-    await page.goto(dist);
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 1000 }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);
