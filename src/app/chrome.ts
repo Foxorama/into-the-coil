@@ -2826,11 +2826,6 @@ ${each('-band[hidden]')} { display: none; }
     .itc-hangar-pilot-card { display: none; }
     /* 0539: and the faces run the plate where the card stood beside them, so the headings start a row under. */
     .itc-hangar-band-faces { grid-column: 1 / -1; }
-    /*
-      0578: and Paint & Parts' two group headings go, the room its Parts column's third band — the tubes —
-      needs: 480x320 put Back 10 px under the fold. Each band still says its own name over its track.
-    */
-    .itc-parts-group-heading { display: none; }
   }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
@@ -2902,6 +2897,12 @@ ${each('-band[hidden]')} { display: none; }
     every column's head.
   */
   .itc-guide-panel .itc-guide-section-heading { display: none; }
+  /*
+    0578: and Paint & Parts' two group headings go, the room its Parts column's third band — the tubes —
+    needs: 480x320 put Back 10 px under the fold, and at 667x375 the plate stood 11 px taller than Hangin'
+    Out's, which 0548 holds still. Each band still says its own name over its track.
+  */
+  .itc-parts-group-heading { display: none; }
   /*
     The panel's own gap is the one thing above the rows with any give, and it is already authored
     against the short axis, so tightening it here is the same argument one step further.

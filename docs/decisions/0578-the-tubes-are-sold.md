@@ -43,8 +43,10 @@ on the row, so a later ware with a prerequisite is a row and not a branch.
 special are, and the first build put the band beside them. A fifth band on Hangin' Out put Back under the
 fold on every phone the layout guard holds (by 26 to 40 pixels) and made the desktop panel scroll past
 *Hanging*. Paint & Parts' Paint column already stands three bands tall when the ship is toned, so a third
-in Parts costs its height nothing on the desktop; at 480x320 it was 10 pixels over, and the tab's two group
-headings go there — each band still names itself. The tubes are parts of the ship, beside its wheels.
+in Parts costs its height nothing on the desktop. On a phone it was 10 pixels over at 480x320, and at
+667x375 CI's fonts stood the plate 11 pixels taller than Hangin' Out's, which
+[0548](0548-the-hangar-holds-still.md) holds still; so on every phone the tab's two group headings go —
+each band still names itself. The tubes are parts of the ship, beside its wheels.
 
 **The rack is the run's input, and nothing in the frame knows where it came from.** 0577 made the run's
 tubes a list `begin` takes; this decision only fills it.
