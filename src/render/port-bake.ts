@@ -242,6 +242,10 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'bench':
     case 'booth':
     case 'viewport':
+    case 'catwalk':
+    case 'cradle':
+    case 'planet':
+    case 'alcove':
     case 'bar':
     case 'door':
     case 'spill':
@@ -381,6 +385,18 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       return;
     case 'viewport':
       paintViewport(ctx, palette);
+      return;
+    case 'catwalk':
+      paintCatwalk(ctx, palette);
+      return;
+    case 'cradle':
+      paintCradle(ctx, palette);
+      return;
+    case 'planet':
+      paintPlanet(ctx, palette);
+      return;
+    case 'alcove':
+      paintAlcove(ctx, palette);
       return;
     case 'door': {
       // A sliding hatch with a lit porthole: it slides behind the facade, so it is drawn whole.
@@ -783,6 +799,137 @@ function paintStall(ctx: CanvasRenderingContext2D, palette: Palette): void {
   ctx.beginPath();
   ctx.arc(11, -0.4, 0.85, 0, Math.PI * 2);
   ctx.fill();
+}
+
+/*
+  ── THE DOCK — 0571 ──────────────────────────────────────────────────────────────────────────────
+
+  Four pieces for the room the hangar's tabs stand in, drawn in world units centred on their box like
+  every piece here. Each in the palette's roles, so the high-contrast palette answers them.
+*/
+
+/** A tile of the mezzanine's catwalk: a deck plate on a girder, a rail over it, and posts at its ends. */
+function paintCatwalk(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  // The walking surface is the box's middle line; the girder hangs under it, the rail stands over it.
+  ctx.fillStyle = shade(PORT_INK.wall, 0.18);
+  ctx.fillRect(-10, 0, 20, 1.4);
+  ctx.fillStyle = PORT_INK.wallDark;
+  ctx.fillRect(-10, 1.4, 20, 2.2);
+  // The girder's web: a zig of braces under the plate.
+  ctx.strokeStyle = shade(PORT_INK.wall, 0.12);
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  for (let x = -10; x < 10; x += 4) {
+    ctx.moveTo(x, 1.6);
+    ctx.lineTo(x + 2, 3.4);
+    ctx.lineTo(x + 4, 1.6);
+  }
+  ctx.stroke();
+  // A strip of the shop light along the plate's edge, and the hazard nosing.
+  ctx.fillStyle = rgba(palette.player, 0.55);
+  ctx.fillRect(-10, 1.4, 20, 0.3);
+  ctx.fillStyle = PORT_INK.hazard;
+  for (let x = -10; x < 10; x += 2) ctx.fillRect(x, 0, 1, 0.35);
+}
+
+/** The cradle a ship rides on: a deck plate with hazard stripes, two clamps reaching up, and the field's glow. */
+function paintCradle(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  // The plate, sunk into the deck: its top is the box's middle line.
+  ctx.fillStyle = '#1b2132';
+  ctx.fillRect(-18, 0, 36, 3.4);
+  ctx.fillStyle = shade('#1b2132', 0.25);
+  ctx.fillRect(-18, 0, 36, 0.5);
+  for (let x = -16.5; x < 16; x += 3) {
+    ctx.fillStyle = PORT_INK.hazard;
+    ctx.beginPath();
+    ctx.moveTo(x, 0.9);
+    ctx.lineTo(x + 1.3, 0.9);
+    ctx.lineTo(x + 2.1, 2.6);
+    ctx.lineTo(x + 0.8, 2.6);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // The clamps: an arm from each end of the plate, angled in, with a lit pad at its tip.
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = shade(PORT_INK.wall, 0.2);
+    ctx.beginPath();
+    ctx.moveTo(side * 18, 0.4);
+    ctx.lineTo(side * 20, -1.2);
+    ctx.lineTo(side * 16.5, -7);
+    ctx.lineTo(side * 15, -6.2);
+    ctx.lineTo(side * 17.2, 0.4);
+    ctx.closePath();
+    ctx.fill();
+    radial(ctx, side * 15.6, -6.8, 1.6, palette.player, 0.9);
+  }
+  // The field the ship rides on: a glow along the plate's top.
+  radialEllipse(ctx, 0, -0.6, 17, 2.4, palette.player, 0.5);
+  ctx.fillStyle = rgba(palette.player, 0.85);
+  ctx.fillRect(-15, -0.4, 30, 0.4);
+}
+
+/** A planet in the bay: a lit disc, banded, with an atmosphere's rim on its sunward side. */
+function paintPlanet(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const r = 34;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.clip();
+  const body = ctx.createRadialGradient(-r * 0.4, -r * 0.45, r * 0.1, 0, 0, r);
+  body.addColorStop(0, mix(palette.player, '#ffffff', 0.25));
+  body.addColorStop(0.5, shade(palette.player, -0.35));
+  body.addColorStop(1, shade(palette.space, 0.15));
+  ctx.fillStyle = body;
+  ctx.fillRect(-r, -r, r * 2, r * 2);
+  // Bands of cloud across it, a little lighter and darker in turn.
+  for (let i = 0; i < 7; i++) {
+    const y = -r + (i + 0.5) * ((r * 2) / 7);
+    ctx.fillStyle = rgba(i % 2 === 0 ? '#ffffff' : palette.space, i % 2 === 0 ? 0.08 : 0.12);
+    ctx.fillRect(-r, y - 2, r * 2, 3 + (i % 3));
+  }
+  // The night side.
+  const night = ctx.createLinearGradient(-r, -r, r, r);
+  night.addColorStop(0.45, rgba(palette.space, 0));
+  night.addColorStop(1, rgba(palette.space, 0.75));
+  ctx.fillStyle = night;
+  ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.restore();
+  // The atmosphere's rim, brightest toward the light.
+  ctx.strokeStyle = rgba(mix(palette.player, '#ffffff', 0.5), 0.55);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(0, 0, r + 0.4, Math.PI * 0.9, Math.PI * 1.75);
+  ctx.stroke();
+  radial(ctx, 0, 0, r + 5, palette.player, 0.18);
+}
+
+/** The alcove a keeper's counter stands in: a recess in the wall, its frame, shelves inside, lit from above. */
+function paintAlcove(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const w = 15;
+  // The recess: darker than the wall, with a warm light falling down its back.
+  ctx.fillStyle = shade(PORT_INK.wallDark, -0.25);
+  ctx.fillRect(-w, -16, w * 2, 31);
+  const light = ctx.createLinearGradient(0, -16, 0, 14);
+  light.addColorStop(0, rgba(PORT_INK.lamp, 0.4));
+  light.addColorStop(1, rgba(PORT_INK.lamp, 0));
+  ctx.fillStyle = light;
+  ctx.fillRect(-w, -16, w * 2, 30);
+  // Shelves on the back wall, with a row of something on each.
+  for (const y of [-7, -1.5]) {
+    ctx.fillStyle = shade(PORT_INK.wall, 0.15);
+    ctx.fillRect(-w + 2, y, w * 2 - 4, 0.6);
+    for (let x = -w + 3; x < w - 3; x += 2.4) {
+      ctx.fillStyle = rgba(x % 4.8 < 2.4 ? palette.player : palette.ally, 0.35);
+      ctx.fillRect(x, y - 1.4, 1.3, 1.4);
+    }
+  }
+  // The frame round it, and a strip light along its head.
+  ctx.fillStyle = shade(PORT_INK.wall, 0.2);
+  ctx.fillRect(-w - 2, -18, w * 2 + 4, 2);
+  ctx.fillRect(-w - 2, -18, 2, 33);
+  ctx.fillRect(w, -18, 2, 33);
+  ctx.fillStyle = PORT_INK.lamp;
+  ctx.fillRect(-w + 1, -16, w * 2 - 2, 0.6);
 }
 
 /** A counter's sign on its front: the keeper's row's two lines, the name large and the trade under it. */

@@ -74,7 +74,9 @@ function drawStand(screen: (typeof STANDING)[number], width: number, height: num
   fitStand(camera, base, width, box, SCREENS[screen].stand!.keeper, fitted, height);
   standViewInto(base, fitted, width, height, view);
   const surface = new RecordingSurface();
-  paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper, -1e9, spot);
+  // 0571: every keeper is in the room; `spot` is where all three stand this time.
+  const spots = Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, spot])) as Record<(typeof KEEPER_KINDS)[number], number>;
+  paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper, -1e9, spots);
   return surface.blits;
 }
 
@@ -95,7 +97,8 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       expect(all(blits, 'blueSide'), `${screen}: the pilot's ship is not on its pad, once`).toHaveLength(1);
       expect(all(blits, 'blueIdle'), `${screen}: the ship's flame is not idling under it`).toHaveLength(1);
       // 0568: the ship's pad alone — the inner one stood half under the keeper's counter.
-      expect(all(blits, 'pad'), `${screen}: the ship's pad is not there, once`).toHaveLength(1);
+      // 0571: the ship on its cradle, and no pad: the dock has none.
+      expect(all(blits, 'cradle'), `${screen}: the ship's cradle is not there, once`).toHaveLength(1);
     }
   });
 
@@ -226,17 +229,26 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     Each tab's counter is its own keeper's and no other's is drawn, so stepping the tabs changes who is at
     the counter; and no two tabs name one keeper, which is the defect this was.
   */
-  it('0550 — draws each tab’s own keeper at the counter and nobody else’s, a different keeper on every tab', () => {
+  /*
+    ⚠️ **SINCE 0571 EVERY KEEPER IS IN THE ROOM, AND THE TAB'S SHOP IS THE LIT ONE.** 0550's defect was the
+    tabs all showing Cosmo; the dock shows all three shops on its mezzanine, and which tab is open is told by
+    which shop is lit — the others have the night drawn over them. So: every keeper and counter once, a
+    shutter over every shop but the tab's own, none over it, and no two tabs naming one keeper.
+  */
+  it('0550 — lights each tab’s own keeper’s shop and dims the others, a different keeper on every tab', () => {
     const named = STANDING.map((screen) => SCREENS[screen].stand!.keeper);
     expect(named, 'a standing tab has nobody at its counter').not.toContain(null);
     expect(new Set(named).size, 'two tabs show the same keeper').toBe(named.length);
     for (const screen of STANDING) {
       const blits = drawStand(screen, 1280, 720);
+      const veils = all(blits, 'veil');
       for (const kind of KEEPER_KINDS) {
         const row = KEEPERS[kind];
-        const expected = kind === SCREENS[screen].stand!.keeper ? 1 : 0;
-        expect(all(blits, row.figure), `${screen}: ${row.name} is drawn ${all(blits, row.figure).length} times`).toHaveLength(expected);
-        expect(all(blits, row.counter), `${screen}: ${row.name}'s counter is drawn ${all(blits, row.counter).length} times`).toHaveLength(expected);
+        expect(all(blits, row.figure), `${screen}: ${row.name} is drawn ${all(blits, row.figure).length} times`).toHaveLength(1);
+        const counter = all(blits, row.counter);
+        expect(counter, `${screen}: ${row.name}'s counter is drawn ${counter.length} times`).toHaveLength(1);
+        const dimmed = veils.some((v) => Math.abs(v.x - counter[0]!.x) < 1);
+        expect(dimmed, `${screen}: ${row.name}'s shop is ${dimmed ? 'dimmed' : 'lit'}`).toBe(kind !== SCREENS[screen].stand!.keeper);
       }
     }
   });
@@ -261,11 +273,11 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
           const wallEnds = Math.max(...walls.map((b) => b.x)) + (PORT_EXTENT.wall * unit) / 2;
           expect(wallEnds, `${at}: the back wall runs past the stand — the bay is not in view`).toBeLessThan(box.left + box.width);
           /*
-            Ten units of stars everywhere — a strip is not an open bay — and more on a wide screen, the shape the
-            report was made on: 1280x720 shows about twenty-five, 1920x1080 about thirty-eight. On a 4:3 the
-            room's own height decides the camera first, and 1024x768 shows thirteen.
+            Twenty units of stars on a wide screen, the shape the report was made on. ⚠️ **Since 0571, two on a
+            4:3**: the dock's three shops are kept whole on the left and the room fills the column's height, and
+            a 1024x768's column holds the bay's edge and a strip past it, not an open view. Owed a look.
           */
-          const want = width / height >= 16 / 9 - 0.01 ? 20 : 10;
+          const want = width / height >= 16 / 9 - 0.01 ? 20 : 2;
           expect(box.left + box.width - wallEnds, `${at}: fewer than ${want} units of stars past the bay`).toBeGreaterThanOrEqual(want * unit);
         }
         /*

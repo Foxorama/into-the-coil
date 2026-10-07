@@ -11,8 +11,9 @@ export const PROBES = [
     guard: 'draws each keeper where their spot says',
     edit: {
       path: 'src/render/port.ts',
-      find: '  const place = row === null ? null : (row.spots[spot] ?? row.spots[0]);',
-      replace: '  const place = row === null ? null : (row.spots[0 * spot] ?? row.spots[0]);',
+      // 0571: in the shops' loop, which every keeper is drawn by; the line after it makes the anchor its own.
+      find: '    const place = row.spots[spots === null ? 0 : spots[kind]] ?? row.spots[0];\n    const shop = DOCK.shops[kind];',
+      replace: '    const place = row.spots[0];\n    const shop = DOCK.shops[kind];',
     },
   },
 ];
