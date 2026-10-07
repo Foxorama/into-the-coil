@@ -13,8 +13,9 @@ export const PROBES = [
     guard: 'refuses a ware the balance does not cover',
     edit: {
       path: 'src/state/slices/hangar.ts',
-      find: '  return price !== null && !state.owned[ware] && state.shards >= price;',
-      replace: '  return price !== null && !state.owned[ware];',
+      // Re-anchored by 0578, which asks after a ware's prerequisite between owning it and the balance.
+      find: '  return price !== null && !state.owned[ware] && needsFirst(state, ware) === null && state.shards >= price;',
+      replace: '  return price !== null && !state.owned[ware] && needsFirst(state, ware) === null;',
     },
   },
   {
@@ -24,8 +25,9 @@ export const PROBES = [
     guard: 'takes the price and gives the ware, once',
     edit: {
       path: 'src/state/slices/hangar.ts',
-      find: '  return price !== null && !state.owned[ware] && state.shards >= price;',
-      replace: '  return price !== null && state.shards >= price;',
+      // Re-anchored by 0578, as the probe above.
+      find: '  return price !== null && !state.owned[ware] && needsFirst(state, ware) === null && state.shards >= price;',
+      replace: '  return price !== null && needsFirst(state, ware) === null && state.shards >= price;',
     },
   },
   {

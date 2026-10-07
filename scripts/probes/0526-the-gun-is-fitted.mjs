@@ -45,8 +45,9 @@ export const PROBES = [
     guard: 'the estate’s arc fitted to the fighter',
     edit: {
       path: 'src/app/mount.ts',
-      find: 'ownSpecial(state.hangar.special[ship]), SHIPS[state.hangar.gun[ship]].weapon, state.hangar.rim[ship]);',
-      replace: 'ownSpecial(state.hangar.special[ship]), SHIPS[ship].weapon, state.hangar.rim[ship]);',
+      // Re-anchored by 0578, which laid the call a line an argument when it added the rack's tubes.
+      find: '      ownSpecial(state.hangar.special[ship]),\n      SHIPS[state.hangar.gun[ship]].weapon,',
+      replace: '      ownSpecial(state.hangar.special[ship]),\n      SHIPS[ship].weapon,',
     },
   },
   {
