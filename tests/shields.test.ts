@@ -584,10 +584,11 @@ describe('the shell is drawn under the ship and above everything else', () => {
     */
     const { world } = quietWorld();
     const layers = world.layers;
-    // 0527: the ship, and over it only what turns on it — a car's spinners, which are the ship's own.
-    expect(layers[layers.length - 1], 'something but the ship’s own wheels is drawn over the ship').toBe(world.wheels);
-    expect(layers[layers.length - 2], 'the ship is not under its wheels and over everything else').toBe(world.shipPool);
-    expect(layers[layers.length - 3], 'something is drawn between the ship and its shell').toBe(world.shieldOrbs);
+    // 0527: the ship, and over it only what is on it — a car's spinners, and since 0581 its loaded tubes.
+    expect(layers[layers.length - 1], 'something but the ship’s own tubes is drawn over the ship').toBe(world.loaded);
+    expect(layers[layers.length - 2], 'something but the ship’s own wheels is drawn over the ship').toBe(world.wheels);
+    expect(layers[layers.length - 3], 'the ship is not under its wheels and over everything else').toBe(world.shipPool);
+    expect(layers[layers.length - 4], 'something is drawn between the ship and its shell').toBe(world.shieldOrbs);
   });
 
   it('every pool the world holds is drawn, so nothing is simulated invisibly', () => {

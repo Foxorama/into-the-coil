@@ -79,7 +79,7 @@ import { NO_HOP, paintPort, paintStand } from '../render/port.ts';
 import { hydraJointOf } from '../content/necks.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
-import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, strokeAt } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, LOADED_TUBE, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, strokeAt } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import { VEINS_OF, arteryAt } from '../content/veins.ts';
@@ -959,6 +959,12 @@ export interface World {
    * (the Mothership's spinners), and none otherwise. A pool for the exhaust's reason, drawn over the ship.
    */
   wheels: Pool<Entity>;
+  /**
+   * The ship's loaded tubes — 0581: one picture at each tube place the ship's row names for the tubes it
+   * carries, in that tube's kind's ink, so a rack of one of each reads as one of each and a tube is drawn
+   * where its missile leaves. A pool for the exhaust's reason, drawn over the ship.
+   */
+  loaded: Pool<Entity>;
   /**
    * A surge's aura: one entity, on the ship while a surge lasts — 0373. A pool of one for the
    * exhaust's reason: the painter is handed pools and does not know what a ship is wearing.
@@ -2624,8 +2630,9 @@ export class GameFrame implements Frame {
     // After the wreck check, so the flame goes out on the step the hull does and not one later —
     // 0230. It reads the pool rather than `flying`, which was true at the top of this step.
     stepExhaust(w);
-    // And the wheels, on the same terms — 0527.
+    // And the wheels, on the same terms — 0527; 0581: and the loaded tubes.
     stepWheels(w);
+    stepLoaded(w);
     // And whether the ship lurched, for the dice on the estate's dash — 0461.
     stepJolt(w);
 
@@ -5309,6 +5316,49 @@ function stepWheels(w: World): void {
     const struck = row.hold > 0 && Math.floor(now / row.hold) !== Math.floor(was / row.hold);
     wheel.prevTurn = struck ? turn : wheelTurn(row, i, was);
     wheel.turn = turn;
+  }
+}
+
+/** What a loaded tube is as a body: a picture on the ship, hitting and hit by nothing — 0581, on the wheel's terms. */
+// @setup: one body, read by `reset` whenever a tube is laid on.
+const LOADED_BODY = { sprite: SPRITE.tubeMissile, spriteHit: SPRITE.tubeMissileHit, radius: 0, health: 1, damage: 0 };
+
+/**
+ * The ship's loaded tubes — 0581. While the ship flies, one picture at each place its row names for the
+ * tubes it carries (`tubes[n]`, where each missile leaves — 0448), in its own kind's ink: the n-th tube
+ * the run carries at the n-th place. It wears the ship's hurt twin whenever the ship does, and swells to
+ * the row's `tubeLength` from the fighter's. Out the step the hull is.
+ *
+ * ⚠️ **Carried by hand, as the wheels are**: nothing else steps this pool. Nothing allocates.
+ */
+function stepLoaded(w: World): void {
+  const kinds = w.weapon.tubes;
+  if (w.shipPool.size === 0 || kinds.length === 0) {
+    w.loaded.clear();
+    return;
+  }
+  const places = w.shipRow.tubes[kinds.length >= 2 ? 2 : 1];
+  while (w.loaded.size > places.length) w.loaded.releaseAt(w.loaded.size - 1);
+  while (w.loaded.size < places.length) {
+    const tube = w.loaded.spawn();
+    if (tube === null) break;
+    reset(tube, w.ship.along, w.ship.across, LOADED_BODY);
+  }
+  const hurt = w.ship.sprite === w.ship.spriteHit;
+  for (let i = 0; i < w.loaded.size; i++) {
+    const tube = w.loaded.at(i);
+    const at = places[i]!;
+    const art = MISSILES[kinds[i] ?? 'straight'].loaded[w.shipRow.tubeLook];
+    const sprite = hurt ? art.hit : art.base;
+    tube.sprite = sprite;
+    tube.spriteBase = sprite;
+    tube.spriteHit = sprite;
+    tube.swell = w.shipRow.tubeLength / LOADED_TUBE;
+    tube.prevAlong = tube.along;
+    tube.prevAcross = tube.across;
+    // The place is where the missile leaves, so the tube's nose; it lies behind it, half its length back.
+    tube.along = w.ship.along + at.along - w.shipRow.tubeLength / 2;
+    tube.across = w.ship.across + at.across;
   }
 }
 
@@ -11221,6 +11271,7 @@ export function respawn(w: World): void {
   */
   w.shieldOrbs.clear();
   w.wheels.clear();
+  w.loaded.clear();
   /*
     ── THE SHIP COMES BACK INTO ITS POOL, WHICH IT ONLY HAS TO DO BECAUSE IT LEFT ──────────────────
 

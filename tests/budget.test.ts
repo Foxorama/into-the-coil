@@ -127,8 +127,13 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * over the lane and both views, the worst is 161; the pool is 180, with the shots' headroom. A hundred
  * and forty more blits of a baked bitmap for the second a charge is spent, on a desktop target. The
  * particle share was not touched.
+ *
+ * ⚠️ **AND 888 SINCE 0581, ON THE SHIP'S LINE, ON 0527's TERMS.** A loaded tube is drawn in its kind's ink
+ * at each tube place — *"by ink"*, so a rack of one of each reads as one of each — and a picture baked
+ * into the hull cannot change ink with the tube the run fills it with: two more blits of a baked bitmap,
+ * for as long as a ship carries two tubes. Nothing else was re-sliced.
  */
-const WORST_CASE = 886;
+const WORST_CASE = 888;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

@@ -39,7 +39,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/ships.ts',
       find: '    tubes: [[], [{ along: 1.18, across: -3.55 }], [{ along: 1.18, across: -3.55 }, { along: 1.18, across: 3.55 }]],',
-      replace: '    tubes: SIDE_TUBES,',
+      // ⚠️ Re-aimed by 0581, which took `SIDE_TUBES`: the places it held, on the disc, written out.
+      replace: '    tubes: [[], [{ along: 3, across: -1.8 }], [{ along: 3, across: -1.8 }, { along: 3, across: 1.8 }]],',
     },
   },
   {

@@ -58,8 +58,9 @@ export const PROBES = [
     guard: 'flashes when the car does',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const hurt = w.ship.sprite === w.ship.spriteHit;',
-      replace: '  const hurt = false;',
+      // ⚠️ Re-anchored by 0581, whose loaded tubes read the hurt the same way: the wheels' own, by what follows.
+      find: "  const hurt = w.ship.sprite === w.ship.spriteHit;\n  /*\n    0557: on the run's own clock",
+      replace: "  const hurt = false;\n  /*\n    0557: on the run's own clock",
     },
   },
   {

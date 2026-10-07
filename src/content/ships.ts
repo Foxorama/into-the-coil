@@ -21,8 +21,9 @@
 
 import type { Body } from '../sim/entity.ts';
 import type { Ink } from './palette.ts';
-import { SHIP_BOX, SPRITE } from './sprites.ts';
+import { LOADED_TUBE, SHIP_BOX, SPRITE } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
+import type { TubeLook } from './missiles.ts';
 import type { DangleKind } from './dangles.ts';
 import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
@@ -82,12 +83,31 @@ export interface ShipRow extends Body {
    */
   hardpoint: Mount;
   /**
+   * How large a gun's mount is drawn on this ship, and so how far its muzzle stands from the hardpoint —
+   * 0581. One on the cars, the saucer and the bike; the fighter carries its guns slimmer, on its nose
+   * ahead of its art — *"other equipped weapons on the fighter show on top of the nose and it hides the
+   * nose art."* Each row authors its own, on 0282's terms.
+   */
+  mountScale: number;
+  /**
    * Where each missile leaves, with one tube fitted and with two — 0448. The first of a pair still pops
    * to the top of the lane and the second to the bottom (`fireMissiles`), so a pair from two turrets on
    * one roof still opens into the two paths a pair always flew. The cars' are their roof turrets; the
    * fighter's and the saucer's are where 0097 put every ship's.
    */
   tubes: readonly [readonly [], readonly [Mount], readonly [Mount, Mount]];
+  /**
+   * How long a loaded tube is drawn at each of those places, nose to fins, in world units — 0581. The frame
+   * lays each loaded tube there in its kind's ink (`stepLoaded`); the fighter's hangs under a wing, a car's
+   * sits in its roof turret. Each row authors its own, on 0282's terms.
+   */
+  tubeLength: number;
+  /**
+   * How a loaded tube is drawn there — 0581: the whole missile (`dart`) under the fighter's wings and out of
+   * the saucer's pods; the warhead (`nose`) at the front of the cars' and the bike's turrets, which hold the
+   * rest in the ship's own livery (0461).
+   */
+  tubeLook: TubeLook;
   /**
    * Its engines: where each flame's root meets the hull — 0448, and it was one `tail` behind the centre.
    * The flame is baked as ONE jet and laid once per nozzle (`stepExhaust`), so the fighter and the saucer
@@ -278,6 +298,13 @@ export interface Wheels {
  */
 const PREDECESSOR_UNIT = 0.062 * SHIP_BOX * 0.42;
 
+/**
+ * A turret's warhead, drawn — 0581: the cone the cars' and the bike's turrets painted at their fronts was
+ * 2.3 of the predecessor's units tall (0461); the loaded nose is 0.95 of its picture's span tall, so its span
+ * is 2.4 of them.
+ */
+const TURRET_NOSE = 2.4 * PREDECESSOR_UNIT;
+
 /** A wheel `(x, y)` in the predecessor's frame on a car drawn about `(cx, cy)` there, in world units. */
 function wheelAt(x: number, y: number, cx: number, cy: number): Mount {
   return { along: (x - cx) * PREDECESSOR_UNIT, across: (y - cy) * PREDECESSOR_UNIT };
@@ -306,20 +333,32 @@ export function fitted(row: ShipRow, gun: WeaponKind, rim: RimKind | null = row.
   const wheels = row.wheels === null || rim === null || rim === row.wheels.rim ? row.wheels : { ...row.wheels, rim };
   if (gun === row.weapon) return wheels === row.wheels ? row : { ...row, wheels };
   const mount = WEAPONS[gun].mount[row.view];
-  return { ...row, wheels, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };
+  // 0581: the mount drawn at the row's scale, so its mouth is that much nearer the hardpoint.
+  const s = row.mountScale;
+  return { ...row, wheels, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along * s, across: row.hardpoint.across + mount.across * s } };
 }
 
-/**
- * Where a gun on the centreline fires from: three units ahead of the centre, clear of the hurtbox. It was
- * `MUZZLE_ALONG` in `src/app/frame.ts` for every ship until 0448.
- */
-const NOSE: Mount = { along: 3, across: 0 };
+/*
+  ── THE FIGHTER'S GUNS ON ITS NOSE, ITS TUBES UNDER ITS WINGS — 0581 ─────────────────────────────────
 
+  Played: *"the default fighter weapon obscures the cool wingtips and looks worse — other equipped weapons
+  on the fighter show on top of the nose and it hides the nose art."* Answered: guns on the nose, slimmer
+  and ahead of its art; tubes under the wings. The hull's radius is 2.94 units (7 of a 9.4 box), its tip
+  at 1.0 of it and every look on its nose behind 0.95 — so the gun's pad sits at 0.93, the gun reaching
+  past the tip, its own pulse drawn there as a borrowed gun is and at the same size. It was a pair of
+  cigar pods hung off the wingtips (0469), and a borrowed gun lay along the canopy at 1.18.
+*/
+/** The fighter's pad on its nose, at 0.93 of its hull's radius. */
+const FIGHTER_HARDPOINT: Mount = { along: 2.73, across: 0 };
+/** How large a gun is drawn on the fighter's nose — six tenths of a car's, so its nose stays its own. */
+const FIGHTER_MOUNT_SCALE = 0.6;
 /**
- * 0097's tubes, the fighter's and the saucer's: a single on the top of the hull, a pair top and bottom,
- * at the nose. *"Yes it will look off balance, that's the point when you only have one."*
+ * Its tubes, each a missile hung under a wing — at mid-span, 0.6 of the hull's radius out, its nose (where
+ * the missile leaves) just behind the wing's leading edge and its body across the chord: one under the top
+ * wing, then one under each. 0097's single still pops to the top of the lane and the pair to the top and the
+ * bottom.
  */
-const SIDE_TUBES: ShipRow['tubes'] = [[], [{ along: 3, across: -1.8 }], [{ along: 3, across: -1.8 }, { along: 3, across: 1.8 }]];
+const FIGHTER_TUBES: ShipRow['tubes'] = [[], [{ along: -0.45, across: -1.76 }], [{ along: -0.45, across: -1.76 }, { along: -0.45, across: 1.76 }]];
 
 /**
  * The saucer's disc, in its box's radius — 0461; it was the whole of it. Here rather than in the bake
@@ -397,14 +436,17 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
       { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
     ],
-    // A hair inside its wingtip pods' waist: 1.13 of the 7-unit hull's radius since the pods became
-    // cigars (0469, `SHIP_POD_MK3` in the bake); the flared pods reached 1.31, and 1.48 before 0449.
-    wingtip: 3.85,
-    muzzle: NOSE,
-    // 0525: drawn from above, and a borrowed gun lies along the nose's spine, behind its tip.
+    // 0581: its wingtips, 0.78 of the 7-unit hull's radius out — the pods that hung past them (0469) are gone.
+    wingtip: 2.29,
+    // 0581: the pulse's two mouths, at the end of its barrels on the nose — the mount's own muzzle, at its scale.
+    muzzle: { along: FIGHTER_HARDPOINT.along + WEAPONS.pulse.mount.top.along * FIGHTER_MOUNT_SCALE, across: 0 },
+    // 0525: drawn from above; 0581: every gun, its own too, on a pad at the nose's tip.
     view: 'top',
-    hardpoint: { along: 1.18, across: 0 },
-    tubes: SIDE_TUBES,
+    hardpoint: FIGHTER_HARDPOINT,
+    mountScale: FIGHTER_MOUNT_SCALE,
+    tubes: FIGHTER_TUBES,
+    tubeLength: LOADED_TUBE,
+    tubeLook: 'dart',
     // Its two nacelles: 0.78 of the 7-unit hull's radius back, 0.21 of it out (`SHIP_CORE` in the bake).
     nozzles: [
       { along: -2.29, across: -0.62 },
@@ -460,8 +502,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0525: from above, a borrowed gun seated on the rim at the nose, where its own ray gun's housing is.
     view: 'top',
     hardpoint: { along: 2.84, across: 0 },
+    mountScale: 1,
     // The warhead in each pod, hung off its sides: the top one alone, then both.
     tubes: [[], [{ along: 1.18, across: -3.55 }], [{ along: 1.18, across: -3.55 }, { along: 1.18, across: 3.55 }]],
+    // 0581: the whole missile, lying in each pod with its warhead at the pod's mouth.
+    tubeLength: LOADED_TUBE,
+    tubeLook: 'dart',
     // Its two drives, on the back of the rim either side of the centreline — the pair it burns in the
     // fight, and since 0450 in the intro's chase too.
     nozzles: [
@@ -527,8 +573,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0525: from the side, a borrowed gun standing on the hood where its own launcher stands.
     view: 'side',
     hardpoint: { along: 3.08, across: -0.76 },
+    mountScale: 1,
     // The orange nose of the missile in each roof turret.
     tubes: [[], [{ along: 0.76, across: -1.92 }], [{ along: 0.07, across: -1.92 }, { along: 1.05, across: -1.92 }]],
+    // 0581: the warhead at each turret's front, as tall as the orange nose 0461 painted there.
+    tubeLength: TURRET_NOSE,
+    tubeLook: 'nose',
     // One pipe, low at the back bumper.
     nozzles: [{ along: -4.42, across: 0.47 }],
     // Its greenhouse, seen from the side: under the T-top, above the beltline (`drawFirebird` in the bake).
@@ -579,8 +629,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0525: from the side, a borrowed gun standing on the bonnet where its own lightning rod stands.
     view: 'side',
     hardpoint: { along: 3.43, across: 0.11 },
+    mountScale: 1,
     // The orange nose of the missile in each turret on the roof rack.
     tubes: [[], [{ along: -1.22, across: -2.04 }], [{ along: -2.18, across: -2.04 }, { along: -0.66, across: -2.04 }]],
+    // 0581: the warhead at each turret's front, on the Firebird's terms.
+    tubeLength: TURRET_NOSE,
+    tubeLook: 'nose',
     // One pipe, under the tailgate.
     nozzles: [{ along: -4.42, across: 0.75 }],
     // Its front glasshouse, seen from the side, behind the pillar (`drawEstate` in the bake).
@@ -629,10 +683,18 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // The lightning ball on its fork crown: the arc's first link leaves it.
     muzzle: wheelAt(15.2, -3.4, 0, 1),
     view: 'side',
-    // A borrowed gun stands on the fork crown, where its own lightning ball is.
-    hardpoint: wheelAt(11.6, -5.2, 0, 1),
+    /*
+      0581: a borrowed gun stands on the front of the fork by the headlamp, ahead of the bars — it stood at
+      the bars' top (11.6, −5.2), against the rider's hands — and a size down, so it is the bike's and not
+      a second rider.
+    */
+    hardpoint: wheelAt(14.4, -2.4, 0, 1),
+    mountScale: 0.8,
     // The orange nose of the missile in each pod on its rear fender.
     tubes: [[], [wheelAt(-11.1, -0.1, 0, 1)], [wheelAt(-13.3, -0.1, 0, 1), wheelAt(-10.7, -0.1, 0, 1)]],
+    // 0581: the warhead at each pod's front, on the Firebird's terms.
+    tubeLength: TURRET_NOSE,
+    tubeLook: 'nose',
     // One pipe, swept back low past the rear wheel to behind its fender.
     nozzles: [wheelAt(-15.4, 3.5, 0, 1)],
     // His seat, under him: the intro's rider drops on here.

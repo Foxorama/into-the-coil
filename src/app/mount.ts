@@ -218,6 +218,8 @@ export const CAPACITY = {
   exhaust: MAX_NOZZLES,
   // 0527: a car's two turning wheels, drawn over the ship — the Mothership's spinners.
   wheels: 2,
+  // 0581: the ship's loaded tubes, drawn over it in their kinds' inks — as many as a ship may carry.
+  loaded: MAX_LAUNCHERS,
   // A surge's aura — 0373. One, out of the four pickup slots 0066's deleted scatter was given.
   aura: 1,
   enemies: 40,
@@ -849,6 +851,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
   const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
   const wheels = new Pool<Entity>(CAPACITY.wheels, makeEntity);
+  const loaded = new Pool<Entity>(CAPACITY.loaded, makeEntity);
   const aura = new Pool<Entity>(CAPACITY.aura, makeEntity);
   const whirl = new Pool<Entity>(CAPACITY.whirl, makeEntity);
   const nova = new Pool<Entity>(CAPACITY.nova, makeEntity);
@@ -1090,7 +1093,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
     // The aura before the body it burns behind — 0305.
     // The aura under every shot, so no halo can hide a bullet beside the ship — 0373.
-    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, bossFront, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool, wheels],
+    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, bossFront, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool, wheels, loaded],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -1128,6 +1131,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shieldOrbs,
     exhaust,
     wheels,
+    loaded,
     aura,
     surgeFor: 0,
     surgeKind: null,

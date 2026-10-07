@@ -942,6 +942,15 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boltWheel1Hit: 'hazard',
   boltWheel2: 'player',
   boltWheel2Hit: 'hazard',
+  // 0581: a loaded tube in its kind's ink — the missile pickup's gold, the seeker pickup's lavender.
+  tubeMissile: 'bullet',
+  tubeMissileHit: 'hazard',
+  tubeSeeker: 'ally',
+  tubeSeekerHit: 'hazard',
+  noseMissile: 'bullet',
+  noseMissileHit: 'hazard',
+  noseSeeker: 'ally',
+  noseSeekerHit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
   weaverHit: 'impact',
@@ -2012,38 +2021,12 @@ export const SHIP_HULL: readonly Pt[] = [...SHIP_UPPER, ...mirrored(SHIP_UPPER).
 */
 
 /*
-  The second tier's smaller pod stood here until 0469. Every run flies the capped kit since 0441, so
-  nothing drew it, and the cigar below is the one pod the fighter has.
-*/
+  ── THE WINGTIP PODS WERE HERE, AND 0581 TOOK THEM ─────────────────────────────────────────────────
 
-/*
-  ── THE POD IS A CIGAR, NOT A BELL — 0469 ───────────────────────────────────────────────────────────
-
-  Played: *"the wingtips on the Huang-woo spaceship still look weird."* The capped pod was a trapezoid
-  0.40 of the radius wide where it met the wing and 0.82 at its outer edge, square-cornered, with its
-  light in the back corner: a bell hung off each wingtip, flared the wrong way, and at 85 pixels two
-  flaps. A pod on a wingtip is a cigar — longest along the line of flight, widest at its waist,
-  tapering to both ends, its light at the FRONT where a forward gun fires. This one lies on the
-  wingtip's chord (the two points at −0.78 are the chord's ends, so it shares that edge with the hull
-  and no area — 0194's trap), runs from 0.1 ahead of it to 1.0 behind, and is 0.35 wide at the waist.
-  The span falls from 1.31 radii to 1.13, which is the way 0449 was asked for.
+  A cigar off each wingtip (0469, a bell before it) was the fighter's pulse. Played: *"the default fighter
+  weapon obscures the cool wingtips and looks worse."* The pulse is drawn on the nose as any gun is
+  (`paintMount`, at the row's `mountScale`), and the wings end where the hull does.
 */
-/** The capped pod: a cigar on the wingtip's chord, nose first. */
-const SHIP_POD_MK3: readonly Pt[] = [
-  [-0.42, -0.78],
-  [-0.2, -0.8],
-  [0, -0.86],
-  [0.1, -0.95],
-  [0, -1.05],
-  [-0.2, -1.11],
-  [-0.45, -1.13],
-  [-0.7, -1.12],
-  [-0.9, -1.06],
-  [-1, -0.96],
-  [-0.95, -0.86],
-  [-0.85, -0.8],
-  [-0.72, -0.78],
-];
 
 /** A canard on the leading edge, the third tier's. Both base points sit on one hull edge. */
 const SHIP_CANARD: readonly Pt[] = [
@@ -2256,59 +2239,89 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, po
 /** Every flyable ship's art, by kind — what `drawKind` and the port both draw. */
 type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt';
 
-/** One tube's place on a hull: where its casing ends at the front, and how long the casing is. */
-interface TubeAt {
-  at: Pt;
-  length: number;
+/*
+  ── THE FIGHTER'S TUBES WERE HERE — ON ITS CHIN AND ITS WING ROOTS — AND 0581 HUNG THEM UNDER ITS WINGS ──
+
+  `TUBES_ON` put the one tube on the chin, over the nose's art, and the pair on the wing roots, each a
+  slate casing with the missile's orange at its nose whatever kind it fired — and nowhere near where its
+  row said the missile left (0448's `tubes`). A tube is the frame's now: each loaded tube is its own
+  picture in its kind's ink (`paintLoadedTube`), laid at the row's own place for it, so where it is drawn
+  and where its missile leaves are one number. The bake draws what holds it: under each wing, a pylon.
+*/
+
+/** A loaded tube's outline, nose +x at 1, fins at −1 — 0581. Its widest are the fins, 0.5 of its radius out. */
+const LOADED_TUBE_HULL: readonly Pt[] = [
+  [1, 0],
+  [0.62, -0.27],
+  [-0.62, -0.27],
+  [-1, -0.52],
+  [-0.96, -0.08],
+  [-0.96, 0.08],
+  [-1, 0.52],
+  [-0.62, 0.27],
+  [0.62, 0.27],
+];
+
+/**
+ * A loaded tube — 0581: a missile lying along the line of flight, its body and warhead in its kind's ink so a
+ * rack of one of each reads as one of each (*"by ink"*: the missile pickup's gold, the seeker pickup's
+ * lavender). Its fins are its outline's and its light runs along it; the one mark on it is the warhead, lit,
+ * half its radius long and its body's width across — fins or a band painted on it were under 0106's floor
+ * at the fighter's 1.7 units, and its silhouette already says missile.
+ */
+function drawLoadedTube(ctx: Pen, f: Frame, ink: string): void {
+  ctx.fillStyle = ink;
+  ctx.beginPath();
+  trace(ctx, f, LOADED_TUBE_HULL);
+  seal(ctx);
+  shaded(ctx, f, [0, -0.27], [0, 0.27], shade(ink, 0.35), shade(ink, -0.35), LOADED_TUBE_HULL);
+  // The warhead lit, its tip the brightest thing on it.
+  poly(ctx, f, shade(ink, 0.55), [
+    [1, 0],
+    [0.62, -0.27],
+    [0.5, -0.27],
+    [0.5, 0.27],
+    [0.62, 0.27],
+  ]);
+}
+
+/** A turret's warhead, tip +x at 1 as the tube's nose is, its base 1.65 of its radius back — 0581. */
+const LOADED_NOSE_HULL: readonly Pt[] = [
+  [1, 0],
+  [-0.65, -0.95],
+  [-0.65, 0.95],
+];
+
+/**
+ * The warhead a loaded turret shows at its front — 0581: the cone the cars' and the bike's turrets painted
+ * in the missile's orange whatever they fired (0461), now in its kind's ink and laid on by the frame, lit
+ * along its top and its tip the brightest thing on it.
+ */
+function drawLoadedNose(ctx: Pen, f: Frame, ink: string): void {
+  ctx.fillStyle = ink;
+  ctx.beginPath();
+  trace(ctx, f, LOADED_NOSE_HULL);
+  seal(ctx);
+  shaded(ctx, f, [0, -0.95], [0, 0.95], shade(ink, 0.4), shade(ink, -0.35), LOADED_NOSE_HULL);
+  poly(ctx, f, shade(ink, 0.6), [
+    [1, 0],
+    [0.3, -0.4],
+    [0.3, 0.4],
+  ]);
 }
 
 /**
- * Where each ship seen from above carries one tube and where it carries two, in the box's radius —
- * 0441. Authored per ship, on 0282's terms: a saucer's tubes are on its rim, and the fighter's on its
- * chin and in the narrow room each wing has between its leading and trailing edge — so each ship says
- * its own length too, and `tests/accents.test.ts` holds every one of them on the hull. The two cars are
- * drawn from the side, and carry their tubes as turrets in their own rooflines (`FIREBIRD_TURRETS`).
+ * A pylon under a wing, at `at` in the box's radius — 0581: a short slate rail along the line of flight the
+ * frame hangs a loaded tube from. 0.12 of the box across, over 0106's floor at the shipped camera.
  */
-const TUBES_ON: Record<'fighter', { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
-  fighter: {
-    one: { at: [0.52, 0], length: 0.2 },
-    // The wing between its swept edges is 0.32 of the box wide here, so a tube fits and no more. A
-    // little further in since the wings were trimmed (0449), which rakes the trailing edge harder.
-    two: [
-      { at: [-0.3, -0.4], length: 0.11 },
-      { at: [-0.3, 0.4], length: 0.11 },
-    ],
-  },
-  /*
-    The saucer's were here — a slate tube lying across its face — until 0461 hung them off its sides on
-    pylons, as pods of its own make (`CADDIE_POD`). The cars carry theirs in their rooflines.
-  */
-};
-
-/**
- * One missile tube, lying along the hull with its warhead forward: fins at the back, a slate casing,
- * and the missile's own orange at the nose. Every part is at least 0.12 of the box's radius across, so
- * each clears 0106's floor at the shipped camera. Painted on a sealed hull, so it can move neither the
- * outline nor the hurtbox.
- */
-function paintTube(ctx: Pen, f: Frame, palette: Palette, { at: [x, y], length }: TubeAt): void {
-  const back = x - length;
-  poly(ctx, f, shade(palette.trim, -0.2), [
-    [back, y - 0.1],
-    [back + 0.12, y - 0.1],
-    [back + 0.12, y + 0.1],
-    [back, y + 0.1],
-  ]);
-  poly(ctx, f, shade(palette.trim, 0.3), [
-    [back, y - 0.07],
-    [x, y - 0.07],
-    [x, y + 0.07],
-    [back, y + 0.07],
-  ]);
-  poly(ctx, f, palette.bullet, [
-    [x, y - 0.07],
-    [x + 0.12, y],
-    [x, y + 0.07],
+function paintPylon(ctx: Pen, f: Frame, palette: Palette, [x, y]: Pt): void {
+  // 0.18 long: the wing's chord at mid-span is 0.23 of the box, and the rail stays inside it.
+  shaded(ctx, f, [x, y - 0.06], [x, y + 0.06], shade(palette.trim, 0.1), shade(palette.trim, -0.45), [
+    [x - 0.09, y - 0.06],
+    [x + 0.06, y - 0.06],
+    [x + 0.09, y],
+    [x + 0.06, y + 0.06],
+    [x - 0.09, y + 0.06],
   ]);
 }
 
@@ -3143,7 +3156,7 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
     [7.2, -10.5],
   ]), 0.95);
   // The pods on the rear fender, in the lacquer banded in chrome, their warheads in the shot's orange.
-  paintTurrets(ctx, f, palette, THUNDERBOLT_PODS[stage]!, THUNDERBOLT_POD_TOP, THUNDERBOLT_FENDER, box, { shell: shade(body, 0.25), band: chrome });
+  paintTurrets(ctx, f, THUNDERBOLT_PODS[stage]!, THUNDERBOLT_POD_TOP, THUNDERBOLT_FENDER, box, { shell: shade(body, 0.25), band: chrome });
   paintWheels(ctx, f, palette, 'thunderbolt', rim);
   // The pipe, swept back low on the near side over the rear tyre to its end behind the fender.
   shaded(ctx, f, at(0, 2.6), at(0, 4.5), shade(chrome, 0.25), shade(chrome, -0.4), box([
@@ -3200,34 +3213,35 @@ export function drawPlayerShip(
   livery: string | null = fitNow(ship).livery,
 ): void {
   const own = gun === SHIPS[ship].weapon;
-  const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
-    stage >= 2 ? on.two : stage === 1 ? [on.one] : [];
-  let tubes: readonly TubeAt[] = [];
+  // A borrowed gun stands on its mount, laid on last; 0581: and the fighter's own does too.
+  let mounted = !own;
   ctx.beginPath();
   switch (ship) {
     case 'fighter': {
-      tubes = tubesOf(TUBES_ON.fighter);
+      mounted = true;
       const fh: Frame = { half: f.half, r: f.r * (FIGHTER_HULL / SHIP_BOX) };
       ctx.fillStyle = livery ?? palette.player;
       trace(ctx, fh, SHIP_HULL);
-      if (own) {
-        trace(ctx, fh, SHIP_POD_MK3);
-        trace(ctx, fh, mirrored(SHIP_POD_MK3));
-      }
       trace(ctx, fh, SHIP_CANARD);
       trace(ctx, fh, mirrored(SHIP_CANARD));
+      // 0581: its own pulse's silhouette on its nose, as the pods were in its outline before it.
+      if (own) trace(ctx, f, fighterPulseHull());
       seal(ctx);
       // Lit from above and ahead before the livery goes on, so the hull has volume under it — 0461.
       // Deeper since 0463: lit to near white, the hull left the livery nothing to stand against.
       shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(livery ?? palette.player, 0.15), shade(livery ?? palette.player, -0.4), SHIP_HULL);
-      // And the wingtip pods the same light, bright at the nose and in shadow behind — along the cigar (0469).
-      if (own) {
-        for (const pod of [SHIP_POD_MK3, mirrored(SHIP_POD_MK3)]) {
-          shaded(ctx, fh, [0.1, 0], [-1, 0], shade(livery ?? palette.player, 0.1), shade(livery ?? palette.player, -0.42), pod);
-        }
+      /*
+        ⚠️ **0581: NO PODS, WHATEVER IT FLIES.** Its pulse was a cigar off each wingtip (0469), over the wings
+        the player liked best; it is drawn on the nose as any borrowed gun is, below — so `own` no longer
+        changes the fighter's drawing, and its pods' glow went with them.
+      */
+      paintShip(ctx, fh, palette, 2, false, livery ?? palette.player);
+      jazzFighter(ctx, fh, palette, false, art);
+      // 0581: its pylons, one under each wing that carries a tube; the tube itself is the frame's (`stepTubes`).
+      // Each under the tube's middle: the place is its nose, and the tube lies half its length behind it.
+      for (const place of SHIPS.fighter.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
+        paintPylon(ctx, f, palette, [(place.along - SHIPS.fighter.tubeLength / 2) / BOX_R, place.across / BOX_R]);
       }
-      paintShip(ctx, fh, palette, 2, own, livery ?? palette.player);
-      jazzFighter(ctx, fh, palette, own, art);
       break;
     }
     // The saucer hangs its pods off its sides, in its own outline — 0461.
@@ -3250,8 +3264,7 @@ export function drawPlayerShip(
       return unhandled;
     }
   }
-  for (const tube of tubes) paintTube(ctx, f, palette, tube);
-  if (!own) paintMount(ctx, f, palette, gun, ship);
+  if (mounted) paintMount(ctx, f, palette, gun, ship);
 }
 
 /**
@@ -3611,14 +3624,14 @@ function steelStar(x: number, y: number, reach: number): Pt[] {
 
 /**
  * A car's roof turrets, painted: a pod in the car's own livery filling each, lit along its top so it
- * reads as round, a band round it, and the missile's orange at its front — 0461. They were slate boxes
- * on both cars; asked for, *"can we make the missile tubes thematically appropriate as well?"*, so the
- * Firebird's are its black lacquer banded in its phoenix's gold and the estate's its burl banded in gilt.
+ * reads as round, and a band round it — 0461. They were slate boxes on both cars; asked for, *"can we make
+ * the missile tubes thematically appropriate as well?"*, so the Firebird's are its black lacquer banded in
+ * its phoenix's gold and the estate's its burl banded in gilt. Since 0581 the missile lying in each is the
+ * frame's, in its kind's ink (`stepLoaded`); the turret is what holds it.
  */
 function paintTurrets(
   ctx: Pen,
   f: Frame,
-  palette: Palette,
   spans: readonly (readonly [number, number])[],
   top: number,
   base: number,
@@ -3638,11 +3651,7 @@ function paintTurrets(
       [from + 1.95, base],
       [from + 0.2, base],
     ]));
-    poly(ctx, f, palette.bullet, box([
-      [to - 2, top + 0.3],
-      [to - 0.1, (top + base) / 2],
-      [to - 2, base - 0.3],
-    ]));
+    // 0581: the missile's orange nose was painted here; the loaded tube is the frame's, in its kind's ink.
   }
 }
 
@@ -3845,7 +3854,7 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
     disc(ctx, f, palette.impact, hx, hy, reach * 0.48);
   }
   // Its turrets on the roof, in its own black and gold.
-  paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box, { shell: body, band: gold });
+  paintTurrets(ctx, f, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box, { shell: body, band: gold });
   // A headlamp in the impact ink at the nose with the player's cyan round it, a tail lamp in the shot's
   // orange — never the enemy's red — with its own light.
   poly(ctx, f, palette.impact, box([
@@ -4034,7 +4043,7 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     [-13.5, -4.1],
   ]));
   // Its turrets on the rack, in its own burl banded in gilt.
-  paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
+  paintTurrets(ctx, f, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
   /*
     The shuriken launcher on the bonnet — 0545: a slate block with a gilt lip along its top and the steel
     star in its face, where the blades leave. It was the lightning rod, which the arc's mount draws now.
@@ -4137,18 +4146,18 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     what reads as a pulse. Each mouth lit in the pods' hazard.
   */
   pulse: {
+    /*
+      ⚠️ **0581: ONE BLOCK OF TWO BARRELS, SPLIT BY A SEAM.** Two barrels each 0.064 wide were under 0106's
+      floor at any scale — unmeasured while the pulse was only ever borrowed, measured since it is the
+      fighter's own on its nose. The block is 0.2 wide, over the floor at the fighter's six tenths; the seam
+      is translucent, so it splits the block into a pair without being a mark too thin to draw.
+    */
     top: (ctx, f, palette, p, [mx]) => {
       const chrome = shade(palette.trim, 0.65);
       disc(ctx, f, shade(palette.trim, -0.45), ...p(0.04, 0), 0.13);
-      for (const side of [-1, 1] as const) {
-        shaded(ctx, f, p(0, side * 0.07 - 0.03), p(0, side * 0.07 + 0.03), shade(chrome, 0.3), shade(chrome, -0.35), [
-          p(0, side * 0.07 - 0.032),
-          p(mx, side * 0.07 - 0.032),
-          p(mx, side * 0.07 + 0.032),
-          p(0, side * 0.07 + 0.032),
-        ]);
-        glow(ctx, f, palette.hazard, ...p(mx, side * 0.07), 0.07, 0.75);
-      }
+      shaded(ctx, f, p(0, -0.1), p(0, 0.1), shade(chrome, 0.3), shade(chrome, -0.35), [p(0, -0.1), p(mx, -0.1), p(mx, 0.1), p(0, 0.1)]);
+      seam(ctx, f, shade(palette.trim, -0.55), 0.03, [p(0.08, 0), p(mx, 0)], 0.6);
+      for (const side of [-1, 1] as const) glow(ctx, f, palette.hazard, ...p(mx, side * 0.05), 0.07, 0.75);
     },
     side: (ctx, f, palette, p, [mx, my]) => {
       const chrome = shade(palette.trim, 0.65);
@@ -4239,6 +4248,42 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
   },
 };
 
+/**
+ * The fighter's own pulse's silhouette, in the box's radius — 0581: its pad and its block to its mouth, laid
+ * on the nose, traced into the hull's outline while it flies its own pulse so the gun is the ship's own shape
+ * and 0149's every-mark-on-the-hull holds over it.
+ *
+ * ⚠️ **ITS BACK IS THE NOSE'S OWN TWO EDGES, SO IT SHARES THEM AND NO AREA** — 0194's trap, which the pods
+ * kept clear of on the wingtip's chord: two outlines over one patch of hull read as a hole there. It runs
+ * from halfway down the nose's upper edge, round the pad and the block, to halfway down its lower edge, and
+ * back along both edges through the tip.
+ */
+function fighterPulseHull(): Pt[] {
+  const row = SHIPS.fighter;
+  const s = row.mountScale;
+  const hx = row.hardpoint.along / BOX_R;
+  const mx = WEAPONS.pulse.mount.top.along / BOX_R;
+  const k = FIGHTER_HULL / SHIP_BOX;
+  // Halfway along the nose's upper edge, from its tip to its next corner, in the box's radius.
+  const [tx, ty] = SHIP_UPPER[0]!;
+  const [cx, cy] = SHIP_UPPER[1]!;
+  const edge: Pt = [((tx + cx) / 2) * k, ((ty + cy) / 2) * k];
+  const at = (x: number, y: number): Pt => [hx + x * s, y * s];
+  return [
+    edge,
+    at(-0.06, -0.13),
+    at(0.1, -0.13),
+    at(0.14, -0.1),
+    at(mx, -0.1),
+    at(mx, 0.1),
+    at(0.14, 0.1),
+    at(0.1, 0.13),
+    at(-0.06, 0.13),
+    [edge[0], -edge[1]],
+    [tx * k, ty * k],
+  ];
+}
+
 /** A small Catherine wheel about `c`, `reach` out, in the box's radius — the launcher's spare, placed. */
 function pinwheelAt(ctx: Pen, f: Frame, palette: Palette, c: Pt, reach: number): void {
   disc(ctx, f, palette.bullet, c[0], c[1], reach);
@@ -4269,12 +4314,19 @@ function starAt(c: Pt, reach: number): Pt[] {
  * `gun`'s mount on `ship`, at its hardpoint and in its view — 0525. The muzzle is the gun row's, in world
  * units, carried into the box's radius as the hardpoint is.
  */
+/*
+  0581: drawn in a frame `mountScale` the box's, so every mark of it — a drum's radius as well as a barrel's
+  length — is that much smaller, and the hardpoint carried into that frame's radius. The mouth lands at the
+  hardpoint plus the gun's mount times the scale, which is where `fitted` fires from.
+*/
 export function paintMount(ctx: Pen, f: Frame, palette: Palette, gun: WeaponKind, ship: ShipArt): void {
   const row = SHIPS[ship];
+  const s = row.mountScale;
   const muzzle = WEAPONS[gun].mount[row.view];
-  const hx = row.hardpoint.along / BOX_R;
-  const hy = row.hardpoint.across / BOX_R;
-  MOUNTS[gun][row.view](ctx, f, palette, (x, y) => [hx + x, hy + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);
+  const fs: Frame = { half: f.half, r: f.r * s };
+  const hx = row.hardpoint.along / (BOX_R * s);
+  const hy = row.hardpoint.across / (BOX_R * s);
+  MOUNTS[gun][row.view](ctx, fs, palette, (x, y) => [hx + x, hy + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);
 }
 
 /**
@@ -13980,6 +14032,23 @@ export function drawKind(
     case 'boltWheel2':
     case 'boltWheel2Hit':
       drawBoltWheel(ctx, f, palette, 2);
+      return;
+    // 0581: a loaded tube of each kind, each its own body on the spinner's terms; the frame lays it on the ship.
+    case 'tubeMissile':
+    case 'tubeMissileHit':
+      drawLoadedTube(ctx, f, palette.bullet);
+      return;
+    case 'tubeSeeker':
+    case 'tubeSeekerHit':
+      drawLoadedTube(ctx, f, palette.ally);
+      return;
+    case 'noseMissile':
+    case 'noseMissileHit':
+      drawLoadedNose(ctx, f, palette.bullet);
+      return;
+    case 'noseSeeker':
+    case 'noseSeekerHit':
+      drawLoadedNose(ctx, f, palette.ally);
       return;
     /*
       ⚠️ **EACH FRAME OF A CYCLE IS ITS OWN ARM, AND THE ARM NAMES ITS INDEX — 0410.** Reading the index

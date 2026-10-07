@@ -4179,8 +4179,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
       Firebird met the floor (41.9 s on its lane) and the fighter borrowing the wheel did not, at 38.9 s.
 
       0553: 0.98 — thrown every two seconds, 1.05 took it in 40.1 s on its lane. At 0.98, 41.4 s there.
+
+      0581: the ray 0.81 and the wheel 0.97 — a borrowed gun stands further forward since then, on the
+      fighter's nose and the bike's fork, so its shots reach the bird sooner: the fighter with the wheel took
+      it in 39.8 s and the bike with the ray in 39.9 s, against the forty.
     */
-    gunWeights: { arc: 1.1, ray: 0.82, catherine: 0.98 },
+    gunWeights: { arc: 1.1, ray: 0.81, catherine: 0.97 },
     damage: 3,
     station: 154,
     drift: 6,
