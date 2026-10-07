@@ -40,7 +40,11 @@ import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from
 import { RACKS, RACK_KINDS, TUBE_WARE_KINDS } from '../content/racks.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import { WEAPONS } from '../content/weapons.ts';
-import { SPECIALS } from '../content/specials.ts';
+import { SIDE_LABELS, SPECIALS, type Side } from '../content/specials.ts';
+import { PICKUPS, bombFaceOf, missileFaceOf, wardFaceOf, type PickupKind } from '../content/pickups.ts';
+import { MISSILES } from '../content/missiles.ts';
+import { SHOTS } from '../content/shots.ts';
+import { ACROSS_SPAN, REFERENCE_ASPECT } from '../sim/camera.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
 export const SCREEN_KINDS = [
@@ -445,6 +449,66 @@ export interface ScreenRow {
  * reach, so the rate is stated here and the shell reads it.
  */
 export const STEPS_PER_SECOND = 60;
+
+/** One line of a pickup face's sheet — 0580: what is said, and what stands beside it. */
+export interface FaceLine {
+  label: string;
+  value: string;
+}
+
+/**
+ * What How to play's sheet says of one face of a pickup — 0580, *"have the icons and have a tap on them pop
+ * up a window with their stats"*. Its name, what it gives, the trigger it goes on (`side`, so the shell can
+ * name the button in the hand holding the game) and the lines under them.
+ *
+ * ⚠️ **EVERY NUMBER IS READ OFF A ROW, IN THE PLAYER'S UNITS.** A missile's hit in pulses (its shot's damage
+ * over the pulse's), a seeker's life in seconds, a thrown special's reach as a share of the reference
+ * screen's length (0023's view, so the same on every device). A row changed is a sheet changed.
+ *
+ * ⚠️ **NOT WHAT A SPECIAL DOES TO A BOSS.** That share is authored in five places by five mechanisms — a
+ * blast's, a storm's strikes, a rift, a nova's ring, each of a candle's bursts — and one line over them is a
+ * switch on the row's shape that the next special falls through.
+ */
+export function faceCard(kind: PickupKind, face: number): { title: string; said: string; side: Side | null; lines: FaceLine[] } {
+  const from = { label: 'From', value: 'The ' + PICKUPS[kind].label + ' pickup' };
+  if (kind === 'missile') {
+    const missile = MISSILES[missileFaceOf(face)];
+    const surge = SPECIALS[missile.special];
+    const pulses = SHOTS[missile.shot].damage / SHOTS.pulse.damage;
+    return {
+      title: missile.label,
+      said: missile.hint,
+      side: null,
+      lines: [
+        from,
+        { label: 'Fits', value: 'A tube on your ship, which fires by itself' },
+        { label: 'Each hit', value: String(pulses) + ' pulses' },
+        {
+          label: 'Flies',
+          value: missile.guidance === 'homing' ? 'Hunts what is on screen, for ' + (missile.fuse / STEPS_PER_SECOND).toFixed(1) + ' s' : 'Straight ahead, to the edge',
+        },
+        // 0577: a missile pickup at two tubes is a surge.
+        { label: 'Both tubes full', value: surge.label + ', on your ' + SIDE_LABELS[surge.side].toLowerCase() },
+      ],
+    };
+  }
+  if (kind === 'shield' && face === 0) {
+    const spill = PICKUPS.shield.spills;
+    return {
+      title: PICKUPS.shield.label,
+      said: PICKUPS.shield.hint,
+      side: null,
+      lines: [from, { label: 'Fits', value: 'A plate on your shell' }, ...(spill === null ? [] : [{ label: 'Shell full', value: SPECIALS[spill].label + ' instead' }])],
+    };
+  }
+  const special = SPECIALS[kind === 'bomb' ? bombFaceOf(face) : wardFaceOf(kind === 'shield' ? face - 1 : face)];
+  const lines: FaceLine[] = [from, { label: 'Goes on', value: 'Your ' + SIDE_LABELS[special.side].toLowerCase() + ', one charge' }];
+  if (special.shot !== null && special.reach > 0) {
+    // Of the narrowest screen's length (0364), which every device shows at least.
+    lines.push({ label: 'Goes off', value: 'About ' + String(Math.round((100 * special.reach) / (ACROSS_SPAN * REFERENCE_ASPECT))) + '% of the screen ahead' });
+  }
+  return { title: special.label, said: special.hint, side: special.side, lines };
+}
 
 /**
  * What a pilot flies, on one line — the pilot band's line, and what a reader hears of each face.

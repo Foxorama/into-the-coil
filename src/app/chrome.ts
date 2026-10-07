@@ -29,9 +29,9 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { SCREENS, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, faceCard, type ChoiceName, type Screen } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
-import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS, faceOf, type PickupKind } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS, SPECIALS } from '../content/specials.ts';
 import { SHOTS } from '../content/shots.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
@@ -1020,6 +1020,9 @@ ${each('-action-cursor')} {
 .itc-guide-key-row { display: contents; }
 .itc-guide-key-faces { display: flex; flex-wrap: wrap; gap: 0.15em; align-items: center; max-width: 4.75em; }
 .itc-guide-key-icon { display: block; width: 2.2em; height: 2.2em; }
+/* 0580: each face a button that opens what it is — no plate of its own, a ring under a pointer and the cursor. */
+.itc-guide-key-face { display: block; padding: 0; margin: 0; border: 0; border-radius: 0.35em; background: none; color: inherit; font: inherit; line-height: 0; cursor: pointer; }
+.itc-guide-key-face:hover { background: color-mix(in srgb, var(--itc-ink) 14%, transparent); }
 .itc-guide-key-name { font-weight: 600; }
 .itc-guide-key-about { display: flex; flex-direction: column; min-width: 0; }
 /* A line a face: its name and what it gives — 0575. */
@@ -2250,7 +2253,7 @@ ${each('-tab-key[hidden]')} { display: none; }
   The sheet that asks before a purchase — 0564, answered *"a confirm sheet"*: the ware, its price, the
   balance before and after, and Buy beside Not now. Over the whole screen, so nothing behind it is pressed.
 */
-.itc-shop-ask {
+.itc-shop-ask, .itc-guide-ask {
   position: absolute;
   inset: 0;
   z-index: 5;
@@ -2261,7 +2264,7 @@ ${each('-tab-key[hidden]')} { display: none; }
   justify-content: center;
   background: color-mix(in srgb, var(--itc-void) 62%, transparent);
 }
-.itc-shop-ask-card {
+.itc-shop-ask-card, .itc-guide-ask-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2274,12 +2277,21 @@ ${each('-tab-key[hidden]')} { display: none; }
   box-shadow: 0 0 2em color-mix(in srgb, var(--itc-ink) 30%, transparent);
   text-align: center;
 }
-.itc-shop-ask-title { margin: 0; font-size: 1.2em; font-weight: 800; }
+.itc-shop-ask-title, .itc-guide-ask-title { margin: 0; font-size: 1.2em; font-weight: 800; }
 .itc-shop-ask-art { display: block; position: relative; width: 5em; height: 5em; }
 .itc-shop-ask-art .itc-shop-art-dangle { font-size: 1.6em; top: 0; }
 .itc-shop-ask-art .itc-shop-art-flame { font-size: 1.5em; }
-.itc-shop-ask-line { margin: 0; font-size: 0.85em; opacity: 0.9; font-variant-numeric: tabular-nums; }
-.itc-shop-ask-row { display: flex; gap: 0.7em; margin-top: 0.3em; }
+.itc-shop-ask-line, .itc-guide-ask-line { margin: 0; font-size: 0.85em; opacity: 0.9; font-variant-numeric: tabular-nums; }
+.itc-shop-ask-row, .itc-guide-ask-row { display: flex; gap: 0.7em; margin-top: 0.3em; }
+/*
+  0580: a pickup face's sheet on How to play — the face large, its name and what it gives, then its lines
+  as a two-column list: what each is, and what it is for this face. Never wider than a phone's plate.
+*/
+.itc-guide-ask-card { max-width: min(26em, 92cqw); max-height: 92cqh; overflow-y: auto; }
+.itc-guide-ask-face { display: block; width: 3.6em; height: 3.6em; }
+.itc-guide-ask-stats { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25em 0.9em; margin: 0.2em 0 0; font-size: 0.82em; text-align: left; }
+.itc-guide-ask-term { font-weight: 800; opacity: 0.75; white-space: nowrap; }
+.itc-guide-ask-value { margin: 0; }
 /*
   ── COSMO'S COUNTER — 0542 ──────────────────────────────────────────────────────────────────────────
 
@@ -2934,6 +2946,9 @@ ${each('-band[hidden]')} { display: none; }
   .itc-guide-body { gap: min(0.5rem, 1.6cqh) min(1.5rem, 3cqw); }
   .itc-guide-key, .itc-guide-controls { gap: 0.15em 0.6em; line-height: 1.2; }
   .itc-guide-key-icon { width: 1.8em; height: 1.8em; }
+  /* 0580: and a face's sheet a step smaller, so its five lines and its button stand clear of a 480x320's edges. */
+  .itc-guide-ask-card { padding: 0.5em 1em; gap: 0.25em; }
+  .itc-guide-ask-face { width: 2.4em; height: 2.4em; }
   /*
     ⚠️ **ON A PHONE A FACE IS ITS NAME — 0575.** A line a face with what it gives is eleven lines, and
     How to play ran 45 to 120 pixels under the fold at every phone size. The names stand on one wrapped
@@ -4073,6 +4088,8 @@ interface Panel {
   glyphs: HTMLElement | null;
   /** 0579: each of the stand's groups' boxes, in the row's order — what a tabbed stand's sub-tab shows one of. */
   groups: readonly HTMLElement[];
+  /** 0580: How to play's faces, a row a pickup, each a button opening what it is. Empty on every other screen. */
+  keys: readonly (readonly HTMLButtonElement[])[];
 }
 
 /** The focus card's four lines — 0562 — and since 0564 a picture of a ware, large. */
@@ -4142,9 +4159,11 @@ interface Band {
  * each band, the actions. Since 0511 and 0512 a control or a band can be off the screen for now, and
  * one that is gone is not a stop.
  */
-function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[]): HTMLElement[][] {
+// 0580: and How to play's faces, a row a pickup, under the tabs — each a button that opens what it is.
+function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[], keys: readonly (readonly HTMLElement[])[]): HTMLElement[][] {
   const rows: HTMLElement[][] = [];
   if (tabs.length > 0) rows.push([...tabs]);
+  for (const key of keys) if (key.length > 0) rows.push([...key]);
   for (const band of bands) if (!band.root.hidden && band.faces !== 'chip') rows.push([band.root]);
   /*
     0517: a chip is drawn among the actions, after them, so it is walked there too.
@@ -4812,6 +4831,15 @@ function keyCap(code: string): string {
 function keyCaps(codes: readonly string[]): string {
   return [...new Set(codes.map(keyCap))].join(' / ');
 }
+/**
+ * What throws the trigger in `slot` on `device`, in its own words — How to play's controls, and since 0580 a
+ * face's sheet, so the two say one thing. The discs stack up the leading edge in trigger order (0060).
+ */
+function triggerIn(device: GuideDevice, slot: number): string {
+  if (device === 'keyboard') return keyCaps([DEFAULT_BINDINGS.special1, DEFAULT_BINDINGS.special2, DEFAULT_BINDINGS.special3][slot] ?? []);
+  if (device === 'pad') return PAD_FACE_NAMES[PAD_SPECIAL_BUTTONS[slot] ?? -1] ?? '';
+  return slot === 0 ? 'Lowest disc' : slot === SIDES.length - 1 ? 'Top disc' : 'Middle disc';
+}
 
 /**
  * How to play — 0458: the pickups, what each gives and how it is taken, and the controls on every
@@ -4827,10 +4855,18 @@ function keyCaps(codes: readonly string[]): string {
  * the pickup rows' `how`, the triggers `SIDE_LABELS`, the keys `DEFAULT_BINDINGS` and the pad's buttons
  * `PAD_SPECIAL_BUTTONS`. A binding changed in the table is changed here.
  */
+/*
+  ⚠️ **0580: EVERY FACE IS A BUTTON, AND A PRESS OPENS WHAT IT IS.** Answered *"tap icons"* to *"have the
+  icons and have a tap on them pop up a window with their stats"*. Each face's button is pushed onto
+  `keys`, a row a pickup, which the cursor walks; `open` puts the sheet up.
+*/
 function buildGuide(
   prefix: string,
   iconOf: (sprite: number) => HTMLCanvasElement,
   devices: Record<GuideDevice, HTMLElement[]>,
+  keys: HTMLButtonElement[][],
+  open: (kind: PickupKind, face: number, sprite: number) => void,
+  listeners: (() => void)[],
 ): HTMLElement {
   const body = document.createElement('div');
   body.className = prefix + 'body';
@@ -4869,12 +4905,24 @@ function buildGuide(
     const hints = document.createElement('span');
     hints.className = prefix + 'key-hint';
     const told: string[] = [];
+    const buttons: HTMLButtonElement[] = [];
     row.faces.forEach((sprite, face) => {
       const said = faceOf(pickup, face);
       told.push(said.label + ': ' + said.hint);
       const icon = iconOf(sprite);
       icon.className = prefix + 'key-icon';
-      icons.appendChild(icon);
+      // 0580: the face in a button of its own, named for a reader, that opens its sheet.
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = prefix + 'key-face';
+      button.setAttribute('aria-label', said.label + ' — ' + said.hint);
+      button.title = said.label;
+      button.appendChild(icon);
+      const press = (): void => open(pickup, face, sprite);
+      button.addEventListener('click', press);
+      listeners.push(() => button.removeEventListener('click', press));
+      icons.appendChild(button);
+      buttons.push(button);
       // A line a face — what it is called and what it gives — so a player knows every shape is good.
       const line = document.createElement('span');
       line.className = prefix + 'key-line';
@@ -4887,7 +4935,9 @@ function buildGuide(
       line.append(called, gives);
       hints.appendChild(line);
     });
-    for (const cell of [icons, names, hints]) cell.setAttribute('aria-hidden', 'true');
+    // 0580: the faces are buttons now, so a reader reaches them; the words beside them are the row's label's.
+    for (const cell of [names, hints]) cell.setAttribute('aria-hidden', 'true');
+    keys.push(buttons);
     const how = document.createElement('span');
     how.className = prefix + 'key-how';
     how.textContent = row.how;
@@ -4896,7 +4946,8 @@ function buildGuide(
     about.append(hints, how);
     const line = document.createElement('span');
     line.className = prefix + 'key-row';
-    line.setAttribute('role', 'img');
+    // 0580: a group and not an image, since its faces are buttons a reader can press.
+    line.setAttribute('role', 'group');
     line.setAttribute('aria-label', row.label + ' — ' + told.join('; or ') + '. ' + row.how);
     line.append(icons, names, about);
     key.appendChild(line);
@@ -4924,12 +4975,9 @@ function buildGuide(
   cell(moves.map((codes) => keyCap(codes[0] ?? '')).join('') + ' / arrows', 'controls-how', 'keyboard');
   cell('Left stick', 'controls-how', 'pad');
   cell('Drag anywhere', 'controls-how', 'touch');
-  const specials = [DEFAULT_BINDINGS.special1, DEFAULT_BINDINGS.special2, DEFAULT_BINDINGS.special3];
   SIDES.forEach((side, slot) => {
     cell(SIDE_LABELS[side], 'controls-what', null);
-    cell(keyCaps(specials[slot] ?? []), 'controls-how', 'keyboard');
-    cell(PAD_FACE_NAMES[PAD_SPECIAL_BUTTONS[slot] ?? -1] ?? '', 'controls-how', 'pad');
-    cell(slot === 0 ? 'Lowest disc' : slot === SIDES.length - 1 ? 'Top disc' : 'Middle disc', 'controls-how', 'touch');
+    for (const device of GUIDE_DEVICES) cell(triggerIn(device, slot), 'controls-how', device);
   });
   section('CONTROLS').appendChild(table);
   return body;
@@ -5743,6 +5791,8 @@ export function makeChrome(
     const crossing = screen === 'travel' ? buildCrossing(prefix) : null;
 
     let board: Panel['board'] = null;
+    // 0580: How to play's faces, filled as its key is built.
+    const keys: HTMLButtonElement[][] = [];
     if (screen === 'title') {
       /*
         ⚠️ **THE TABLE BESIDE THE ROWS, AND THE KEY IS ON HOW TO PLAY — 0458.** *"The display for the
@@ -5762,7 +5812,7 @@ export function makeChrome(
       board = { root: boardRoot, body };
       panel.appendChild(body);
     } else if (screen === 'guide') {
-      panel.appendChild(buildGuide(prefix, iconOf, guideDevices));
+      panel.appendChild(buildGuide(prefix, iconOf, guideDevices, keys, (kind, face, sprite) => tell(screen, kind, face, sprite), listeners));
       panel.appendChild(choices);
     } else {
       /*
@@ -6215,7 +6265,7 @@ export function makeChrome(
       screen does not have or miss one it does.
     */
     // Rewritten in place by `setActionShown` and `setTouch`, so `follow` below reads the walk as it stands.
-    const rows: HTMLElement[][] = walkOf(tabs, choiceBands, controls);
+    const rows: HTMLElement[][] = walkOf(tabs, choiceBands, controls, keys);
     /*
       ⚠️ **ONE CURSOR, WHOEVER MOVED IT.** A click, a tap or the Tab key puts the platform's focus on a
       control without asking the chrome; read back here, so the next push of a stick starts from where
@@ -6240,7 +6290,7 @@ export function makeChrome(
 
     // 0562: the card opens speaking for the screen's first band of its own, which is where the cursor opens (0561).
     const spoken = focus === null ? null : (choiceBands.find((b) => b.faces === 'words') ?? null);
-    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper, focus, spoken, glyphs, groups: groupBoxes };
+    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper, focus, spoken, glyphs, groups: groupBoxes, keys };
     elements.push(root);
   }
 
@@ -6820,6 +6870,92 @@ export function makeChrome(
   let asking: { sheet: HTMLElement; put: () => void } | null = null;
   /** The hand the player is holding the game in — 0458's `setDevice`, kept since 0561 for a band's words. */
   let device: GuideDevice = 'keyboard';
+  /**
+   * Put up a pickup face's sheet — 0580: the face large, its name, what it gives, and its lines
+   * (`faceCard`), with the button that throws it in the hand holding the game. On the ask's terms (0564): over
+   * the panel, the cursor walking only its one button, and Back, B, Escape or that button put it away.
+   */
+  /*
+    0580: take the ring off every control the walk has now, before a sheet replaces it — the ring is painted
+    only over the rows the walk holds, so the control the cursor left stood ringed under the sheet beside its
+    button, two rings on the screen at once.
+  */
+  const unring = (panel: Panel, prefix: string): void => {
+    for (const row of panel.rows) for (const control of row) control.classList.remove(prefix + 'action-cursor');
+  };
+  /** Put a sheet away without its `yes` — 0564's, the chrome's `dismiss`; since 0580 a face's sheet's way out too. */
+  const dismiss = (): boolean => {
+    if (asking === null) return false;
+    const { sheet, put } = asking;
+    asking = null;
+    sheet.remove();
+    put();
+    paintFocus();
+    return true;
+  };
+  const tell = (screen: Screen, kind: PickupKind, face: number, sprite: number): void => {
+    const panel = panels[screen];
+    if (panel === undefined) return;
+    dismiss();
+    const prefix = prefixFor(screen);
+    const card = faceCard(kind, face);
+    const sheet = document.createElement('div');
+    sheet.className = prefix + 'ask';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-label', card.title);
+    const box = document.createElement('div');
+    box.className = prefix + 'ask-card';
+    const art = iconOf(sprite);
+    art.className = prefix + 'ask-face';
+    const title = document.createElement('p');
+    title.className = prefix + 'ask-title';
+    title.textContent = card.title;
+    const said = document.createElement('p');
+    said.className = prefix + 'ask-line';
+    said.textContent = card.said;
+    const lines = document.createElement('dl');
+    lines.className = prefix + 'ask-stats';
+    const add = (label: string, value: string): void => {
+      const term = document.createElement('dt');
+      term.className = prefix + 'ask-term';
+      term.textContent = label;
+      const what = document.createElement('dd');
+      what.className = prefix + 'ask-value';
+      what.textContent = value;
+      lines.append(term, what);
+    };
+    for (const line of card.lines) add(line.label, line.value);
+    if (card.side !== null) add('Throw it', triggerIn(device, SIDES.indexOf(card.side)));
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = prefix + 'action ' + prefix + 'action-lead';
+    close.textContent = 'Got it';
+    close.addEventListener('click', () => dismiss());
+    const row = document.createElement('div');
+    row.className = prefix + 'ask-row';
+    row.appendChild(close);
+    box.append(art, title, said, lines, row);
+    sheet.appendChild(box);
+    // A press on the dim around the card puts it away too, as a tap off a sheet does on a phone.
+    sheet.addEventListener('click', (event) => {
+      if (event.target === sheet) dismiss();
+    });
+    panel.root.appendChild(sheet);
+    const was = { row: cursor.row, col: cursor.col };
+    unring(panel, prefix);
+    panel.rows.splice(0, panel.rows.length, [close]);
+    cursor.row = 0;
+    cursor.col = 0;
+    asking = {
+      sheet,
+      put: () => {
+        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, panel.keys));
+        cursor.row = Math.min(was.row, panel.rows.length - 1);
+        cursor.col = Math.min(was.col, (panel.rows[cursor.row]?.length ?? 1) - 1);
+      },
+    };
+    paintFocus();
+  };
   /** The control under the cursor on the shown screen, or `undefined` on a screen with none. */
   const atCursor = (): HTMLElement | undefined => {
     const panel = shownScreen === null ? undefined : panels[shownScreen];
@@ -7147,7 +7283,7 @@ export function makeChrome(
         // A class the stylesheet lays a touch screen's panel out by, on the panel the screen has.
         panel.root.classList.toggle(prefixFor(screen) + 'touch', touch);
         for (const band of panel.bands) if (band.on === 'touch') band.root.hidden = !touch;
-        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, panel.keys));
       }
     },
     setHand(hand: HandKind): void {
@@ -7727,7 +7863,7 @@ export function makeChrome(
       if (panel === undefined || control === undefined || control.hidden === !shown) return;
       control.hidden = !shown;
       // 0564: not under a sheet that is asking, whose two buttons are the walk until it goes.
-      if (asking === null) panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+      if (asking === null) panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, panel.keys));
     },
     setActionLabel(screen: Screen, index: number, label: string): void {
       // The first text of the button, so a hint inside it (`-action-hint`) is kept.
@@ -7834,13 +7970,14 @@ export function makeChrome(
       panel.root.appendChild(sheet);
       // The cursor walks the two while the sheet is up, and comes back to where it was when it goes.
       const was = { row: cursor.row, col: cursor.col };
+      unring(panel, prefix);
       panel.rows.splice(0, panel.rows.length, [confirm, decline]);
       cursor.row = 0;
       cursor.col = 0;
       asking = {
         sheet,
         put: () => {
-          panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+          panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, panel.keys));
           cursor.row = Math.min(was.row, panel.rows.length - 1);
           cursor.col = Math.min(was.col, (panel.rows[cursor.row]?.length ?? 1) - 1);
         },
@@ -7898,18 +8035,10 @@ export function makeChrome(
         const band = panel?.bands.find((b) => b.name === name);
         if (panel === undefined || band === undefined || band.root.hidden === !shown) continue;
         band.root.hidden = !shown;
-        if (asking === null) panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+        if (asking === null) panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, panel.keys));
       }
     },
-    dismiss(): boolean {
-      if (asking === null) return false;
-      const { sheet, put } = asking;
-      asking = null;
-      sheet.remove();
-      put();
-      paintFocus();
-      return true;
-    },
+    dismiss,
     setKeeperLine(screen: Screen, line: string): void {
       const keeper = panels[screen]?.keeper;
       if (keeper === null || keeper === undefined || keeper.line.textContent === line) return;
