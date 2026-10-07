@@ -62,8 +62,9 @@ export const PROBES = [
     guard: 'a look fitted is kept and drawn on the card',
     edit: {
       path: 'src/content/ships.ts',
-      find: '  return a.gun === b.gun && a.rim === b.rim && a.art === b.art && a.livery === b.livery;',
-      replace: '  return a.gun === b.gun && a.rim === b.rim && a.livery === b.livery;',
+      // ⚠️ Re-anchored by 0582, which compares the tubes too, a field to a line.
+      find: '    a.art === b.art &&\n',
+      replace: '',
     },
   },
   {

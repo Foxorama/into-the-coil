@@ -38,6 +38,7 @@ import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
 import { FLAMES, type FlameKind } from '../content/flames.ts';
 import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
+import { MISSILES, type MissileKind } from '../content/missiles.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
@@ -2269,20 +2270,35 @@ const LOADED_TUBE_HULL: readonly Pt[] = [
  * half its radius long and its body's width across — fins or a band painted on it were under 0106's floor
  * at the fighter's 1.7 units, and its silhouette already says missile.
  */
-function drawLoadedTube(ctx: Pen, f: Frame, ink: string): void {
+/*
+  0582: about `at`, `k` of the frame's radius long each way — the frame's own sprite at the defaults, and a
+  tube laid on a ship's picture (`paintLoadedTubes`) at its place and its length in that picture's box.
+*/
+function drawLoadedTube(ctx: Pen, f: Frame, ink: string, at: Pt = [0, 0], k = 1): void {
+  const p = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => [at[0] + x * k, at[1] + y * k]);
+  const hull = p(LOADED_TUBE_HULL);
   ctx.fillStyle = ink;
   ctx.beginPath();
-  trace(ctx, f, LOADED_TUBE_HULL);
+  trace(ctx, f, hull);
   seal(ctx);
-  shaded(ctx, f, [0, -0.27], [0, 0.27], shade(ink, 0.35), shade(ink, -0.35), LOADED_TUBE_HULL);
-  // The warhead lit, its tip the brightest thing on it.
-  poly(ctx, f, shade(ink, 0.55), [
-    [1, 0],
-    [0.62, -0.27],
-    [0.5, -0.27],
-    [0.5, 0.27],
-    [0.62, 0.27],
+  const [top, bottom] = p([
+    [0, -0.27],
+    [0, 0.27],
   ]);
+  shaded(ctx, f, top!, bottom!, shade(ink, 0.35), shade(ink, -0.35), hull);
+  // The warhead lit, its tip the brightest thing on it.
+  poly(
+    ctx,
+    f,
+    shade(ink, 0.55),
+    p([
+      [1, 0],
+      [0.62, -0.27],
+      [0.5, -0.27],
+      [0.5, 0.27],
+      [0.62, 0.27],
+    ]),
+  );
 }
 
 /** A turret's warhead, tip +x at 1 as the tube's nose is, its base 1.65 of its radius back — 0581. */
@@ -2297,17 +2313,49 @@ const LOADED_NOSE_HULL: readonly Pt[] = [
  * in the missile's orange whatever they fired (0461), now in its kind's ink and laid on by the frame, lit
  * along its top and its tip the brightest thing on it.
  */
-function drawLoadedNose(ctx: Pen, f: Frame, ink: string): void {
+function drawLoadedNose(ctx: Pen, f: Frame, ink: string, at: Pt = [0, 0], k = 1): void {
+  const p = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => [at[0] + x * k, at[1] + y * k]);
+  const hull = p(LOADED_NOSE_HULL);
   ctx.fillStyle = ink;
   ctx.beginPath();
-  trace(ctx, f, LOADED_NOSE_HULL);
+  trace(ctx, f, hull);
   seal(ctx);
-  shaded(ctx, f, [0, -0.95], [0, 0.95], shade(ink, 0.4), shade(ink, -0.35), LOADED_NOSE_HULL);
-  poly(ctx, f, shade(ink, 0.6), [
-    [1, 0],
-    [0.3, -0.4],
-    [0.3, 0.4],
+  const [top, bottom] = p([
+    [0, -0.95],
+    [0, 0.95],
   ]);
+  shaded(ctx, f, top!, bottom!, shade(ink, 0.4), shade(ink, -0.35), hull);
+  poly(
+    ctx,
+    f,
+    shade(ink, 0.6),
+    p([
+      [1, 0],
+      [0.3, -0.4],
+      [0.3, 0.4],
+    ]),
+  );
+}
+
+/**
+ * A fit's loaded tubes laid on `ship` drawn in its box at `f` — 0582, for a picture the frame does not lay
+ * them on: the hangar's pad. The n-th tube at the n-th of the row's places for that many, its nose there,
+ * in its kind's picture's ink and its ship's look — the frame's own `stepLoaded`, painted. `across` squashes
+ * the places toward the centreline for a picture that leans them away (the saucer side-on, 0444).
+ */
+export function paintLoadedTubes(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, tubes: readonly MissileKind[], across = 1): void {
+  const row = SHIPS[ship];
+  const places = row.tubes[tubes.length >= 2 ? 2 : tubes.length === 1 ? 1 : 0];
+  const k = row.tubeLength / 2 / BOX_R;
+  places.forEach((place, i) => {
+    const kind = tubes[i];
+    if (kind === undefined) return;
+    const sprite = SPRITE_KINDS[MISSILES[kind].loaded[row.tubeLook].base]!;
+    const ink = palette[INK_OF[sprite]];
+    const at: Pt = [(place.along - row.tubeLength / 2) / BOX_R, (place.across * across) / BOX_R];
+    if (row.tubeLook === 'dart') drawLoadedTube(ctx, f, ink, at, k);
+    else drawLoadedNose(ctx, f, ink, at, k);
+  });
 }
 
 /**

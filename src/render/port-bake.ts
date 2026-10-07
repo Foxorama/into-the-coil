@@ -21,7 +21,7 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, HANGAR_SCALE, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeGlyph, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { bakeGlyph, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
@@ -157,7 +157,11 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'blueTilt3': {
       const art = HANGAR_ART[pilot.ship];
       if (art === null) paintBlue(ctx, f, palette, size, pilot.ship);
-      else art.paint(ctx, f, palette, size, LEAN[kind]);
+      else {
+        art.paint(ctx, f, palette, size, LEAN[kind]);
+        // 0582: and its tubes, their places leaning in toward the rim as the picture leans side-on.
+        paintLoadedTubes(ctx, f, palette, pilot.ship, fitNow(pilot.ship).tubes, Math.sin((LEAN[kind] * Math.PI) / 2));
+      }
       return canvas;
     }
     /*
@@ -1538,13 +1542,19 @@ function paintStation(ctx: CanvasRenderingContext2D, palette: Palette, h: number
 const VIPER_JETS: readonly Pt[] = [[-0.87, 0.025]];
 
 /**
- * The pilot's own ship, at hangar size — 0441: the same drawing the fight blits, bare of tubes, with an
- * outline thinned to suit a ship this near — at the game's proportion it would be a finger's width.
+ * The pilot's own ship, at hangar size — 0441: the same drawing the fight blits, with an outline thinned to
+ * suit a ship this near — at the game's proportion it would be a finger's width.
+ *
+ * ⚠️ **0582: WEARING THE TUBES ITS FIT CARRIES, AND IT WAS BARE.** Played: *"[the tubes] need to be shown in
+ * the hangar when equipped."* The fight's ship at that many tubes, and each loaded in its kind's ink at its
+ * place, as the frame lays them on in a run (0581) — so the pad is what the run will fly.
  */
 function paintBlue(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, ship: ShipKind): void {
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.014);
-  drawPlayerShip(ctx, f, palette, ship, 0);
+  const tubes = fitNow(ship).tubes;
+  drawPlayerShip(ctx, f, palette, ship, tubes.length);
+  paintLoadedTubes(ctx, f, palette, ship, tubes);
 }
 
 /*
