@@ -62,7 +62,8 @@ async function press(page: Page, key: string, times = 1): Promise<void> {
 describe.runIf(chromePath)('0561 — the cursor tries on, and only a press fits', () => {
   it('steps the gun band without fitting, fits on a press, and puts the fitted one back when the band is left', async () => {
     const page = await opened();
-    // The hangar opens on the pilots; down is the gun.
+    // The hangar opens on the pilots; down is the sub-tabs (0579), and down again the gun.
+    await press(page, 'ArrowDown');
     await press(page, 'ArrowDown');
     expect(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'down from the pilots did not reach the gun band').toBe('Gun');
     const before = await fittedGun(page);
@@ -89,6 +90,8 @@ describe.runIf(chromePath)('0561 — the cursor tries on, and only a press fits'
 
   it('stands on a shut gun, says what opens it, and refuses a press on it', async () => {
     const page = await opened();
+    // 0579: past the sub-tabs to the gun.
+    await press(page, 'ArrowDown');
     await press(page, 'ArrowDown');
     // Past every open gun to the Thunderbolt's, which is shut: the cursor stands on it.
     await press(page, 'ArrowRight', SHIP_KINDS.length);
