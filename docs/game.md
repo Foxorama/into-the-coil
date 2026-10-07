@@ -212,31 +212,34 @@ Found in the level, applied on contact, kept across every level that follows **a
 screen**, and every upgrade is worth taking — an upgrade that cannot change the outcome is worse than
 none.
 
-**A pickup is rare: a level authors two, and the fights offer the rest** —
+**A pickup is rare: a level authors one place, level one three, and the mid-boss throws three** —
 [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md),
 [0083](decisions/0083-two-ladders-of-four.md) and [0256](decisions/0256-a-pickup-keeps-the-count.md).
-They are premium game pieces: each one is a crossing the player commits to under fire, and what the
-level authors is what the player gets.
+They are premium game pieces: each one is a crossing the player commits to under fire.
 
-| | a tier buys | tiers | a level authors | the mid-boss drops | the end boss |
+**What a pickup is, is drawn, and it keeps it** —
+[0575](decisions/0575-a-pickup-is-what-it-shows.md), superseding
+[0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md)'s cycle. A level's place is drawn as a
+gun special, the tubes or the shield side with a third each, then one face of that; the mid-boss's three
+are always one of each, each face drawn. The draw is reseeded every run. Every pickup waits fifteen
+seconds.
+
+| | a face buys | tiers | a level's places | the mid-boss drops | the end boss |
 |---|---|---|---|---|---|
-| **`bomb`** | one charge of the gun special its face shows — bomb, storm or whirlpool | — | none; level one one before its mid-boss | 1 | — |
-| **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 1 a fifth of the way in; level one a second between the fights | — | — |
-| **`shield`** | cycles: one hit that never reaches the hull, capped by the tier — 3, or none on Burn — or a charge of the void or the nova on the ward's trigger | — | — | 1; on Burn the `ward` in its place | — |
-| **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | — | on Burn only, as the shield | — |
+| **`bomb`** | one charge of the gun special its face shows — bomb, storm, whirlpool or candle | — | drawn | 1 | — |
+| **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | drawn | 1 | — |
+| **`shield`** | one hit that never reaches the hull, capped by the tier — 3, or none on Burn — or a charge of the void or the nova on the ward's trigger | — | drawn | 1; on Burn the `ward` in its place | — |
+| **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | a shield drawn on Burn | on Burn only, as the shield | — |
 
 A run starts with two charges of its own gun's special. **The bomb pickup is where the weapon pickup
-was, and it cycles the gun specials the way the weapon pickup cycled the guns**
-([0441](decisions/0441-a-pilot-flies-their-own-ship.md), on
-[0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md)'s clock). Any ship can take any face
-for one charge of it, so a choice of special is made under fire. A missile pickup taken once its own
-ladder is full becomes a charge of that tube's special
+was** ([0441](decisions/0441-a-pilot-flies-their-own-ship.md)). Any ship can take any face for one
+charge of it. A missile pickup taken once its own ladder is full becomes a charge of that tube's special
 ([0373](decisions/0373-a-special-is-the-guns-own.md)). That is how *every upgrade is worth taking*
 survives a cap.
 
-**The missile pickup cycles over the tubes**, and taking a different tube switches it and keeps the
-count ([0256](decisions/0256-a-pickup-keeps-the-count.md)). **Every face of a cycling pickup is its
-own glyph in its own ink**, inside the one bubble that says *pickup*:
+**A missile pickup shows one tube**, and taking a different tube switches it and keeps the count
+([0256](decisions/0256-a-pickup-keeps-the-count.md)). **Every face of a pickup is its own glyph in its
+own ink**, inside the one bubble that says *pickup*:
 [0239](decisions/0239-the-guns-answer-the-third-play-test.md) and
 [0240](decisions/0240-the-blades-reach-the-boss.md).
 
@@ -290,8 +293,8 @@ death's ladders back on the field (0066, 0243, 0266) is gone with the cost it an
 0372. The arc is 1.5, because it is the one gun whose fight closing in cannot shorten; the serpent
 authors it back at 1, because it was already that animal's quickest gun.
 
-**How to play carries a key** — every pickup, its real sprite turning through its faces, what each
-face gives and how it is taken. [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md),
+**How to play carries a key** — every pickup, the real sprites of every face it may be drawn on side by
+side, what each face gives and how it is taken ([0575](decisions/0575-a-pickup-is-what-it-shows.md)). [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md),
 on the title until [0458](decisions/0458-the-title-is-rows.md) moved it behind a tab. The enemies deliberately get no
 key: an enemy announces itself by shooting at you, and a pickup announces nothing — **and it does so
 as it appears**: a firing body's first volley leaves inside a third of a second of its hull entering

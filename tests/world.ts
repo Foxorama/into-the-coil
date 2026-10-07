@@ -18,6 +18,7 @@ import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES } from '../src/content/bosses.ts';
 import {
+  DRAWN_KINDS,
   PICKUPS,
   PICKUP_KINDS,
   type PickupKind,
@@ -36,8 +37,7 @@ import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { makeDeaths } from '../src/sim/collide.ts';
 import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
-import { makeRng } from '../src/sim/rng.ts';
-import { SHIP_START_ALONG, corridorFor, firstVolleyIn, layRoom, respawn, type LevelScore, type World } from '../src/app/frame.ts';
+import { makeRng, type Rng } from '../src/sim/rng.ts';import { SHIP_START_ALONG, corridorFor, firstVolleyIn, layRoom, respawn, type LevelScore, type World } from '../src/app/frame.ts';
 import { CAPACITY, CHAIN_TRAIL, NECK_SLOTS } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -57,6 +57,21 @@ import { viewOf } from '../src/sim/camera.ts';
  * in `src/content/levels.ts`; nothing here is a copy of them.
  */
 export const NO_SECTIONS: LevelSections = [{ at: 0, section: 'run' }];
+
+/**
+ * A pickup stream that deals `kind` on `face` to every pickup — 0575. A level authors places and the
+ * frame draws what is in them, so a fixture about collecting a shield has to be dealt one: this answers
+ * `drawKind`'s draw with the kind's place in `DRAWN_KINDS` and `drawFace`'s with `face`, round and round.
+ * A kind that is never drawn for itself — the ward — is dealt as the shield it stands in for.
+ */
+export function dealing(kind: PickupKind, face = 0): Rng {
+  const drawn = DRAWN_KINDS.includes(kind) ? kind : (PICKUP_KINDS.find((k) => PICKUPS[k].bare === kind) ?? kind);
+  const answers = [DRAWN_KINDS.indexOf(drawn), face];
+  let next = 0;
+  const rigged = makeRng('dealt');
+  rigged.int = (): number => answers[next++ % answers.length]!;
+  return rigged;
+}
 
 /**
  * A level that never spawns anything and whose boss never arrives.
@@ -497,6 +512,7 @@ export function playableWorld(
     shedRng: makeRng('test').stream('shed'),
     bossShedIn: 0,
     dropRng: makeRng('test').stream('drop'),
+    pickupRng: makeRng('test').stream('pickups'),
     arcRng: makeRng('test').stream('arc'),
     stormRng: makeRng('test').stream('storm'),
     bodyBoltRng: makeRng('test').stream('body-bolt'),

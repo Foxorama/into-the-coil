@@ -99,10 +99,10 @@ import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, t
 import { type BossFight, type DifficultyRow, bossToughnessFor, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, VOLLEY_CYCLE, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
 import {
-  PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
-  PICKUP_REPEATS,
   PICKUPS,
+  drawFace,
+  drawKind,
   type PickupKind,
   type PickupRow,
   type Weapon,
@@ -368,7 +368,7 @@ const DROP_SPEED = 0.85;
  * the first play-test with the guns: *"it's too punishing now on death with rotation and weapons…
  * they need to last as long as regular power ups."* A death now costs the gun as well as the rungs
  * (0233) and the pieces that come back cycle, so a player recovering a loadout has three things to
- * time at once; five seconds was sized for one. A scattered piece carries `lingerFor` like any other.
+ * time at once; five seconds was sized for one. A thrown piece waits `PICKUP_LINGER_STEPS` like any other.
  *
  * ⚠️ **What is left is the FLIGHT: three quarters of a second at `DROP_SPEED`**, bouncing off the
  * box, before the wander takes it. Long enough that eight pieces are visibly eight headings —
@@ -499,10 +499,16 @@ const DROP_SPREAD_MAX = 1.3;
  *
  * ⚠️ **420 → 600, so the wander reaches the back wall and turns inside the wait** — 0233. At a
  * wander held under half the scroll rate, the box takes a little over eight seconds to cross, and a
- * seven-second wait was a pickup that left on the way to its first turn. Ten seconds is the floor;
- * a cycling pickup waits the longer of this and its repetitions (`lingerFor`).
+ * seven-second wait was a pickup that left on the way to its first turn.
+ *
+ * ⚠️ **600 → 900, AND 600 HAD STOPPED DOING WHAT IT SAYS — 0575.** Measured when the cycle went and
+ * this became every pickup's whole wait: at 600 a pickup arrives at the front wall, falls back the
+ * width of the box and leaves without ever turning — 0364's zoom made the box longer and the floor
+ * was never moved, and every cycling pickup's longer wait hid it. At 720 it turns and comes 16 units
+ * back; at 900, 63, a bounce the player sees. Fifteen seconds is what every pickup waits now: the
+ * bomb and the shield waited 24 and 18 for their turns, and the tubes 12.
  */
-export const PICKUP_LINGER_STEPS = 600;
+export const PICKUP_LINGER_STEPS = 900;
 
 /**
  * How much wider than the hull the ship's reach is when COLLECTING, as a multiple of its radius.
@@ -1038,6 +1044,16 @@ export interface World {
    * otherwise deal a different drop. It was the death scatter's stream (0066) until 0256.
    */
   dropRng: Rng;
+  /**
+   * What every pickup is drawn as — its kind for a level's place, its face for every pickup — 0575, on
+   * 0021's terms: what a pickup offers is what the player crosses the screen for, so it is its own
+   * concern and never a draw on the drop's heading or the spawns'.
+   *
+   * ⚠️ **RESEEDED FOR EVERY RUN BY THE SHELL** (`makeLifecycle`'s `seedRun`), where every other stream
+   * here opens the same each run. *"A random pickup"* that was the same pickup every run would be an
+   * authored one the player had not been told about.
+   */
+  pickupRng: Rng;
   /**
    * The arc's own stream — 0021, one stream per concern. It seeds a link's jag and picks where on a
    * boss a jumping bolt lands; a bolt that rolled on the spawn stream would move a wave by one enemy
@@ -7877,25 +7893,8 @@ function driftPickups(w: World): void {
   for (let i = w.pickups.size - 1; i >= 0; i--) {
     const item = w.pickups.at(i);
     item.swell = breath;
-    /*
-      ── THE CYCLE — 0233 ─────────────────────────────────────────────────────────────────────────
-
-      A pickup with more than one face turns to the next every `PICKUP_CYCLE_STEPS`, and the face it
-      is showing is what the player gets. `faceIn` is zero on a pickup with one face, so this is a
-      compare and nothing else for the shield and the bomb.
-
-      ⚠️ **`spriteBase` and not `sprite`**, because `stepEntities` derives the drawn sprite from
-      `spriteBase` on the step after this — the same rule `turnFlares` follows for a page turned.
-      `spriteHit` follows it too, or a pickup would flash back to its first face, which no pickup
-      does today and which would be a lie the day one did.
-    */
-    if (item.faceIn > 0 && --item.faceIn === 0) {
-      const faces = w.pickupRows[item.kind]!.faces;
-      item.face = item.face + 1 >= faces.length ? 0 : item.face + 1;
-      item.spriteBase = faces[item.face]!;
-      item.spriteHit = item.spriteBase;
-      item.faceIn = PICKUP_CYCLE_STEPS;
-    }
+    // 0233's cycle turned the face here every three seconds; since 0575 a pickup keeps the face it
+    // was drawn on (`putOnFace`), so nothing about it changes between its spawn and its taking.
     /*
       ⚠️ **ONE LANE WALL, AND IT DISPATCHES ON WHETHER THE PICKUP HAS ARRIVED — 0293.** This turned
       every pickup by flipping the sign of `velAcross`, which is right for one still approaching and
@@ -8318,16 +8317,10 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
   */
   const side = stoneAt(w.corridor, item.along, item.across, item.radius);
   if (side !== 0 && w.corridor !== null) item.across = outOfStone(w.corridor, item.along, item.across, item.radius, side);
-  /*
-    ⚠️ **A DROPPED PIECE CYCLES LIKE AN AUTHORED ONE — 0233.** 0243 had a scattered piece hold the
-    face the player just lost, because what a death threw back was what it took and a switch under
-    fire was the report; a drop is an offer, not a return, and since 0256 a switch keeps the count,
-    so the cycle costs nothing but the choice. The face and the bob's phase by index, on
-    `startCycle`'s own argument: pieces near each other must visibly differ on every run.
-  */
-  startCycle(item, row, index % row.faces.length);
+  // A dropped piece's face is drawn as an authored one's is — 0575; its kind is the drop list's.
+  putOnFace(item, row, w.pickupRng);
   item.bobPhase = index * GOLDEN_ANGLE;
-  throwArc(w, item, row, index, pieces, w.dropRng);
+  throwArc(w, item, index, pieces, w.dropRng);
 }
 
 /**
@@ -8346,7 +8339,7 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
  * the camera's frame*. The along half is spent against `PICKUP_EASE` in `driftPickups`, and what is
  * left is a piece holding the distance the hull died at and bouncing across the lane.
  */
-function throwArc(w: World, item: Entity, row: PickupRow, index: number, pieces: number, rng: Rng): void {
+function throwArc(w: World, item: Entity, index: number, pieces: number, rng: Rng): void {
   const share = (Math.PI / pieces) * DROP_JITTER_SHARE;
   const halfGap = share < DROP_JITTER_MAX ? share : DROP_JITTER_MAX;
   const angle = Math.PI / 3 + (index / pieces) * Math.PI * 2 + rng.range(-halfGap, halfGap);
@@ -8355,7 +8348,7 @@ function throwArc(w: World, item: Entity, row: PickupRow, index: number, pieces:
   item.velAlong = w.scrollPerStep + Math.cos(angle) * speed;
   // The throw is a flight, and then the wait every pickup has — 0236. `driftPickups` has both.
   item.turnsLeft = DROP_FLIGHT;
-  item.holdFor = lingerFor(row);
+  item.holdFor = PICKUP_LINGER_STEPS;
 }
 
 /**
@@ -8369,8 +8362,12 @@ function throwArc(w: World, item: Entity, row: PickupRow, index: number, pieces:
 function spawnPickup(w: World, index: number): void {
   const entry = w.level.pickups[index];
   if (entry === undefined) return;
-  // No level authors a shield today; one that did would be offered as the drop's is — 0355, 0447.
-  const offered = offeredAs(w, entry.kind);
+  /*
+    ⚠️ **WHAT IT IS IS DRAWN HERE, AND IT WAS AUTHORED — 0575.** The level says where; the kind is
+    drawn on the run's own stream, and a shield on a tier that wears none is offered as its `bare`, as
+    the drop's is — 0355, 0447: *"burn doesn't get shields still."*
+  */
+  const offered = offeredAs(w, drawKind(w.pickupRng));
   if (offered === null) return;
   const kind = w.pickupKinds[offered];
   const row = w.pickupRows[kind];
@@ -8424,38 +8421,28 @@ function spawnPickup(w: World, index: number): void {
     ⚠️ **Nothing allocates**: a subtraction, a divide and a `Math.max`.
   */
   const approach = (entry.at - w.cameraAlong - PICKUP_SLOW_AT - boxPastFor(w.view.alongSpan)) / w.scrollPerStep;
-  item.holdFor = lingerFor(row) + Math.max(0, Math.round(approach));
-  startCycle(item, row, index % row.faces.length);
+  item.holdFor = PICKUP_LINGER_STEPS + Math.max(0, Math.round(approach));
+  putOnFace(item, row, w.pickupRng);
 }
 
-/**
- * How long a pickup of `row` waits once it has arrived — 0233.
- *
- * ⚠️ **The longer of the two promises.** 0064's seven seconds is the floor every pickup has; a
- * cycling pickup also owes `PICKUP_REPEATS` full turns of its faces, so the player sees every gun
- * at least twice before it leaves — and a third gun lengthens the wait on its own, because the
- * promise is counted in repetitions.
- */
-function lingerFor(row: PickupRow): number {
-  const cycles = PICKUP_REPEATS * row.faces.length * PICKUP_CYCLE_STEPS;
-  return cycles > PICKUP_LINGER_STEPS ? cycles : PICKUP_LINGER_STEPS;
-}
+/*
+  ── `lingerFor` WAS HERE, AND 0575 TOOK IT ───────────────────────────────────────────────────────
+
+  It was the longer of `PICKUP_LINGER_STEPS` and two full turns of a pickup's faces (0233), so a
+  bomb pickup waited twenty-four seconds and a shield eighteen. A pickup that does not turn owes no
+  turns, so every pickup waits `PICKUP_LINGER_STEPS`.
+*/
 
 /**
- * Put a pickup on `face` and, if it has more than one, start it turning.
- *
- * ⚠️ **An authored pickup starts on a face chosen by its INDEX, not on the first**, on the drift's
- * own argument: a level is authored, so two pickups near each other must visibly differ on every
- * run rather than on most of them — and two weapon pickups side by side showing the same gun at
- * the same moment would read as one offer twice.
+ * Put a pickup on a face drawn from `row`, which it keeps — 0575: *"It doesn't rotate and can be
+ * picked up as is."* In the call that resets it, so no step draws the row's first face instead.
  */
-function startCycle(item: Entity, row: PickupRow, face: number): void {
-  if (row.faces.length < 2) return;
+function putOnFace(item: Entity, row: PickupRow, rng: Rng): void {
+  const face = drawFace(row, rng);
   item.face = face;
   item.spriteBase = row.faces[face]!;
   item.spriteHit = item.spriteBase;
   item.sprite = item.spriteBase;
-  item.faceIn = PICKUP_CYCLE_STEPS;
 }
 
 /**

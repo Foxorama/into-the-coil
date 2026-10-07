@@ -10,6 +10,7 @@ import { type Action, type State, initialState, reduce } from '../src/state/root
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { initialRun, livesFor, startingArsenal } from '../src/state/slices/run.ts';
 import { playableWorld } from './world.ts';
+import { makeRng } from '../src/sim/rng.ts';
 
 /**
  * WHAT A NEW RUN RESETS, AND WHAT A CONTINUE KEEPS.
@@ -317,5 +318,36 @@ describe('a run over is a continue', () => {
     const rng = built.world.rng;
     built.lifecycle.resume();
     expect(built.world.rng, 'the continue dealt the rest of the level a different hand').toBe(rng);
+  });
+});
+
+describe('0575 — every run deals its pickups from a seed the shell draws', () => {
+  it('a run begun on a seed draws what that seed draws, and a second run its own', () => {
+    /*
+      *"A random pickup"*: the spawn stream opens the same every run on purpose, and a pickup stream that
+      did too would deal the same pickups every run — an authored level wearing a die. So `begin` takes
+      the pickup stream from the seed the shell hands it, and two runs on two seeds are dealt apart.
+    */
+    const built = playableWorld(LEVELS[LEVEL_KINDS[0]!]);
+    let current: State = initialState;
+    const seeds = [11, 29];
+    let next = 0;
+    const lifecycle = makeLifecycle(
+      built.world,
+      (action: Action) => {
+        current = reduce(current, action);
+      },
+      () => current.run,
+      () => seeds[next++]!,
+    );
+    const dealt: number[][] = [];
+    for (const seed of seeds) {
+      lifecycle.begin(TIER, SHIP, 'free');
+      const want = makeRng(seed).stream('pickups');
+      const got = [built.world.pickupRng.float(), built.world.pickupRng.float()];
+      expect(got, `the run begun on seed ${seed} draws its pickups from somewhere else`).toEqual([want.float(), want.float()]);
+      dealt.push(got);
+    }
+    expect(dealt[0], 'two runs on two seeds were dealt the same pickups').not.toEqual(dealt[1]);
   });
 });

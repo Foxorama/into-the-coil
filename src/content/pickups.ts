@@ -23,6 +23,7 @@
  */
 
 import type { Body } from '../sim/entity.ts';
+import type { Rng } from '../sim/rng.ts';
 /*
   ⚠️ **THE WEAPON NO LONGER IMPORTS THE TEMPO, AND THAT IS THE DECISION** —
   `docs/decisions/0159-the-two-clocks-come-apart.md`. This file used to read `STEPS_PER_BEAT` out of
@@ -149,26 +150,26 @@ export interface PickupRow extends Body {
   how: string;
   effect: PickupEffect;
   /**
-   * What it looks like, in cycle order — one sprite per thing it can be offering.
+   * What it looks like — one sprite per thing it can be offering, in its table's order.
    *
-   * ── A PICKUP CYCLES BETWEEN KINDS, AND A FACE IS WHICH ONE IT IS SHOWING ────────────────────────
+   * ── A PICKUP IS DRAWN ON ONE FACE AND KEEPS IT — 0575 ───────────────────────────────────────────
    *
-   * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`. Asked for: *"the weapon power
-   * ups need to cycle between the weapons with about a 2sec time… so that they can make a choice and
-   * collect that weapon upgrade."* The weapon pickup's faces are the guns and the missile pickup's
-   * are the tubes, in the order their tables list them; a shield and a bomb have one face each and
-   * never turn.
+   * *"Change all the ingame pickups to be a random pickup that doesn't rotate. The pickup spawns with a
+   * random powerup … It doesn't rotate and can be picked up as is."* 0233 turned a pickup through
+   * these every three seconds so the player could wait for the one they wanted; since 0575 the frame
+   * draws one when it spawns (`drawFace`) and the pickup shows it until it is taken or leaves.
    *
    * ⚠️ **`sprite` is `faces[0]`, held by `tests/weapons.test.ts` rather than derived**, because the
-   * `Body` a pickup is spawned from is what `reset` copies and the title screen's key reads — and
-   * a first face that differed from the row's own sprite would be a pickup that changed on the step
-   * after it appeared.
-   *
-   * ⚠️ **This is the cycle 0082 removed, one level down** — between kinds of ONE ladder rather than
-   * between a gun and a shield, which is the version 0083 said was coming and the argument against
-   * 0052 always allowed: a player watching the faces turn is choosing a gun, not gambling a shield.
+   * `Body` a pickup is spawned from is what `reset` copies and the title screen's key reads. The face
+   * drawn is put on in the same call as the reset, so no step ever draws the first face by mistake.
    */
   faces: readonly number[];
+  /**
+   * Whether a pickup's place may be drawn as this kind — 0575. The bomb, the tubes and the shield are
+   * the three things a pickup can be — *"a shield/missile or special weapon"* — and the ward is only
+   * ever a shield on a tier that wears none, so it is never drawn for itself.
+   */
+  drawn: boolean;
   /**
    * The special it becomes when it has nowhere to go and its face does not say which — 0377.
    *
@@ -191,37 +192,20 @@ export interface PickupRow extends Body {
   bare: PickupKind | null;
 }
 
-/**
- * Sim steps a cycling pickup shows each face for. *"About a 2sec time."*
- *
- * ⚠️ **Steps rather than seconds, because the cycle is a thing the player reads off the field and
- * the field steps at 60Hz** — 0022. Two seconds is long enough to read a glyph at pickup size and
- * decide; a face that turned faster would be a coin the player could not call.
- *
- * ⚠️ **THREE SECONDS, AND IT WAS TWO — the first play-test's own number.** Reported 2026-09-05:
- * *"the rotation needs to be 1sec longer, it takes too long to fly to the pickup and it changes just
- * before you grab it to the wrong weapon all the time."* A face has to outlast the crossing a player
- * makes for it, from wherever they were when they chose; two seconds was the time to read it and not
- * the time to reach it. `docs/decisions/0236-the-guns-answer-the-first-play-test.md`.
- */
-export const PICKUP_CYCLE_STEPS = 180;
+/*
+  ── `PICKUP_CYCLE_STEPS` AND `PICKUP_REPEATS` WERE HERE, AND 0575 TOOK THEM ──────────────────────
 
-/**
- * How many full cycles a pickup stays for, at least. *"Long enough that the player can see at least
- * 2 repetitions of each weapon so that they can make a choice."*
- *
- * `src/app/frame.ts` sizes the wait from this and the face count, so a third weapon kind lengthens
- * the wait on its own — the promise is about repetitions and not about seconds.
- */
-export const PICKUP_REPEATS = 2;
+  Three seconds a face (0233, 0236) and two full turns of the faces before a pickup could leave. A
+  pickup no longer turns, so it waits the same ten seconds every pickup's floor already was
+  (`PICKUP_LINGER_STEPS` in `src/app/frame.ts`).
+*/
 
 export const PICKUPS: Record<PickupKind, PickupRow> = {
   /**
    * A CHARGE OF A GUN'S SPECIAL, AND IT WAS THE WEAPON — 0441.
    *
-   * ⚠️ **It cycles the gun specials as the weapon pickup cycled the guns**, on the same clock, so the
-   * choice the player makes under fire is the one 0233 built: watch the face, cross when it shows what
-   * you want. Any ship may take any face — *"a player can pick up any type and get a bomb of that
+   * ⚠️ **It is drawn on one of the gun specials and keeps it — 0575**; it cycled them until then, on
+   * 0233's clock. Any ship may take any face — *"a player can pick up any type and get a bomb of that
    * type"* — and the charge goes on the gun's trigger, newest first, as every gun special does (0376).
    */
   bomb: {
@@ -237,10 +221,11 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     damage: 0,
     label: 'Bomb',
     hint: 'A charge of the face it shows',
-    how: 'Fly in on the face you want: one charge for your gun trigger',
+    how: 'One charge for your gun trigger',
     effect: 'special',
     // Every gun special, in the specials' own order — 0441. The key lists each face by name.
     faces: BOMB_KINDS.map((k) => SPECIALS[k].face),
+    drawn: true,
     spills: null,
     bare: null,
   },
@@ -265,9 +250,10 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     damage: 0,
     label: 'Missiles',
     hint: 'Tubes up a tier',
-    how: 'Fly in on the tubes you want; at a full rack it is a surge for your missile trigger',
+    how: 'The tubes it shows; at a full rack it is a surge for your missile trigger',
     effect: 'upgrade',
     faces: MISSILE_KINDS.map((k) => MISSILES[k].pickup),
+    drawn: true,
     spills: null,
     bare: null,
   },
@@ -283,11 +269,12 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
    * *"shields in particular are so much more stronger than I had anticipated."* That is the reason it
    * survived the cut and the reason a level may only author two.
    *
-   * ⚠️ **IT CYCLES SINCE 0447: THE SHIELD, THE VOID, THE NOVA.** *"For shields → instead of void bombs
+   * ⚠️ **ITS FACES SINCE 0447: THE SHIELD, THE VOID, THE NOVA.** *"For shields → instead of void bombs
    * at shield cap, the void bomb will be on rotation with the shield on that pickup so a player can
    * choose to pick up a void bomb or a shield."* The nova joined because it pops bullets, which makes it
    * the ward's and not the gun's. The first face is the shield; the rest are `WARD_KINDS` in order, and
-   * a ward face is a charge on the third trigger (`effectOf`, `specialOf`).
+   * a ward face is a charge on the third trigger (`effectOf`, `specialOf`). Since 0575 one of the three
+   * is drawn and kept rather than turned through.
    */
   shield: {
     sprite: SPRITE.pickupShield,
@@ -300,16 +287,17 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     how: 'A plate for your shell, or a ward charge; at a full shell a plate becomes a void',
     effect: 'shield',
     faces: [SPRITE.pickupShield, ...WARD_KINDS.map((k) => SPECIALS[k].face)],
-    // A shield face taken at a full shell is still a void — the cycle is the choice, and a face the
-    // player flew for should never be a dead pickup.
+    drawn: true,
+    // A shield face taken at a full shell is still a void — a face the player flew for should never be
+    // a dead pickup.
     spills: 'voidMissile',
     bare: 'ward',
   },
   /**
    * THE SHIELD PICKUP WITHOUT ITS SHIELD — 0447: what a tier that wears no shell is offered where a
    * shield would be. *"In Burn difficulty, when a miniboss dies it'll spit out a void bomb pickup in
-   * place of the shield."* It cycles the ward's specials, the void and the nova, and never authors a
-   * level slot of its own: it only ever arrives as a shield's `bare`.
+   * place of the shield."* It is the ward's specials, the void and the nova, and is never drawn for
+   * itself: it only ever arrives as a shield's `bare`.
    */
   ward: {
     sprite: SPRITE.pickupVoid,
@@ -322,10 +310,31 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     how: 'Where a shield would be, on Burn: one charge for your ward trigger',
     effect: 'special',
     faces: WARD_KINDS.map((k) => SPECIALS[k].face),
+    drawn: false,
     spills: null,
     bare: null,
   },
 };
+
+/**
+ * What a pickup's place may be drawn as — 0575: every row that says `drawn`, in the table's order.
+ */
+export const DRAWN_KINDS: readonly PickupKind[] = PICKUP_KINDS.filter((k) => PICKUPS[k].drawn);
+
+/**
+ * What kind a pickup's place is, drawn with even odds over `DRAWN_KINDS` — 0575: *"a random powerup
+ * that can be a shield/missile or special weapon."* The kind first and then the face (`drawFace`), so
+ * the tubes, which have two faces, are as likely as the gun specials, which have four: the player's
+ * answer when asked, because a face-for-face draw would starve a run of tubes.
+ */
+export function drawKind(rng: Rng): PickupKind {
+  return DRAWN_KINDS[rng.int(0, DRAWN_KINDS.length - 1)]!;
+}
+
+/** Which of `row`'s faces a pickup is drawn on, with even odds — 0575. */
+export function drawFace(row: PickupRow, rng: Rng): number {
+  return rng.int(0, row.faces.length - 1);
+}
 
 /**
  * What a ship is carrying: the tube ladder and which tube it is fitted with.

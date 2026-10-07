@@ -1167,6 +1167,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossShedIn: 0,
     // What a mid-boss's death drops is its own concern, so its own stream — 0021, 0256.
     dropRng: makeRng('proof-scene').stream('drop'),
+    // What a pickup is — 0575. Reseeded by `begin` for every run from the seed the shell draws.
+    pickupRng: makeRng('proof-scene').stream('pickups'),
     arcRng: makeRng('proof-scene').stream('arc'),
     stormRng: makeRng('proof-scene').stream('storm'),
     bodyBoltRng: makeRng('proof-scene').stream('body-bolt'),
@@ -2076,7 +2078,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ⚠️ **`() => state.run` and not `state.run`**, because `dispatch` reassigns `state` — a run
     captured at construction would be stale by the first `begin`.
   */
-  const lifecycle = makeLifecycle(world, dispatch, () => state.run);
+  // A run's pickups are dealt from a seed the shell draws per run, as the finale's lines are — 0575.
+  const lifecycle = makeLifecycle(world, dispatch, () => state.run, () => Math.floor(Math.random() * 0x7fffffff));
 
   /*
     ── FLYING — 0513 ────────────────────────────────────────────────────────────────────────────────

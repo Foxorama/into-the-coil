@@ -29,9 +29,9 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { SCREENS, STEPS_PER_SECOND, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, type ChoiceName, type Screen } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
-import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
+import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS, SPECIALS } from '../content/specials.ts';
 import { SHOTS } from '../content/shots.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
@@ -179,26 +179,13 @@ function starSky(): string {
   );
 }
 
-/**
- * The pickup key's turns — 0432, on How to play since 0458: one keyframe set per number of faces a pickup has, read off the table,
- * so a pickup given a fourth face turns through four without an edit here. Each face is up for its
- * share of the turn and crossfades over the last few percent of it.
- */
-function faceTurns(): string {
-  const counts = [...new Set(PICKUP_KINDS.map((kind) => PICKUPS[kind].faces.length))].filter((n) => n > 1);
-  return counts
-    .map((n) => {
-      const share = 100 / n;
-      const fade = 3;
-      return (
-        `@keyframes ${prefixFor('guide')}key-face-${n} { ` +
-        `0% { opacity: 1; visibility: visible; } ${share - fade}% { opacity: 1; visibility: visible; } ` +
-        `${share}% { opacity: 0; visibility: hidden; } ${100 - fade}% { opacity: 0; visibility: hidden; } ` +
-        `100% { opacity: 1; visibility: visible; } }`
-      );
-    })
-    .join('\n');
-}
+/*
+  ── `faceTurns` WAS HERE, AND 0575 TOOK IT ───────────────────────────────────────────────────────
+
+  The key's keyframes, one set per number of faces (0432), so each row turned through its faces as the
+  pickup on the field did. A pickup is drawn on one face and keeps it now, and a key that turned would
+  teach a thing the field no longer does — every face stands side by side instead.
+*/
 
 /**
  * The strip across the top of play — 0439's one height, 0465's type — as numbers rather than as
@@ -1024,19 +1011,18 @@ ${each('-action-cursor')} {
   align-items: center;
 }
 /*
-  One row per pickup, cycling — 0432. The row is not a box of its own: its cells sit in the key's grid.
-  Each cell stacks its faces in one grid area, so it is as wide as its widest face and a turn moves
-  nothing beside it. The third cell carries what the face gives and, under it, how the pickup is taken.
+  One row per pickup — 0432 — with every face it may be drawn on standing side by side since 0575. The
+  row is not a box of its own: its cells sit in the key's grid. The third cell carries what its faces
+  give and, under it, how the pickup is taken.
 */
 .itc-guide-key-row { display: contents; }
-.itc-guide-key-cell { display: grid; align-items: center; }
-.itc-guide-key-cell > * { grid-area: 1 / 1; }
-.itc-guide-key-face { animation-timing-function: linear; animation-iteration-count: infinite; }
-${faceTurns()}
+.itc-guide-key-faces { display: flex; flex-wrap: wrap; gap: 0.15em; align-items: center; max-width: 4.75em; }
 .itc-guide-key-icon { display: block; width: 2.2em; height: 2.2em; }
 .itc-guide-key-name { font-weight: 600; }
 .itc-guide-key-about { display: flex; flex-direction: column; min-width: 0; }
-.itc-guide-key-hint { font-weight: 600; opacity: 0.95; }
+/* A line a face: its name and what it gives — 0575. */
+.itc-guide-key-hint { display: flex; flex-direction: column; font-weight: 600; opacity: 0.95; }
+.itc-guide-key-gives { font-weight: 400; }
 .itc-guide-key-how { opacity: 0.7; }
 .itc-guide-controls {
   display: grid;
@@ -1409,8 +1395,6 @@ ${faceTurns()}
   .itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label, .itc-ended-sheet-label,
   .itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value, .itc-ended-sheet-value,
   .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank, .itc-ended-sheet-rank { animation: none; opacity: 1; }
-  /* The key still turns — it is how a cycling pickup is told — but it cuts rather than fades. 0432. */
-  .itc-guide-key-face { animation-timing-function: steps(1, end); }
 }
 /*
   ── THE INTRO'S SKIP ─────────────────────────────────────────────────────────────────────────────
@@ -2896,6 +2880,14 @@ ${each('-band[hidden]')} { display: none; }
   .itc-guide-body { gap: min(0.5rem, 1.6cqh) min(1.5rem, 3cqw); }
   .itc-guide-key, .itc-guide-controls { gap: 0.15em 0.6em; line-height: 1.2; }
   .itc-guide-key-icon { width: 1.8em; height: 1.8em; }
+  /*
+    ⚠️ **ON A PHONE A FACE IS ITS NAME — 0575.** A line a face with what it gives is eleven lines, and
+    How to play ran 45 to 120 pixels under the fold at every phone size. The names stand on one wrapped
+    line with dots between; what each gives is in the row's label for a reader, and on the desktop.
+  */
+  .itc-guide-key-hint { flex-direction: row; flex-wrap: wrap; column-gap: 0.5em; }
+  .itc-guide-key-gives { display: none; }
+  .itc-guide-key-line:not(:last-child)::after { content: ' ·'; }
   /*
     ⚠️ **AND ON A PHONE, THE TWO SECTION HEADINGS GO.** At 480x320 How to play scrolled by nine
     pixels on CI's fonts and fitted on this machine's. The headings are the one line on it that says
@@ -4772,7 +4764,8 @@ function buildGuide(
   body.className = prefix + 'body';
   const lead = document.createElement('p');
   lead.className = prefix + 'lead';
-  lead.textContent = 'Pickups drift in turning through what they offer. Fly into one to take the face it is showing.';
+  // 0575: a pickup shows one face and keeps it, so the lead no longer says it turns.
+  lead.textContent = 'Each pickup drifts in showing one of these. Fly into it to take it.';
   body.appendChild(lead);
 
   const section = (title: string): HTMLElement => {
@@ -4791,41 +4784,36 @@ function buildGuide(
   for (const pickup of PICKUP_KINDS) {
     const row = PICKUPS[pickup];
     /*
-      ⚠️ **ONE ROW PER PICKUP, AND IT CYCLES AS THE PICKUP DOES — 0432.** Each row's glyph, name and
-      hint turn together through its faces at the field's own `PICKUP_CYCLE_STEPS`, so the key teaches
-      the thing the player will meet — a shape that changes its offer. **Every face stays in the page,
-      stacked in one cell**, and the stylesheet shows one at a time, so nothing reflows as it turns; the
-      row is labelled with every face for a reader, who cannot wait for a picture to change.
+      ⚠️ **ONE ROW PER PICKUP, EVERY FACE IT MAY BE DRAWN ON STANDING SIDE BY SIDE — 0575.** It turned
+      through them as the pickup did (0432); a pickup is drawn on one face and keeps it now, so the key
+      shows all of them at once and names them in a line. The row is labelled with every face and what
+      it gives for a reader.
     */
     const icons = document.createElement('span');
-    icons.className = prefix + 'key-cell';
+    icons.className = prefix + 'key-faces';
     const names = document.createElement('span');
-    names.className = prefix + 'key-cell ' + prefix + 'key-name';
+    names.className = prefix + 'key-name';
+    names.textContent = row.label;
     const hints = document.createElement('span');
-    hints.className = prefix + 'key-cell ' + prefix + 'key-hint';
+    hints.className = prefix + 'key-hint';
     const told: string[] = [];
-    const count = row.faces.length;
     row.faces.forEach((sprite, face) => {
       const said = faceOf(pickup, face);
       told.push(said.label + ': ' + said.hint);
       const icon = iconOf(sprite);
       icon.className = prefix + 'key-icon';
-      const name = document.createElement('span');
-      name.textContent = said.label;
-      const hint = document.createElement('span');
-      hint.textContent = said.hint;
-      if (count > 1) {
-        for (const turn of [icon, name, hint]) {
-          turn.classList.add(prefix + 'key-face');
-          turn.style.animationName = prefix + 'key-face-' + String(count);
-          turn.style.animationDuration = String((count * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
-          // Face `face` is up for the `face`th share of the turn, so its clock is run that far on.
-          turn.style.animationDelay = String((-((count - face) % count) * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
-        }
-      }
       icons.appendChild(icon);
-      names.appendChild(name);
-      hints.appendChild(hint);
+      // A line a face — what it is called and what it gives — so a player knows every shape is good.
+      const line = document.createElement('span');
+      line.className = prefix + 'key-line';
+      const called = document.createElement('span');
+      called.className = prefix + 'key-called';
+      called.textContent = said.label;
+      const gives = document.createElement('span');
+      gives.className = prefix + 'key-gives';
+      gives.textContent = ' — ' + said.hint;
+      line.append(called, gives);
+      hints.appendChild(line);
     });
     for (const cell of [icons, names, hints]) cell.setAttribute('aria-hidden', 'true');
     const how = document.createElement('span');

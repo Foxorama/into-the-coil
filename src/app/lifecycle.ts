@@ -87,7 +87,12 @@ export interface Lifecycle {
   end(): void;
 }
 
-export function makeLifecycle(world: World, dispatch: (action: Action) => void, runOf: () => RunState): Lifecycle {
+/**
+ * `seedRun` is where a run's pickups are drawn from — 0575. The shell hands it a seed drawn from the
+ * page's own randomness, so every run is dealt differently; a test leaves it at its fixed default, so a
+ * run it flies is dealt the same every time (0021: below the shell, a seed is an argument).
+ */
+export function makeLifecycle(world: World, dispatch: (action: Action) => void, runOf: () => RunState, seedRun: () => number = () => 0): Lifecycle {
   /**
    * Put the run's current level on the field.
    *
@@ -139,6 +144,8 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       */
       // A fresh spawn stream, so run two is run one — the reason `seedField` gives.
       world.rng = makeRng('proof-scene').stream('spawns');
+      // And a fresh pickup stream that is NOT run one's — 0575: *"a random pickup"* is random per run.
+      world.pickupRng = makeRng(seedRun()).stream('pickups');
       /*
         ⚠️ **There is ONE sweep here and there used to be two.** This called `resetScene` itself and
         then called `enterLevel`, which calls `startLevel`, which calls it again one line later — the

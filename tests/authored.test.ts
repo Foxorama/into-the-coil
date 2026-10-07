@@ -60,7 +60,6 @@ function over(base: string, top: string, alpha: number): string {
 }
 import { loopsAt } from './bakes.ts';
 import { SAMPLE_RATE, sampleCue } from '../src/app/sound.ts';
-import { PICKUP_CYCLE_STEPS } from '../src/content/pickups.ts';
 import { DIFFICULTIES } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
@@ -138,14 +137,7 @@ function measureFour(): void {
   observe('0172-four', found.length === 0, found);
 }
 
-/**
- * 0236 — a cycling pickup shows each face for three seconds. The player's number, from the guns'
- * first play-test: *"the rotation needs to be 1sec longer."* Nothing breaks at two, so it is a taste.
- */
-function measureCycle(): void {
-  const seconds = PICKUP_CYCLE_STEPS / STEPS_PER_SECOND;
-  observe('0236-cycle', seconds >= 3, seconds >= 3 ? [] : [`a face is shown for ${seconds.toFixed(1)}s`]);
-}
+// `measureCycle` — 0236's three seconds a face — went with the cycle: a pickup keeps one face (0575).
 
 /**
  * 0237 — a blade is drawn as big as the ship. The player's number, from the blades' first play-test:
@@ -456,7 +448,6 @@ function measureAll(): void {
   measureDuck();
   measureFour();
   measureAA();
-  measureCycle();
   measureBlade();
   measureThrow();
   measureLean();
