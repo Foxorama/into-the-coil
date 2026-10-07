@@ -53,8 +53,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       // Re-anchored by 0502, which gave the row its window, and by 0503, which moved it to 1435.
-      find: "    midBoss: { kind: 'sentinel', at: 1435, windowSeconds: 25 },",
-      replace: "    midBoss: { kind: 'sentinel', at: 5549, windowSeconds: 25 },",
+      // And by 0576, which made every window twenty.
+      find: "    midBoss: { kind: 'sentinel', at: 1435, windowSeconds: 20 },",
+      replace: "    midBoss: { kind: 'sentinel', at: 5549, windowSeconds: 20 },",
     },
   },
   {

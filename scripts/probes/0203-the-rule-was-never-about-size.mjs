@@ -19,8 +19,9 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       // Re-anchored by 0503, which put the organ at 1209 and left `gauntlet` opening `push` there too,
       // so the anchor carries Ember Nebula's own `bossAt` to stay unique.
-      find: "    bossAt: 4054,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 1209, section: 'push' },",
-      replace: "    bossAt: 4054,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 1420, section: 'push' },",
+      // And by 0576, which moved Ember Nebula's end boss 180 sooner.
+      find: "    bossAt: 3874,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 1209, section: 'push' },",
+      replace: "    bossAt: 3874,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 1420, section: 'push' },",
     },
   },
   {

@@ -32,9 +32,9 @@ export const PROBES = [
     guard: 'and its crater is on the screen, above all the land in front of it',
     edit: {
       path: 'src/content/levels.ts',
-      // 3398 since 0503, with its section.
-      find: '      { at: 3398, lane: 45,',
-      replace: '      { at: 3398, lane: 70,',
+      // 3398 since 0503, with its section, and 3218 since 0576.
+      find: '      { at: 3218, lane: 45,',
+      replace: '      { at: 3218, lane: 70,',
     },
   },
   {

@@ -36,8 +36,12 @@ import { playableWorld } from './world.ts';
  * which is right — a level may be written for a longer fight (0282) — but a guard measured only
  * against the number it guards is green when that number is zero. This is the one place the ask
  * itself is written down.
+ *
+ * ⚠️ **TWENTY SINCE 0576, AND IT WAS TWENTY-FIVE.** *"Cut 5 secs from the dead time after the miniboss,
+ * part of the time was to allow the player to let the pickups rotate, but if they don't rotate any
+ * more it's going to be solid dead time."*
  */
-const ASKED_SECONDS = 25;
+const ASKED_SECONDS = 20;
 
 /**
  * How late after its window a level's script may resume, in seconds: the authoring grid, and no more.
@@ -170,7 +174,7 @@ describe('0502 — the window is the fight', () => {
     }
   });
 
-  it('and every level is written for the twenty-five seconds the player asked for', () => {
+  it('and every level is written for the twenty seconds the player asked for', () => {
     for (const kind of LEVEL_KINDS) {
       expect(LEVELS[kind].midBoss!.windowSeconds, `${kind}'s window is shorter than the fight the player reported`).toBeGreaterThanOrEqual(
         ASKED_SECONDS,

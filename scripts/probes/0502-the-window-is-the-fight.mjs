@@ -18,10 +18,11 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: after a mid-boss arrives nothing new is put down for its window',
     edit: {
       path: 'src/content/levels.ts',
-      // Re-anchored by 0503, which closed the level up: the chorus's window is 1499–2399, so the
-      // wave is moved from 2400 back to 2280, the same 120 inside it.
-      find: "  { at: 2400, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
-      replace: "  { at: 2280, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
+      // Re-anchored by 0503, which closed the level up, and by 0576, which cut the window to twenty
+      // seconds: the chorus's window is 1499–2219, so the wave is moved from 2220 back to 2100, the
+      // same 120 inside it.
+      find: "  { at: 2220, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
+      replace: "  { at: 2100, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
     },
   },
   {
@@ -47,9 +48,10 @@ export const PROBES = [
     guard: 'and the window is the gap: the script resumes when it closes, not later',
     edit: {
       path: 'src/content/levels.ts',
-      // Re-anchored by 0503: the window closes at 2335 and the wave stands at 2336; 39 late again.
-      find: "  { at: 2336, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
-      replace: "  { at: 2375, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
+      // Re-anchored by 0503, and by 0576: the window closes at 2155 and the wave stands at 2156; 39
+      // later again.
+      find: "  { at: 2156, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
+      replace: "  { at: 2195, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
     },
   },
   {
@@ -83,13 +85,14 @@ export const PROBES = [
     suite: 'tests/window.test.ts',
     // A row written for a shorter fight than the player reported. The walk still finds the gap the
     // row says, so only the literal can tell — which is why it is a literal.
-    broke: 'the chorus’s window cut to twenty seconds',
-    guard: 'and every level is written for the twenty-five seconds the player asked for',
+    broke: 'the chorus’s window cut to fifteen seconds',
+    // Renamed by 0576, which made the asked-for window twenty.
+    guard: 'and every level is written for the twenty seconds the player asked for',
     edit: {
       path: 'src/content/levels.ts',
       // 1499 since 0503.
-      find: "    midBoss: { kind: 'chorus', at: 1499, windowSeconds: 25 },",
-      replace: "    midBoss: { kind: 'chorus', at: 1499, windowSeconds: 20 },",
+      find: "    midBoss: { kind: 'chorus', at: 1499, windowSeconds: 20 },",
+      replace: "    midBoss: { kind: 'chorus', at: 1499, windowSeconds: 15 },",
     },
   },
 ];

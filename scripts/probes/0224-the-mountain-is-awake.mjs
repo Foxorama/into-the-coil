@@ -21,9 +21,10 @@ export const PROBES = [
     edit: {
       path: 'src/content/levels.ts',
       // Re-anchored by 0347, which re-placed and scaled the three and gave each an eruption, and by
-      // 0503, which moved the three with their sections: `surge` is 2419.
-      find: '      { at: 2419, lane: 48,',
-      replace: '      { at: 2500, lane: 48,',
+      // 0503, which moved the three with their sections, and 0576, which moved them again: `surge` is
+      // 2239.
+      find: '      { at: 2239, lane: 48,',
+      replace: '      { at: 2320, lane: 48,',
     },
   },
   {
