@@ -4,6 +4,10 @@
 the hangar's half of the tubes; [0577](0577-the-tubes-are-full.md) is the run's. Builds on
 [0523](0523-cosmo-opens.md)'s shop and [0542](0542-cosmos-counter.md)'s shelves.
 
+⚠️ **Superseded in part by [0579](0579-the-loadout-has-tabs.md)**: *the band*. The tubes are fitted on Hangin'
+Out under *Loadout*, behind sub-tabs that gave it the height, and Paint & Parts' headings came back. The trade,
+the racks, the run and the key stand.
+
 ## The ask
 
 > *"let's add the missile tubes are puchasable items from Cosmo's — you can buy 1-2 of both homing and

@@ -37,7 +37,7 @@ import { ART } from '../content/art.ts';
 import { HUES, TONES } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
-import { RACKS, RACK_KINDS } from '../content/racks.ts';
+import { RACKS, RACK_KINDS, TUBE_WARE_KINDS } from '../content/racks.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
@@ -130,8 +130,14 @@ export function isSlot(name: ChoiceName): name is SlotName {
  */
 export type ShelfName = ShelfKind | 'aisle';
 
-/** What a band on a screen may choose: a setting, a slot of the ship on the hangar's stand, or a ware. */
-export type ChoiceName = SettingName | SlotName | ShelfName;
+/*
+  0579: which of a stand's groups is in view, on a stand that shows them one at a time (`StandRow.tabbed`).
+  Neither a setting nor a slot nor a shelf: nothing is kept, and its options are the stand's own headings.
+*/
+export type SectionName = 'section';
+
+/** What a band on a screen may choose: a setting, a slot of the ship on the hangar's stand, a ware, or a section. */
+export type ChoiceName = SettingName | SlotName | ShelfName | SectionName;
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -214,6 +220,12 @@ export interface StandRow {
    * plate's head, as the pilots do. A fact about each tab: a fourth tab writes its own.
    */
   groups: readonly { label: string; bands: readonly ChoiceName[] }[];
+  /**
+   * Whether the groups are shown one at a time — 0579: behind a band of their headings drawn as tabs, the
+   * `section` band, so a group added is a tab and never a taller plate. `false` draws every group under
+   * its heading. A fact about each tab, as its groups are.
+   */
+  tabbed: boolean;
   /**
    * Where the port's camera stands while the tab is up — 0540: on the pad for the hangar, closer on it
    * for Paint & Parts, beside the stall for Cosmo's (0542). Each tab's own; the room is the intro's.
@@ -459,6 +471,41 @@ const pilotOptions = GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hi
 // 0571: on the ship on its cradle in the dock.
 const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };
 
+/**
+ * The band of a tabbed stand's headings — 0579: one option a group, in the stand's order, so a group added
+ * to the row is a tab without a second list to keep in step. A step brings that group into view.
+ */
+function sectionBand(stand: StandRow): ScreenChoice {
+  return {
+    name: 'section',
+    label: 'Section',
+    options: stand.groups.map((group) => ({ label: group.label, hint: '' })),
+    faces: 'words',
+    on: 'all',
+    press: 'steps',
+  };
+}
+
+/** Hangin' Out's stand — a name of its own because its section band is read off it (0579). */
+const HANGAR_STAND: StandRow = {
+  groups: [
+    // 0579: and the tubes, which are loadout as the gun and the special are.
+    { label: 'Loadout', bands: ['gun', 'special', 'rack'] },
+    // 0561: *Cockpit*, answered 2026-10-07 — a band named *Dash* stood under a heading named *Dash*.
+    { label: 'Cockpit', bands: ['plate', 'dangle'] },
+  ],
+  /*
+    0579: one group at a time — *"If we need to scroll or something on hanging out, then we need better
+    menu's there. There's going to be shield cosmetics and other cosmetics as well"* — answered as
+    sub-tabs: a later group is a tab, and the plate is never more than three bands tall.
+  */
+  tabbed: true,
+  // 0548: the port's one camera, the pad and the keeper's counter in it — it was on the pad at 1.5 (0540).
+  camera: PORT_CAMERA,
+  // 0550: Unity, who puts the loadout and the dash together.
+  keeper: 'unity',
+};
+
 /** A ship's name to follow *the* — the Firebird's label carries its own article. */
 function plainLabel(kind: ShipKind): string {
   return SHIPS[kind].label.replace(/^The /, '');
@@ -520,7 +567,7 @@ export function toneWhy(won: boolean, painted: boolean): string | null {
 
 /** What the tubes band says while no tube is owned — 0578: where they are sold, and what a bare ship does. */
 export function rackWhy(boughtAny: boolean): string | null {
-  return boughtAny ? null : 'Tubes are sold at Cosmo’s, the next tab — without them, missile pickups fit yours';
+  return boughtAny ? null : 'Tubes are sold at Cosmo’s — without them, missile pickups fit yours';
 }
 
 /** What the flame band says while only the standard is had — 0530: where the rest are sold. */
@@ -565,9 +612,9 @@ export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Re
     case 'dangle':
     case 'flame':
       return 'Sold at Cosmo’s, the next tab';
-    // 0578: a rack wants tubes, and Cosmo's sells them, the tab after Paint & Parts.
+    // 0578: a rack wants tubes, and Cosmo's sells them — since 0579 two tabs over, so not *the next tab*.
     case 'rack':
-      return 'Buy the tubes for it at Cosmo’s, the next tab';
+      return 'Buy the tubes for it at Cosmo’s';
     // The band's own sentence covers these: a ship not yet won, or a factory paint with no tone.
     case 'art':
     case 'livery':
@@ -600,11 +647,12 @@ export function dangleWhy(boughtAny: boolean): string | null {
  * is fitted on Paint & Parts, where a dangle hangs in the hangar — and since 0530 a flame is too.
  */
 /*
-  0578: a tube is fitted in Paint & Parts, as a rim is; and a second tube waits for the first, which the
-  shelf says before it says what the balance is short of — `waiting` is the ware it waits for.
+  0578: a second tube waits for the first, which the shelf says before it says what the balance is short
+  of — `waiting` is the ware it waits for. 0579: a tube is fitted in the hangar, under *Loadout*.
 */
 export function wareWhy(ware: OwnableKind, owned: boolean, shards: number, waiting: OwnableKind | null = null): string | null {
-  if (owned) return DANGLE_KINDS.some((dangle) => dangle === ware) ? 'Yours — hang it in the hangar' : 'Yours — fit it in Paint & Parts';
+  if (owned && DANGLE_KINDS.some((dangle) => dangle === ware)) return 'Yours — hang it in the hangar';
+  if (owned) return TUBE_WARE_KINDS.some((tube) => tube === ware) ? 'Yours — fit it in the hangar' : 'Yours — fit it in Paint & Parts';
   if (waiting !== null) return 'Buy the ' + OWNABLES[waiting].name + ' first';
   const price = OWNABLES[ware].price ?? 0;
   return shards < price ? 'Need ' + String(price - shards) + ' more Star Shards' : null;
@@ -896,17 +944,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pause: null,
     leads: false,
     // 0539: what the ship flies with, and what its dash wears — the two the player reads across.
-    stand: {
-      groups: [
-        { label: 'Loadout', bands: ['gun', 'special'] },
-        // 0561: *Cockpit*, answered 2026-10-07 — a band named *Dash* stood under a heading named *Dash*.
-        { label: 'Cockpit', bands: ['plate', 'dangle'] },
-      ],
-      // 0548: the port's one camera, the pad and the keeper's counter in it — it was on the pad at 1.5 (0540).
-      camera: PORT_CAMERA,
-      // 0550: Unity, who puts the loadout and the dash together.
-      keeper: 'unity',
-    },
+    stand: HANGAR_STAND,
     actions: [{ label: 'Back', hint: '' }],
     choices: [
       {
@@ -918,6 +956,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         press: 'steps',
       },
+      // 0579: the sub-tabs, under the pilot and over the one group they have in view.
+      sectionBand(HANGAR_STAND),
       {
         name: 'plate',
         label: 'Dash',
@@ -969,6 +1009,19 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         press: 'tries',
       },
+      /*
+        0578: the tubes the ship carries into a run — none first, then every rack in the table's order, the
+        ones the tubes owned are not enough for shut and saying where to buy them. Built by walking
+        `RACK_KINDS`. 0579: on Hangin' Out, under *Loadout*.
+      */
+      {
+        name: 'rack',
+        label: 'Tubes',
+        options: RACK_KINDS.map((kind) => ({ label: RACKS[kind].label, hint: RACKS[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'tries',
+      },
     ],
     steps: false,
     // 0540: the port stands behind it, so the screen shows the picture rather than painting over it.
@@ -998,13 +1051,11 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // 0539: what is bolted on, and how it is painted.
     stand: {
       groups: [
-        /*
-          0578: and the tubes, which are parts of the ship — and here, where Paint's three already set the
-          tab's height, rather than a fifth band on Hangin' Out, which put Back under every phone's fold.
-        */
-        { label: 'Parts', bands: ['rim', 'flame', 'rack'] },
+        // 0579: the tubes were here a day (0578), for the height Hangin' Out had not got; they are loadout.
+        { label: 'Parts', bands: ['rim', 'flame'] },
         { label: 'Paint', bands: ['art', 'livery', 'tone'] },
       ],
+      tabbed: false,
       /*
         0548: the port's one camera. It was closer on the pad at 2.3 (0540), so the wheels, the nose and the
         flame were large — and the room jumped a size every time the tab was stepped onto, which was asked
@@ -1084,19 +1135,6 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         press: 'tries',
       },
-      /*
-        0578: the tubes the ship carries into a run — none first, then every rack in the table's order, the
-        ones the tubes owned are not enough for shut and saying where to buy them. Built by walking
-        `RACK_KINDS`.
-      */
-      {
-        name: 'rack',
-        label: 'Tubes',
-        options: RACK_KINDS.map((kind) => ({ label: RACKS[kind].label, hint: RACKS[kind].hint })),
-        faces: 'words',
-        on: 'all',
-        press: 'tries',
-      },
     ],
     steps: false,
     // 0540: on the hangar's terms.
@@ -1129,7 +1167,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       stand a third of it wide: at the bar the ship stood under the plate. So Cosmo keeps a stall on the deck
       beside the pad, and the camera stands between the two — the port's one camera since 0548.
     */
-    stand: { groups: [], camera: PORT_CAMERA, keeper: 'cosmo' },
+    stand: { groups: [], tabbed: false, camera: PORT_CAMERA, keeper: 'cosmo' },
     // 0542: Buy names the price of the ware in the window, written by the shell — `Buy · 250 ✦`.
     actions: [
       { label: 'Buy', hint: '' },

@@ -10,7 +10,6 @@ import { seeded } from './seed.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
-import { SCREENS } from '../src/state/screens.ts';
 import { RACK_KINDS } from '../src/content/racks.ts';
 import { MISSILES } from '../src/content/missiles.ts';
 
@@ -34,7 +33,7 @@ afterAll(async () => {
 });
 
 describe.runIf(chromePath)('0578 — a run opens on the tubes the hangar fitted', () => {
-  it('one of each fitted to the fighter on Paint & Parts, and the run carries a missile tube and a seeker tube', async () => {
+  it('one of each fitted to the fighter on Hangin’ Out, and the run carries a missile tube and a seeker tube', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const owned = { ...initialHangar.owned, straightTube: true, homingTube: true };
@@ -43,14 +42,12 @@ describe.runIf(chromePath)('0578 — a run opens on the tubes the hangar fitted'
     await pastIntro(page);
     await openHangar(page);
 
-    // The tubes are fitted on Paint & Parts, beside the wheels and the flame.
-    await page.locator(`${shown('hangar')} .${prefixFor('hangar')}tab`, { hasText: SCREENS.parts.heading }).click();
-    await page.waitForSelector(shown('parts'), { state: 'attached' });
+    // 0579: the tubes are fitted on Hangin' Out, under *Loadout* beside the gun and the special.
     const hook = GOLFER_KINDS.find((kind) => GOLFERS[kind].ship === 'fighter')!;
-    const parts = prefixFor('parts');
-    await page.locator(`${shown('parts')} [${SETTING_ATTR}="pilot"] .${parts}option >> nth=${GOLFER_KINDS.indexOf(hook)}`).click();
-    await page.locator(`${shown('parts')} [${SETTING_ATTR}="rack"] .${parts}option >> nth=${RACK_KINDS.indexOf('mixed')}`).click();
-    await back(page, 'parts');
+    const hangar = prefixFor('hangar');
+    await page.locator(`${shown('hangar')} [${SETTING_ATTR}="pilot"] .${hangar}option >> nth=${GOLFER_KINDS.indexOf(hook)}`).click();
+    await page.locator(`${shown('hangar')} [${SETTING_ATTR}="rack"] .${hangar}option >> nth=${RACK_KINDS.indexOf('mixed')}`).click();
+    await back(page, 'hangar');
     await fly(page);
 
     const lives = (await page.getAttribute('.itc-playing-hud-group[aria-label*="lives"]', 'aria-label')) ?? '';

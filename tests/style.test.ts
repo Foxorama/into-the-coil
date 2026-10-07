@@ -136,8 +136,9 @@ describe('the chooser is the table', () => {
     // 0528: and its art; 0529: and its paint, a colour and a tone; 0530: and its flame.
     // 0542: and Cosmo's shelf is a shelf a table and the aisle that steps them, every one read off the table.
     // 0578: and the rack of tubes a ship carries in, beside its gun and its special.
+    // 0579: and Hangin' Out's sub-tabs, which step the group in view.
     expect([...where.keys()].sort()).toEqual(
-      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rack', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'aisle', ...SHELF_KINDS].sort(),
+      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rack', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'aisle', 'section', ...SHELF_KINDS].sort(),
     );
   });
 });

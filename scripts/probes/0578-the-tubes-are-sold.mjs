@@ -46,7 +46,7 @@ export const PROBES = [
     decision: '0578',
     suite: 'tests/tube-shop.browser.test.ts',
     broke: 'the shell beginning every run on no tubes, whatever the hangar fitted',
-    guard: 'one of each fitted to the fighter on Paint & Parts',
+    guard: 'one of each fitted to the fighter on Hangin’ Out',
     edit: { path: 'src/app/mount.ts', find: '      RACKS[state.hangar.rack[ship]].tubes,\n    );', replace: '      [],\n    );' },
   },
 ];

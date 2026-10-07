@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { back, fly, openHangar, pickWare, shown } from './title.ts';
+import { back, fly, inView, openHangar, pickWare, shown } from './title.ts';
 import { seeded } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
@@ -137,6 +137,8 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
     // Back in the hangar, the golf ball hung on the default pilot's ship; the run flies with it.
     await page.locator(`${shown('shop')} .${SHOP}tab`, { hasText: SCREENS.hangar.heading }).click();
     await page.waitForSelector(shown('hangar'), { state: 'attached' });
+    // 0579: on the *Cockpit* sub-tab.
+    await inView(page, 'hangar', 'dangle');
     await page.locator(`${shown('hangar')} [${SETTING_ATTR}="dangle"] .${prefixFor('hangar')}option >> nth=${1 + DANGLE_KINDS.indexOf('golfball')}`).click();
     expect(await hanging(page), 'the hangar did not hang what was chosen').toBe('golfball');
     await back(page, 'hangar');

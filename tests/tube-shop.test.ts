@@ -77,10 +77,13 @@ describe('the rack', () => {
     expect(reduce(owned, { slice: 'hangar', type: 'rack', ship: 'fighter', rack: 'mixed' }), 'a straight tube never bought was fitted').toBe(owned);
   });
 
-  it('is a band on Paint & Parts beside the wheels and the flame, in the table’s order, and says where tubes are sold', () => {
-    const band = SCREENS.parts.choices.find((c) => c.name === 'rack');
+  // 0579: on Hangin' Out under *Loadout*, where 0578 had it on Paint & Parts for want of the height.
+  it('is a band on Hangin’ Out under Loadout beside the gun and the special, in the table’s order, and says where tubes are sold', () => {
+    const band = SCREENS.hangar.choices.find((c) => c.name === 'rack');
     expect(band?.options.map((o) => o.label)).toEqual(RACK_KINDS.map((rack) => RACKS[rack].label));
-    expect(SCREENS.parts.stand?.groups.find((g) => g.bands.includes('rim'))?.bands, 'the tubes are not among the parts').toContain('rack');
+    expect(SCREENS.hangar.stand?.groups.find((g) => g.bands.includes('gun'))?.bands, 'the tubes are not in the loadout').toContain('rack');
+    expect(SCREENS.parts.choices.some((c) => c.name === 'rack'), 'the tubes are still on Paint & Parts too').toBe(false);
+    expect(wareWhy('homingTube', true, 0), 'Cosmo’s says to fit a tube somewhere else').toBe('Yours — fit it in the hangar');
     expect(rackWhy(false)).toContain('Cosmo');
     expect(rackWhy(true)).toBe(null);
     expect(optionWhy('rack', 'fighter', 1, initialHangar.won)).toContain('Cosmo');

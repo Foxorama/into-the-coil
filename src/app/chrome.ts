@@ -2173,6 +2173,45 @@ ${each('-tab-key[hidden]')} { display: none; }
 .itc-shop-band-away { display: none; }
 .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-options { gap: 0.2em; border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 50%, transparent); }
 .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-option { border-radius: 0.55em 0.55em 0 0; border-bottom-width: 0; padding-top: 0.25em; padding-bottom: 0.25em; }
+/*
+  ── HANGIN' OUT'S SUB-TABS — 0579 ─────────────────────────────────────────────────────────────────────
+
+  The aisle's look on the hangar's groups: *Loadout* and *Cockpit* as tabs across the plate, the group in
+  view under them and the other put away on every device — *"There's going to be shield cosmetics and other
+  cosmetics as well so we need to have that section capable of handling more"*: a group added is a tab.
+*/
+/* Two classes, so it outranks every layout's display for a group — a phone lays one out as a grid. */
+.itc-hangar-group.itc-hangar-group-away { display: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) {
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'less track more';
+  padding: 0.1em;
+  row-gap: 0;
+}
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-label,
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-hint { display: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-options {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.2em;
+  padding: 0.2em 0.15em 0;
+  border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 50%, transparent);
+}
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 0.55em 0.55em 0 0;
+  border-bottom-width: 0;
+  padding-top: 0.25em;
+  padding-bottom: 0.25em;
+}
+/* A tab is where the player is looking, not a thing fitted, so it wears no tick. */
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option::before { content: none; }
 .itc-shop-option.itc-shop-option-tile { display: grid; grid-template-rows: auto auto auto; justify-items: center; align-content: start; gap: 0.12em; padding-top: 0.35em; padding-bottom: 0.3em; }
 .itc-shop-option-art { display: block; position: relative; width: 100%; height: 3.1em; pointer-events: none; }
 .itc-shop-option-label { line-height: 1.1; }
@@ -2584,7 +2623,8 @@ ${each('-band[hidden]')} { display: none; }
     0550 hid a keeper who only greets from a phone's plate, where the card put Back under the fold. Since
     0572 no keeper is on the plate: their words are a bubble in the stand, so the rule hid nothing and went.
   */
-  .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  /* 0579: Hangin' Out shows one group at a time, so its one group has the plate's width. */
+  .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'label label label' 'less track more'; padding: 0 0.1em; row-gap: 0; }
   /* 0566: one chip a band, as wide as the band, its name cut rather than run past its edge. */
   .itc-hangar-group .itc-hangar-band .itc-hangar-option, .itc-parts-group .itc-parts-band .itc-parts-option { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -2656,6 +2696,18 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: flex; justify-content: center; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on):not(.itc-hangar-option-look), .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look) { display: none; }
+  /* 0579: except the sub-tabs, every one of which is drawn — a tab shows where else there is to go. */
+  .itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option { display: block; }
+  /*
+    0579: and the group in view one row of its bands, side by side — three for the Loadout, two for the
+    Cockpit. One under another the Loadout put Back under a 667x375's fold, and two to a row still stood
+    the plate 15 px taller than Paint & Parts'. Each chip shows the one that is on, cut short where it
+    must be, and the card at the foot names it whole.
+  */
+  .itc-hangar-group { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: min(0.6rem, 1.5cqw); }
+  /* Its arrows as narrow as a 480x320's already are, so the chip between them has the band's width. */
+  .itc-hangar-group .itc-hangar-band { column-gap: 0.1em; }
+  .itc-hangar-group .itc-hangar-band .itc-hangar-band-step { padding-left: 0; padding-right: 0; }
   /*
     0561: the one tried on in the fitted one's place; and a band with neither — the tone of a ship in the
     factory's paint — shows its first, shut, so the row is not two arrows round nothing.
@@ -2898,12 +2950,6 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-guide-panel .itc-guide-section-heading { display: none; }
   /*
-    0578: and Paint & Parts' two group headings go, the room its Parts column's third band — the tubes —
-    needs: 480x320 put Back 10 px under the fold, and at 667x375 the plate stood 11 px taller than Hangin'
-    Out's, which 0548 holds still. Each band still says its own name over its track.
-  */
-  .itc-parts-group-heading { display: none; }
-  /*
     The panel's own gap is the one thing above the rows with any give, and it is already authored
     against the short axis, so tightening it here is the same argument one step further.
   */
@@ -2992,6 +3038,8 @@ ${each('-band[hidden]')} { display: none; }
   /* The balance and the dash stand at the stand's foot, the dash small: the ship is the picture up here. */
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { padding-bottom: 2.2em; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr); }
+  /* 0579: held upright the plate scrolls and the width is the short side, so the group in view is two to a row. */
+  .itc-hangar-group { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-keeper, .itc-parts-keeper { display: none; }
   /* The readout typeset by the width up here — by the height it was the stand's full width over the ship. */
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.7rem, 3cqw, 1rem); }
@@ -4023,6 +4071,8 @@ interface Panel {
   spoken: Band | null;
   /** 0562: the keys that do things here, in the hand's words, or `null` off a stand. */
   glyphs: HTMLElement | null;
+  /** 0579: each of the stand's groups' boxes, in the row's order — what a tabbed stand's sub-tab shows one of. */
+  groups: readonly HTMLElement[];
 }
 
 /** The focus card's four lines — 0562 — and since 0564 a picture of a ware, large. */
@@ -4541,6 +4591,11 @@ export interface Chrome {
    * desktop every shelf it has the height for; the walk passes over a shelf that is not drawn.
    */
   setInView(screen: Screen, shelf: ChoiceName): void;
+  /**
+   * Which of a tabbed stand's groups is in view — 0579, by its place in the row's groups: its tab lit on the
+   * screen's section band and every other group put away, on every device, so the walk passes over them.
+   */
+  setSection(screen: Screen, index: number): void;
   /** What the keeper behind the counter is saying — 0542: Cosmo's line, under their face on the plate. */
   setKeeperLine(screen: Screen, line: string): void;
   /**
@@ -6015,8 +6070,8 @@ export function makeChrome(
         the menu feels out of place and weird"* — the foot's card said it at the plate's bottom, a column of
         empty plate away from the row it was about. Said under the row it is about, each row says its own.
       */
-      // Never the aisle: it is the shelf's tabs, and says which shelf is in view by the shelf.
-      if (row.stand !== null && choice.faces === 'words' && !chip && choice.name !== 'aisle') {
+      // Never the aisle: it is the shelf's tabs, and says which shelf is in view by the shelf. 0579: nor a section.
+      if (row.stand !== null && choice.faces === 'words' && !chip && choice.name !== 'aisle' && choice.name !== 'section') {
         const root = document.createElement('div');
         root.className = prefix + 'band-said';
         root.setAttribute('aria-hidden', 'true');
@@ -6062,6 +6117,11 @@ export function makeChrome(
       the dash before the gun on the hangar — and the groups draw them in another, so the bands are
       walked as the document has them: up and down go to the band above and below, never across a heading.
     */
+    /*
+      ⚠️ **0579: A TABBED STAND DRAWS NO HEADINGS**: its section band is the headings, as tabs over the one
+      group in view (`setSection`), and a heading over that group would say the lit tab a second time.
+    */
+    const groupBoxes: HTMLElement[] = [];
     if (row.stand !== null && row.stand.groups.length > 0) {
       // One box for the headings, so they split the plate between them whatever the head above is.
       const groups = document.createElement('div');
@@ -6070,15 +6130,18 @@ export function makeChrome(
       for (const group of row.stand.groups) {
         const box = document.createElement('div');
         box.className = prefix + 'group';
-        const heading = document.createElement('div');
-        heading.className = prefix + 'group-heading';
-        heading.textContent = group.label;
-        box.appendChild(heading);
+        if (!row.stand.tabbed) {
+          const heading = document.createElement('div');
+          heading.className = prefix + 'group-heading';
+          heading.textContent = group.label;
+          box.appendChild(heading);
+        }
         for (const name of group.bands) {
           const band = choiceBands.find((b) => b.name === name);
           if (band !== undefined) box.appendChild(band.root);
         }
         groups.appendChild(box);
+        groupBoxes.push(box);
       }
       choiceBands.sort((a, b) => (a.root.compareDocumentPosition(b.root) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
     }
@@ -6177,7 +6240,7 @@ export function makeChrome(
 
     // 0562: the card opens speaking for the screen's first band of its own, which is where the cursor opens (0561).
     const spoken = focus === null ? null : (choiceBands.find((b) => b.faces === 'words') ?? null);
-    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper, focus, spoken, glyphs };
+    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper, focus, spoken, glyphs, groups: groupBoxes };
     elements.push(root);
   }
 
@@ -6867,6 +6930,11 @@ export function makeChrome(
     let band = panel.spoken;
     if (card === null || band === null) return;
     if (band.name === 'aisle') band = panel.bands.find((b) => b.name === inView.shop) ?? band;
+    // 0579: and a stand's sub-tabs for the first band of the group they have in view.
+    if (band.name === 'section') {
+      const box = panel.groups[band.index];
+      band = panel.bands.find((b) => box !== undefined && box.contains(b.root)) ?? band;
+    }
     const { shown, button, shut, name, state } = wordsOf(band);
     // 0564: and a ware's picture, large — a copy of its tile's, taken again when the ware changes.
     const art = button?.querySelector('[class$="option-art"]');
@@ -6915,6 +6983,46 @@ export function makeChrome(
     const left = tried.offsetLeft - track.offsetLeft;
     if (left < track.scrollLeft) track.scrollLeft = left;
     else if (left + tried.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + tried.offsetWidth - track.clientWidth;
+  };
+  /** Mark a band's chosen option on one screen — `setChoice`'s, and 0579's `setSection` for one screen alone. */
+  const choose = (screen: Screen, name: ChoiceName, index: number): void => {
+    const panel = panels[screen];
+    const buttons = panel?.options[name];
+    if (panel === undefined || buttons === undefined) return;
+    for (let i = 0; i < buttons.length; i++) {
+      const on = i === index;
+      buttons[i]!.classList.toggle(prefixFor(screen) + 'option-on', on);
+      buttons[i]!.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    // 0458: the band says the live one's hint, and a step that has nowhere to go is shown as such.
+    const band = panel.bands.find((b) => b.name === name);
+    if (band === undefined) return;
+    // 0571: only a choice that moved scrolls its row — the shell says the same choice again on every hover.
+    const moved = band.index !== index;
+    band.index = index;
+    // 0561: a try that has become the fitted one is no longer a try.
+    if (band.look === index) {
+      band.look = -1;
+      paintLook(band);
+    }
+    sayBand(band);
+    // 0513: a band of faces says who the one on it is, on the card under it.
+    if (band.faces === 'portraits') paintPilot(screen, GOLFER_KINDS[index]);
+    /*
+      A face scrolled off a long roster's track is brought back into view when it is chosen.
+
+      ⚠️ **THE TRACK'S OWN scrollLeft, AND IT WAS scrollIntoView.** That scrolls every scrolling
+      ancestor too, and the overlay is one (0049): on a window too short for the title it scrolled
+      the whole screen to the band at boot, and the name went off the top where nothing scrolls
+      back to it — the bug 0049 exists for, which its own guard caught.
+    */
+    const chosen = buttons[index];
+    const track = chosen?.parentElement;
+    if (moved && chosen !== undefined && track instanceof HTMLElement && track.scrollWidth > track.clientWidth) {
+      const left = chosen.offsetLeft - track.offsetLeft;
+      if (left < track.scrollLeft) track.scrollLeft = left;
+      else if (left + chosen.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + chosen.offsetWidth - track.clientWidth;
+    }
   };
   /** Try an option on — 0561. Trying on the fitted one is putting back. */
   const tryOn = (band: Band, index: number, scroll = false): void => {
@@ -7533,44 +7641,20 @@ export function makeChrome(
       timer.textContent = seconds === null ? '' : String(seconds);
     },
     setChoice(name: ChoiceName, index: number): void {
-      for (const screen of Object.keys(panels) as Screen[]) {
-        const panel = panels[screen];
-        const buttons = panel?.options[name];
-        if (panel === undefined || buttons === undefined) continue;
-        for (let i = 0; i < buttons.length; i++) {
-          const on = i === index;
-          buttons[i]!.classList.toggle(prefixFor(screen) + 'option-on', on);
-          buttons[i]!.setAttribute('aria-pressed', on ? 'true' : 'false');
-        }
-        // 0458: the band says the live one's hint, and a step that has nowhere to go is shown as such.
-        const band = panel.bands.find((b) => b.name === name);
-        if (band === undefined) continue;
-        // 0571: only a choice that moved scrolls its row — the shell says the same choice again on every hover.
-        const moved = band.index !== index;
-        band.index = index;
-        // 0561: a try that has become the fitted one is no longer a try.
-        if (band.look === index) {
-          band.look = -1;
-          paintLook(band);
-        }
-        sayBand(band);
-        // 0513: a band of faces says who the one on it is, on the card under it.
-        if (band.faces === 'portraits') paintPilot(screen, GOLFER_KINDS[index]);
-        /*
-          A face scrolled off a long roster's track is brought back into view when it is chosen.
-
-          ⚠️ **THE TRACK'S OWN scrollLeft, AND IT WAS scrollIntoView.** That scrolls every scrolling
-          ancestor too, and the overlay is one (0049): on a window too short for the title it scrolled
-          the whole screen to the band at boot, and the name went off the top where nothing scrolls
-          back to it — the bug 0049 exists for, which its own guard caught.
-        */
-        const chosen = buttons[index];
-        const track = chosen?.parentElement;
-        if (moved && chosen !== undefined && track instanceof HTMLElement && track.scrollWidth > track.clientWidth) {
-          const left = chosen.offsetLeft - track.offsetLeft;
-          if (left < track.scrollLeft) track.scrollLeft = left;
-          else if (left + chosen.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + chosen.offsetWidth - track.clientWidth;
-        }
+      for (const screen of Object.keys(panels) as Screen[]) choose(screen, name, index);
+    },
+    setSection(screen: Screen, index: number): void {
+      const panel = panels[screen];
+      if (panel === undefined) return;
+      // 0579: the band of this screen only — a second tabbed stand keeps its own group in view.
+      choose(screen, 'section', index);
+      const away = prefixFor(screen) + 'group-away';
+      panel.groups.forEach((box, i) => box.classList.toggle(away, i !== index));
+      // And the card speaks for a band in view: one in a group put away is no longer what the player is on.
+      const spoken = panel.spoken;
+      if (spoken !== null && spoken.root.closest('.' + away) !== null) {
+        panel.spoken = panel.bands.find((b) => b.name === 'section') ?? spoken;
+        paintCard(panel);
       }
     },
     setOpen(name: ChoiceName, open: readonly boolean[], why: string | null, whys: readonly (string | null)[] = []): void {

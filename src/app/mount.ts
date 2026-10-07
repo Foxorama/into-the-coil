@@ -2111,6 +2111,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let arriving = false;
   let shopVisits = 0;
   const windowWare = (): OwnableKind | undefined => SHELVES[aisle].wares[picked[aisle]];
+  /**
+   * Which group each tabbed stand has in view — 0579, by its position in the stand's groups. The shell's,
+   * on the aisle's terms: kept for nothing past the visit, and the first group until a tab is stepped.
+   */
+  const sections: Partial<Record<Screen, number>> = {};
   /*
     ⚠️ **TRIED ON WHERE IT GOES — 0542.** A ware in the window on Cosmo's is worn by the ship on its pad
     before a shard is spent: a dangle on the dash (0523), a rim on the wheels of a ship that has them, a
@@ -2448,7 +2453,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     // 0523: the ware in Cosmo's window — the shell's to hold, kept for nothing past the visit.
     // 0542: the aisle steps the shelf in view; a shelf's band picks its ware and brings that shelf into view.
-    else if (name === 'aisle') {
+    // 0579: a stand's sub-tab, which brings its group into view on the screen it was stepped on.
+    else if (name === 'section') {
+      sections[state.screen.current] = index;
+      fitHangar();
+    } else if (name === 'aisle') {
       const kind = SHELF_KINDS[index];
       if (kind !== undefined) aisle = kind;
       justSold = null;
@@ -2512,8 +2521,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (justFitted === ware) return COSMO.shop.fitted;
     if (justSold === ware) return COSMO.shop.sold;
     if (WARES.every((w) => state.hangar.owned[w])) return COSMO.shop.soldOut;
-    // A tube is fitted in Paint & Parts, as a rim is — 0578; a dangle is hung in the hangar.
-    const hangs = DANGLE_KINDS.some((kind) => kind === ware);
+    // A dangle is hung in the hangar, and since 0579 a tube is fitted there too, under *Loadout*.
+    const hangs = DANGLE_KINDS.some((kind) => kind === ware) || TUBE_WARE_KINDS.some((kind) => kind === ware);
     if (owned) return COSMO.shop.owned.replace('{where}', hangs ? SCREENS.hangar.heading : SCREENS.parts.heading);
     if (RIM_KINDS.some((kind) => kind === ware) && SHIPS[ship].wheels === null) return COSMO.shop.noWheels;
     // 0578: and the second tube of a kind waits for the first.
@@ -2640,6 +2649,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     chrome.setChoice('aisle', SHELF_KINDS.indexOf(aisle));
     chrome.setInView('shop', aisle);
+    // 0579: and every tabbed stand's group in view, on its own screen.
+    for (const screen of Object.keys(SCREENS) as Screen[]) if (SCREENS[screen].stand?.tabbed === true) chrome.setSection(screen, sections[screen] ?? 0);
     if (ware !== undefined) {
       /*
         0564: the shop's first action says what a press of it does with the ware in the window — buys it,

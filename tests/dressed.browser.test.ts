@@ -128,6 +128,8 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
     const page = await opened(1920, 1080);
     const p = prefixFor('hangar');
     const caption = `${shown('hangar')} .${p}band:has([${SETTING_ATTR}="gun"]) .${p}band-said`;
+    // 0579: down past the sub-tabs to the gun.
+    await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     const heights: number[] = [];
     const count = await page.locator(`${shown('hangar')} [${SETTING_ATTR}="gun"] .${p}option`).count();
@@ -142,7 +144,8 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
       And every other band's caption beside it: a dash's line is a few words on any letters, where a gun's runs to
       two on CI's wider ones, which made every gun the same two lines there and this guard blind to the rule.
     */
-    const all = await page.locator(`${shown('hangar')} .${p}band-said`).evaluateAll((els) => els.map((el) => el.getBoundingClientRect().height));
+    // 0579: the ones in view — a band behind the other sub-tab is not drawn, and measures nothing.
+    const all = await page.locator(`${shown('hangar')} .${p}band-said`).evaluateAll((els) => els.filter((el) => el.getClientRects().length > 0).map((el) => el.getBoundingClientRect().height));
     heights.push(...all);
     expect(heights.length, 'no guns, so this guard is measuring nothing').toBeGreaterThan(1);
     expect(Math.max(...heights) - Math.min(...heights), `the caption's height moved as the cursor stepped: ${heights.join(', ')}`).toBeLessThan(1);
@@ -195,6 +198,8 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
       expect(said.height, `the ${name} band's caption is not drawn`).toBeGreaterThan(0);
       expect(inside(said, band) && said.y >= options.y + options.height - 1, `the ${name} band's caption is not under its options`).toBe(true);
     }
+    // 0579: down past the sub-tabs to the gun.
+    await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(150);
@@ -205,15 +210,25 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
 
   it('draws a picture on every Hangin’ Out card, and the fitted one is not filled over it', async () => {
     const page = await opened(1280, 720);
-    const cards = await page.locator(`${shown('hangar')} .${HANGAR}band:not(.${HANGAR}band-faces) .${HANGAR}option`).evaluateAll((all, p) =>
-      all.map((card) => {
-        const pic = card.querySelector('.' + p + 'option-pic');
-        const r = pic?.getBoundingClientRect();
-        const fill = getComputedStyle(card).backgroundColor;
-        const alpha = /rgba?\(([^)]+)\)/.exec(fill)?.[1]?.split(',')[3];
-        return { name: card.textContent ?? '', pic: r !== undefined && r.width > 0 && r.height > 0, on: card.className.includes(p + 'option-on'), opaque: alpha === undefined ? !fill.includes('/') && fill !== 'rgba(0, 0, 0, 0)' : Number(alpha) >= 0.99 };
-      }),
-    HANGAR);
+    /*
+      0579: under every sub-tab in turn, the cards in view — the tabs themselves are words, and a group behind
+      the other tab is not drawn. Every group is visited, so a card on the Cockpit is held as one on the Loadout.
+    */
+    const cards: { name: string; pic: boolean; on: boolean; opaque: boolean }[] = [];
+    for (const group of SCREENS.hangar.stand!.groups.keys()) {
+      await page.locator(`${shown('hangar')} [${SETTING_ATTR}="section"] .${HANGAR}option >> nth=${group}`).click();
+      const seen = await page.locator(`${shown('hangar')} .${HANGAR}band:not(.${HANGAR}band-faces):not(:has([${SETTING_ATTR}="section"])) .${HANGAR}option`).evaluateAll((all, p) =>
+        all.filter((card) => card.getClientRects().length > 0).map((card) => {
+          const pic = card.querySelector('.' + p + 'option-pic');
+          const r = pic?.getBoundingClientRect();
+          const fill = getComputedStyle(card).backgroundColor;
+          const alpha = /rgba?\(([^)]+)\)/.exec(fill)?.[1]?.split(',')[3];
+          return { name: card.textContent ?? '', pic: r !== undefined && r.width > 0 && r.height > 0, on: card.className.includes(p + 'option-on'), opaque: alpha === undefined ? !fill.includes('/') && fill !== 'rgba(0, 0, 0, 0)' : Number(alpha) >= 0.99 };
+        }),
+      HANGAR);
+      expect(seen.length, `no cards under sub-tab ${group}, so this guard is measuring nothing there`).toBeGreaterThan(0);
+      cards.push(...seen);
+    }
     expect(cards.length, 'no cards, so this guard is measuring nothing').toBeGreaterThan(0);
     expect(cards.filter((c) => !c.pic).map((c) => c.name), 'cards with no picture').toEqual([]);
     expect(cards.filter((c) => c.on && c.opaque).map((c) => c.name), 'a fitted card is filled over its picture').toEqual([]);
