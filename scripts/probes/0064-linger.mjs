@@ -59,12 +59,12 @@ export const PROBES = [
     */
     broke: 'the wait cut below a crossing, so a pickup can only be taken by a player already beside it',
     guard: 'waits long enough to be crossed the whole lane for',
-    // ⚠️ Re-anchored by 0233: the wait is the longer of the floor and a cycling pickup's turns, so a
-    // floor cut on its own is covered by the turns. The break is the whole wait cut, in `lingerFor`.
+    // ⚠️ Re-anchored by 0233 onto `lingerFor`, and back onto the constant by 0575, which made it every
+    // pickup's whole wait again.
     edit: {
       path: 'src/app/frame.ts',
-      find: '  return cycles > PICKUP_LINGER_STEPS ? cycles : PICKUP_LINGER_STEPS;',
-      replace: '  return 90 + 0 * cycles;',
+      find: 'export const PICKUP_LINGER_STEPS = 900;',
+      replace: 'export const PICKUP_LINGER_STEPS = 90;',
     },
   },
   {

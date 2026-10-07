@@ -169,9 +169,10 @@ export const PROBES = [
       */
       // ⚠️ Re-anchored by 0441, whose one upgrade is the tubes: the weapon pickup is a special now, so
       // the missile pickup is the upgrade the table can disagree about.
-      // ⚠️ Re-anchored by 0458, which put the row's `how` between its hint and its effect.
-      find: "    how: 'Fly in on the tubes you want; at a full rack it is a surge for your missile trigger',\n    effect: 'upgrade',",
-      replace: "    how: 'Fly in on the tubes you want; at a full rack it is a surge for your missile trigger',\n    effect: 'special',",
+      // ⚠️ Re-anchored by 0458, which put the row's `how` between its hint and its effect, and by 0575,
+      // which reworded it.
+      find: "    how: 'The tubes it shows; at a full rack it is a surge for your missile trigger',\n    effect: 'upgrade',",
+      replace: "    how: 'The tubes it shows; at a full rack it is a surge for your missile trigger',\n    effect: 'special',",
     },
   },
   {
