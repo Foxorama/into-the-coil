@@ -135,7 +135,7 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
 export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP, spots: Readonly<Record<KeeperKind, number>> | null = null): void {
   surface.clear();
   /*
-    ── THE DOCK — 0570 ─────────────────────────────────────────────────────────────────────────────
+    ── THE DOCK — 0571 ─────────────────────────────────────────────────────────────────────────────
     *"a fun spaceship hangar set against a space backdrop, space for the tradie/merchant stalls to show, the
     spaceship to show the changes"*. Space first, with a planet in the bay; a back wall that ends at the bay
     under a truss that reaches out over it; a mezzanine along the wall with every keeper's shopfront on it in
@@ -159,7 +159,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   const walk = PORT_EXTENT.catwalk;
   for (let along = DOCK.catwalkFrom + walk / 2; along < DOCK.catwalkTo; along += walk) put(surface, view, PORT_SPRITE.catwalk, along, DOCK.catwalk, 1, 0, TILE_OVERLAP);
   /*
-    0569: every keeper wherever they are this visit — at their counter, at the ship, or out — and since 0570
+    0569: every keeper wherever they are this visit — at their counter, at the ship, or out — and since 0571
     all three are in the room at once. The open tab's shop is lit; the others stand back in the dim.
   */
   for (let k = 0; k < KEEPER_KINDS.length; k++) {
@@ -214,7 +214,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   put(surface, view, PORT_SPRITE.bayBottom, DOCK.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
 }
 
-/** How lit a shop is while another tab is open — 0570: there, and plainly not the one being spoken to. */
+/** How lit a shop is while another tab is open — 0571: there, and plainly not the one being spoken to. */
 const SHOP_DIM = 0.5;
 
 /** The keepers whose place this visit is at the ship, drawn `drawn` it — behind it, or over it. */
@@ -292,7 +292,7 @@ export function fitStand(
     them now, past the ship. Holding it in view held the camera back a third.
   */
   /*
-    0570: and the mezzanine's first shopfront, whole — every keeper's shop is in the room on every tab, the
+    0571: and the mezzanine's first shopfront, whole — every keeper's shop is in the room on every tab, the
     first of them furthest from the ship. `keeper` is the tab's; the camera keeps them all, so it is unread.
   */
   void keeper;

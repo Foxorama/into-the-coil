@@ -1655,7 +1655,7 @@ ${banded((p) => `.${p}option-shut::after`)} {
   background: currentColor;
 }
 /*
-  ⚠️ **THE CURSOR IS CORNER BRACKETS, AND IT VANISHED ON THE FITTED OPTION — 0570.** Played: *"the focus
+  ⚠️ **THE CURSOR IS CORNER BRACKETS, AND IT VANISHED ON THE FITTED OPTION — 0571.** Played: *"the focus
   selector also disappears when you move focus over the 'selected item'"*. The cursor on a band that tries
   was the try-on's ring, and with the cursor back on the fitted one there is no try-on, so there was no ring:
   only the fill, which is the fitted one's and not the cursor's. The cursor is now four white corner brackets
@@ -2697,7 +2697,7 @@ ${each('-band[hidden]')} { display: none; }
   /* The balance a step smaller on a phone, in the stand's corner where it stands on a desktop (0539). */
   .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { font-size: 0.8em; }
   /*
-    0570: on a phone held sideways the dash is a strip on the deck under the ship, in the stand's foot — at
+    0571: on a phone held sideways the dash is a strip on the deck under the ship, in the stand's foot — at
     0566's floor it stood in two rows over the ship. Twelve pixels, the floor's own size for a count.
   */
   .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { position: relative; }
@@ -3036,7 +3036,7 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { grid-area: stand; position: relative; }
   /* The balance is in the plate's foot; the dash on the deck under the ship, which stands in the stand's middle. */
   /*
-    0570: the dash has a place of its own — *"The cockpit dash is still just … 'there'"*. A cockpit monitor
+    0571: the dash has a place of its own — *"The cockpit dash is still just … 'there'"*. A cockpit monitor
     standing on the deck in the stand's near corner, clear of the ship: a framed screen titled *Cockpit*, the dash plate
     on it and whatever hangs from it swinging below, as it would through the ship's windscreen.
   */

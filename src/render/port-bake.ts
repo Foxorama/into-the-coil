@@ -802,7 +802,7 @@ function paintStall(ctx: CanvasRenderingContext2D, palette: Palette): void {
 }
 
 /*
-  ── THE DOCK — 0570 ──────────────────────────────────────────────────────────────────────────────
+  ── THE DOCK — 0571 ──────────────────────────────────────────────────────────────────────────────
 
   Four pieces for the room the hangar's tabs stand in, drawn in world units centred on their box like
   every piece here. Each in the palette's roles, so the high-contrast palette answers them.

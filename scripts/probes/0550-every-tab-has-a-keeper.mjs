@@ -8,7 +8,7 @@ export const PROBES = [
   {
     decision: '0550',
     suite: 'tests/stand.test.ts',
-    // 0570: every shop is in the room, so the break is the tab's own shop dimmed with the rest.
+    // 0571: every shop is in the room, so the break is the tab's own shop dimmed with the rest.
     broke: 'the open tab’s shop dimmed like the others',
     guard: 'lights each tab’s own keeper’s shop',
     edit: {

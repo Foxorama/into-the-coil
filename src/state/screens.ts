@@ -454,7 +454,7 @@ const pilotOptions = GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hi
  * one they share today, and a tab that wants another writes its own.
  */
 // 0568: no closer than the room's whole height and a little — the truss to the deck — so a bigger screen shows more hangar.
-// 0570: on the ship on its cradle in the dock.
+// 0571: on the ship on its cradle in the dock.
 const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };
 
 /** A ship's name to follow *the* — the Firebird's label carries its own article. */

@@ -126,13 +126,13 @@ export const PORT_KINDS = [
   // 0550: the viewport in the back wall, its frame and its glass — the stars are the sky behind the wall.
   'viewport',
   /*
-    0570: the dock the hangar's tabs stand in — the mezzanine's catwalk, a tile of it; the cradle the
+    0571: the dock the hangar's tabs stand in — the mezzanine's catwalk, a tile of it; the cradle the
     pilot's ship rides on; and the planet hung in the open bay.
   */
   'catwalk',
   'cradle',
   'planet',
-  // 0570: the alcove in the back wall each keeper's counter stands in — a shopfront, lit from inside.
+  // 0571: the alcove in the back wall each keeper's counter stands in — a shopfront, lit from inside.
   'alcove',
 ] as const;
 /*
@@ -214,7 +214,7 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   booth: 30,
   // 0550: two wall tiles wide and a frame's width over, so the frame laps the wall round the hole.
   viewport: 44,
-  // 0570: a catwalk tile, the cradle under a ship's box with its clamps, and the planet — baked small and
+  // 0571: a catwalk tile, the cradle under a ship's box with its clamps, and the planet — baked small and
   // blitted up (`DOCK.planetGrow`): it is soft by nature, and a whole one at the screen's scale is megabytes.
   catwalk: 20,
   cradle: 44,
@@ -223,7 +223,7 @@ export const PORT_EXTENT: Record<PortKind, number> = {
 };
 
 /**
- * ── THE DOCK — 0570 ──────────────────────────────────────────────────────────────────────────────
+ * ── THE DOCK — 0571 ──────────────────────────────────────────────────────────────────────────────
  *
  * Where the hangar's tabs stand: *"a fun spaceship hangar set against a space backdrop, space for the
  * tradie/merchant stalls to show, the spaceship to show the changes"*. A shorter room than the intro's,
