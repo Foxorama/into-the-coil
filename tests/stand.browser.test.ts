@@ -10,6 +10,7 @@ import { SCREENS, SCREEN_KINDS } from '../src/state/screens.ts';
 import { DIFFICULTIES, TUNED } from '../src/content/difficulty.ts';
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
 import { SIDES } from '../src/content/specials.ts';
+import { slotsLeftToRight } from '../src/app/pad.ts';
 import { livesFor, ownSpecial, startingArsenal } from '../src/state/slices/run.ts';
 
 /**
@@ -108,7 +109,8 @@ describe.runIf(chromePath)('0539 — the readout stands down on the hangar’s t
     await openHangar(page);
     const ship = GOLFERS[DEFAULT_GOLFER].ship;
     const arsenal = startingArsenal(ship, TUNED, ownSpecial(ship));
-    const want = ['×' + String(livesFor(TUNED)), ...SIDES.map((side) => '×' + String(arsenal[side].length))];
+    // In the order the strip stands them, which is the pad's and not the binding's — 0574.
+    const want = ['×' + String(livesFor(TUNED)), ...slotsLeftToRight(SIDES.length).map((slot) => '×' + String(arsenal[SIDES[slot]!].length))];
     expect(DIFFICULTIES[TUNED].lives, 'the tier opens with no lives, so a ×0 would pass').toBeGreaterThan(0);
     expect((await readout(page, prefixFor('hangar'))).counts, 'the dash does not count the opening complement').toEqual(want);
     await back(page, 'hangar');

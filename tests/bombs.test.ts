@@ -20,9 +20,8 @@ import { playableWorld, NO_LEVEL } from './world.ts';
  * level cleared. A bomb launches forward and detonates a set distance ahead of the ship, doing 6× a
  * pulse's damage in a wide blast — and the blast hurts the player, which is the skill in it."*
  *
- * ⚠️ **The blast hurting the player is the assertion that matters most**, because it is the one a
- * reasonable person would remove by accident: every other collision in the game is a threat meeting
- * the ship, and this is the ship's own weapon doing it.
+ * ⚠️ **The blast no longer hurts the player** —
+ * `docs/decisions/0574-nothing-of-mine-hurts-me.md`, at the end of this file.
  */
 
 /** A gun whose own special is the bomb — what a ship carrying it opens a run on (0441). */
@@ -179,35 +178,50 @@ describe('a blast is an area, and it lands once', () => {
     expect(before - enemy.health, 'the blast landed more than once').toBe(SHOTS.blast.damage);
   });
 
-  it('hurts the player, and costs exactly what any other hit costs', () => {
-    /*
-      ⚠️ **THE ASK'S OWN SENTENCE**: *"and the blast hurts the player, which is the skill in it."*
-      Driven by flying the ship into its own blast — the bomb is thrown, the ship keeps going, and
-      the fixture asserts what it cost. One shield, not two, because a hit is a hit (0050).
-    */
-    /*
-      ⚠️ **THE PLAYER HAS TO BE INSIDE IT WHEN IT GOES OFF, which is the rule as well as the fixture.**
-      A blast lands once, on the step it appears; what stays on screen afterwards is the ring it left.
-      So the way to be hurt by your own bomb is to chase it — which is what this does, by flying the
-      ship along with the thrown body until the fuse runs out.
-    */
+});
+
+describe('0574 — nothing of the player’s hurts the player', () => {
+  /*
+    ⚠️ **IT WAS 0053's ASSERTION THAT MATTERED MOST, AND IT IS INVERTED.** *"No special hurts the player
+    - lets make them all consistent."* The bomb and the candle could hurt their own ship and six other
+    specials could not; the ray's burst, a gun's, could too. Both tests fly the ship INTO its own fire,
+    because a ship standing clear of it would pass with the pairing still in place.
+  */
+  it('a ship that chases its own bomb into the blast keeps every shield', () => {
     const { world, frame } = quietWorld();
     world.ship.health = world.shipRow.health + MAX_SHIELDS;
     const shieldsBefore = shieldsOf(world.shipRow, world.ship.health);
     launchSpecial(world, 'bomb');
     const bomb = world.bombs.at(0);
+    let went = false;
     for (let i = 0; i < A_WHILE; i++) {
-      // Chasing it: the ship keeps pace with its own bomb, which is the mistake being modelled.
+      // Chasing it: the ship keeps pace with its own bomb, so it is inside the blast the step it lands.
       world.ship.along = bomb.along;
       world.ship.prevAlong = world.ship.along;
       world.ship.across = bomb.across;
       world.ship.prevAcross = world.ship.across;
       frame.step();
-      if (world.blasts.size > 0) break;
+      if (world.blasts.size > 0) {
+        went = true;
+        break;
+      }
     }
-    const shieldsAfter = shieldsOf(world.shipRow, world.ship.health);
-    expect(shieldsAfter, 'the player flew into their own blast and it did nothing').toBeLessThan(shieldsBefore);
-    expect(shieldsBefore - shieldsAfter, 'the player’s own blast cost more than one hit').toBe(1);
+    expect(went, 'the bomb never went off, so the ship was never inside it').toBe(true);
+    expect(shieldsOf(world.shipRow, world.ship.health), 'the player’s own bomb cost them a hit').toBe(shieldsBefore);
+  });
+
+  it('every kind of the player’s blast, landing on the ship, costs it nothing', () => {
+    // The three that carry damage into the blast pool: the bomb's, the candle's and the ray's.
+    for (const kind of ['blast', 'firework', 'rayBurst'] as const) {
+      const { world, frame } = quietWorld();
+      world.ship.health = world.shipRow.health + MAX_SHIELDS;
+      const before = world.ship.health;
+      const body = world.blasts.spawn()!;
+      reset(body, world.ship.along, world.ship.across, SHOTS[kind], 0);
+      expect(body.damage, `${kind} carries no damage, so this proves nothing`).toBeGreaterThan(0);
+      frame.step();
+      expect(world.ship.health, `the player’s own ${kind} landed on their ship`).toBe(before);
+    }
   });
 });
 

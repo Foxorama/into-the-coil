@@ -51,6 +51,22 @@ export const PAD_AXIS_X = 0;
 export const PAD_AXIS_Y = 1;
 export const PAD_SPECIAL_BUTTONS: readonly number[] = [0, 1, 2, 3];
 /**
+ * Where each standard-mapping face button stands across the pad, left negative — 0574: the bottom
+ * one (A) and the top one (Y) in the middle, the right one (B) right and the left one (X) left.
+ * *"The gamepad buttons are guard, special, missile"* — the strip stands its triggers in this order, so
+ * what the eye reads left to right is what the thumb finds left to right.
+ */
+export const PAD_FACE_ACROSS: readonly number[] = [0, 1, -1, 0];
+
+/**
+ * The triggers' slots in the order their pad buttons stand left to right — 0574. Ties keep the
+ * binding order, so the bottom button stands before the top one.
+ */
+export function slotsLeftToRight(count: number): number[] {
+  const across = (slot: number): number => PAD_FACE_ACROSS[PAD_SPECIAL_BUTTONS[slot] ?? slot] ?? 0;
+  return Array.from({ length: count }, (_, slot) => slot).sort((a, b) => across(a) - across(b) || a - b);
+}
+/**
  * Start, by its standard-mapping index — 0511: the button every console pauses on, and free in play
  * (0–3 are the specials). A menu reads it as a confirm (`src/app/menu.ts`), so on the pause it presses
  * *Resume*, which is where the cursor opens.

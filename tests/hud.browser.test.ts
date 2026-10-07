@@ -564,6 +564,25 @@ describe.runIf(chromePath)('the in-game readout', () => {
     await page.context().close();
   });
 
+  it('0574 — stands the triggers as the pad’s buttons stand: guard, special, missile, left to right', async () => {
+    /*
+      *"The Cockpit has special, missile, guard -> but the gamepad buttons are guard, special, missile."*
+      Read in pixels off the glass, so a strip reordered by anything — the DOM, a flex `order`, a
+      direction — is caught as the player would see it.
+    */
+    const page = await open();
+    await fly(page);
+    await page.waitForTimeout(200);
+    const seen = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('.itc-playing-hud-stack')]
+        .map((el) => ({ side: el.dataset['side'] ?? '', x: el.getBoundingClientRect().left }))
+        .sort((a, b) => a.x - b.x)
+        .map((s) => s.side),
+    );
+    expect(seen, 'the strip does not read as the pad’s face buttons stand').toEqual(['ward', 'gun', 'tubes']);
+    await page.context().close();
+  });
+
   it('reports the run in words as well as in pictures', async () => {
     /*
       ⚠️ `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *every cue has a visual
@@ -737,7 +756,8 @@ describe.runIf(chromePath)('the readout follows what the player spends', () => {
     await fly(page);
     await page.waitForTimeout(300);
     // "2 charges, next Bomb" since 0373: the stack's count and what it throws next.
-    const label = '.itc-playing-hud-group[aria-label*="charge"]';
+    // The gun's stack by name: since 0574 the strip's first is the ward's, which Space does not throw.
+    const label = '.itc-playing-hud-group[data-side="gun"][aria-label*="charge"]';
     const before = await page.getAttribute(label, 'aria-label');
     expect(before, 'the readout does not say what the player is carrying').toMatch(/\d+ charges?, next \w+/);
 

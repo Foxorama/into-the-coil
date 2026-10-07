@@ -47,7 +47,7 @@ import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import { SHELF_KINDS, SHELVES, type OwnableKind } from '../content/wares.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
-import { PAD_SPECIAL_BUTTONS } from './pad.ts';
+import { PAD_SPECIAL_BUTTONS, slotsLeftToRight } from './pad.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
 // hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
 // that replaced the strip is `docs/decisions/0358-a-trigger-is-a-button.md`.
@@ -6236,6 +6236,8 @@ export function makeChrome(
   for (let i = 0; i < SIDES.length; i++) {
     const group = document.createElement('div');
     group.className = 'itc-playing-hud-group itc-playing-hud-stack';
+    // Which trigger it counts, so the strip's order can be read back by side — 0574.
+    group.dataset['side'] = SIDES[i]!;
     const icon = hudIcon(SPRITE.bomb);
     const count = document.createElement('span');
     group.append(icon, count);
@@ -6248,7 +6250,14 @@ export function makeChrome(
   // the number is what matters — 0024's floor is that every cue has a twin, not that it is visual.
   shieldGroup.setAttribute('role', 'img');
   const pips: HTMLElement[] = [];
-  hud.append(livesGroup, shieldGroup, ...stackGroups.map((s) => s.group));
+  /*
+    ⚠️ **THE TRIGGERS STAND AS THE PAD'S BUTTONS STAND, NOT IN THE BINDING ORDER — 0574.** `SIDES` is
+    gun, tubes, ward because that is `special1`–`special3`, and the pad puts them on A, B and X — X on
+    the left, A in the middle, B on the right. The strip read gun, tubes, ward over buttons that read
+    ward, gun, tubes: *"it's weird and awkward that the display in game doesn't match the 3 buttons."*
+    `setHud` still writes `stackGroups` by slot; only where each group stands moves.
+  */
+  hud.append(livesGroup, shieldGroup, ...slotsLeftToRight(stackGroups.length).map((slot) => stackGroups[slot]!.group));
   /*
     The box the strip is sized against — 0465: the host's whole glass, a query container as the
     trigger discs' is, so the strip's type is a share of the SHORT axis and not of the width.

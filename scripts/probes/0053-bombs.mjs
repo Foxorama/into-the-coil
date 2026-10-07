@@ -1,30 +1,11 @@
 // The breaks behind docs/decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md.
 //
-// ⚠️ The blast is the first body in the game that hurts BOTH sides, and half of these probes exist
-// because every reasonable instinct removes that. The other half are the arsenal's arithmetic, which
-// is invisible until a player counts their own bombs and finds one missing.
+// ⚠️ The blast hurt BOTH sides until 0574, which made the player's own blasts harmless to the ship;
+// that probe is 0574's own file now. What is left here is the arsenal's arithmetic, which is
+// invisible until a player counts their own bombs and finds one missing.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0053',
-    suite: 'tests/bombs.test.ts',
-    /*
-      ⚠️ THE ONE THE WHOLE THING IS ABOUT: *"and the blast hurts the player, which is the skill in
-      it."* Every other collision in the game is a threat meeting the ship, so a pairing that hurts
-      the player with their own weapon is the line somebody deletes while tidying — and the game is
-      still perfectly playable afterwards, just without the thing that made the bomb a decision.
-    */
-    broke: 'the blast made harmless to the player, so a bomb is free',
-    guard: 'hurts the player, and costs exactly what any other hit costs',
-    edit: {
-      path: 'src/app/frame.ts',
-      // Re-anchored by 0349, which gave the pairing the corridor: a blast does not reach through stone.
-      find:
-        '    collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false, w.corridor);',
-      replace: '    void w.blasts;',
-    },
-  },
   {
     decision: '0053',
     suite: 'tests/bombs.test.ts',

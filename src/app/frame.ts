@@ -2443,13 +2443,14 @@ export class GameFrame implements Frame {
       // is not: a body the player rammed is still there afterwards.
       collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       /*
-        ⚠️ **THE PLAYER'S OWN BLAST, IN THE SAME LIST AS EVERY OTHER THREAT — and that is the skill in
-        it.** Asked for: *"and the blast hurts the player."* It goes through `collideIntoOne` rather
-        than through a check of its own so that the hit costs exactly what any other hit costs: one
-        shield, or the life, with the same invulnerable window afterwards. A separate path would be a
-        second description of what a hit is, and the two would disagree the first time either moved.
+        ⚠️ **THE PLAYER'S OWN BLASTS ARE NOT IN THIS LIST, AND THEY WERE — 0574.** 0053 paired them
+        with the ship: *"and the blast hurts the player, which is the skill in it."* By 2026-10-07 two
+        specials of eight and one gun of five could hurt their own ship and the rest could not, and the
+        ask was the consistency: *"no special hurts the player - lets make them all consistent."* Every
+        body in `w.blasts` is the player's — a bomb's blast, a candle's firework, a ray's burst, a rift,
+        a pyre — so the ship is paired with none of them.
       */
-      collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false, w.corridor);
+      // The player's own blasts are not paired with the ship — 0574.
       // And the stone, inside the same one-hit cap as everything above — 0349.
       stoneStrikesShip(w);
       if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
