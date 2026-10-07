@@ -1161,6 +1161,12 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ A PLAY OF LEGENDARY IS BUILT AND OWED A PLAY — 2026-10-07
+
+Six items in one decision — [0573](decisions/0573-the-legend-bites.md): the end bosses' tails, the
+mid-bosses and the arc, the serpent's balls, the Black Heart's ink, and Legend's lives. Its *What is
+owed* names the play, the vetoes, and one question about three other places' shot inks.
+
 ### ⚠️ THE HANGAR FAMILY IS REVIEWED AND REBUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-07
 
 [`the-hangar-family-reviewed`](../reports/the-hangar-family-reviewed-2026-10-07.md) is the review, the

@@ -23,7 +23,7 @@ import {
 import { FIRE_GRID, VOLLEY_CYCLE, nextOnGrid } from '../src/content/cadence.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
-import { phaseFor } from '../src/app/boss.ts';
+import { TAIL_FROM, phaseFor, tailOf } from '../src/app/boss.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { ASSIST_KNOBS } from '../src/sim/assist.ts';
 import { initialState, reduce, type Action, type State } from '../src/state/root.ts';
@@ -670,6 +670,55 @@ describe('the tier reaches the field, and not only the table', () => {
         BOSSES.sentinel.health * 2,
       );
     }
+  });
+
+  it('0573: a tier’s tail holds its share of the bar longer at the END of the fight, and nowhere else', () => {
+    /*
+      `docs/decisions/0573-the-legend-bites.md`. Asked: *"all bosses need like +10/15% for the final 1-2
+      stages, they die before they even get an attack off"* — and answered, as a share of the whole bar
+      spent where the fight ends. So what is held is a fight flown through the real frame: the stretch
+      before the tail as long as it ever was, and the tail longer by exactly the share asked.
+
+      ⚠️ **IN SECONDS OF A REAL FIGHT, ON A ROW MADE FOR THE TEST — 0027.** A tail as wide as its own
+      span, so the tail must take TWICE as long and nothing before it may move; a damage path that
+      skipped the tail, or applied it from the first hit, or in the wrong fight, fails one of the three.
+      The guns fly as they fly, so the ratio is held to a band rather than to a step.
+    */
+    const span = tailOf(BOSSES.sentinel);
+    expect(span, 'the sentinel has no tail to hold').toBeGreaterThan(0);
+    const bossOnly: LevelRow = { waves: [], pickups: [], landmarks: [], bossAt: 300, midBoss: null, sections: NO_SECTIONS, boss: 'sentinel', theme: 'approach' };
+    const fly = (row: DifficultyRow): { before: number; tail: number } => {
+      const { world } = playableWorld(bossOnly);
+      world.difficulty = row;
+      const frame = new GameFrame(world);
+      let start = -1;
+      let tailAt = -1;
+      for (let step = 0; step < 40_000; step++) {
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 999;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
+        if (world.bossPool.size > 0 && world.bossEntering < 0 && !world.bossBeaten) {
+          const boss = world.bossPool.at(0);
+          if (start < 0) start = step;
+          if (tailAt < 0 && phaseFor(BOSSES.sentinel, boss.health, world.bossFullHealth).upTo <= TAIL_FROM) tailAt = step;
+          world.ship.prevAcross = world.ship.across;
+          world.ship.across = boss.across;
+        }
+        frame.step();
+        if (start >= 0 && (world.bossBeaten || world.bossPool.size === 0)) {
+          return { before: (tailAt - start) / STEPS_PER_SECOND, tail: (step - tailAt) / STEPS_PER_SECOND };
+        }
+      }
+      throw new Error('the sentinel was never killed');
+    };
+    const plain = fly(AUTHORED);
+    const held = fly({ ...AUTHORED, bossTail: { mid: 0, end: span } });
+    expect(Math.abs(held.before - plain.before) / plain.before, `the fight before the tail went ${plain.before.toFixed(1)} s → ${held.before.toFixed(1)} s`).toBeLessThan(0.1);
+    expect(held.tail / plain.tail, `a tail as wide as its span took ${plain.tail.toFixed(1)} s → ${held.tail.toFixed(1)} s, not twice`).toBeGreaterThan(1.7);
+    expect(held.tail / plain.tail, `a tail as wide as its span took ${plain.tail.toFixed(1)} s → ${held.tail.toFixed(1)} s, not twice`).toBeLessThan(2.3);
+    // And the mid-boss's number does not reach the end boss's fight.
+    const wrongFight = fly({ ...AUTHORED, bossTail: { mid: span, end: 0 } });
+    expect(wrongFight.tail / plain.tail, 'the mid-boss’s tail held the end boss').toBeLessThan(1.15);
   });
 });
 

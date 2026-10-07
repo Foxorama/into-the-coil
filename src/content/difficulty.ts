@@ -255,10 +255,31 @@ export interface BossHold {
    * rows that were asked about and no other.
    */
   bossToughness: Readonly<Record<BossFight, number>>;
+  /**
+   * Health a boss holds IN ITS TAIL beyond what its bar says, as a share of its full health, by which
+   * fight it is — `docs/decisions/0573-the-legend-bites.md`. The tail is the phases from the first whose
+   * `upTo` is at or under `TAIL_FROM` (`src/app/boss.ts`) to the death.
+   *
+   * ⚠️ **ASKED OF ONE TIER, FROM A PLAY OF IT:** *"all bosses need like +10/15% for the final 1-2
+   * stages, they die before they even get an attack off at the moment, hydra in particular"*, and
+   * answered, asked which reading: a fifteenth-and-a-bit of the whole bar, spent where the fight ends.
+   * The top of the fight is untouched — the tail is longer, the opening is not.
+   *
+   * ⚠️ **A DAMAGE SCALE IN THE TAIL AND NOT A BIGGER BAR**, so every phase still turns at its own
+   * `upTo` and the bar still reads as a share: a hit landing in a tail that spans `s` of the bar is
+   * worth `s / (s + bossTail)` of itself, which adds exactly `bossTail × full` to what the fight takes.
+   *
+   * ⚠️ **A LITERAL, LIKE `bossToughness`, AND FOR 0532's REASON** — an axis would move Savior and Burn
+   * with it. `NO_TAIL`, nothing in either fight, is the shared default (0282).
+   */
+  bossTail: Readonly<Record<BossFight, number>>;
 }
 
 /** A boss exactly as tough as the tier's `toughness` says, in both fights — the default, 0532. */
 export const AS_TOUGH: Readonly<Record<BossFight, number>> = { mid: 1, end: 1 };
+
+/** A boss whose tail holds what its bar says, in both fights — the default, 0573. */
+export const NO_TAIL: Readonly<Record<BossFight, number>> = { mid: 0, end: 0 };
 
 /** Every multiplier axis — the keys of `Multipliers`, so a new axis is a compile error until it has a margin. */
 export type MultiplierAxis = keyof Multipliers;
@@ -435,7 +456,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     title: 'Legendary Pilot',
     // The button's voice, in the player's words — 0370.
     hint: 'Is that plot armour?',
-    lives: 5,
+    // *"Reduce starting/total lives to 3 instead of 5"* — 0573. Its full shell is still the life in hand.
+    lives: 3,
     // Every life opens on a full shell and every level renews it — 0355, the player's words.
     shellOpen: 3,
     shellCap: 3,
@@ -444,11 +466,15 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
     corridor: { narrowest: 56, slope: 0.25 },
     /*
-      Half again the mid-boss and fifteen percent more end boss, over a `toughness` of one — 0532, the
-      player's numbers from a play of this tier. Asked first as twice; settled at one and a half so
-      Savior's mid-bosses, raised with it, hold a fifth more than these.
+      Fifteen percent more end boss over a `toughness` of one — 0532, the player's number from a play of
+      this tier. The mid-boss was half again, asked first as twice and settled at one and a half; since
+      0573 it is 1.7, from the next play: *"minibosses die too fast as well"*. Still under Savior's 1.8,
+      which the player chose over raising Savior's with it.
     */
-    bossToughness: { mid: 1.5, end: 1.15 },
+    bossToughness: { mid: 1.7, end: 1.15 },
+    // And an end boss's last stages hold a further 0.15 of its bar — 0573: *"they die before they even
+    // get an attack off"*. The mid-boss's 1.7 is its whole answer.
+    bossTail: { mid: 0, end: 0.15 },
   },
   /**
    * The tier the game is tuned for — `SAVIOR` is its multipliers, and the other two are derived.
@@ -470,6 +496,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
       above the gentle one after Legend's mid-bosses rose.
     */
     bossToughness: { mid: 1.125, end: 1 },
+    // Its tails hold what its bars say — 0573 was asked of Legend's.
+    bossTail: NO_TAIL,
   },
   /**
    * The tier that is supposed to end runs: Savior a margin up on every axis but `aggression` and
@@ -503,6 +531,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     corridor: { narrowest: 34, slope: 0.58 },
     // As tough as `toughness` says — 0532 is a literal on Legend's and Savior's rows, so it does not ripple here.
     bossToughness: AS_TOUGH,
+    bossTail: NO_TAIL,
   },
 };
 
@@ -539,6 +568,8 @@ export const AUTHORED: DifficultyRow = {
   corridor: { narrowest: 56, slope: 0.25 },
   // The content's bosses at the content's health — 0532 is a tier's, never the baseline's.
   bossToughness: AS_TOUGH,
+  // And their tails at their bars' — 0573, a tier's for the same reason.
+  bossTail: NO_TAIL,
 };
 
 /*

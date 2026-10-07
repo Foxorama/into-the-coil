@@ -709,7 +709,8 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   // A hailstone — the Rime Shelf's: ice that does not burst, in the frost ink, so a raider's shard is
   // told from the frost ship's by staying one thing.
   hail: { sprite: SPRITE.hail, spriteHit: SPRITE.hail, radius: 1.2, health: 1, damage: 1, speed: 1.1, fission: SPENT_BY_ARRIVING },
-  // A clot — the Black Heart's: a knot of blood, lobed round a dark middle, in its place's ink.
+  // A clot — the Black Heart's: a knot of blood, lobed round a dark middle, in its place's ink — green
+  // since 0573, so a clot is never mistaken for the player's own amber fire.
   clot: { sprite: SPRITE.clot, spriteHit: SPRITE.clot, radius: 1.15, health: 1, damage: 1, speed: 1.3, fission: SPENT_BY_ARRIVING },
   /**
    * The serpent's acid blast — `docs/decisions/0248-the-serpent-strikes.md`. The fattest and
@@ -797,19 +798,31 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   maw: {
     sprite: SPRITE.maw,
     spriteHit: SPRITE.mawHit,
-    radius: 3.6,
+    /*
+      ⚠️ **5.4, AND IT WAS 3.6 — 0573: IT IS BORN AT THE SIZE IT USED TO GROW TO.** *"Poison bubbles need
+      to start bigger and then shrink as they get hit to match the size of the explosion."* The burst
+      already scaled with what was left (`burstMaw`: the share of the appetite unspent is the share of
+      the ring thrown), and the ball said the opposite, swelling as it emptied — the biggest ball on the
+      screen was the one with the smallest burst in it. So it opens at half again, and a full ball is a
+      full burst.
+    */
+    radius: 5.4,
     health: 13.2,
     damage: 3,
     speed: 0.55,
     fission: SPENT_BY_ARRIVING,
     /*
-      ⚠️ **HALF AGAIN WHEN ITS APPETITE IS SPENT, AND THE OLD MECHANISM MADE IT FIFTEEN TIMES — 0322.** The
-      swell was a step of 1.1 **per bite**, measured on a void that takes six of them; a thirty-point ball fed
-      by the one-damage pulse takes twenty-nine, and 1.1²⁹ took its hurtbox from 3.6 units to **fifty-two on a
-      hundred-unit lane** — half the room the player flies in, on a ball drawn fourteen units wide. The worse
-      the player's gun, the bigger the wall they made by doing the thing they were asked to do.
+      ⚠️ **A THIRD OF ITS SIZE WHEN ITS APPETITE IS SPENT, SO IT SHRINKS AS IT EATS — 0573.** `bite` spends
+      this as a share per point of damage whichever way it runs, so a ball at half its appetite is
+      `√⅓` of its birth and one at its last point about a third, as small as the two-drop burst it would
+      then throw. Below one rather than above it is the whole of the change; the mechanism is 0322's.
+
+      ⚠️ **AND 0322's FINDING STILL STANDS UNDER IT**: the size is a function of what was eaten and never
+      of how many shots ate it. The swell was a step of 1.1 **per bite** until then, which took a
+      thirty-point ball fed by the one-damage pulse to **fifty-two units of hurtbox on a hundred-unit
+      lane** — the worse the player's gun, the bigger the wall.
     */
-    swallows: { swell: 1.5 },
+    swallows: { swell: 1 / 3 },
     /*
       ⚠️ **35.6 IS *20% AWAY FROM THE LEFT SCREEN*, MEASURED ONCE ON THE NARROWEST VIEW** — a fifth of
       `ACROSS_SPAN × MIN_ASPECT`. 0023 says a spawn is placed against a view the device cannot change, and a

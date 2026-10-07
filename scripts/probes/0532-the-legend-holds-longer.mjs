@@ -13,7 +13,8 @@ export const PROBES = [
     guard: 'puts each fight’s boss down at what its tier’s row says for THAT fight',
     edit: {
       path: 'src/app/frame.ts',
-      find: "  boss.health = bossToughnessFor(w.bossRow.health, w.difficulty, w.fight === 0 ? 'mid' : 'end');",
+      // ⚠️ Re-anchored by 0573, which named the fight in `fightOf` for the tail to read as well.
+      find: '  boss.health = bossToughnessFor(w.bossRow.health, w.difficulty, fightOf(w));',
       replace: '  boss.health = toughnessFor(w.bossRow.health, w.difficulty);',
     },
   },
@@ -24,8 +25,9 @@ export const PROBES = [
     guard: 'puts each fight’s boss down at what its tier’s row says for THAT fight',
     edit: {
       path: 'src/app/frame.ts',
-      find: "w.difficulty, w.fight === 0 ? 'mid' : 'end');",
-      replace: "w.difficulty, w.fight === 0 ? 'end' : 'mid');",
+      // ⚠️ Re-anchored by 0573: the fight is named once, in `fightOf`, and the spawn reads it there.
+      find: "  return w.fight === 0 ? 'mid' : 'end';",
+      replace: "  return w.fight === 0 ? 'end' : 'mid';",
     },
   },
   {
@@ -49,7 +51,7 @@ export const PROBES = [
     guard: 'and never makes something take fewer, whatever the tiers turn out to be',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: '    bossToughness: { mid: 1.5, end: 1.15 },',
+      find: '    bossToughness: { mid: 1.7, end: 1.15 },',
       replace: '    bossToughness: { mid: 2, end: 1.15 },',
     },
   },

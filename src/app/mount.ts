@@ -1176,6 +1176,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     breakerRng: makeRng('proof-scene').stream('breaker'),
     // How a jagged laser zigzags — 0388, its own stream on the same terms.
     beamRng: makeRng('proof-scene').stream('beam'),
+    // The height each ball of a lob is aimed at — 0573, its own stream on the same terms.
+    lobRng: makeRng('proof-scene').stream('lob'),
     // Where the volcanoes' rock falls — 0251, its own stream on the same terms.
     rockRng: makeRng('proof-scene').stream('rock'),
     voidRng: makeRng('proof-scene').stream('void'),
