@@ -50,8 +50,9 @@ export const PROBES = [
         cannot be cancelled* is exactly the sentence above. Checked: it fires as `a cancelled bake
         still handed its material over`.
       */
-      find: '  return () => {\n    stopped = true;\n  };',
-      replace: '  return () => {\n    // The caller asked to stop and nothing here is listening.\n  };',
+      // 0583: the stop is one half of a `PlaceBake` handle now, and the break is the same one.
+      find: '    stop: () => {\n      stopped = true;\n    },',
+      replace: '    stop: () => {\n      // The caller asked to stop and nothing here is listening.\n    },',
     },
   },
 ];

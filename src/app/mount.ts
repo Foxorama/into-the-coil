@@ -98,7 +98,7 @@ import {
 } from './music.ts';
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
-import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
+import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone, type PlaceBake } from './sound.ts';
 import { DOCK, INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
@@ -2944,7 +2944,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * fact about where it is going.
    */
   let bakingTheme: ThemeKind | null = null;
-  let stopBaking: (() => void) | null = null;
+  let stopBaking: PlaceBake | null = null;
   /*
     ── THE NEXT PLACE, BAKED WHILE THIS ONE IS FLOWN ────────────────────────────────────────────────
 
@@ -2961,6 +2961,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     seconds (one forty-two bar layer bounds it), and the approach and the fight are never less than
     forty-five — so it starts when `applyMusicLevel` first sees the boss coming.
 
+    ⚠️ **ON ONE WORKER, AND THE WHOLE POOL ONLY ONCE IT IS OWED** — 0583. Four workers flat out under the
+    approach and the fight was the busiest part of the level paying for the next one, on a phone the cores
+    its audio was mixed on. A boss that dies before it lands `hurry`s the rest out at once.
+
     ⚠️ **HELD, NOT HANDED** — `setLoops` swaps at the next phrase, so a set handed over early is the next
     level's music arriving in this one. `ahead` is where it waits.
 
@@ -2970,7 +2974,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   let ahead: { theme: ThemeKind; loops: Record<MusicLayer, Float32Array>; cues: Float32Array[][] } | null = null;
   let aheadTheme: ThemeKind | null = null;
-  let stopAhead: (() => void) | null = null;
+  let stopAhead: PlaceBake | null = null;
   /** The run reached the place while its bake was still in flight, so it is handed over as it lands. */
   let aheadIsWanted = false;
   /**
@@ -3189,7 +3193,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (next > LEVEL_KINDS.length - 1) return;
     const theme = placeFor(next);
     if (theme === bakingTheme || theme === aheadTheme) return;
-    stopAhead?.();
+    stopAhead?.stop();
     ahead = null;
     aheadTheme = theme;
     aheadIsWanted = false;
@@ -3201,7 +3205,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         return;
       }
       ahead = { theme, loops, cues };
-    });
+    }, undefined, true);
   };
 
   const bakeIncomingPlace = (want?: ThemeKind): void => {
@@ -3209,7 +3213,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (theme === bakingTheme) return;
     // 0331: the place was baked on the way here — handed over now, and the one after it is started.
     if (ahead !== null && ahead.theme === theme) {
-      stopBaking?.();
+      stopBaking?.stop();
       bakingTheme = theme;
       const held = ahead;
       ahead = null;
@@ -3219,12 +3223,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     // …or it is still in flight, and lands in the run's hands rather than in `ahead`.
     if (aheadTheme === theme) {
-      stopBaking?.();
+      stopBaking?.stop();
       bakingTheme = theme;
       aheadIsWanted = true;
+      // 0583: it was baking one layer at a time because it had until now. It has not any more.
+      stopAhead?.hurry();
       return;
     }
-    stopAhead?.();
+    stopAhead?.stop();
     ahead = null;
     aheadTheme = null;
     /*
@@ -3233,7 +3239,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       left — and 0128's swap lands at the next PHRASE, so the wrong piece would arrive up to
       twenty-five seconds after the level it belongs to ended.
     */
-    stopBaking?.();
+    stopBaking?.stop();
     bakingTheme = theme;
     stopBaking = bakePlace(theme, ({ loops, cues }) => {
       handOverPlace(theme, loops, cues);
