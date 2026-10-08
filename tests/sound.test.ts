@@ -813,6 +813,69 @@ describe('the cue table', () => {
         if (takePrewarmed() === null) prewarmAudio((run) => run());
       };
 
+      it('0583 — A BAKE AHEAD KEEPS ONE LAYER ON THE POOL, AND A HURRY SENDS THE REST AT ONCE', () => {
+        /*
+          ⚠️ **THE NEXT PLACE IS NOT NEEDED UNTIL THE BOSS DIES**, and it was baked on every worker the pool
+          had, under the approach and the fight. A bake for the place the run is IN is still sent whole —
+          that one is owed now — so both halves are asked here, and the cancel, which must stop the queue
+          as well as the hand-over.
+
+          ⚠️ **NOTHING IS ALLOWED TO LAND.** The pool here answers with nothing, and every bake is stopped
+          before it could finish: a finished bake releases the shared copy of what it re-voices (0331),
+          and the tests after this one read that set.
+        */
+        warm();
+        // What goes to the pool: the place's own layers, and any shared one an earlier place let go.
+        const mine = [...bakedBy('saurian'), ...[...releasedLayers()].filter((layer) => !bakedBy('saurian').includes(layer))];
+        expect(mine.length, 'the place this is written against re-voices too little to queue').toBeGreaterThan(4);
+        let out = 0;
+        let mostOut = 0;
+        let asked = 0;
+        const replies: (() => void)[] = [];
+        useLayerBaker(
+          () =>
+            new Promise<Float32Array>((done) => {
+              asked++;
+              out++;
+              mostOut = Math.max(mostOut, out);
+              replies.push(() => {
+                out--;
+                done(new Float32Array(0));
+              });
+            }),
+        );
+        const answer = async (): Promise<void> => {
+          replies.shift()!();
+          for (let i = 0; i < 4; i++) await Promise.resolve();
+        };
+        const run = async (): Promise<void> => {
+          const later = bakePlace('saurian', () => {}, () => {}, true);
+          expect(out, 'a bake ahead sent nothing to the pool').toBe(1);
+          await answer();
+          await answer();
+          expect(asked, 'a bake ahead did not send the next layer when one came back').toBe(3);
+          expect(mostOut, 'a bake ahead had more than one layer on the pool').toBe(1);
+          later.hurry();
+          expect(out, 'a hurried bake held layers back').toBe(mine.length - 2);
+          later.stop();
+          while (replies.length > 0) await answer();
+          expect(asked, 'a stopped bake kept sending').toBe(mine.length);
+
+          asked = 0;
+          mostOut = 0;
+          const owed = bakePlace('saurian', () => {}, () => {});
+          expect(mostOut, 'a bake that is owed now was held back').toBe(mine.length);
+          owed.stop();
+          while (replies.length > 0) await answer();
+
+          const left = bakePlace('saurian', () => {}, () => {}, true);
+          left.stop();
+          await answer();
+          expect(asked, 'a cancelled bake ahead sent another layer after it was stopped').toBe(mine.length + 1);
+        };
+        return run().finally(() => useLayerBaker(null));
+      }, 60_000);
+
       it('0331 — and the shared copy of what it re-voices is let go, and baked again when it is wanted', () => {
         /*
           ⚠️ **THE HALF OF 0133 THAT WAS NEVER BUILT.** The place's own material was baked at the boundary
@@ -1004,7 +1067,7 @@ describe('the cue table', () => {
         }, (run) => queue.push(run));
         // Walk a few jobs, then leave.
         for (let i = 0; i < 5 && queue.length > 0; i++) queue.shift()!();
-        stop();
+        stop.stop();
         while (queue.length > 0) queue.shift()!();
         expect(arrived, 'a cancelled bake still handed its material over').toBe(false);
       }, 30_000);

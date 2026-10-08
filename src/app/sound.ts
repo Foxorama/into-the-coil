@@ -1642,8 +1642,11 @@ let warming = false;
  * The longest single job is the longest single NOTE, which `tests/themes.test.ts` holds under three
  * seconds for a place exactly as `tests/sound.test.ts` holds it for the base.
  *
- * ⚠️ **Cancellable, because a run can leave a place before its material arrives.** The returned
- * function stops the walk; a half-built set is never handed anywhere, so there is nothing to undo.
+ * ⚠️ **Cancellable, because a run can leave a place before its material arrives.** `stop` ends the
+ * walk; a half-built set is never handed anywhere, so there is nothing to undo.
+ *
+ * ⚠️ **A BAKE AHEAD KEEPS ONE LAYER ON THE POOL, AND `hurry` LETS THE REST GO** —
+ * `docs/decisions/0583-a-bake-ahead-takes-one-worker.md`. See `AHEAD_IN_FLIGHT`.
  *
  * ⚠️ **Nothing happens before the prewarm has finished**, because there is no base set to share from
  * and baking one here would be the three-second freeze 0102 exists to have removed. A boundary is
@@ -1654,10 +1657,11 @@ export function bakePlace(
   theme: ThemeKind,
   ready: (baked: { loops: Record<MusicLayer, Float32Array>; cues: Float32Array[][] }) => void,
   schedule: (run: () => void) => void = (run) => void setTimeout(run, 0),
-): () => void {
+  ahead = false,
+): PlaceBake {
   const base = prewarmed?.loops;
   const baseCues = prewarmed?.cues;
-  if (base === undefined || baseCues === undefined) return () => {};
+  if (base === undefined || baseCues === undefined) return { stop: () => {}, hurry: () => {} };
   const own = { ...base } as Record<MusicLayer, Float32Array>;
   /*
     ⚠️ **THE CUE SET IS COPIED ONE LEVEL DEEP AND THE VARIANT ARRAYS ARE SHARED** — 0190, on exactly
@@ -1698,15 +1702,35 @@ export function bakePlace(
   let stopped = false;
   let walked = false;
   let waitingOn = 0;
+  /*
+    ⚠️ **THE POOL IS FED FROM A QUEUE, `inFlight` AT A TIME** — 0583. A bake for the place the run is in is
+    needed now and sends every layer at once, as it always has; a bake AHEAD has until the boss dies and
+    keeps `AHEAD_IN_FLIGHT` out, so it is not four cores flat out under the fight it is running beside.
+    A cancelled bake sends nothing more — the one layer already out is the whole of what it wastes.
+  */
+  let inFlight = ahead ? AHEAD_IN_FLIGHT : Number.POSITIVE_INFINITY;
+  let out = 0;
+  const sends: (() => Promise<void>)[] = [];
+  const pump = (): void => {
+    while (!stopped && out < inFlight && sends.length > 0) {
+      out++;
+      void sends.shift()!().then(() => {
+        out--;
+        pump();
+      });
+    }
+  };
   for (const layer of mine) {
     if (baker !== null) {
       waitingOn++;
-      void baker(layer, theme).then((buffer) => {
-        if (stopped) return;
-        own[layer] = buffer;
-        waitingOn--;
-        finish();
-      });
+      sends.push(() =>
+        baker(layer, theme).then((buffer) => {
+          if (stopped) return;
+          own[layer] = buffer;
+          waitingOn--;
+          finish();
+        }),
+      );
       continue;
     }
     jobs.push(() => {
@@ -1726,14 +1750,16 @@ export function bakePlace(
     if (mine.includes(layer) || !released.has(layer)) continue;
     if (baker !== null) {
       waitingOn++;
-      void baker(layer, undefined).then((buffer) => {
-        if (stopped) return;
-        base[layer] = buffer;
-        own[layer] = buffer;
-        released.delete(layer);
-        waitingOn--;
-        finish();
-      });
+      sends.push(() =>
+        baker(layer, undefined).then((buffer) => {
+          if (stopped) return;
+          base[layer] = buffer;
+          own[layer] = buffer;
+          released.delete(layer);
+          waitingOn--;
+          finish();
+        }),
+      );
       continue;
     }
     jobs.push(() => {
@@ -1781,11 +1807,36 @@ export function bakePlace(
     }
     schedule(step);
   };
+  pump();
   schedule(step);
-  return () => {
-    stopped = true;
+  return {
+    stop: () => {
+      stopped = true;
+    },
+    hurry: () => {
+      inFlight = Number.POSITIVE_INFINITY;
+      pump();
+    },
   };
 }
+
+/** A place's bake in flight: `stop` drops it, `hurry` sends whatever a bake ahead is still holding back. */
+export interface PlaceBake {
+  stop(): void;
+  hurry(): void;
+}
+
+/**
+ * How many layers a bake AHEAD keeps on the pool at once — `docs/decisions/0583-a-bake-ahead-takes-one-worker.md`.
+ *
+ * ⚠️ **ONE, BECAUSE THE PLACE IS NOT NEEDED UNTIL THE BOSS DIES.** The bake ahead starts at `approach`
+ * (0331), and the whole pool — up to four workers — took Saurian Belt's 25 layers through in a burst of
+ * every core the game had spare, under the busiest part of the level. On a phone that is the cores the
+ * audio thread and the frame were running on. One worker spends the same synthesis across the approach and
+ * the fight; a boss that dies first finds the rest sent at once by `hurry`, which is the old cost, paid only
+ * when it is owed.
+ */
+const AHEAD_IN_FLIGHT = 1;
 
 /**
  * Run jobs from `at` until the slice is spent, and say where it got to.
