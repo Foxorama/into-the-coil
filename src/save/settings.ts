@@ -17,7 +17,6 @@
 
 import { DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUND_KINDS } from '../content/sound.ts';
-import { STYLE_KINDS } from '../content/styles.ts';
 import { TRAVEL_KINDS } from '../content/travel.ts';
 import { HAND_KINDS, STEER_KINDS } from '../content/touch.ts';
 import { CREDIT_KINDS } from '../content/credits.ts';
@@ -47,7 +46,6 @@ function oneOf<K extends string>(kinds: readonly K[], raw: unknown, fallback: K)
 /** The fields of `settings` that are kept. */
 export function keptOf(settings: SettingsState): KeptSettings {
   return {
-    style: settings.style,
     sound: settings.sound,
     travel: settings.travel,
     difficulty: settings.difficulty,
@@ -76,7 +74,6 @@ export function settingsFrom(text: string | null, base: SettingsState): Settings
   const doc = data as Partial<Record<keyof KeptSettings | 'v', unknown>>;
   if (doc.v !== SETTINGS_VERSION) return base;
   return {
-    style: oneOf(STYLE_KINDS, doc.style, base.style),
     sound: oneOf(SOUND_KINDS, doc.sound, base.sound),
     travel: oneOf(TRAVEL_KINDS, doc.travel, base.travel),
     difficulty: oneOf(DIFFICULTY_KINDS, doc.difficulty, base.difficulty),

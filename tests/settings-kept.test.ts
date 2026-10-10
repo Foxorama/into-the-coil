@@ -9,7 +9,6 @@ import {
 } from '../src/save/settings.ts';
 import type { Store } from '../src/save/store.ts';
 import { initialSettings, type SettingsState } from '../src/state/slices/settings.ts';
-import { STYLE_KINDS } from '../src/content/styles.ts';
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { TRAVEL_KINDS } from '../src/content/travel.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -41,7 +40,6 @@ function memory(refuse = false): Store & { data: Map<string, string> } {
 
 /** Every setting moved off its default — the first option of each table that is not it. */
 const moved = (): SettingsState => ({
-  style: STYLE_KINDS.find((k) => k !== initialSettings.style)!,
   sound: SOUND_KINDS.find((k) => k !== initialSettings.sound)!,
   travel: TRAVEL_KINDS.find((k) => k !== initialSettings.travel)!,
   difficulty: DIFFICULTY_KINDS.find((k) => k !== initialSettings.difficulty)!,
@@ -52,12 +50,11 @@ const moved = (): SettingsState => ({
 });
 
 describe('0510 — the settings are kept', () => {
-  it('THE ASK: the look, the sound, the crossing and the tier read back as they were left', () => {
+  it('THE ASK: the sound, the crossing and the tier read back as they were left', () => {
     const store = memory();
     const chosen = moved();
     writeSettings(store, chosen);
     const back = readSettings(store, initialSettings);
-    expect(back.style).toBe(chosen.style);
     expect(back.sound).toBe(chosen.sound);
     expect(back.travel).toBe(chosen.travel);
     expect(back.difficulty).toBe(chosen.difficulty);
@@ -68,12 +65,12 @@ describe('0510 — the settings are kept', () => {
     const chosen = moved();
     writeSettings(store, chosen);
     const back = readSettings(store, initialSettings);
-    expect(back.hand, 'the trigger side was forgotten').toBe(chosen.hand);
+    expect(back.hand, 'the hand was forgotten').toBe(chosen.hand);
     expect(back.steer, 'the steering was forgotten').toBe(chosen.steer);
     // Version 1 as 0510 wrote it, before there was a touch section: still version 1, still read.
-    const before = JSON.stringify({ v: SETTINGS_VERSION, style: chosen.style, sound: chosen.sound, travel: chosen.travel, difficulty: chosen.difficulty });
+    const before = JSON.stringify({ v: SETTINGS_VERSION, sound: chosen.sound, travel: chosen.travel, difficulty: chosen.difficulty });
     const old = settingsFrom(before, initialSettings);
-    expect(old.style, 'a document from before the touch section was thrown away').toBe(chosen.style);
+    expect(old.sound, 'a document from before the touch section was thrown away').toBe(chosen.sound);
     expect(old.hand).toBe(initialSettings.hand);
     expect(old.steer).toBe(initialSettings.steer);
   });
@@ -90,10 +87,10 @@ describe('0510 — the settings are kept', () => {
 
   it('one setting the game no longer has costs that setting and not its neighbours', () => {
     const chosen = moved();
-    const doc = { ...JSON.parse(serialiseSettings(chosen)), style: 'a-look-since-dropped' };
+    const doc = { ...JSON.parse(serialiseSettings(chosen)), travel: 'a-crossing-since-dropped' };
     const back = settingsFrom(JSON.stringify(doc), initialSettings);
-    expect(back.style, 'an unknown look was trusted').toBe(initialSettings.style);
-    expect(back.sound, 'a bad look threw away the sound').toBe(chosen.sound);
+    expect(back.travel, 'an unknown crossing was trusted').toBe(initialSettings.travel);
+    expect(back.sound, 'a bad crossing threw away the sound').toBe(chosen.sound);
     expect(back.difficulty).toBe(chosen.difficulty);
   });
 

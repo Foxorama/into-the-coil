@@ -42,7 +42,7 @@ import {
 // 0517: whether a run that runs out may be continued.
 import { CREDIT_KINDS, DEFAULT_CREDIT } from '../content/credits.ts';
 // 0512: the touch section — which side the discs stand on, and how quick the steering is.
-import { DEFAULT_HAND, DEFAULT_STEER, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
+import { DEFAULT_HAND, DEFAULT_STEER, HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
 import { MOTE_BAND, flythroughSteps, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
 import { DEBRIS } from '../content/debris.ts';
@@ -79,7 +79,6 @@ import {
 import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS, rackCarrying, tubesOf } from '../content/racks.ts';
 import { AUTHORED, DIFFICULTIES, DIFFICULTY_KINDS, TUNED } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
-import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/cadence.ts';
 // 0212: the last five are the music room's walk — it asks the same questions a run asks.
 import {
@@ -438,11 +437,9 @@ export const NECK_SLOTS = 8;
  * the things that can kill the player. At 0.6 the near field is under two thirds, and
  * `tests/budget.test.ts` is where that ceiling is held rather than in this sentence.
  *
- * ⚠️ **Module-level and frozen in place, because a STYLE can turn it off** —
- * `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. Retro is the game before the sky,
- * and what `retro` means is that `World.sky` is the empty list: nothing in `src/render/scene.ts`
- * or `src/app/frame.ts` learns that a style exists, because the layer list is already the whole of
- * what it reads. Built once here, since this file may allocate and the painter may not.
+ * ⚠️ **Module-level and frozen in place**, built once here, since this file may allocate and the
+ * painter may not. (A style could once turn it off — 0070's Retro, removed by
+ * `docs/decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md`.)
  *
  * ⚠️ **Exported so the guard reads THIS rather than a copy of it.** `tests/budget.test.ts` used to
  * restate the array under a comment claiming it was *"the real sky, built the way `src/app/mount.ts`
@@ -623,10 +620,9 @@ export const SKY_UNDER_A_RANGE = [
 /**
  * Which sky a place has. `null` — the title screen and the music room's own backdrop — is space.
  *
- * ⚠️ **ONE FUNCTION SO THE TWO CALLERS CANNOT DISAGREE.** The style chooser turns the sky off (Retro)
- * and the level boundary changes the place, and before 0221 only the first of those touched
- * `world.sky` — because there was only one sky. A second array means both have to route through the
- * same answer or a level boundary silently reinstates the star fields a planet just removed.
+ * ⚠️ **ONE FUNCTION SO EVERY CALLER GETS THE SAME ANSWER** — 0221: a level boundary changes the place,
+ * and anything that sets `world.sky` routes through here or silently reinstates the star fields a
+ * planet just removed.
  */
 export function skyFor(place: ThemeKind | null): Sky {
   if (place === null) return SKY;
@@ -690,9 +686,6 @@ const SPACE_SKY_OF: Record<ThemeKind, Sky> = {
  * is the drift `tests/one-description.test.ts` exists for.
  */
 const SEEDED_BODIES = 12;
-
-/** What a style with no sky gets. Module-level, so switching styles allocates nothing. */
-const NO_SKY: typeof SKY = [];
 
 /**
  * The edge of the player's box, as the painter needs it — `docs/decisions/0074-the-box-is-drawn.md`.
@@ -1059,6 +1052,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // Solved once per palette by `boltInks`, which gives each a hot heart — 0520.
   surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard));
 
+  /*
+    Whether the canvas is shown mirrored, left for right — 0590, played left-handed. Held so `applyMirror`
+    touches the style only when the answer moves; declared up here because `applyScreen` asks it first.
+  */
+  let shownMirrored = false;
   // Whether the pad's Start was pressed since the last tick — 0511. Set from inside the step, spent in `onTick`.
   let pauseAsked = false;
 
@@ -1368,7 +1366,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
           pauseAsked = true;
         },
       }),
-    ]),
+      // 0590: and every push read back through the mirror while the field is shown in one.
+    ], () => shownMirrored),
     intent: makeIntent(SPECIAL_BINDINGS),
     // The title screen does not step (`src/state/screens.ts`), so the game opens on a still field
     // and waits for the player rather than spending their first life for them.
@@ -1587,6 +1586,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       chrome.setBubble(null, 0, 0, 0, 'above');
       surface.setAtlas(atlas);
     }
+    // 0590: and the field mirrored or not, now that what is drawn on it is known.
+    applyMirror();
     // The splash counts from when it appears — 0415.
     if (screen === 'splash') splashSteps = 0;
     /*
@@ -1929,13 +1930,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const rearmed = next.run.tubes !== state.run.tubes || next.run.ship !== state.run.ship || next.run.gun !== state.run.gun;
     const runChanged = next.run !== state.run;
     /*
-      ⚠️ **Per FIELD rather than per slice, and it stopped being the same question at the second
-      setting.** `next.settings !== state.settings` was exactly right while there was one field on it;
-      with two, changing the sound would re-run `applyStyle`, which touches the DOM and re-marks a
-      chooser nobody pressed. The identity check the reducer preserves is still what makes this cheap
-      — this only narrows which of the two effects it licenses.
+      ⚠️ **Per FIELD rather than per slice**: `next.settings !== state.settings` would re-run every
+      setting's effect on a press of any one of them, and `applySound` sounds the chime. The identity
+      check the reducer preserves is still what makes this cheap — this only narrows which effect it
+      licenses.
     */
-    const styleChanged = next.settings.style !== state.settings.style;
     const soundChanged = next.settings.sound !== state.settings.sound;
     // 0340, on the two lines above's terms: per FIELD, so a travel change re-marks one chooser and
     // does not re-bake an atlas or touch the speaker.
@@ -1995,12 +1994,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (runChanged || moved) syncHud();
     // And the score, which a banked level or a new run moves as much as a kill does — 0428.
     if (runChanged || moved) syncScore();
-    /*
-      ⚠️ **By identity, like the weapon above.** The reducer preserves it when nothing moved
-      (`tests/style.test.ts` holds that), so pressing the option that is already on re-paints
-      nothing — and `applyStyle` touches the DOM.
-    */
-    if (styleChanged) applyStyle();
     /*
       ⚠️ **The chime is HERE and not in `applySound`**, so it sounds on a change the player made and
       never at boot. It is the only cue in the game whose subject is whether sound works, and a game
@@ -2404,19 +2397,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /*
     A SETTING WAS PRESSED — `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`.
 
-    ⚠️ **The index is narrowed against the content hub, exactly as a tier is.** `STYLE_KINDS` IS the
+    ⚠️ **The index is narrowed against the content hub, exactly as a tier is.** `SOUND_KINDS` IS the
     order `src/state/screens.ts` built the options in, so the position the chrome hands back reads
-    straight off it — and nothing anywhere has to cast a string into a `StyleKind`, which is what
+    straight off it — and nothing anywhere has to cast a string into a `SoundKind`, which is what
     `docs/decisions/0016-a-hub-enumerates-kinds.md` bans the escape hatches for.
 
-    ⚠️ **It dispatches and stops.** What a style CHANGES is decided in one place below, off the state,
+    ⚠️ **It dispatches and stops.** What a setting CHANGES is decided in one place below, off the state,
     so a second way in — a pad, a later settings screen — cannot apply half of it.
   */
   (name: ChoiceName, index: number, pointer: boolean): void => {
-    if (name === 'style') dispatch({ slice: 'settings', type: 'style', style: STYLE_KINDS[index] ?? DEFAULT_STYLE });
-    // The second setting, and it is one more line here because 0070 built the mechanism rather than
-    // the style. `SOUND_KINDS` IS the order `src/state/screens.ts` built the options in.
-    else if (name === 'sound') dispatch({ slice: 'settings', type: 'sound', sound: SOUND_KINDS[index] ?? DEFAULT_SOUND });
+    if (name === 'sound') dispatch({ slice: 'settings', type: 'sound', sound: SOUND_KINDS[index] ?? DEFAULT_SOUND });
     // The third, and it is the line 0072 predicted: *"the queue behind the style was already the same
     // shape."* `TRAVEL_KINDS` IS the order `src/state/screens.ts` built the options in — 0340.
     else if (name === 'travel') dispatch({ slice: 'settings', type: 'travel', travel: TRAVEL_KINDS[index] ?? DEFAULT_TRAVEL });
@@ -2819,57 +2809,30 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   showPilot();
 
   /*
-    WHAT A STYLE CHANGES, in one place — `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`.
-
-    ⚠️ **Read off the ROW, never off the kind.** `STYLES[style].sky` and `.face` are the whole of
-    it, so a third style is a row in `src/content/styles.ts` and no line here — the same shape
-    `enemyRows` and `pickupRows` already have.
-
-    ⚠️ **The sky is a LIST SWAP and not a flag the painter reads.** `src/render/scene.ts` walks
-    `World.sky`, so an empty list is a sky that costs nothing and needs no branch: nothing below the
-    shell learns that a style exists, which is what keeps 0024's *no cosmetic setting may touch the
-    sim* true by construction rather than by discipline.
-
-    ⚠️ **Called at boot as well as on a change**, or the chooser opens with nothing marked and the
-    default is a thing the player can only discover by pressing something.
-  */
-  /*
-    ⚠️ **WHICH PLACE IS ACTUALLY ON THE SCREEN, AND IT IS NOT DERIVABLE WHERE IT IS NEEDED** — 0221.
-    `applySky` runs from the style chooser, which knows nothing about levels and cannot call
-    `placeOnScreen()` — that reads the run, and the chooser is reachable from the title screen and
-    from the music room. **And it is `applyPlace`'s memo too, since 0417** — that one used to be the
-    backdrop COLOUR, which two places can share, and level one was never baked because of it.
+    ⚠️ **WHICH PLACE IS ACTUALLY ON THE SCREEN** — 0221, and `applyPlace`'s memo since 0417 — that one
+    used to be the backdrop COLOUR, which two places can share, and level one was never baked because
+    of it.
 
     ⚠️ **`null` AT BOOT, WHICH IS THE TITLE'S, AND THAT IS NOT A SHORTCUT**: the atlas is baked in the
     palette's own sky ink (`bakeOne` in `src/render/bake.ts`), which is what the title asks for, so the
     first bake is the first place — `tests/room.browser.test.ts` leans on that.
 
-    ⚠️ **DECLARED HERE AND NOT BESIDE `applyPlace`, WHICH IS WHERE IT BELONGS BY SUBJECT.** `applyStyle`
+    ⚠️ **DECLARED HERE AND NOT BESIDE `applyPlace`, WHICH IS WHERE IT BELONGS BY SUBJECT.** `applySky`
     is called at boot, four hundred lines above that function, so a `let` beside it is in the
-    temporal dead zone when the chooser first reads it — `Cannot access 'bakedPlace' before
-    initialization`, and a blank canvas. The same trap 0216 hit with `onSeek`, which is the second time
-    in this file that *where a thing belongs* and *where a thing may be declared* have disagreed.
+    temporal dead zone when it is first read — `Cannot access 'bakedPlace' before initialization`, and
+    a blank canvas. The same trap 0216 hit with `onSeek`.
   */
   let bakedPlace: ThemeKind | null = null;
 
   /*
-    ⚠️ **THE SKY IS TWO DECISIONS NOW AND THEY ARE TAKEN IN ONE PLACE** — 0221. Retro says whether
-    there is a sky at all; the place says which one. Before this there was only ever one array, so the
-    style chooser owned `world.sky` outright — and a level boundary that reinstated the star fields a
-    planet had just removed would have been a one-line omission with no way to notice it.
+    ⚠️ **THE SKY IS THE PLACE'S, TAKEN IN ONE PLACE** — 0221: a level boundary that reinstated the star
+    fields a planet had just removed would be a one-line omission with no way to notice it.
   */
   const applySky = (): void => {
-    world.sky = STYLES[state.settings.style].sky ? skyFor(bakedPlace) : NO_SKY;
+    world.sky = skyFor(bakedPlace);
   };
-
-  const applyStyle = (): void => {
-    const row = STYLES[state.settings.style];
-    applySky();
-    chrome.setFace(row.face);
-    chrome.setChoice('style', STYLE_KINDS.indexOf(state.settings.style));
-  };
-  // Once at boot, so the chooser opens with the default marked and the sky matches it.
-  applyStyle();
+  // Once at boot, so the sky is the title's before the first place is baked.
+  applySky();
 
   /*
     WHAT THE SOUND SETTING CHANGES, in one place — and it is one thing.
@@ -2905,8 +2868,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /*
     WHAT THE TRAVEL SETTING CHANGES, in one place — and it is NOTHING but the mark on its own chooser.
 
-    ⚠️ **AND THAT IS THE STRONGEST THING 0024 SAYS ABOUT IT** — 0340. `applyStyle` re-bakes an atlas
-    and `applySound` reaches the speaker; this reaches a button. What the setting is FOR is read where
+    ⚠️ **AND THAT IS THE STRONGEST THING 0024 SAYS ABOUT IT** — 0340. `applySound` reaches the speaker; this reaches a button. What the setting is FOR is read where
     the crossing is spent (`TRAVELS[state.settings.travel].floorSteps`), which is a number consulted on
     one screen — so there is no state anywhere that a comfort knob has put out of step, and nothing to
     apply at boot but the mark.
@@ -2924,8 +2886,34 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('hand', HAND_KINDS.indexOf(state.settings.hand));
     chrome.setChoice('steer', STEER_KINDS.indexOf(state.settings.steer));
     chrome.setHand(state.settings.hand);
+    applyMirror();
   }
   applyTouch();
+  /*
+    WHAT THE HAND MIRRORS — `docs/decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md`.
+
+    ⚠️ **THE CANVAS IS SHOWN FLIPPED, AND NOTHING IS DRAWN DIFFERENTLY.** A transform on the element is
+    one fact the compositor applies to the whole picture — the ship, every bullet, every boss and its
+    attacks, the sky, the box's wall — so nothing in `src/render/` or `src/app/frame.ts` learns a hand
+    exists, no sprite is baked twice and no blit pays for a flip. The world steps the identical game in
+    either hand (0024); `src/app/devices.ts` reads the pushes back through the same mirror.
+
+    ⚠️ **NOT THE PORT.** The hangar's tabs and the intro stand in a room drawn under DOM — the doors over
+    the shopfronts, the dash at the ship, the shop's sign is lettered in the canvas — and a mirrored room
+    would put every door over the wrong shop and read its sign backwards. Nothing flies there; the hand is
+    for the field. The finale is the fight's last frame going on, so it keeps the fight's mirror, and its
+    bubble is told (`speak`).
+
+    ⚠️ **AND LANDSCAPE ONLY**, which is the only way the field is flown (0031): a portrait screen is a
+    stand or the rotate gate.
+  */
+  function applyMirror(): void {
+    const want = HANDS[state.settings.hand].mirrored && world.intro === null && world.stand === null && view.alongAxis === 'x';
+    if (want === shownMirrored) return;
+    shownMirrored = want;
+    canvas.style.transform = want ? 'scaleX(-1)' : '';
+    chrome.setMirrored(want);
+  }
 
   /*
     HOW FAR UP THE MUSIC'S LADDER THE RUN IS — `docs/decisions/0090-the-music-is-four-loops.md`.
@@ -3166,7 +3154,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const lit = place === null ? undefined : THEMES[place].land?.[palette];
     if (land !== null) bakeGround(atlas, land[palette], want, clouds, view.scale * dpr, backdrop, lit);
     // ⚠️ **AND THE SKY ITSELF CHANGES SHAPE, not just its colours**: a planet has no star fields.
-    // Routed through `applySky` so the style chooser's Retro-off and this cannot disagree.
+    // Routed through `applySky` so every caller takes the sky from one answer.
     applySky();
     // The intro flies this sky, from references to the bitmaps just baked — 0416. Nothing outside it.
     showPort();
@@ -4006,7 +3994,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * a blip in their voice on each syllable's first letter.
    */
   const speak = (line: string, t: number, from: number, along: number, across: number, hang: 'above' | 'below', golfer: GolferRow): void => {
-    chrome.setBubble(line, lettersSaid(t, from), screenX(view, along, across), screenY(view, along, across), hang, golfer.name, golfer.cap);
+    // 0590: the mouth where the mirrored canvas shows it — the canvas is the viewport's width.
+    const x = screenX(view, along, across);
+    chrome.setBubble(line, lettersSaid(t, from), shownMirrored ? viewportWidth(host) - x : x, screenY(view, along, across), hang, golfer.name, golfer.cap);
     if (blipsAt(line, t, from) && audioOut.ready()) speaker.play('talk', across, golfer.voice);
   };
   // Where the ship speaking is this step, in the view — 0426; written, never allocated.
@@ -4250,6 +4240,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * the destination only while the only button on a dead run was a way of giving up.
    */
   world.onTick = (): void => {
+    // 0590: a rotation moves the view without a screen moving, so the mirror is asked again — free when it has not moved.
+    applyMirror();
     /*
       ⚠️ **The speaker's clock, and it is here rather than in `onIdle` for decision 0063's reason.**
       A cue's hold is counted in fixed steps (`src/content/cues.ts`), and holds have to expire on the

@@ -115,7 +115,7 @@ const read = (path: string): string => readFileSync(resolve(root, path), 'utf8')
 /**
  * A source with its comments blanked.
  *
- * ⚠️ **The ban below scans CODE, and `tests/style.test.ts`'s equivalent scans raw text.** The
+ * ⚠️ **The ban below scans CODE, and the look's equivalent, deleted by 0590, scanned raw text.** The
  * difference is not an inconsistency, it is this repository's own house style catching up with its
  * guards: every rule in `src/` cites the file it comes from, so `src/app/frame.ts` names
  * `src/content/sound.ts` in prose precisely BECAUSE it is forbidden to import it. A raw scan would
@@ -2220,7 +2220,7 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
 
 describe('a comfort setting cannot reach the game', () => {
   /**
-   * ⚠️ **`src/app/frame.ts` is the interesting entry, exactly as it is in `tests/style.test.ts`.** It
+   * ⚠️ **`src/app/frame.ts` is the interesting entry, exactly as it is in `tests/hand.test.ts`.** It
    * is the file that NAMES cues, so it must be able to see `src/content/cues.ts` — and it is also the
    * file that decides what hits what, so it must never see whether the player is listening.
    */
@@ -2340,15 +2340,15 @@ describe('the sound setting on the settings slice', () => {
     expect(reduce(initialState, pick(DEFAULT_SOUND)), 'choosing the setting already on rebuilt the state').toBe(initialState);
   });
 
-  it('and does not take the style with it, which a slice of two fields makes possible for the first time', () => {
+  it('and does not take another setting with it, which a slice of two fields makes possible', () => {
     /*
       ⚠️ **The bug a one-field slice could not have had.** `return { sound }` type-checks against a
       `Record` over `SettingName` only while there is one name; with two, dropping the spread silently
-      resets the other setting — and the player's look would vanish every time they touched the sound.
+      resets the other setting — and the player's hand would flip every time they touched the sound.
     */
-    const retro = reduce(initialState, { slice: 'settings', type: 'style', style: 'retro' });
-    const quiet = reduce(retro, pick('off'));
-    expect(quiet.settings.style, 'changing the sound threw the style away').toBe('retro');
+    const left = reduce(initialState, { slice: 'settings', type: 'hand', hand: 'left' });
+    const quiet = reduce(left, pick('off'));
+    expect(quiet.settings.hand, 'changing the sound threw the hand away').toBe('left');
     expect(quiet.settings.sound).toBe('off');
   });
 

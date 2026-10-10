@@ -144,8 +144,8 @@ export interface ThemeRow {
   /**
    * What the level break calls it — `docs/game.md`'s voice rule: what it is, never why it is good.
    *
-   * ⚠️ **On the row rather than in `src/app/chrome.ts`**, for the reason `src/content/styles.ts`
-   * gives: a second list of names goes on saying the old thing the day one of them changes.
+   * ⚠️ **On the row rather than in `src/app/chrome.ts`**, for the reason 0070 gave
+   * for the look's table: a second list of names goes on saying the old thing the day one of them changes.
    */
   title: string;
   /**

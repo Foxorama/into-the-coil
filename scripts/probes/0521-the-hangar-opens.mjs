@@ -75,7 +75,8 @@ export const PROBES = [
   },
   {
     decision: '0521',
-    suite: 'tests/style.test.ts',
+    // 0590: the guard moved to tests/settings.test.ts with the look's file deleted around it.
+    suite: 'tests/settings.test.ts',
     broke: 'the pilot band offered on a third screen, Settings',
     guard: 'every setting is offered on exactly one screen',
     edit: {

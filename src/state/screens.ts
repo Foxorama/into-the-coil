@@ -19,7 +19,6 @@
 import { GAME_TITLE } from '../brand.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
-import { STYLES, STYLE_KINDS } from '../content/styles.ts';
 // 0340: the crossing's knob, on the two lines above's exact terms.
 import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 // 0512: the touch section's two, on the same terms.
@@ -99,7 +98,8 @@ export interface ScreenAction {
 // 0458: the tier is a setting since the title became rows — chosen on a band, kept until changed.
 // 0512: and the touch section's two.
 // 0517: and whether a run that runs out may be continued.
-export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' | 'hand' | 'steer' | 'credits';
+// 0590: and no longer the look, whose one alternative had stopped being what it was asked for as.
+export type SettingName = 'difficulty' | 'sound' | 'travel' | 'pilot' | 'hand' | 'steer' | 'credits';
 
 /**
  * Every slot the hangar fits on a ship — 0521. Closed. The plate is the first; the plan's queue
@@ -972,20 +972,12 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       { label: 'Back', hint: '' },
     ],
     /*
-      ⚠️ **Each built by walking its kind table, so the options ARE the table** — 0070 for the look,
-      0072 for the sound, 0340 for the crossing. **The crossing is a comfort knob over the picture and
+      ⚠️ **Each built by walking its kind table, so the options ARE the table** — 0072 for the sound,
+      0340 for the crossing, 0590 for the hand. **The crossing is a comfort knob over the picture and
       NOT over the sim** (0024): `src/content/travel.ts` holds what it changes, and
       `tests/travel.test.ts` makes that a fact.
     */
     choices: [
-      {
-        name: 'style',
-        label: 'Look',
-        options: STYLE_KINDS.map((kind) => ({ label: STYLES[kind].title, hint: STYLES[kind].hint })),
-        faces: 'words',
-        on: 'all',
-        press: 'steps',
-      },
       {
         name: 'sound',
         label: 'Sound',
@@ -1003,19 +995,23 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         press: 'steps',
       },
       /*
-        ⚠️ **THE TOUCH SECTION — 0512**, on a screen that can be touched and nowhere else: which side the
-        trigger discs stand on, and how quick the steering is. Asked for as both, of *trigger side,
-        sensitivity, both, neither?*. Comfort knobs over the input and not over the sim (0024):
-        `src/content/touch.ts` holds what each changes.
+        ⚠️ **THE HAND — 0590, ON EVERY DEVICE**: *left* is the game mirrored, and on a touch screen the
+        trigger discs go with it. It was 0512's *Triggers*, offered on touch alone, until the side the
+        discs stand on became the side the game is played from. A knob over the picture and the input
+        and not over the sim (0024): `src/content/touch.ts` holds what it changes.
       */
       {
         name: 'hand',
-        label: 'Triggers',
+        label: 'Hand',
         options: HAND_KINDS.map((kind) => ({ label: HANDS[kind].title, hint: HANDS[kind].hint })),
         faces: 'words',
-        on: 'touch',
+        on: 'all',
         press: 'steps',
       },
+      /*
+        ⚠️ **THE TOUCH SECTION — 0512**, on a screen that can be touched and nowhere else: how quick the
+        steering is. A comfort knob over the input and not over the sim (0024).
+      */
       {
         name: 'steer',
         label: 'Steering',

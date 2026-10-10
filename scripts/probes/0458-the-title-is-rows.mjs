@@ -111,7 +111,8 @@ export const PROBES = [
   },
   {
     decision: '0458',
-    suite: 'tests/style.test.ts',
+    // 0590: the guard moved to tests/settings.test.ts with the look's file deleted around it.
+    suite: 'tests/settings.test.ts',
     // A setting offered on two screens: Settings' crossing band relabelled as the pilot's.
     broke: 'one setting offered on two screens, so there are two places to look for it',
     guard: 'every setting is offered on exactly one screen',

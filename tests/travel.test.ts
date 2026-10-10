@@ -61,7 +61,7 @@ import { NO_LEVEL, playableWorld } from './world.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
-/** Every `.ts` under a directory, recursively. An explicit walk, not a glob — `tests/style.test.ts`. */
+/** Every `.ts` under a directory, recursively. An explicit walk, not a glob. */
 function filesUnder(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(resolve(root, dir), { withFileTypes: true })) {
@@ -533,7 +533,7 @@ describe('a comfort knob over the crossing cannot reach the game', () => {
    * number it is handed (`World.warp`), and must never learn that the number came from a row with a
    * comfort setting on it — a step that could read *Brief* is a step that could branch on it.
    *
-   * ⚠️ **AND `src/render/scene.ts` IS ON IT**, which the style and sound bans do not need: the painter
+   * ⚠️ **AND `src/render/scene.ts` IS ON IT**, which the sound ban does not need: the painter
    * draws the streaks, and the frame imports the painter. A transitive route to a setting is a route.
    */
   const FORBIDDEN = [...filesUnder('src/sim'), 'src/app/frame.ts', 'src/app/boss.ts', 'src/render/scene.ts'];
