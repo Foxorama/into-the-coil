@@ -11,22 +11,12 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0213',
-    suite: 'tests/room.browser.test.ts',
-    /*
-      ⚠️ NOT SWEEPING LOOKS LIKE THE CONSERVATIVE CHOICE. The pools belong to a run, the room is a
-      menu, and leaving them alone is what a careful reader would do — which is exactly why the
-      report arrived. The room is the only screen that shows the field without stepping it.
-    */
-    broke: 'the room opening on the boot field again, so a dozen enemies drift off and nothing follows',
-    guard: 'opens on an empty lane, and keeps something in it for a whole walk',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: '    motes = makeMotes(makeRng(\'music-room\').stream(\'motes\'));',
-      replace: '    motes = [];',
-    },
-  },
+  /*
+    ⚠️ THE FIRST BREAK HERE — the room opening on the boot field again (`motes = []` in src/app/mount.ts) —
+    IS NO LONGER PROVEN, because its guard was deleted with the look it measured through: it counted lit
+    pixels with Retro's sky off, and with the sky on the same count stays green with the motes gone.
+    docs/decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md names it as owed.
+  */
   {
     decision: '0213',
     suite: 'tests/attract.test.ts',
