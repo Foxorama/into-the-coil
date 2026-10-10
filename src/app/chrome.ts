@@ -3200,8 +3200,8 @@ ${each('-band[hidden]')} { display: none; }
 @container (max-height: 460px) {
   /*
     The ware in the window alone between the shelf's arrows, as a phone's hangar shows one chip a band (0566):
-    a tile scrolled out of a row is a button the player cannot press, and the layout guard
-    (tests/layout.browser.test.ts) counts it off the screen.
+    a tile scrolled out of a row is a button the player cannot press, and the layout guard counts it
+    off the screen.
   */
   .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-options { display: flex; flex-wrap: nowrap; justify-content: center; }
   .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-option:not(.itc-shop-option-on) { display: none; }
