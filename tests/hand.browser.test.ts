@@ -6,6 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { back, choose, launch, openHangar, openSettings } from './title.ts';
 import { HAND_KINDS } from '../src/content/touch.ts';
+import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 
 /**
  * THE GAME HAS A LEFT HAND, IN THE PAGE —
@@ -70,6 +71,35 @@ describe.runIf(chromePath)('0590 — the left hand', () => {
     await choose(again, 'hand', HAND_KINDS.indexOf('right'));
     await expect.poll(() => mirrored(again), { message: 'Right left the field mirrored' }).toBe(false);
     await again.context().close();
+  });
+
+  /*
+    ⚠️ **MOVED HERE FROM THE LOOK'S BROWSER TEST, WHICH 0590 DELETED** — it was never about the look.
+    `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning alone*
+    in the unconditional tier, and which option of a band is live is exactly the state a hue would hide.
+    The on-option is filled; the others are hollow.
+  */
+  it('and the band says which hand is on, in fill rather than in colour alone', async () => {
+    const page = await open();
+    const left = HAND_KINDS.indexOf('left');
+    await openSettings(page);
+    await choose(page, 'hand', left);
+    const options = `[${SETTING_ATTR}="hand"] .${prefixFor('settings')}option`;
+    await expect.poll(() => page.evaluate((sel) => document.querySelectorAll(sel)[1]?.className ?? '', options)).toContain('option-on');
+    const marked = await page.evaluate((selector: string) => {
+      return [...document.querySelectorAll(selector)].map((el) => ({
+        on: el.className.includes('option-on'),
+        background: getComputedStyle(el).backgroundColor,
+      }));
+    }, options);
+    expect(marked.length, 'the band has no options at all').toBe(HAND_KINDS.length);
+    expect(marked.filter((m) => m.on).length, 'more or less than one option is marked').toBe(1);
+    expect(marked[left]!.on, 'the option that was pressed is not the one marked').toBe(true);
+    const transparent = /rgba\(0,\s*0,\s*0,\s*0\)|transparent/;
+    expect(marked[left]!.background, 'the live option is not filled, so only colour says so').not.toMatch(transparent);
+    const off = marked.find((m) => !m.on);
+    expect(off?.background, 'an unchosen option is filled too, so the fill says nothing').toMatch(transparent);
+    await page.context().close();
   });
 
   it('and not the port, whose doors and sign are drawn to be read the right way round', async () => {

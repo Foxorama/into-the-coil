@@ -373,6 +373,8 @@ const WITHOUT_PROBES: Record<string, string> = {
     behind their tables; a blanket *a superseded decision needs no probes* would exempt those too, on
     a marker that does not distinguish them. One honest line beats a rule that reads the wrong files.
   */
+  // 0070's look was removed by 0590, and its probes with it; the two claims about every setting it held moved to 0590's.
+  '0070': 'its look was removed from the game by 0590, so its probes went with the code — the slice outliving a run and keeping its identity, and the live option filled rather than coloured, are re-proven by 0590\'s probes',
   '0281': 'its wake was removed from the game by 0282 the day it shipped, so its five probes went with the code — the table is a record of what was measured, not a claim anything can re-run',
   /*
     ⚠️ **THE SEVENTH, AND THE FIRST THAT ADDS NO GUARD AT ALL.** 0284 redraws the serpent's head and

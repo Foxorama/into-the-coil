@@ -84,11 +84,15 @@ The readout stays as it is: its words must read left to right, and its ship is a
 - `tests/hand.test.ts`: nothing in `src/sim/`, `src/render/`, `src/app/frame.ts` or `src/app/boss.ts` may
   import the hand; the combiner turns `along` and only `along`; the left arrow flies a mirrored ship forward.
 - `tests/hand.browser.test.ts`: Left mirrors the field behind Settings and through a run (past the intro,
-  which is not), Right puts it back, and the hangar is never mirrored.
+  which is not), Right puts it back, and the hangar is never mirrored; and the live option of a band is
+  filled rather than coloured — 0024's floor, moved here from the look's browser test, which was never about
+  the look.
 - `tests/settings.test.ts`: the four bands in order and on which devices, every setting on exactly one
   screen (moved here from the deleted `tests/style.test.ts`), the slice outliving a run, and an old
   document naming the look read field by field.
 - `tests/touch-section.browser.test.ts`: the hand is offered on a desktop, the steering is not, and Left
   still draws every disc where a left thumb is read.
 
-Probes in `scripts/probes/0590-the-game-has-a-left-hand.mjs`, every one seen red.
+Probes in `scripts/probes/0590-the-game-has-a-left-hand.mjs`, every one seen red. They carry 0070's three
+breaks that were about every setting rather than the look (the slice's identity, its outliving a run, the
+filled option), so `tests/prove-guard.test.ts` names 0070's table as re-proven here rather than unbacked.

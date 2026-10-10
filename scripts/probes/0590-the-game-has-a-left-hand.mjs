@@ -68,4 +68,41 @@ export const PROBES = [
       replace: "        label: 'Hand',\n        options: HAND_KINDS.map((kind) => ({ label: HANDS[kind].title, hint: HANDS[kind].hint })),\n        faces: 'words',\n        on: 'touch',",
     },
   },
+  /*
+    THE TWO CLAIMS 0070 MADE ABOUT EVERY SETTING, re-proven here since the look's probes went with it.
+  */
+  {
+    decision: '0590',
+    suite: 'tests/settings.test.ts',
+    broke: 'the slice rebuilt on a press that changed nothing, so every press re-applies the hand',
+    guard: 'preserves identity when nothing moved, which is what stops a re-apply per press',
+    edit: {
+      path: 'src/state/slices/settings.ts',
+      find: '      return state.hand === action.hand ? state : { ...state, hand: action.hand };',
+      replace: '      return { ...state, hand: action.hand };',
+    },
+  },
+  {
+    decision: '0590',
+    suite: 'tests/settings.test.ts',
+    broke: 'the settings thrown away by a run beginning, which is what living on the run would mean',
+    guard: 'is untouched by a run, which is the whole reason it is not on one',
+    edit: {
+      path: 'src/state/root.ts',
+      find: '  return agree(run === state.run ? state : { ...state, run });',
+      replace: '  return agree(run === state.run ? state : { ...state, run, settings: initialSettings });',
+    },
+  },
+  {
+    decision: '0590',
+    suite: 'tests/hand.browser.test.ts',
+    // 0070's own break, kept: the guard moved here when the look's browser test went with the look.
+    broke: 'the live option told apart by opacity rather than by fill',
+    guard: 'and the band says which hand is on, in fill rather than in colour alone',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: "${each('-option-on')} {\n  background: var(--itc-ink);\n  color: var(--itc-void);\n  opacity: 1;\n}",
+      replace: "${each('-option-on')} {\n  opacity: 1;\n}",
+    },
+  },
 ];
