@@ -4122,7 +4122,13 @@ function firePulse(w: World): void {
     ⚠️ Every barrel carries the scroll rate, like everything else the player watches move.
   */
   const step = w.weapon.shots > 1 ? w.weapon.spread / (w.weapon.shots - 1) : 0;
-  const first = -(step * (w.weapon.shots - 1)) / 2;
+  /*
+    0588: and the whole volley turned by the right stick, as far as the gun's row lets it be — the ray's
+    22.5° either side of the nose, every other gun's nought. A share of the arc, so a stick half over is
+    half of it, and a released stick fires straight ahead.
+  */
+  const aim = w.weapon.aim * w.intent.aim;
+  const first = aim - (step * (w.weapon.shots - 1)) / 2;
   for (let i = 0; i < w.weapon.shots; i++) {
     const shot = w.playerShots.spawn();
     // A volley one barrel short is dropped rather than grown — `src/sim/pool.ts` has the argument.
@@ -4142,6 +4148,11 @@ function firePulse(w: World): void {
     reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, w.weapon.flight === 'burst' ? RAY_KIND : 0);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
     shot.velAcross = Math.sin(angle) * row.speed;
+    // 0588: a steered shot faces where it was thrown — the ray's rings stand square to their flight.
+    if (w.weapon.aim !== 0) {
+      shot.turn = angle;
+      shot.prevTurn = angle;
+    }
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
     shot.damage = w.weapon.damage;
     /*

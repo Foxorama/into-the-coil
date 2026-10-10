@@ -551,8 +551,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     */
     // The saucer's rim.
     wingtip: 2.84,
-    // The ray gun's orb, at the nose — its front, where the rings leave.
-    muzzle: { along: 4.46, across: 0 },
+    // 0587: the front of the ray gun's little saucer, at the nose — where the rings leave. It was the dish's, at 4.46.
+    muzzle: { along: 3.79, across: 0 },
     // 0525: from above, a borrowed gun seated on the rim at the nose, where its own ray gun's housing is.
     view: 'top',
     hardpoint: { along: 2.84, across: 0 },

@@ -150,4 +150,29 @@ for (const kind of SHIP_KINDS) {
   }
 }
 host.appendChild(lit);
+
+// 0588: the ray's four rings in each of their pages, straight ahead and steered to the edge of their arc.
+const rays = document.createElement('section');
+for (const page of ['ray', 'rayRipple', 'raySwell'] as const) {
+  for (const turn of [0, -WEAPONS.ray.aim]) {
+    cell(
+      rays,
+      'Ray: ' + page + (turn === 0 ? '' : ' steered'),
+      (pen, size) => {
+        const tile = document.createElement('canvas');
+        tile.width = size;
+        tile.height = size;
+        drawKind(tile.getContext('2d') as unknown as Pen, page, palette, size, theme);
+        const ctx = pen as unknown as CanvasRenderingContext2D;
+        ctx.save();
+        ctx.translate(size / 2, size / 2);
+        ctx.rotate(turn);
+        ctx.drawImage(tile, -size / 2, -size / 2);
+        ctx.restore();
+      },
+      SPRITE_EXTENT[page],
+    );
+  }
+}
+host.appendChild(rays);
 document.body.dataset.ready = '1';

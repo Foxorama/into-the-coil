@@ -48,12 +48,15 @@ export function combineDevices(sources: readonly InputSource[]): InputSource {
     contribute(intent: Intent): void {
       intent.along = 0;
       intent.across = 0;
+      // 0588: and the aim, on the same terms.
+      intent.aim = 0;
       clearIntent(intent);
       for (let i = 0; i < attached.length; i++) attached[i]?.contribute(intent);
       // The clamp happens after every source has added, never inside one: a device clamping its own
       // ask would make the sum depend on the order after all.
       intent.along = clamp1(intent.along);
       intent.across = clamp1(intent.across);
+      intent.aim = clamp1(intent.aim);
     },
     // Forwarded to every source, for the same reason `release` is: the shell holds one handle and
     // must not have to know which devices are behind it.
