@@ -73,7 +73,7 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
   it('tries the ware on the dash, buys it once, says how far off the next is, and hangs it on the run', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 300 }));
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 338 }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);
@@ -111,7 +111,7 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
     await buy.click();
     let kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.owned.golfball, 'Buy bought without asking').toBe(false);
-    expect(await page.locator(`.${SHOP}ask`).innerText(), 'the sheet does not say the balance after').toContain('300 → 50');
+    expect(await page.locator(`.${SHOP}ask`).innerText(), 'the sheet does not say the balance after').toContain('338 → 50');
     await confirm.click();
     // The golf ball bought: the balance down by its price, Buy gone, and the shelf saying it is theirs.
     kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);

@@ -105,7 +105,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, openingHealthFor, ownFit, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shelled, openingHealthFor, ownFit, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -127,11 +127,12 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rackWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rackWhy, rimWhy, shellWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor, liveryInk } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
+import { SHELLS, SHELL_KINDS } from '../content/shells.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, WARES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
 import { COSMO, KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
@@ -155,7 +156,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { artOpen, flameOpen, gunOpen, needsFirst, plateOpen, rackOpen, reduceHangar, rimOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
+import { artOpen, flameOpen, gunOpen, needsFirst, plateOpen, rackOpen, reduceHangar, rimOpen, shellOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1425,6 +1426,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     because everything that draws the fitted ship reads it.
   */
   let look: { name: SlotName; index: number } | null = null;
+  /** 0584: the slot last tried on or fitted, so the pad keeps the shell round the ship while it is the one being chosen. */
+  let lastSlot: SlotName | null = null;
   // @setup: built once, so a try reads a hangar in which every option is open.
   const EVERY_SHIP_WON = Object.fromEntries(SHIP_KINDS.map((kind) => [kind, true])) as Record<ShipKind, boolean>;
   // @setup: and every ware owned.
@@ -1956,6 +1959,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (rearmed) {
       // 0525: the ship with the run's gun — its own row, or that row firing another's gun from its mount.
       world.shipRow = fitted(SHIPS[state.run.ship], state.run.gun, state.hangar.rim[state.run.ship]);
+      // 0584: in the shell the hangar fitted.
+      world.shipRow = shelled(world.shipRow, state.hangar.shell[state.run.ship]);
       // 0526: and the atlas wearing it.
       fitAtlasGun();
       world.weapon = weaponFor(world.shipRow, state.run.tubes);
@@ -2188,6 +2193,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         const rack = RACK_KINDS[index];
         return rack === undefined ? null : { slice: 'hangar', type: 'rack', ship, rack };
       }
+      // 0584: the shell, `SHELL_KINDS` in order.
+      case 'shell': {
+        const shell = SHELL_KINDS[index];
+        return shell === undefined ? null : { slice: 'hangar', type: 'shell', ship, shell };
+      }
       default: {
         const unhandled: never = name;
         return unhandled;
@@ -2222,6 +2232,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (rim !== undefined) return SHIPS[ship].wheels === null ? null : { slice: 'hangar', type: 'rim', ship, rim };
     const flame = FLAME_KINDS.find((kind) => kind === ware);
     if (flame !== undefined) return { slice: 'hangar', type: 'flame', ship, flame };
+    // 0584: a shell, on any ship.
+    const shell = SHELL_KINDS.find((kind) => kind === ware);
+    if (shell !== undefined) return { slice: 'hangar', type: 'shell', ship, shell };
     /*
       0578: a tube goes into the ship's rack — beside what is fitted while there is room, else in place of
       the bottom tube — as the rack of that shape. `null` where no rack is that shape.
@@ -2238,7 +2251,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const h = state.hangar;
     const tube = TUBE_WARE_KINDS.find((kind) => kind === ware);
     if (tube !== undefined) return tubesOf(h.rack[ship], TUBE_WARES[tube].tube) >= (TUBE_WARES[tube].needs === null ? 1 : 2);
-    return h.hung[ship] === ware || h.rim[ship] === ware || h.flame[ship] === ware;
+    return h.hung[ship] === ware || h.rim[ship] === ware || h.flame[ship] === ware || h.shell[ship] === ware;
   }
   function standFit(ship: ShipKind): Fit {
     const fit = hangarFit(ship);
@@ -2247,7 +2260,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const rim = RIM_KINDS.find((kind) => kind === ware);
     if (rim !== undefined) return SHIPS[ship].wheels === null ? fit : { ...fit, rim };
     const flame = FLAME_KINDS.find((kind) => kind === ware);
-    return flame === undefined ? fit : { ...fit, flame };
+    if (flame !== undefined) return { ...fit, flame };
+    // 0584: and a shell round the ship on its pad.
+    const shell = SHELL_KINDS.find((kind) => kind === ware);
+    return shell === undefined ? fit : { ...fit, shell };
   }
   /** Whether the splash has had a press the page could turn the sound on with — 0513. */
   let splashPressed = false;
@@ -2265,6 +2281,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       SHIPS[state.hangar.gun[ship]].weapon,
       state.hangar.rim[ship],
       RACKS[state.hangar.rack[ship]].tubes,
+      // 0584: and in the shell it wears.
+      state.hangar.shell[ship],
     );
   };
   function fly(): void {
@@ -2449,6 +2467,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     else if (isSlot(name)) {
       look = null;
+      lastSlot = name;
       const before = state.hangar;
       const action = slotAction(name, index, GOLFERS[state.settings.pilot].ship);
       if (action !== null) dispatch(action);
@@ -2498,6 +2517,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0561: an option tried on, or let go of — worn on the stand, fitted to nothing.
   (name: ChoiceName, index: number) => {
     look = index >= 0 && isSlot(name) ? { name, index } : null;
+    if (look !== null) lastSlot = look.name;
     fitHangar();
   });
   for (const element of chrome.elements) host.appendChild(element);
@@ -2609,6 +2629,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const flames = FLAME_KINDS.map((kind) => flameOpen(state.hangar, kind));
     chrome.setOpen('flame', flames, flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])), whysOf('flame', flames));
     chrome.setChoice('flame', FLAME_KINDS.indexOf(state.hangar.flame[ship]));
+    // 0584: the shell — its own always, another ship's on the dash's rule, a bought one on any ship.
+    const shells = SHELL_KINDS.map((kind) => shellOpen(state.hangar, ship, kind));
+    const lendsShell = SHELL_KINDS.some((kind, i) => SHELLS[kind].from !== null && SHELLS[kind].from !== ship && shells[i] === true);
+    const boughtShell = SHELL_KINDS.some((kind, i) => SHELLS[kind].from === null && shells[i] === true);
+    chrome.setOpen('shell', shells, shellWhy(ship, state.hangar.won[ship], lendsShell, boughtShell), whysOf('shell', shells));
+    chrome.setChoice('shell', SHELL_KINDS.indexOf(state.hangar.shell[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
     chrome.setSheet('hangar', balance);
@@ -2685,12 +2711,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const onPad = GOLFERS[state.settings.pilot];
       // 0542: the fit the stand wears, with Cosmo's window tried on while the shop is up.
       const fit = standFit(onPad.ship);
+      // 0584: the shell round the ship while a shell is what is being chosen — on its band, or in Cosmo's window.
+      const ware = windowWare();
+      world.standShell = state.screen.current === 'shop' ? SHELL_KINDS.some((kind) => kind === ware) : lastSlot === 'shell';
       /*
         ⚠️ **AND THE FLAME — 0541.** `sameFit` leaves the flame out, because the game's atlas burns it in
         one set of sprites kept apart (`atlasFlame`, 0530); the port's ship pieces bake their flames with the
         ship, so a flame chosen and compared by `sameFit` alone burned the last one on the pad.
       */
-      if (portFit === null || portFit.ship !== onPad.ship || !sameFit(portFit.fit, fit) || portFit.fit.flame !== fit.flame) {
+      // 0584: and the shell, which is its own pictures as the flame is.
+      if (portFit === null || portFit.ship !== onPad.ship || !sameFit(portFit.fit, fit) || portFit.fit.flame !== fit.flame || portFit.fit.shell !== fit.shell) {
         const into = port;
         withFit(onPad.ship, fit, () => bakePortShip(into, colours, onPad, portSharp));
         portFit = { ship: onPad.ship, fit };
@@ -2732,12 +2762,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const ship = GOLFERS[state.settings.pilot].ship;
     // 0526: with the gun the hangar fitted it, so the pick is seen as it will be flown; 0561: or the one tried on.
     const h = seen();
-    const row = fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, h.rim[ship]);
+    // 0584: in the shell fitted, or the one tried on.
+    const row = shelled(fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, h.rim[ship]), standFit(ship).shell);
     chrome.setShip(row, SHIPS[h.plate[ship]], hangarFit(ship));
     fitAtlasGun();
     if (state.run.lives > 0) return;
     // 0542: the wheels the stand wears, so a rim tried on at Cosmo's turns on the pad as a fitted one does.
-    world.shipRow = state.screen.current === 'shop' ? fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, standFit(ship).rim) : row;
+    world.shipRow = state.screen.current === 'shop' ? shelled(fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, standFit(ship).rim), standFit(ship).shell) : row;
     // 0578: wearing the tubes its rack carries, so the ship on the field is the one a run will open in.
     world.weapon = weaponFor(row, RACKS[h.rack[ship]].tubes);
     wearHull(world);
@@ -2777,7 +2808,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   function fitOf(ship: ShipKind, gun: WeaponKind, h: HangarState = state.hangar): Fit {
     // 0582: and the rack it carries, so the pad wears its tubes as the run will.
-    return { gun, rim: h.rim[ship], art: h.art[ship], livery: liveryFor(h.livery[ship], palette), flame: h.flame[ship], tubes: RACKS[h.rack[ship]].tubes };
+    // 0584: and the shell its shields wear, which the pad shows round it while a shell is being chosen.
+    return { gun, rim: h.rim[ship], art: h.art[ship], livery: liveryFor(h.livery[ship], palette), flame: h.flame[ship], tubes: RACKS[h.rack[ship]].tubes, shell: h.shell[ship] };
   }
   /** How the hangar has fitted `ship` — 0527: its own fit, with the gun the hangar gave it; 0561: as the stand shows it. */
   function hangarFit(ship: ShipKind): Fit {

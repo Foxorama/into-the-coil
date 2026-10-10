@@ -16,6 +16,7 @@
 
 import type { ShipKind } from './ships.ts';
 import type { SpriteKind } from './sprites.ts';
+import { priced } from './prices.ts';
 
 const TAU = Math.PI * 2;
 
@@ -93,7 +94,7 @@ export const RIMS: Record<RimKind, RimRow> = {
     name: 'Mothership spinners',
     hint: 'Silver spokes that never stop turning',
     from: null,
-    price: 1000,
+    price: priced(1000),
     wheel: { frames: [{ base: 'spinnerWheel', hit: 'spinnerWheelHit' }], hold: 0, turn: [0.7, 0.8], jump: 0 },
   },
   /*

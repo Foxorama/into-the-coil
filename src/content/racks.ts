@@ -18,6 +18,7 @@
  */
 
 import { MISSILES, MISSILE_KINDS, type MissileKind } from './missiles.ts';
+import { priced } from './prices.ts';
 
 /** Every tube ware. Closed: the first and second of each kind, so *"1-2 of both"* is four things to own. */
 export const TUBE_WARE_KINDS = ['straightTube', 'secondStraightTube', 'homingTube', 'secondHomingTube'] as const;
@@ -37,7 +38,7 @@ export interface TubeWareRow {
 }
 
 /** What a tube costs at Cosmo's — the player's number, on every row. */
-const TUBE_PRICE = 500;
+const TUBE_PRICE = priced(500);
 
 export const TUBE_WARES: Record<TubeWareKind, TubeWareRow> = {
   straightTube: { name: 'Missile Tube', hint: 'A tube that fires straight, on any ship', price: TUBE_PRICE, tube: 'straight', needs: null },

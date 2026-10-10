@@ -34,10 +34,10 @@ afterAll(async () => {
 });
 
 describe.runIf(chromePath)('0527 — the spinners are bought, fitted, and turn', () => {
-  it('bought at Cosmo’s for 1000, fitted to the Firebird on Paint & Parts, turning on its pad', async () => {
+  it('bought at Cosmo’s for 1000 and 0585’s fifteen per cent, fitted to the Firebird on Paint & Parts, turning on its pad', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 1000 }));
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 1150 }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);

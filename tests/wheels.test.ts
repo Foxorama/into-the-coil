@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { priced } from '../src/content/prices.ts';
 import { GameFrame, wearHull, type World } from '../src/app/frame.ts';
 import { STEP_MS } from '../src/app/loop.ts';
 import { RIMS, RIM_KINDS } from '../src/content/rims.ts';
@@ -41,7 +42,7 @@ function flying(ship: ShipKind, rim: (typeof RIM_KINDS)[number] | null): { world
 describe('the rims', () => {
   it('THE ASK: the Mothership’s spinners on Cosmo’s shelf at 1000 shards, and they turn', () => {
     expect(WARES).toContain('spinner');
-    expect(OWNABLES.spinner.price).toBe(1000);
+    expect(OWNABLES.spinner.price).toBe(priced(1000));
     expect(RIMS.spinner.wheel?.turn ?? null, 'the spinners are baked still').not.toBe(null);
     expect(initialHangar.owned.spinner, 'the spinners were owned before they were bought').toBe(false);
   });
@@ -58,13 +59,13 @@ describe('the rims', () => {
     expect(rimOpen(none, 'firebird', 'whitewall'), 'the estate’s rims on a Firebird never won in').toBe(false);
     expect(rimOpen(holding(0, 'firebird', 'estate').hangar, 'firebird', 'whitewall')).toBe(true);
     expect(rimOpen(none, 'estate', 'spinner'), 'spinners never bought').toBe(false);
-    const bought = reduce(holding(1000), { slice: 'hangar', type: 'bought', ware: 'spinner' });
+    const bought = reduce(holding(priced(1000)), { slice: 'hangar', type: 'bought', ware: 'spinner' });
     expect(bought.hangar.shards).toBe(0);
     for (const car of ['firebird', 'estate'] as const) expect(rimOpen(bought.hangar, car, 'spinner'), car).toBe(true);
   });
 
   it('nothing on a ship with no wheels, whatever is owned', () => {
-    const bought = reduce(holding(1000, 'fighter', 'firebird'), { slice: 'hangar', type: 'bought', ware: 'spinner' });
+    const bought = reduce(holding(priced(1000), 'fighter', 'firebird'), { slice: 'hangar', type: 'bought', ware: 'spinner' });
     for (const rim of RIM_KINDS) {
       expect(rimOpen(bought.hangar, 'fighter', rim), rim).toBe(false);
       expect(reduce(bought, { slice: 'hangar', type: 'rim', ship: 'caddie', rim }).hangar.rim.caddie, rim).toBe(null);
@@ -82,13 +83,13 @@ describe('the rims', () => {
   it('the shelf sends a bought rim to Paint & Parts, and a bought dangle to the hangar', () => {
     expect(wareWhy('spinner', true, 0)).toContain('Paint & Parts');
     expect(wareWhy('golfball', true, 0)).toContain('hangar');
-    expect(wareWhy('spinner', false, 400)).toBe('Need 600 more Star Shards');
+    expect(wareWhy('spinner', false, 400)).toBe('Need ' + String(priced(1000) - 400) + ' more Star Shards');
   });
 });
 
 describe('the key', () => {
   it('keeps what was bought and what each car wears', () => {
-    let state = reduce(holding(1000), { slice: 'hangar', type: 'bought', ware: 'spinner' });
+    let state = reduce(holding(priced(1000)), { slice: 'hangar', type: 'bought', ware: 'spinner' });
     state = reduce(state, { slice: 'hangar', type: 'rim', ship: 'estate', rim: 'spinner' });
     expect(state.hangar.rim.estate).toBe('spinner');
     expect(hangarFrom(serialiseHangar(state.hangar), initialHangar)).toEqual(state.hangar);

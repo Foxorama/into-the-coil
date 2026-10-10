@@ -16,6 +16,8 @@
  * ⚠️ **A LOOK, NEVER A THING THE SIM READS** — the flame is in no pairing (`src/content/exhaust.ts`).
  */
 
+import { priced } from './prices.ts';
+
 /** Every flame. Closed — a new one is a row here. */
 export const FLAME_KINDS = ['standard', 'ion'] as const;
 export type FlameKind = (typeof FLAME_KINDS)[number];
@@ -36,5 +38,5 @@ export interface FlameRow {
 
 export const FLAMES: Record<FlameKind, FlameRow> = {
   standard: { name: 'Standard', hint: 'The orange the engines came with', price: null, inks: null },
-  ion: { name: 'Ion Thrusters', hint: 'Blue flame thrusters, for any ship', price: 400, inks: { outer: '#3a5cff', inner: '#9fb8ff' } },
+  ion: { name: 'Ion Thrusters', hint: 'Blue flame thrusters, for any ship', price: priced(400), inks: { outer: '#3a5cff', inner: '#9fb8ff' } },
 };

@@ -21,8 +21,8 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, HANGAR_SCALE, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeGlyph, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
-import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
+import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { CADDIE_DISC, SHELL_SPAN, SHIPS, type ShipKind } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
@@ -213,6 +213,13 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       return bakeWheel(1, palette, pixelsPerUnit, pilot);
     case 'blueWheel2':
       return bakeWheel(2, palette, pixelsPerUnit, pilot);
+    // 0584: the shell the pilot's ship wears — or the one tried on — in each of its shimmer frames.
+    case 'blueShell0':
+      return bakeShell(fitNow(pilot.ship).shell, palette, size, 0, SHELL_SPAN);
+    case 'blueShell1':
+      return bakeShell(fitNow(pilot.ship).shell, palette, size, 1, SHELL_SPAN);
+    case 'blueShell2':
+      return bakeShell(fitNow(pilot.ship).shell, palette, size, 2, SHELL_SPAN);
     // 0542: Cosmo's bust, the portrait's own drawing (`src/render/cosmo-art.ts`), behind the stall's counter.
     case 'cosmo':
       paintCosmo(ctx, palette, size);
@@ -602,6 +609,9 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'blueWheel0':
     case 'blueWheel1':
     case 'blueWheel2':
+    case 'blueShell0':
+    case 'blueShell1':
+    case 'blueShell2':
     case 'cosmo':
     case 'unity':
     case 'mmxxvi':

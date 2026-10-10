@@ -25,8 +25,9 @@ export const PROBES = [
     guard: 'the run’s flame is royal blue',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    return flame === undefined ? fit : { ...fit, flame };',
-      replace: '    return fit;',
+      // Re-anchored by 0584, which tries a shell on after the flame.
+      find: '    if (flame !== undefined) return { ...fit, flame };',
+      replace: '    if (flame !== undefined) return fit;',
     },
   },
   {

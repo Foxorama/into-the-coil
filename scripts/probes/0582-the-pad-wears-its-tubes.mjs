@@ -22,7 +22,7 @@ export const PROBES = [
     suite: 'tests/pad-tubes.browser.test.ts',
     broke: 'the hangar’s fit carrying no rack, so the pad never learns of one',
     guard: 'fits one of each on Hangin’ Out, and the ship on the pad changes as it does',
-    edit: { path: 'src/app/mount.ts', find: 'flame: h.flame[ship], tubes: RACKS[h.rack[ship]].tubes };', replace: 'flame: h.flame[ship], tubes: [] };' },
+    edit: { path: 'src/app/mount.ts', find: 'flame: h.flame[ship], tubes: RACKS[h.rack[ship]].tubes, shell', replace: 'flame: h.flame[ship], tubes: [], shell' },
   },
   {
     decision: '0582',

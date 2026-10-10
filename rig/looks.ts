@@ -11,16 +11,17 @@
  * Dev only: `vite.config.ts` builds the root page alone, as for every page under `rig/`.
  */
 
-import { drawKind, drawPlayerShip, withFlame, type Pen } from '../src/render/bake.ts';
+import { bakeShell, drawKind, drawPlayerShip, withFlame, type Pen } from '../src/render/bake.ts';
+import { SHELLS, SHELL_KINDS } from '../src/content/shells.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
-import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
+import { SHELL_SPAN, SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
 import { WEAPONS, WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
 import { ART, type ArtKind } from '../src/content/art.ts';
 import { RIMS, RIM_KINDS, type RimKind } from '../src/content/rims.ts';
 import { HUES, TONES, liveryInk } from '../src/content/livery.ts';
 import { FLAMES, FLAME_KINDS } from '../src/content/flames.ts';
 import { THEME_KINDS, THEMES, type ThemeKind } from '../src/content/themes.ts';
-import { SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { SHIP_BOX, SPRITE_EXTENT } from '../src/content/sprites.ts';
 
 const palette = PALETTES[DEFAULT_PALETTE];
 const asked = new URLSearchParams(location.search).get('theme');
@@ -99,4 +100,54 @@ for (const flame of FLAME_KINDS) {
 }
 cell(flames, 'The frost ship’s shard', (pen, size) => drawKind(pen, 'frost', palette, size, theme), SPRITE_EXTENT.frost);
 host.appendChild(flames);
+
+// 0584: every shell, as three shields wear it, round the ship it comes on — or the fighter, for one sold.
+const shells = document.createElement('section');
+for (const kind of SHELL_KINDS) {
+  const wearer = SHELLS[kind].from ?? 'fighter';
+  cell(
+    shells,
+    'Shield: ' + SHELLS[kind].name,
+    (pen, size) => {
+      drawPlayerShip(pen, { half: size / 2, r: (SHIP_BOX / SHELL_SPAN) * size * 0.42 }, palette, wearer, 0, SHIPS[wearer].weapon, SHIPS[wearer].wheels?.rim ?? null, SHIPS[wearer].arts[0], null);
+      (pen as unknown as CanvasRenderingContext2D).drawImage(bakeShell(kind, palette, size, 0, SHELL_SPAN), 0, 0);
+    },
+    SHELL_SPAN,
+  );
+}
+host.appendChild(shells);
+
+// 0586: every ship's lights, laid on it as the fight lays them, in each of their pictures and turned a little.
+const lit = document.createElement('section');
+for (const kind of SHIP_KINDS) {
+  const row = SHIPS[kind];
+  if (row.lamps.length === 0) continue;
+  const pictures = Math.max(...row.lamps.map((lamp) => lamp.frames.length));
+  for (let n = 0; n < pictures; n++) {
+    cell(
+      lit,
+      'Lights: ' + row.label + ' ' + String(n),
+      (pen, size) => {
+        drawPlayerShip(pen, { half: size / 2, r: size * 0.42 }, palette, kind, 0, row.weapon, row.wheels?.rim ?? null, row.arts[0], null);
+        const ctx = pen as unknown as CanvasRenderingContext2D;
+        const unit = size / SHIP_BOX;
+        for (const lamp of row.lamps) {
+          const sprite = lamp.frames[n % lamp.frames.length]!;
+          const side = Math.max(2, Math.round(SPRITE_EXTENT[sprite] * unit));
+          const tile = document.createElement('canvas');
+          tile.width = side;
+          tile.height = side;
+          drawKind(tile.getContext('2d') as unknown as Pen, sprite, palette, side, theme);
+          ctx.save();
+          ctx.translate(size / 2 + lamp.at.along * unit, size / 2 + lamp.at.across * unit);
+          ctx.rotate(lamp.turn === null ? 0 : n * 0.3);
+          ctx.drawImage(tile, -side / 2, -side / 2);
+          ctx.restore();
+        }
+      },
+      SHIP_BOX,
+    );
+  }
+}
+host.appendChild(lit);
 document.body.dataset.ready = '1';

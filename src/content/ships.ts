@@ -21,13 +21,14 @@
 
 import type { Body } from '../sim/entity.ts';
 import type { Ink } from './palette.ts';
-import { LOADED_TUBE, SHIP_BOX, SPRITE } from './sprites.ts';
+import { LOADED_TUBE, SHIP_BOX, SPRITE, type SpriteKind } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
 import type { MissileKind, TubeLook } from './missiles.ts';
 import type { DangleKind } from './dangles.ts';
 import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
 import type { FlameKind } from './flames.ts';
+import { SHELLS, SHELL_KINDS, type ShellKind, type ShieldShell } from './shells.ts';
 
 /** Every flyable ship. Closed. */
 export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt';
@@ -164,35 +165,45 @@ export interface ShipRow extends Body {
    * ship, so a shield is a shield — only what it looks like, and since 0557 how far out it stands.
    */
   shield: ShieldShell;
-}
-
-/**
- * How a ship's shell is drawn. Closed, per 0016 — each is a draw in `src/render/bake.ts`.
- *
- *   **honeycomb**  a strip of energy cells with a bright rim: a starfighter's deflector (0430)
- *   **bubble**     a soap film with a light sliding over it: the saucer's, in its ray's lavender
- *   **plumes**     gold-edged black feathers laid along the arc: the Firebird's phoenix
- *   **lattice**    a gilt trellis between two gilt rails, studded where it crosses: the estate's
- *   **storm**      a cage of forked lightning in the arc's cyan: the Thunderbolt's (0545)
- */
-export type ShieldLook = 'honeycomb' | 'bubble' | 'plumes' | 'lattice' | 'storm';
-
-/**
- * A ship's shell: its look, and a plate's three shimmer frames at each of the four places
- * `SHIELD_ANGLES` names, in that order.
- */
-export interface ShieldShell {
-  readonly look: ShieldLook;
-  readonly places: readonly [ShieldFrames, ShieldFrames, ShieldFrames, ShieldFrames];
   /**
-   * How far from the ship's centre this shell stands, in world units, when not `SHIELD_ORBIT` — 0557.
-   * Played: *"the lightning shield cosmetic needs to be positioned slightly further away from the
-   * spaceship because it overwhelms the ship itself"*. Read through `shellOrbit`, which holds the default.
+   * Its lights — `docs/decisions/0586-the-ships-are-lit.md`: pictures the frame lays on the ship every step
+   * it flies, as it lays the turning wheels (`stepWheels`), and the pad lays on it too. The fighter's
+   * wingtip strobes and the saucer's spinning ring of lights; none on a ship that has asked for none.
+   * Each row authors its own (0282), so a light lands on one ship and not the others.
    */
-  readonly orbit?: number;
+  lamps: readonly Lamp[];
 }
 
-export type ShieldFrames = readonly [number, number, number];
+/**
+ * One light on a ship — 0586: where it stands about the ship's centre, the pictures it shows in turn, how
+ * long each holds, and how fast it spins, if it does.
+ */
+export interface Lamp {
+  readonly at: Mount;
+  readonly frames: readonly [SpriteKind, ...SpriteKind[]];
+  /** Seconds each picture holds before the next, or `0` for one picture held for good. */
+  readonly hold: number;
+  /** Seconds a turn, or `null` for a light that does not spin. */
+  readonly turn: number | null;
+  /**
+   * How the pad shows it: `laid` as the fight does, over a ship the pad draws as the fight does; `edge`, a
+   * ring seen edge-on, its bulbs running along the near edge of a saucer the pad draws from the side.
+   */
+  readonly pad: 'laid' | 'edge';
+}
+
+/** Which of `lamp`'s pictures it shows `seconds` in — on the run's clock in the fight, and the stand's on the pad. */
+export function lampFrame(lamp: Lamp, seconds: number): number {
+  return lamp.hold <= 0 ? 0 : Math.floor(seconds / lamp.hold) % lamp.frames.length;
+}
+
+/** How far `lamp` stands turned `seconds` in, in `[0, 2π)`. */
+export function lampTurn(lamp: Lamp, seconds: number): number {
+  return lamp.turn === null ? 0 : ((Math.PI * 2 * seconds) / lamp.turn) % (Math.PI * 2);
+}
+
+// 0584: a shell is a slot now, and its kinds, its shape and its table are `src/content/shells.ts`'s.
+export type { ShieldFrames, ShieldLook, ShieldShell } from './shells.ts';
 
 /**
  * A colour the readout wears: a palette role, moved toward another and lifted or shaded — never a hex,
@@ -278,12 +289,26 @@ export interface Fit {
     the frame (0581), so only a picture that is not the fight's reads this.
   */
   readonly tubes: readonly MissileKind[];
+  /*
+    0584: and the shell it wears. Not in its hull — the shell is its own sprites, as the flame is — so
+    `sameFit` leaves it out, and only the pad's preview of it reads this.
+  */
+  readonly shell: ShellKind;
 }
 
-/** A ship as it comes: its own gun, its own rim, its own look, the factory's paint, the standard flame and no tubes. */
+/** A ship as it comes: its own gun, its own rim, its own look, the factory's paint, the standard flame, no tubes and its own shell. */
 export function ownFit(ship: ShipKind): Fit {
   const row = SHIPS[ship];
-  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: 'standard', tubes: [] };
+  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: 'standard', tubes: [], shell: row.shield.look };
+}
+
+/**
+ * `row` wearing `shell` — 0584, on `fitted`'s terms: the row as it is when the shell is its own, and
+ * otherwise the row with that shell, so the frame reads `shield` off the row it was handed and never learns
+ * that shells move.
+ */
+export function shelled(row: ShipRow, shell: ShellKind): ShipRow {
+  return row.shield.look === shell ? row : { ...row, shield: SHELLS[shell].shell };
 }
 
 /** Whether two fits draw the same ship — its hull and, since 0582, its tubes; the flame is baked apart from it (`bakeFlame`). */
@@ -378,6 +403,29 @@ const FIGHTER_TUBES: ShipRow['tubes'] = [[], [{ along: -0.45, across: -1.76 }], 
  * because the caddie's row sizes its intro by it: the disc stands in the hangar where the box did.
  */
 export const CADDIE_DISC = 0.72;
+
+/*
+  ── THE SHIPS' LIGHTS — 0586 ──────────────────────────────────────────────────────────────────────
+
+  Played: *"The fighter needs lights blinking on the wingtips."* A strobe on each, where the hull's gold
+  wingtip light is (`paintShip`, at (−0.57, ±0.69) of the 7-unit hull's radius, 2.94 units): a double flash
+  and a rest, as an aircraft's anti-collision strobes go, both wings together. Each of the six pictures holds
+  a ninth of a second, so the pattern is two thirds of a second long.
+*/
+const STROBE: Lamp['frames'] = ['navStrobe', 'navDark', 'navStrobe', 'navDark', 'navDark', 'navDark'];
+const FIGHTER_LAMPS: readonly Lamp[] = [
+  { at: { along: -1.68, across: -2.02 }, frames: STROBE, hold: 1 / 9, turn: null, pad: 'laid' },
+  { at: { along: -1.68, across: 2.02 }, frames: STROBE, hold: 1 / 9, turn: null, pad: 'laid' },
+];
+/*
+  And *"Lil caddie needs to have a spinning disc of funky alien UFO lights spinning around on its disc."* One
+  ring over the whole disc, about its centre, turning once in two seconds and its colours stepping on a bulb
+  every fifth of one, so the lights chase as the ring spins.
+*/
+/** The saucer's ring of lights: how many bulbs, and how far out, in its box's radius — on its rim's dark band. */
+export const UFO_BULBS = 12;
+export const UFO_RING = 0.885 * CADDIE_DISC;
+const CADDIE_LAMPS: readonly Lamp[] = [{ at: { along: 0, across: 0 }, frames: ['ufoLights0', 'ufoLights1'], hold: 0.2, turn: 2, pad: 'edge' }];
 
 /** The most engines any ship burns — the size of the exhaust's pool (`src/app/mount.ts`). */
 export const MAX_NOZZLES = 2;
@@ -475,15 +523,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0528: its violet chevron (0461), a shark mouth, racing stripes.
     arts: ['chevron', 'sharkmouth', 'racing'],
     // The honeycomb deflector the game's shell always was, in the player's own ink — 0430.
-    shield: {
-      look: 'honeycomb',
-      places: [
-        [SPRITE.shield0a, SPRITE.shield0b, SPRITE.shield0c],
-        [SPRITE.shield120a, SPRITE.shield120b, SPRITE.shield120c],
-        [SPRITE.shield180a, SPRITE.shield180b, SPRITE.shield180c],
-        [SPRITE.shield240a, SPRITE.shield240b, SPRITE.shield240c],
-      ],
-    },
+    shield: SHELLS.honeycomb.shell,
+    lamps: FIGHTER_LAMPS,
   },
   /**
    * Feather Fade's — *The Far Carry*'s Little Green Caddie, *"a flying saucer with a 7-iron. They come
@@ -548,15 +589,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0528: its clear dome (0461), its pilot under the glass, a gold visor.
     arts: ['glass', 'pilot', 'visor'],
     // A soap film in its ray dish’s lavender, a light sliding over it — 0492.
-    shield: {
-      look: 'bubble',
-      places: [
-        [SPRITE.shieldBubble0a, SPRITE.shieldBubble0b, SPRITE.shieldBubble0c],
-        [SPRITE.shieldBubble120a, SPRITE.shieldBubble120b, SPRITE.shieldBubble120c],
-        [SPRITE.shieldBubble180a, SPRITE.shieldBubble180b, SPRITE.shieldBubble180c],
-        [SPRITE.shieldBubble240a, SPRITE.shieldBubble240b, SPRITE.shieldBubble240c],
-      ],
-    },
+    shield: SHELLS.bubble.shell,
+    lamps: CADDIE_LAMPS,
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
@@ -605,15 +639,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0528: its phoenix (0468), hot-rod flames, a rally stripe.
     arts: ['phoenix', 'flames', 'rally'],
     // Its phoenix’s feathers: black lacquer read by gold edges, as the car is — 0492.
-    shield: {
-      look: 'plumes',
-      places: [
-        [SPRITE.shieldPlume0a, SPRITE.shieldPlume0b, SPRITE.shieldPlume0c],
-        [SPRITE.shieldPlume120a, SPRITE.shieldPlume120b, SPRITE.shieldPlume120c],
-        [SPRITE.shieldPlume180a, SPRITE.shieldPlume180b, SPRITE.shieldPlume180c],
-        [SPRITE.shieldPlume240a, SPRITE.shieldPlume240b, SPRITE.shieldPlume240c],
-      ],
-    },
+    shield: SHELLS.plumes.shell,
+    lamps: [],
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
@@ -661,15 +688,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0528: the burl as it came, a crest on the door, daisies on the tailgate panel.
     arts: ['woody', 'crest', 'daisies'],
     // A gilt trellis between gilt rails, a stud at every crossing — 0492.
-    shield: {
-      look: 'lattice',
-      places: [
-        [SPRITE.shieldLattice0a, SPRITE.shieldLattice0b, SPRITE.shieldLattice0c],
-        [SPRITE.shieldLattice120a, SPRITE.shieldLattice120b, SPRITE.shieldLattice120c],
-        [SPRITE.shieldLattice180a, SPRITE.shieldLattice180b, SPRITE.shieldLattice180c],
-        [SPRITE.shieldLattice240a, SPRITE.shieldLattice240b, SPRITE.shieldLattice240c],
-      ],
-    },
+    shield: SHELLS.lattice.shell,
+    lamps: [],
   },
   /**
    * The Marmot's — `docs/decisions/0546-the-marmot-rides.md`. *The Far Carry*'s Thunderbolt, *"a hot-rod
@@ -720,16 +740,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0545: a cyan bolt down its tank, the Marmot's paw in gold, gold pinstripes.
     arts: ['boltTank', 'pawprint', 'pinstripes'],
     // A cage of forked lightning — 0545. 0557: a unit and a half further out than the rest, clear of the bike.
-    shield: {
-      look: 'storm',
-      orbit: 7.1,
-      places: [
-        [SPRITE.shieldStorm0a, SPRITE.shieldStorm0b, SPRITE.shieldStorm0c],
-        [SPRITE.shieldStorm120a, SPRITE.shieldStorm120b, SPRITE.shieldStorm120c],
-        [SPRITE.shieldStorm180a, SPRITE.shieldStorm180b, SPRITE.shieldStorm180c],
-        [SPRITE.shieldStorm240a, SPRITE.shieldStorm240b, SPRITE.shieldStorm240c],
-      ],
-    },
+    shield: SHELLS.storm.shell,
+    lamps: [],
   },
 };
 
@@ -772,6 +784,14 @@ export function shellOrbit(shell: ShieldShell): number {
   return shell.orbit ?? SHIELD_ORBIT;
 }
 
+/** How many world units across a whole shell is drawn in — 0584: its plates' outer edges either side, and a margin. */
+export function shellSpan(shell: ShieldShell): number {
+  return 2 * (shellOrbit(shell) + 1.6);
+}
+
+/** The widest any shell is drawn — 0584, so the pad's shell pictures share one span and each stands at its own orbit. */
+export const SHELL_SPAN = Math.max(...SHELL_KINDS.map((kind) => shellSpan(SHELLS[kind].shell)));
+
 /**
  * Where a plate of the deflector shell may stand, in radians from the nose —
  * `docs/decisions/0430-the-readout-counts-ships-and-shields.md`. A ship's `shield.places` gives each
@@ -782,21 +802,6 @@ export function shellOrbit(shell: ShieldShell): number {
  * would need a picture for every angle it passed through.
  */
 export const SHIELD_ANGLES: readonly [number, number, number, number] = [0, (Math.PI * 2) / 3, Math.PI, (Math.PI * 4) / 3];
-
-/**
- * Which ship's shell a plate's sprite belongs to, and where on it — for the bake, which is handed a
- * sprite and draws the plate the row says it is.
- */
-export function shieldPlateOf(sprite: number): { readonly ship: ShipRow; readonly place: number; readonly shimmer: number } | null {
-  for (const kind of SHIP_KINDS) {
-    const places = SHIPS[kind].shield.places;
-    for (let place = 0; place < places.length; place++) {
-      const shimmer = places[place]!.indexOf(sprite);
-      if (shimmer >= 0) return { ship: SHIPS[kind], place, shimmer };
-    }
-  }
-  return null;
-}
 
 /**
  * Which places a shell of each size stands on, indexed by how many shields the ship carries.

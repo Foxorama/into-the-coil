@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { priced } from '../src/content/prices.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, WARES } from '../src/content/wares.ts';
 import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS, rackCarrying, type RackKind } from '../src/content/racks.ts';
 import { SHIP_KINDS } from '../src/content/ships.ts';
@@ -30,7 +31,7 @@ describe('the shelf', () => {
     expect(SHELF_KINDS.at(-1), 'the tubes are not the last shelf, so a shelf before them moved').toBe('tubes');
     expect(SHELVES.tubes.wares).toEqual([...TUBE_WARE_KINDS]);
     for (const ware of TUBE_WARE_KINDS) {
-      expect(OWNABLES[ware].price, `${ware} is not *"500 each"*`).toBe(500);
+      expect(OWNABLES[ware].price, `${ware} is not *"500 each"*`).toBe(priced(500));
       expect(WARES, `${ware} is not for sale`).toContain(ware);
       expect(initialHangar.owned[ware], `${ware} was owned before it was bought`).toBe(false);
     }
@@ -46,7 +47,7 @@ describe('the shelf', () => {
     expect(reduce(rich, { slice: 'hangar', type: 'bought', ware: 'secondHomingTube' }), 'the second tube was bought first').toBe(rich);
     expect(wareWhy('secondHomingTube', false, 10_000, 'homingTube')).toBe('Buy the ' + OWNABLES.homingTube.name + ' first');
     const first = reduce(rich, { slice: 'hangar', type: 'bought', ware: 'homingTube' });
-    expect(first.hangar.shards).toBe(9_500);
+    expect(first.hangar.shards).toBe(10_000 - priced(500));
     expect(canBuy(first.hangar, 'secondHomingTube'), 'the second tube was refused with the first owned').toBe(true);
     // And the other kind's second is still behind its own first.
     expect(canBuy(first.hangar, 'secondStraightTube')).toBe(false);

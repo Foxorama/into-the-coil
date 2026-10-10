@@ -23,7 +23,8 @@ import { ART_KINDS } from '../content/art.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
 import { OWNABLE_KINDS, type OwnableKind } from '../content/wares.ts';
 import { RACK_KINDS } from '../content/racks.ts';
-import { type HangarState, artOpen, flameOpen, gunOpen, liveryOf, liveryOpen, plateOpen, rackOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
+import { SHELL_KINDS } from '../content/shells.ts';
+import { type HangarState, artOpen, flameOpen, gunOpen, liveryOf, liveryOpen, plateOpen, rackOpen, rimOpen, shellOpen, specialOpen } from '../state/slices/hangar.ts';
 import type { Store } from './store.ts';
 
 /** Where the hangar lives. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
@@ -146,13 +147,24 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     const raw = RACK_KINDS.find((r) => r === rackDoc?.[kind]);
     if (raw !== undefined && rackOpen(holding, raw)) rack[kind] = raw;
   }
-  return { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack };
+  /*
+    0584: each ship's shell — one its wins or what it owns open to it, or its own. A new field on version 1,
+    so a document written before it reads as every ship in its own shell; an edited one wears no shell it
+    did not win or buy.
+  */
+  const shellDoc = perShipOf(doc.shell);
+  const shell = { ...base.shell };
+  for (const kind of SHIP_KINDS) {
+    const raw = SHELL_KINDS.find((k) => k === shellDoc?.[kind]);
+    if (raw !== undefined && shellOpen(holding, kind, raw)) shell[kind] = raw;
+  }
+  return { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  const { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack } = hangar;
-  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack });
+  const { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell } = hangar;
+  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

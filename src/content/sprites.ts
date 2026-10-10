@@ -95,6 +95,17 @@ export const SPRITE_KINDS = [
   // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
   'spinnerWheel',
   'spinnerWheelHit',
+  // 0586: a ship's lights, laid on it by the frame — the fighter's wingtip strobes, lit and dark, and the
+  // ring of lights spinning round the saucer's disc, in two pictures that chase.
+  'navStrobe',
+  'navDark',
+  'ufoLights0',
+  'ufoLights1',
+  // And one of its bulbs in each of its four inks, for the pad, where the saucer is seen edge-on.
+  'ufoBulb0',
+  'ufoBulb1',
+  'ufoBulb2',
+  'ufoBulb3',
   // 0557: the Thunderbolt's lightning, three cracks the frame strikes in turn over each wheel.
   'boltWheel0',
   'boltWheel0Hit',
@@ -1149,6 +1160,43 @@ export const SPRITE_KINDS = [
   'shieldStorm240a',
   'shieldStorm240b',
   'shieldStorm240c',
+  // The shells Cosmo's sells — 0584: at the same four places and three frames.
+  'shieldAurora0a',
+  'shieldAurora0b',
+  'shieldAurora0c',
+  'shieldAurora120a',
+  'shieldAurora120b',
+  'shieldAurora120c',
+  'shieldAurora180a',
+  'shieldAurora180b',
+  'shieldAurora180c',
+  'shieldAurora240a',
+  'shieldAurora240b',
+  'shieldAurora240c',
+  'shieldRunes0a',
+  'shieldRunes0b',
+  'shieldRunes0c',
+  'shieldRunes120a',
+  'shieldRunes120b',
+  'shieldRunes120c',
+  'shieldRunes180a',
+  'shieldRunes180b',
+  'shieldRunes180c',
+  'shieldRunes240a',
+  'shieldRunes240b',
+  'shieldRunes240c',
+  'shieldDisco0a',
+  'shieldDisco0b',
+  'shieldDisco0c',
+  'shieldDisco120a',
+  'shieldDisco120b',
+  'shieldDisco120c',
+  'shieldDisco180a',
+  'shieldDisco180b',
+  'shieldDisco180c',
+  'shieldDisco240a',
+  'shieldDisco240b',
+  'shieldDisco240c',
   /*
     ── A SURGE IS WORN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────────────────
 
@@ -1623,6 +1671,13 @@ export const LIGHT_KINDS: readonly SpriteKind[] = [
   // The Catherine wheel's sparks — 0549: two crossing burn white where they cross, which is the depth asked for.
   'cinder',
   'cinderCool',
+  /*
+    0586: the fighter's wingtip strobes — white, so added is what they should be. The saucer's coloured
+    bulbs are NOT here: added over its pale green disc every one of them burned to the same white, and the
+    ask is for colours.
+  */
+  'navStrobe',
+  'navDark',
 ];
 
 /**
@@ -1681,6 +1736,15 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   spinnerWheel: 3.6 * 0.062 * SHIP_BOX,
   spinnerWheelHit: 3.6 * 0.062 * SHIP_BOX,
+  // 0586: a lamp a little wider than the wingtip it sits on, glow and all; the saucer's ring is its box.
+  navStrobe: 1.6,
+  navDark: 1.6,
+  ufoLights0: SHIP_BOX,
+  ufoLights1: SHIP_BOX,
+  ufoBulb0: 1.2,
+  ufoBulb1: 1.2,
+  ufoBulb2: 1.2,
+  ufoBulb3: 1.2,
   // 0557: in the spinner's box, so one swell stands any rim's picture over any tyre.
   boltWheel0: 3.6 * 0.062 * SHIP_BOX,
   boltWheel0Hit: 3.6 * 0.062 * SHIP_BOX,
@@ -2594,6 +2658,43 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shieldStorm240a: 12,
   shieldStorm240b: 12,
   shieldStorm240c: 12,
+  // 0584: the shells Cosmo's sells, on the same tile.
+  shieldAurora0a: 12,
+  shieldAurora0b: 12,
+  shieldAurora0c: 12,
+  shieldAurora120a: 12,
+  shieldAurora120b: 12,
+  shieldAurora120c: 12,
+  shieldAurora180a: 12,
+  shieldAurora180b: 12,
+  shieldAurora180c: 12,
+  shieldAurora240a: 12,
+  shieldAurora240b: 12,
+  shieldAurora240c: 12,
+  shieldRunes0a: 12,
+  shieldRunes0b: 12,
+  shieldRunes0c: 12,
+  shieldRunes120a: 12,
+  shieldRunes120b: 12,
+  shieldRunes120c: 12,
+  shieldRunes180a: 12,
+  shieldRunes180b: 12,
+  shieldRunes180c: 12,
+  shieldRunes240a: 12,
+  shieldRunes240b: 12,
+  shieldRunes240c: 12,
+  shieldDisco0a: 12,
+  shieldDisco0b: 12,
+  shieldDisco0c: 12,
+  shieldDisco120a: 12,
+  shieldDisco120b: 12,
+  shieldDisco120c: 12,
+  shieldDisco180a: 12,
+  shieldDisco180b: 12,
+  shieldDisco180c: 12,
+  shieldDisco240a: 12,
+  shieldDisco240b: 12,
+  shieldDisco240c: 12,
   // Round the whole hull with a margin — the ship is 7, so its wingtips sit inside the rim. 0373.
   auraHunt: 12,
   auraOverdrive: 12,

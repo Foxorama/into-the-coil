@@ -50,7 +50,8 @@
 
 import { DIFFICULTIES, type DifficultyKind } from '../content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
-import { SHIPS, fitted, type ShipKind } from '../content/ships.ts';
+import { SHIPS, fitted, shelled, type ShipKind } from '../content/ships.ts';
+import type { ShellKind } from '../content/shells.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { MissileKind } from '../content/missiles.ts';
 import type { WeaponKind } from '../content/weapons.ts';
@@ -79,6 +80,8 @@ export interface Lifecycle {
     gun?: WeaponKind,
     rim?: RimKind | null,
     tubes?: readonly MissileKind[],
+    // 0584: and the shell its shields wear, the ship's own by default.
+    shell?: ShellKind,
   ): void;
   /** The burn to the next place begins. Nothing about the run or the field moves — 0340. */
   onward(): void;
@@ -139,6 +142,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       gun?: WeaponKind,
       rim?: RimKind | null,
       tubes?: readonly MissileKind[],
+      shell?: ShellKind,
     ): void {
       /*
         ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same
@@ -149,6 +153,8 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       // And the ship, resolved to its row once, on the same terms — 0441. `startLevel` respawns it,
       // so its hull and hurtbox are this row's from the first frame. 0525: with the gun it flies.
       world.shipRow = fitted(SHIPS[ship], gun ?? SHIPS[ship].weapon, rim ?? undefined);
+      // 0584: and in the shell the hangar fitted — its own until one is chosen.
+      if (shell !== undefined) world.shipRow = shelled(world.shipRow, shell);
       /*
         ⚠️ **`seedField` is NOT called here, and it used to be.** A random opening field is the right
         answer for a scene proving the page draws and the wrong one for an authored level: it puts

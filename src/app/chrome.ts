@@ -37,9 +37,10 @@ import { SHOTS } from '../content/shots.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
+import { SHELL_KINDS } from '../content/shells.ts';
 import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS } from '../content/racks.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
-import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
+import { bakeAtlas, bakeGlyph, bakeShell, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
@@ -6535,6 +6536,13 @@ export function makeChrome(
       if (glyph !== undefined) holder.appendChild(bakeGlyph(glyph, colours, WARE_ART_PIXELS / SPRITE_EXTENT[glyph]));
       return holder;
     }
+    // 0584: a shell, as a ship carrying three shields wears it.
+    const shell = SHELL_KINDS.find((kind) => kind === ware);
+    if (shell !== undefined) {
+      holder.className = 'itc-shop-art-rim';
+      holder.appendChild(bakeShell(shell, colours, WARE_ART_PIXELS));
+      return holder;
+    }
     const flame = FLAME_KINDS.find((kind) => kind === ware);
     holder.className = 'itc-shop-art-flame';
     if (flame !== undefined) {
@@ -6568,6 +6576,13 @@ export function makeChrome(
         const flame = FLAME_KINDS[i];
         if (flame === undefined) return null;
         holder.appendChild(wareArt(flame));
+        return holder;
+      }
+      // 0584: the shell, drawn as Cosmo's shelf draws it.
+      if (band === 'shell') {
+        const shell = SHELL_KINDS[i];
+        if (shell === undefined) return null;
+        holder.appendChild(wareArt(shell));
         return holder;
       }
       holder.setAttribute('aria-hidden', 'true');

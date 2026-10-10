@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { priced } from '../src/content/prices.ts';
 import { FLAMES, FLAME_KINDS } from '../src/content/flames.ts';
 import { OWNABLES, WARES } from '../src/content/wares.ts';
 import { SHIP_KINDS, ownFit } from '../src/content/ships.ts';
@@ -36,10 +37,10 @@ describe('the shop', () => {
   it('THE ASK: Ion Thrusters at Cosmo’s for 400 shards', () => {
     expect(WARES).toContain('ion');
     expect(OWNABLES.ion.name).toBe('Ion Thrusters');
-    expect(OWNABLES.ion.price).toBe(400);
+    expect(OWNABLES.ion.price).toBe(priced(400));
     expect(initialHangar.owned.ion, 'the thrusters were owned before they were bought').toBe(false);
     expect(initialHangar.owned.standard).toBe(true);
-    const bought = reduce(holding(400), { slice: 'hangar', type: 'bought', ware: 'ion' });
+    const bought = reduce(holding(priced(400)), { slice: 'hangar', type: 'bought', ware: 'ion' });
     expect(bought.hangar.shards).toBe(0);
     expect(wareWhy('ion', true, 0)).toContain('Paint & Parts');
   });
@@ -50,7 +51,7 @@ describe('the flame', () => {
     for (const ship of SHIP_KINDS) expect(initialHangar.flame[ship], ship).toBe('standard');
     expect(flameOpen(initialHangar, 'ion')).toBe(false);
     expect(reduce(initialState, { slice: 'hangar', type: 'flame', ship: 'fighter', flame: 'ion' }).hangar.flame.fighter, 'burned before it was bought').toBe('standard');
-    const bought = reduce(holding(400), { slice: 'hangar', type: 'bought', ware: 'ion' });
+    const bought = reduce(holding(priced(400)), { slice: 'hangar', type: 'bought', ware: 'ion' });
     for (const ship of SHIP_KINDS) expect(reduce(bought, { slice: 'hangar', type: 'flame', ship, flame: 'ion' }).hangar.flame[ship], ship).toBe('ion');
     expect(flameWhy(false)).toContain('Cosmo');
     expect(flameWhy(true)).toBe(null);
@@ -85,7 +86,7 @@ describe('the flame', () => {
 
 describe('the key', () => {
   it('keeps each ship’s flame, and refuses one its own list does not own', () => {
-    const bought = reduce(holding(400), { slice: 'hangar', type: 'bought', ware: 'ion' });
+    const bought = reduce(holding(priced(400)), { slice: 'hangar', type: 'bought', ware: 'ion' });
     const fitted = reduce(bought, { slice: 'hangar', type: 'flame', ship: 'caddie', flame: 'ion' });
     expect(hangarFrom(serialiseHangar(fitted.hangar), initialHangar)).toEqual(fitted.hangar);
     const forged = JSON.stringify({ v: HANGAR_VERSION, flame: { caddie: 'ion', fighter: 'plasma' } });
