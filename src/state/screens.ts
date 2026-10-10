@@ -552,6 +552,29 @@ function sectionBand(stand: StandRow): ScreenChoice {
   };
 }
 
+/** Paint & Parts' stand — a name of its own because its section band is read off it, on Hangin' Out's terms (0584). */
+const PARTS_STAND: StandRow = {
+  groups: [
+    // 0579: the tubes were here a day (0578), for the height Hangin' Out had not got; they are loadout.
+    // 0584: and the shell its shields wear.
+    { label: 'Parts', bands: ['rim', 'flame', 'shell'] },
+    { label: 'Paint', bands: ['art', 'livery', 'tone'] },
+  ],
+  /*
+    0584: one group at a time, on Hangin' Out's terms (0579) — the shield made Parts three bands tall, and
+    on the smallest phone the plate ran past the screen. 0579 named this as the shields' coming.
+  */
+  tabbed: true,
+  /*
+    0548: the port's one camera. It was closer on the pad at 2.3 (0540), so the wheels, the nose and the
+    flame were large — and the room jumped a size every time the tab was stepped onto, which was asked
+    to stop. The looks are still read close on rig/looks.html.
+  */
+  camera: PORT_CAMERA,
+  // 0550: MMXXVI, who paints it.
+  keeper: 'mmxxvi',
+};
+
 /** Hangin' Out's stand — a name of its own because its section band is read off it (0579). */
 const HANGAR_STAND: StandRow = {
   groups: [
@@ -1134,23 +1157,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pause: null,
     leads: false,
     // 0539: what is bolted on, and how it is painted.
-    stand: {
-      groups: [
-        // 0579: the tubes were here a day (0578), for the height Hangin' Out had not got; they are loadout.
-        // 0584: and the shell its shields wear.
-        { label: 'Parts', bands: ['rim', 'flame', 'shell'] },
-        { label: 'Paint', bands: ['art', 'livery', 'tone'] },
-      ],
-      tabbed: false,
-      /*
-        0548: the port's one camera. It was closer on the pad at 2.3 (0540), so the wheels, the nose and the
-        flame were large — and the room jumped a size every time the tab was stepped onto, which was asked
-        to stop. The looks are still read close on rig/looks.html.
-      */
-      camera: PORT_CAMERA,
-      // 0550: MMXXVI, who paints it.
-      keeper: 'mmxxvi',
-    },
+    stand: PARTS_STAND,
     actions: [{ label: 'Back', hint: '' }],
     choices: [
       {
@@ -1163,6 +1170,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         press: 'steps',
       },
+      // 0584: the sub-tabs, as Hangin' Out's (0579), over the one group they have in view.
+      sectionBand(PARTS_STAND),
       /*
         0527: the wheels — every rim in the table's order, named with where it comes from. Built by
         walking `RIM_KINDS`; a ship with no wheels shows them all shut and says so.

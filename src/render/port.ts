@@ -74,8 +74,11 @@ const UFO_RIM = UFO_RING * SHIP_BOX * 0.42;
 // @setup: three indices for the lifetime of the module.
 const BLUE_SHELLS: readonly number[] = [PORT_SPRITE.blueShell0, PORT_SPRITE.blueShell1, PORT_SPRITE.blueShell2];
 
-/** Steps each of the shell's shimmer frames holds on the pad — a sixth of a second, so it ripples. */
-const SHELL_SHIMMER = 10;
+/**
+ * How many shimmer frames the shell shows a bob on the pad — nine, so it ripples about every fifth of a second
+ * and comes back to where it was each bob, as everything on the stand does (`BLUE_BOB_RATE`).
+ */
+const SHELL_SHIMMERS = 9;
 
 /** How much bigger than its box a tile is blitted, so the seam between two can never show the space behind. */
 const TILE_OVERLAP = 1.03;
@@ -252,16 +255,23 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     chosen — on the pad it would otherwise sit over every other look. Its pictures are baked off the fitted
     shell, or the one tried on, into `BLUE_SHELLS` (`bakePortShip`), shimmering as the fight's do.
   */
-  if (shell) put(surface, view, BLUE_SHELLS[Math.floor(t / SHELL_SHIMMER) % BLUE_SHELLS.length]!, pad, across, 1, 0, size);
+  if (shell) put(surface, view, BLUE_SHELLS[Math.floor(((t % BOB_STEPS) / BOB_STEPS) * SHELL_SHIMMERS) % BLUE_SHELLS.length]!, pad, across, 1, 0, size);
   /*
     0586: and its lights, on the stand's clock — the fighter's strobes laid as the fight lays them, from the
     game's own pictures at the pad's size; the saucer's ring, which the pad sees edge-on, as its bulbs
     running along the rim's near edge, each brighter as it comes round to the front.
   */
-  const lit = t / STEPS_PER_SECOND;
+  /*
+    ⚠️ **ON THE BOB'S CLOCK, SO A BOB APART IS THE SAME PICTURE** — what the pad's guards read a fitting
+    against (`tests/stand.ts`). Each light runs a whole number of its own cycles a bob, the nearest to its
+    row's pace: the strobe's two thirds of a second three times, the ring's two-second turn once.
+  */
+  const bob = (t % BOB_STEPS) / BOB_STEPS;
   const unit = HANGAR_SCALE * size;
   for (let k = 0; k < ship.lamps.length; k++) {
     const lamp = ship.lamps[k]!;
+    const cycle = lamp.turn ?? lamp.hold * lamp.frames.length;
+    const lit = bob * Math.max(1, Math.round(BOB_STEPS / STEPS_PER_SECOND / cycle)) * cycle;
     const at = pad + lamp.at.along * unit;
     const down = across + lamp.at.across * unit;
     if (lamp.pad === 'laid') {

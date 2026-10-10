@@ -32,6 +32,13 @@ Every price is a first answer and the player's to move.
 - **Arts** are a case in each ship's painter, and the side-on saucer on the pad (`paintSaucer`) draws the
   rainbow dome as four upright bands.
 
+## The plate, on a phone
+
+Seven dangles on one shelf ran three rows deep in rows of three on a 667x375, past its foot, and five aisle
+tabs wrapped to a second row. On a landscape phone the shelf is now one row of three with the rest a scroll
+away, as a taller screen's already was, and the aisle one row of tabs cut short. Measured with
+`tests/layout.browser.test.ts`'s six sizes.
+
 ## The screen, considered
 
 [0295](0295-a-ranking-guard-is-a-content-limiter.md), per thing:

@@ -1161,6 +1161,18 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE PLAY-TEST OF 2026-10-10 IS BUILT IN ONE PR AND OWED A PLAY
+
+Six decisions; each one's *Owed* or *considered* section names what the play has to look at:
+
+- shields are a slot and Cosmo's sells three — [0584](decisions/0584-the-shields-are-worn.md);
+- every price fifteen per cent up, through one number — [0585](decisions/0585-the-prices-rise.md);
+- the fighter's wingtip strobes and the caddie's spinning ring of lights — [0586](decisions/0586-the-ships-are-lit.md);
+- the ray gun a little saucer on the top half — [0587](decisions/0587-the-ray-gun-is-a-saucer.md);
+- the ray's four edge-on rings, steered by the right stick through 45° — [0588](decisions/0588-the-rings-are-thrown.md),
+  which is owed a play with a pad;
+- more looks of every kind, with their prices the player's to move — [0589](decisions/0589-more-looks.md).
+
 ### ⚠️ A PLAY OF LEGENDARY IS BUILT AND OWED A PLAY — 2026-10-07
 
 Six items in one decision — [0573](decisions/0573-the-legend-bites.md): the end bosses' tails, the

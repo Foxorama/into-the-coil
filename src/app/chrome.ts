@@ -2185,24 +2185,26 @@ ${each('-tab-key[hidden]')} { display: none; }
   cosmetics as well so we need to have that section capable of handling more"*: a group added is a tab.
 */
 /* Two classes, so it outranks every layout's display for a group — a phone lays one out as a grid. */
-.itc-hangar-group.itc-hangar-group-away { display: none; }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) {
+/* 0584: and Paint & Parts', since the shield made it one group too tall. */
+.itc-hangar-group.itc-hangar-group-away, .itc-parts-group.itc-parts-group-away { display: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']),
+.itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) {
   grid-column: 1 / -1;
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas: 'less track more';
   padding: 0.1em;
   row-gap: 0;
 }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-label,
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-hint { display: none; }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-options {
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-label, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-band-label,
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-hint, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-band-hint { display: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-options, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-options {
   display: flex;
   flex-wrap: nowrap;
   gap: 0.2em;
   padding: 0.2em 0.15em 0;
   border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 50%, transparent);
 }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option {
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-option {
   flex: 1 1 0;
   min-width: 0;
   text-align: center;
@@ -2215,7 +2217,7 @@ ${each('-tab-key[hidden]')} { display: none; }
   padding-bottom: 0.25em;
 }
 /* A tab is where the player is looking, not a thing fitted, so it wears no tick. */
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option::before { content: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option::before, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-option::before { content: none; }
 .itc-shop-option.itc-shop-option-tile { display: grid; grid-template-rows: auto auto auto; justify-items: center; align-content: start; gap: 0.12em; padding-top: 0.35em; padding-bottom: 0.3em; }
 .itc-shop-option-art { display: block; position: relative; width: 100%; height: 3.1em; pointer-events: none; }
 .itc-shop-option-label { line-height: 1.1; }
@@ -2636,8 +2638,7 @@ ${each('-band[hidden]')} { display: none; }
     0550 hid a keeper who only greets from a phone's plate, where the card put Back under the fold. Since
     0572 no keeper is on the plate: their words are a bubble in the stand, so the rule hid nothing and went.
   */
-  /* 0579: Hangin' Out shows one group at a time, so its one group has the plate's width. */
-  .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  /* 0579: Hangin' Out shows one group at a time, so its one group has the plate's width — and 0584, Paint & Parts too. */
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'label label label' 'less track more'; padding: 0 0.1em; row-gap: 0; }
   /* 0566: one chip a band, as wide as the band, its name cut rather than run past its edge. */
   .itc-hangar-group .itc-hangar-band .itc-hangar-option, .itc-parts-group .itc-parts-band .itc-parts-option { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -2710,17 +2711,17 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: flex; justify-content: center; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on):not(.itc-hangar-option-look), .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look) { display: none; }
   /* 0579: except the sub-tabs, every one of which is drawn — a tab shows where else there is to go. */
-  .itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option { display: block; }
+  .itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-option { display: block; }
   /*
     0579: and the group in view one row of its bands, side by side — three for the Loadout, two for the
     Cockpit. One under another the Loadout put Back under a 667x375's fold, and two to a row still stood
     the plate 15 px taller than Paint & Parts'. Each chip shows the one that is on, cut short where it
     must be, and the card at the foot names it whole.
   */
-  .itc-hangar-group { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: min(0.6rem, 1.5cqw); }
+  .itc-hangar-group, .itc-parts-group { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: min(0.6rem, 1.5cqw); }
   /* Its arrows as narrow as a 480x320's already are, so the chip between them has the band's width. */
-  .itc-hangar-group .itc-hangar-band { column-gap: 0.1em; }
-  .itc-hangar-group .itc-hangar-band .itc-hangar-band-step { padding-left: 0; padding-right: 0; }
+  .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { column-gap: 0.1em; }
+  .itc-hangar-group .itc-hangar-band .itc-hangar-band-step, .itc-parts-group .itc-parts-band .itc-parts-band-step { padding-left: 0; padding-right: 0; }
   /*
     0561: the one tried on in the fitted one's place; and a band with neither — the tone of a ship in the
     factory's paint — shows its first, shut, so the row is not two arrows round nothing.
@@ -3055,7 +3056,7 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { padding-bottom: 2.2em; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr); }
   /* 0579: held upright the plate scrolls and the width is the short side, so the group in view is two to a row. */
-  .itc-hangar-group { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .itc-hangar-group, .itc-parts-group { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-keeper, .itc-parts-keeper { display: none; }
   /* The readout typeset by the width up here — by the height it was the stand's full width over the ship. */
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.7rem, 3cqw, 1rem); }
@@ -3190,6 +3191,23 @@ ${each('-band[hidden]')} { display: none; }
   /* The foot stacked: the card across the plate, and the balance and the actions under it. */
   .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'focus focus' 'sheet choices' 'glyphs glyphs'; }
   .itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { font-size: 0.74em; }
+}
+/*
+  0589: a landscape phone's shelf one tile, the ware in the window — the hanging shelf has seven since 0589,
+  and in rows of three it ran three rows deep, past a 667x375's foot.
+  And the aisle's five tabs one row, each cut short rather than wrapping to a second.
+*/
+@container (max-height: 460px) {
+  /*
+    The ware in the window alone between the shelf's arrows, as a phone's hangar shows one chip a band (0566):
+    a tile scrolled out of a row is a button the player cannot press, and the layout guard
+    (tests/layout.browser.test.ts) counts it off the screen.
+  */
+  .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-options { display: flex; flex-wrap: nowrap; justify-content: center; }
+  .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-option:not(.itc-shop-option-on) { display: none; }
+  .itc-shop-option.itc-shop-option-tile { flex: 0 1 60%; }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-options { display: flex; flex-wrap: nowrap; }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-option { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 /*
   ── ONE VOICE — 0440 ─────────────────────────────────────────────────────────────────────────────

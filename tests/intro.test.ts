@@ -35,7 +35,7 @@ import { CADDIE_DISC, SHIPS, SHIP_KINDS, fitted, type ShipKind } from '../src/co
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
 import { KEEPER_KINDS } from '../src/content/keepers.ts';
 import { SKY } from '../src/app/mount.ts';
-import { paintPort, paintStand } from '../src/render/port.ts';
+import { NO_HOP, paintPort, paintStand } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -163,6 +163,11 @@ describe('the picture', () => {
     // 0557: and every picture of the lightning, which strikes them in turn over a second on the pad.
     for (let t = 0; t < 60; t++) {
       paintStand(stand, viewOf(NARROW.width, NARROW.height), t, SKY, SHIPS.thunderbolt, null);
+      for (const b of stand.blits) seen.add(b.sprite);
+    }
+    // 0584: and the shell round the ship, while one is being chosen, in each of its shimmer frames.
+    for (let t = 0; t < 60; t++) {
+      paintStand(stand, viewOf(NARROW.width, NARROW.height), t, SKY, SHIPS.fighter, null, NO_HOP, null, true);
       for (const b of stand.blits) seen.add(b.sprite);
     }
     const unseen = PORT_KINDS.filter((kind) => !seen.has(PORT_SPRITE[kind]));

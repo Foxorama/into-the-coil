@@ -3,6 +3,9 @@
 **Accepted 2026-10-01.** Feather Fade's gun on the Little Green Caddie. It is the fourth gun, and
 it is new with [0441](0441-a-pilot-flies-their-own-ship.md).
 
+⚠️ **Superseded in part by [0588](0588-the-rings-are-thrown.md)**: *the picture*. Four rings in a train up the
+line of flight, each seen edge-on, where this drew four about one centre; and the right stick steers them.
+
 ## The ask
 
 > *"Little green caddie will be piloted by Feather Fade and gets a new weapon, which is a ray gun that

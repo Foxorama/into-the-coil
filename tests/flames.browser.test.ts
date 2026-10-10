@@ -10,6 +10,7 @@ import { seeded } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { FLAME_KINDS } from '../src/content/flames.ts';
+import { OWNABLES } from '../src/content/wares.ts';
 import { SCREENS } from '../src/state/screens.ts';
 
 /**
@@ -79,7 +80,8 @@ describe.runIf(chromePath)('0530 — the thrusters bought and fitted burn blue i
     const before = await flown(standard.page);
     await standard.close();
 
-    const { page, close } = await opened(400);
+    // 0585: the price risen.
+    const { page, close } = await opened(OWNABLES.ion.price ?? 0);
     const shop = prefixFor('shop');
     const parts = prefixFor('parts');
     await page.locator(`${shown('hangar')} .${prefixFor('hangar')}tab`, { hasText: SCREENS.shop.heading }).click();

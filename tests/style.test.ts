@@ -126,6 +126,8 @@ describe('the chooser is the table', () => {
     */
     for (const [setting, screens] of where) {
       if (setting === 'pilot') expect(screens.sort(), 'the pilot is offered somewhere other than the title and the hangar’s tabs').toEqual(['hangar', 'parts', 'shop', 'title']);
+      // 0584: a stand's sub-tabs are its own, not a setting: each tabbed stand steps the group in view on its own screen.
+      else if (setting === 'section') expect(screens.sort(), 'sub-tabs are on a screen whose stand is not tabbed').toEqual(['hangar', 'parts']);
       else expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
     }
     // 0512: and the touch section's two, on Settings with the rest.

@@ -6,6 +6,9 @@ has a small pointed end, but fires a large circular projectile."* [0467](0467-th
 emitter as a chrome ball half sunk in the disc at the nose, with a barrel to a small orb, painted over the dome. From
 above it read as a thing sitting on the saucer. The orb was a point, and the gun fires rings.
 
+⚠️ **Superseded in part by [0587](0587-the-ray-gun-is-a-saucer.md)**: *the side view and the gun's shape*. The
+gun is a little saucer, riding the top half from the side; from above it still hangs under the lip.
+
 ## The rule
 
 **The gun is painted before the disc**, straight after the hull's silhouette is sealed. The disc's face then covers

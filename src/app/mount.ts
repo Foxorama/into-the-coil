@@ -2713,7 +2713,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const fit = standFit(onPad.ship);
       // 0584: the shell round the ship while a shell is what is being chosen — on its band, or in Cosmo's window.
       const ware = windowWare();
-      world.standShell = state.screen.current === 'shop' ? SHELL_KINDS.some((kind) => kind === ware) : lastSlot === 'shell';
+      world.standShell = state.screen.current === 'shop' ? SHELL_KINDS.some((kind) => kind === ware) : state.screen.current === 'parts' && lastSlot === 'shell';
       /*
         ⚠️ **AND THE FLAME — 0541.** `sameFit` leaves the flame out, because the game's atlas burns it in
         one set of sprites kept apart (`atlasFlame`, 0530); the port's ship pieces bake their flames with the
