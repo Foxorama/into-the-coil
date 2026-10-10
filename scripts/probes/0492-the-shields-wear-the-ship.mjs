@@ -11,7 +11,7 @@ export const PROBES = [
     broke: 'the saucer’s fore plate drawn from the fighter’s sprites',
     guard: 'THE OWN SHELL: every ship flies in its own plates, and no two ships share one',
     edit: {
-      path: 'src/content/ships.ts',
+      path: 'src/content/shells.ts',
       find: '        [SPRITE.shieldBubble0a, SPRITE.shieldBubble0b, SPRITE.shieldBubble0c],',
       replace: '        [SPRITE.shield0a, SPRITE.shield0b, SPRITE.shield0c],',
     },
@@ -24,9 +24,10 @@ export const PROBES = [
     guard: 'THE OWN SHELL, DRAWN: every look curves round the ship at the shell’s orbit, and no two looks are one picture',
     edit: {
       path: 'src/render/bake.ts',
-      find: '          drawBubblePlate(ctx, at, plate.shimmer, palette);',
+      // Re-anchored by 0584, which draws every shell's plate through one dispatch.
+      find: '      drawBubblePlate(ctx, at, shimmer, palette);',
       replace:
-        '          drawBubblePlate(ctx, { ...at, cx: at.cx + Math.cos(at.angle) * at.radius, cy: at.cy + Math.sin(at.angle) * at.radius }, plate.shimmer, palette);',
+        '      drawBubblePlate(ctx, { ...at, cx: at.cx + Math.cos(at.angle) * at.radius, cy: at.cy + Math.sin(at.angle) * at.radius }, shimmer, palette);',
     },
   },
   {
@@ -37,8 +38,8 @@ export const PROBES = [
     guard: 'THE OWN SHELL, DRAWN: every look curves round the ship at the shell’s orbit, and no two looks are one picture',
     edit: {
       path: 'src/render/bake.ts',
-      find: '          drawLatticePlate(ctx, at, plate.shimmer, palette);',
-      replace: '          drawPlumePlate(ctx, at, plate.shimmer, palette);',
+      find: '      drawLatticePlate(ctx, at, shimmer, palette);',
+      replace: '      drawPlumePlate(ctx, at, shimmer, palette);',
     },
   },
 ];

@@ -11,7 +11,7 @@ export const PROBES = [
     suite: 'tests/tube-shop.test.ts',
     broke: 'the tubes priced at something other than the ask’s 500',
     guard: 'THE ASK: a first and second of each kind of tube, 500 shards each',
-    edit: { path: 'src/content/racks.ts', find: 'const TUBE_PRICE = 500;', replace: 'const TUBE_PRICE = 400;' },
+    edit: { path: 'src/content/racks.ts', find: 'const TUBE_PRICE = priced(500);', replace: 'const TUBE_PRICE = priced(400);' },
   },
   {
     decision: '0578',
@@ -47,6 +47,6 @@ export const PROBES = [
     suite: 'tests/tube-shop.browser.test.ts',
     broke: 'the shell beginning every run on no tubes, whatever the hangar fitted',
     guard: 'one of each fitted to the fighter on Hangin’ Out',
-    edit: { path: 'src/app/mount.ts', find: '      RACKS[state.hangar.rack[ship]].tubes,\n    );', replace: '      [],\n    );' },
+    edit: { path: 'src/app/mount.ts', find: '      RACKS[state.hangar.rack[ship]].tubes,\n      // 0584', replace: '      [],\n      // 0584' },
   },
 ];

@@ -73,7 +73,7 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
   it('tries the ware on the dash, buys it once, says how far off the next is, and hangs it on the run', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 300 }));
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 338 }));
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);
@@ -111,7 +111,7 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
     await buy.click();
     let kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.owned.golfball, 'Buy bought without asking').toBe(false);
-    expect(await page.locator(`.${SHOP}ask`).innerText(), 'the sheet does not say the balance after').toContain('300 → 50');
+    expect(await page.locator(`.${SHOP}ask`).innerText(), 'the sheet does not say the balance after').toContain('338 → 50');
     await confirm.click();
     // The golf ball bought: the balance down by its price, Buy gone, and the shelf saying it is theirs.
     kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
@@ -125,9 +125,11 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
 
     // The next is out of reach, and the shelf says by how much; a press of Buy cannot buy it.
     await pickWare(page, 'family');
-    expect(await shelfLine(page, 'family')).toBe('Need 200 more Star Shards');
-    expect(await keeperLine(page), 'Cosmo does not say how far off the balance is').toBe(COSMO.shop.short.replace('{short}', '200'));
-    expect(await buy.innerText(), 'the first action does not say how far short the balance is').toContain('Need 200 more');
+    // 0585: the price risen, so how far short is read off the price rather than written out.
+    const short = String((OWNABLES.family.price ?? 0) - 50);
+    expect(await shelfLine(page, 'family')).toBe('Need ' + short + ' more Star Shards');
+    expect(await keeperLine(page), 'Cosmo does not say how far off the balance is').toBe(COSMO.shop.short.replace('{short}', short));
+    expect(await buy.innerText(), 'the first action does not say how far short the balance is').toContain('Need ' + short + ' more');
     await buy.click();
     expect(await page.locator(`.${SHOP}ask`).count(), 'a sheet asked to buy what the balance cannot cover').toBe(0);
     kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);

@@ -12,7 +12,12 @@ export const PROBES = [
     suite: 'tests/loadout-tabs.test.ts',
     broke: 'Hangin’ Out drawing every group under its heading again',
     guard: 'THE ASK: Hangin’ Out is tabbed',
-    edit: { path: 'src/state/screens.ts', find: '  tabbed: true,', replace: '  tabbed: false,' },
+    // Re-anchored by 0584, whose Paint & Parts is tabbed too: Hangin' Out's is the one before its camera's line.
+    edit: {
+      path: 'src/state/screens.ts',
+      find: "  tabbed: true,\n  // 0548: the port's one camera, the pad",
+      replace: "  tabbed: false,\n  // 0548: the port's one camera, the pad",
+    },
   },
   {
     decision: '0579',
@@ -35,7 +40,8 @@ export const PROBES = [
     guard: 'draws every tab on the plate and only the group whose tab is lit',
     edit: {
       path: 'src/app/chrome.ts',
-      find: "  .itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option { display: block; }\n",
+      // Re-anchored by 0584, which draws Paint & Parts' tabs by the same rule.
+      find: "  .itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-option { display: block; }\n",
       replace: '',
     },
   },

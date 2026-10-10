@@ -16,6 +16,7 @@
 
 import type { ShipKind } from './ships.ts';
 import type { SpriteKind } from './sprites.ts';
+import { priced } from './prices.ts';
 
 const TAU = Math.PI * 2;
 
@@ -61,7 +62,7 @@ export function wheelTurn(wheel: RimWheel, i: number, seconds: number): number {
 }
 
 /** Every rim. Closed — a new one is a row here and a painter in `src/render/bake.ts`. */
-export const RIM_KINDS = ['snowflake', 'whitewall', 'spinner', 'bolts'] as const;
+export const RIM_KINDS = ['snowflake', 'whitewall', 'spinner', 'bolts', 'neon', 'wire'] as const;
 export type RimKind = (typeof RIM_KINDS)[number];
 
 export interface RimRow {
@@ -93,7 +94,7 @@ export const RIMS: Record<RimKind, RimRow> = {
     name: 'Mothership spinners',
     hint: 'Silver spokes that never stop turning',
     from: null,
-    price: 1000,
+    price: priced(1000),
     wheel: { frames: [{ base: 'spinnerWheel', hit: 'spinnerWheelHit' }], hold: 0, turn: [0.7, 0.8], jump: 0 },
   },
   /*
@@ -118,6 +119,12 @@ export const RIMS: Record<RimKind, RimRow> = {
       jump: 2.4,
     },
   },
+  /*
+    0589: *"we need more cosmetics of every shape and style"* — two more Cosmo's sells, baked still into the
+    hull as the snowflakes are: a neon ring in the ray's lavender round a dark hub, and chrome wire spokes.
+  */
+  neon: { name: 'Neon rings', hint: 'A ring of lavender neon in every wheel', from: null, price: priced(600), wheel: null },
+  wire: { name: 'Chrome wires', hint: 'Silver wire spokes, polished bright', from: null, price: priced(500), wheel: null },
 };
 
 /** The most pictures any rim's wheel shows in turn — the pad bakes this many of the fitted rim's. */

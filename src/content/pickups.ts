@@ -606,6 +606,8 @@ export interface Weapon {
   /** How far a coiling shot swings from its axis, and radians its swing advances per step — 0234, 0244. Zero otherwise. */
   coil: number;
   turn: number;
+  /** How far the right stick may turn a volley either side of straight ahead — 0588. Zero for a gun not steered. */
+  aim: number;
 }
 
 /*
@@ -813,5 +815,6 @@ export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = []): We
     falloff: gunRow.falloff,
     coil: gunRow.coil,
     turn: gunRow.turn,
+    aim: gunRow.aim,
   };
 }

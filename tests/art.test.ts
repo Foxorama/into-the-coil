@@ -22,7 +22,7 @@ function wonIn(...ships: (typeof SHIP_KINDS)[number][]): State {
 }
 
 describe('the looks', () => {
-  it('every ship authors three of its own, its first the one it always wore, and every look is one ship’s', () => {
+  it('every ship authors its own, its first the one it always wore, and every look is one ship’s', () => {
     expect(SHIPS.fighter.arts[0]).toBe('chevron');
     expect(SHIPS.caddie.arts[0]).toBe('glass');
     expect(SHIPS.firebird.arts[0]).toBe('phoenix');
@@ -53,9 +53,10 @@ describe('the looks', () => {
     expect(reduce(all, { slice: 'hangar', type: 'art', ship: 'firebird', art: 'flames' }).hangar.art.firebird).toBe('flames');
   });
 
-  it('the band is three places, named for whichever ship is on the stand', () => {
+  // 0589: four since a fourth look was drawn for every ship.
+  it('the band is four places, named for whichever ship is on the stand', () => {
     const band = SCREENS.parts.choices.find((c) => c.name === 'art')!;
-    expect(band.options).toHaveLength(3);
+    expect(band.options).toHaveLength(4);
     for (const ship of SHIP_KINDS) expect(artOptions(ship).map((o) => o.label), ship).toEqual(SHIPS[ship].arts.map((art) => ART[art].name));
   });
 

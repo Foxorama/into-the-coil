@@ -58,7 +58,7 @@ export const PROBES = [
     broke: 'the storm back on the bike at the shared orbit',
     guard: 'the Thunderbolt’s storm stands clear of the bike',
     edit: {
-      path: 'src/content/ships.ts',
+      path: 'src/content/shells.ts',
       find: '      orbit: 7.1,',
       replace: '      orbit: 5.6,',
     },

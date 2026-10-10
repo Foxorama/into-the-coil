@@ -13,8 +13,9 @@ export const PROBES = [
     guard: 'burns the flame chosen, on the pad',
     edit: {
       path: 'src/app/mount.ts',
-      find: ' || portFit.fit.flame !== fit.flame) {',
-      replace: ') {',
+      // Re-anchored by 0584, which compares the shell after the flame.
+      find: ' || portFit.fit.flame !== fit.flame || ',
+      replace: ' || ',
     },
   },
   {

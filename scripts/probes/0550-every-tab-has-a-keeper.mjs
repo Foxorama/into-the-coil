@@ -25,8 +25,9 @@ export const PROBES = [
     guard: 'lights each tab’s own keeper’s shop',
     edit: {
       path: 'src/state/screens.ts',
-      find: "      // 0550: MMXXVI, who paints it.\n      keeper: 'mmxxvi',",
-      replace: "      // 0550: MMXXVI, who paints it.\n      keeper: 'unity',",
+      // Re-anchored by 0584, which named Paint & Parts' stand (PARTS_STAND) as Hangin' Out's is.
+      find: "  // 0550: MMXXVI, who paints it.\n  keeper: 'mmxxvi',",
+      replace: "  // 0550: MMXXVI, who paints it.\n  keeper: 'unity',",
     },
   },
   /*

@@ -42,6 +42,13 @@ export interface Intent {
   /** Movement across the dodge lane, −1…1. */
   across: number;
   /**
+   * Where the gun is pointed across the lane, −1…1 — `docs/decisions/0588-the-rings-are-thrown.md`: the
+   * pad's right stick, across, in the same units and handedness as `across`. Nought is straight ahead. A gun
+   * whose row lets it be steered (`aim` on `src/content/weapons.ts`) turns its volley by this share of its
+   * arc; every other gun never reads it.
+   */
+  aim: number;
+  /**
    * Presses since the previous step, one entry per special BINDING.
    *
    * ⚠️ Indexed by binding, not by weapon kind, and its length is the binding budget rather than the
@@ -59,7 +66,7 @@ export function makeIntent(bindings: number): Intent {
     throw new RangeError(`intent needs at least one special binding, got ${bindings}`);
   }
   // @setup: the only allocation in this file, and it happens once at boot.
-  return { along: 0, across: 0, specials: new Array<number>(bindings).fill(0) };
+  return { along: 0, across: 0, aim: 0, specials: new Array<number>(bindings).fill(0) };
 }
 
 /**

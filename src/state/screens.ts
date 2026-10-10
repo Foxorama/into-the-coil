@@ -36,6 +36,7 @@ import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { ART } from '../content/art.ts';
 import { HUES, TONES } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
+import { SHELLS, SHELL_KINDS } from '../content/shells.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
 import { RACKS, RACK_KINDS, TUBE_WARE_KINDS } from '../content/racks.ts';
 import type { KeeperKind } from '../content/keepers.ts';
@@ -117,7 +118,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 // 0529: and the colour its body is painted, a hue and a tone.
 // 0530: and what its engines burn.
 // 0578: and the tubes it carries into a run — `rack`, since `tubes` is the shelf they are sold on.
-export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame', 'rack'] as const;
+// 0584: and the shell its shields wear — `shell`, since `shields` is the shelf they are sold on.
+export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame', 'rack', 'shell'] as const;
 export type SlotName = (typeof SLOT_NAMES)[number];
 /** Whether a band's name is a slot of the ship — 0561, so the shell can fit or try on any slot in one arm. */
 export function isSlot(name: ChoiceName): name is SlotName {
@@ -550,6 +552,29 @@ function sectionBand(stand: StandRow): ScreenChoice {
   };
 }
 
+/** Paint & Parts' stand — a name of its own because its section band is read off it, on Hangin' Out's terms (0584). */
+const PARTS_STAND: StandRow = {
+  groups: [
+    // 0579: the tubes were here a day (0578), for the height Hangin' Out had not got; they are loadout.
+    // 0584: and the shell its shields wear.
+    { label: 'Parts', bands: ['rim', 'flame', 'shell'] },
+    { label: 'Paint', bands: ['art', 'livery', 'tone'] },
+  ],
+  /*
+    0584: one group at a time, on Hangin' Out's terms (0579) — the shield made Parts three bands tall, and
+    on the smallest phone the plate ran past the screen. 0579 named this as the shields' coming.
+  */
+  tabbed: true,
+  /*
+    0548: the port's one camera. It was closer on the pad at 2.3 (0540), so the wheels, the nose and the
+    flame were large — and the room jumped a size every time the tab was stepped onto, which was asked
+    to stop. The looks are still read close on rig/looks.html.
+  */
+  camera: PORT_CAMERA,
+  // 0550: MMXXVI, who paints it.
+  keeper: 'mmxxvi',
+};
+
 /** Hangin' Out's stand — a name of its own because its section band is read off it (0579). */
 const HANGAR_STAND: StandRow = {
   groups: [
@@ -634,6 +659,16 @@ export function rackWhy(boughtAny: boolean): string | null {
   return boughtAny ? null : 'Tubes are sold at Cosmo’s — without them, missile pickups fit yours';
 }
 
+/**
+ * What the shield band says while it offers nothing but the ship's own — 0584: the dash's sentence, and
+ * Cosmo's, since either opens some.
+ */
+export function shellWhy(ship: ShipKind, won: boolean, borrowable: boolean, bought: boolean): string | null {
+  if (bought || borrowable) return null;
+  const sentence = slotWhy(ship, won, borrowable, 'shield');
+  return sentence === null ? null : sentence + ', or buy one at Cosmo’s';
+}
+
 /** What the flame band says while only the standard is had — 0530: where the rest are sold. */
 export function flameWhy(bought: boolean): string | null {
   return bought ? null : 'Ion Thrusters are at Cosmo’s, the next tab';
@@ -676,6 +711,15 @@ export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Re
     case 'dangle':
     case 'flame':
       return 'Sold at Cosmo’s, the next tab';
+    // 0584: a ship's own shell, another ship's on the dash's words, or one Cosmo's sells.
+    case 'shell': {
+      const shell = SHELL_KINDS[index];
+      if (shell === undefined) return null;
+      const from = SHELLS[shell].from;
+      if (from === null) return 'Sold at Cosmo’s, the next tab';
+      if (!won[ship]) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its shield';
+      return 'Beat the jellyfish in the ' + plainLabel(from) + ' to borrow its shield';
+    }
     // 0578: a rack wants tubes, and Cosmo's sells them — since 0579 two tabs over, so not *the next tab*.
     case 'rack':
       return 'Buy the tubes for it at Cosmo’s';
@@ -1113,22 +1157,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pause: null,
     leads: false,
     // 0539: what is bolted on, and how it is painted.
-    stand: {
-      groups: [
-        // 0579: the tubes were here a day (0578), for the height Hangin' Out had not got; they are loadout.
-        { label: 'Parts', bands: ['rim', 'flame'] },
-        { label: 'Paint', bands: ['art', 'livery', 'tone'] },
-      ],
-      tabbed: false,
-      /*
-        0548: the port's one camera. It was closer on the pad at 2.3 (0540), so the wheels, the nose and the
-        flame were large — and the room jumped a size every time the tab was stepped onto, which was asked
-        to stop. The looks are still read close on rig/looks.html.
-      */
-      camera: PORT_CAMERA,
-      // 0550: MMXXVI, who paints it.
-      keeper: 'mmxxvi',
-    },
+    stand: PARTS_STAND,
     actions: [{ label: 'Back', hint: '' }],
     choices: [
       {
@@ -1141,6 +1170,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         press: 'steps',
       },
+      // 0584: the sub-tabs, as Hangin' Out's (0579), over the one group they have in view.
+      sectionBand(PARTS_STAND),
       /*
         0527: the wheels — every rim in the table's order, named with where it comes from. Built by
         walking `RIM_KINDS`; a ship with no wheels shows them all shut and says so.
@@ -1195,6 +1226,21 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         name: 'flame',
         label: 'Flame',
         options: FLAME_KINDS.map((kind) => ({ label: FLAMES[kind].name, hint: FLAMES[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'tries',
+      },
+      /*
+        0584: the shell its shields wear — every shell in the table's order, named with where it comes from.
+        Built by walking `SHELL_KINDS`, on the wheels' terms.
+      */
+      {
+        name: 'shell',
+        label: 'Shield',
+        options: SHELL_KINDS.map((kind) => {
+          const shell = SHELLS[kind];
+          return { label: shell.name, hint: shell.hint + ' — ' + (shell.from === null ? 'from Cosmo’s' : 'from the ' + plainLabel(shell.from)) };
+        }),
         faces: 'words',
         on: 'all',
         press: 'tries',

@@ -15,8 +15,10 @@
  * (0522). Nothing in `src/sim/` or the frame may import this table.
  */
 
+import { priced } from './prices.ts';
+
 /** Every dangle. Closed — a new one is a row here and a drawing in the chrome. */
-export const DANGLE_KINDS = ['dice', 'eucalyptus', 'family', 'golfball'] as const;
+export const DANGLE_KINDS = ['dice', 'eucalyptus', 'family', 'golfball', 'duck', 'horseshoe', 'mirrorball', 'bobblehead'] as const;
 export type DangleKind = (typeof DANGLE_KINDS)[number];
 
 export interface DangleRow {
@@ -35,9 +37,14 @@ export interface DangleRow {
 export const DANGLES: Record<DangleKind, DangleRow> = {
   // The estate's own since 0461, and every player's: the slot is named for them.
   dice: { name: 'Fuzzy dice', hint: 'A pair in the classic red fur', price: null },
-  eucalyptus: { name: 'Eucalyptus tree', hint: 'A potpourri tree, for the long way down', price: 250 },
-  family: { name: 'Family photo', hint: 'The alien’s family, in a little gilt frame', price: 250 },
-  golfball: { name: 'Golf ball', hint: 'Dimpled, on a string — a keepsake from the Far Carry', price: 250 },
+  eucalyptus: { name: 'Eucalyptus tree', hint: 'A potpourri tree, for the long way down', price: priced(250) },
+  family: { name: 'Family photo', hint: 'The alien’s family, in a little gilt frame', price: priced(250) },
+  golfball: { name: 'Golf ball', hint: 'Dimpled, on a string — a keepsake from the Far Carry', price: priced(250) },
+  // 0589: *"we need more cosmetics of every shape and style"* — four more on the same strand, at the cheaper stuff's price.
+  duck: { name: 'Rubber duck', hint: 'A yellow duck, squeaky and unafraid', price: priced(250) },
+  horseshoe: { name: 'Lucky horseshoe', hint: 'Gilt, and hung the right way up', price: priced(250) },
+  mirrorball: { name: 'Mini mirror ball', hint: 'A disco ball the size of a thumb', price: priced(300) },
+  bobblehead: { name: 'Alien bobblehead', hint: 'Nods along to every turn', price: priced(300) },
 };
 
 // What Cosmo's sells is every ownable row with a price — `src/content/wares.ts` since 0527.

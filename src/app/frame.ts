@@ -90,7 +90,7 @@ import { ROWS_OF } from '../content/arms.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
-import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellOrbit, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
+import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellOrbit, fullHealthFor, hullFor, lampFrame, lampTurn, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
@@ -1798,6 +1798,8 @@ export interface World {
   standHop?: number;
   /** 0569: where each keeper is this visit — an index into their row's `spots`, written by the shell after every run. */
   standSpots?: Readonly<Record<KeeperKind, number>>;
+  /** 0584: whether the pad shows the ship's shell round it — while a shell is being chosen. Written by the shell. */
+  standShell?: boolean;
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
@@ -2813,7 +2815,7 @@ export class GameFrame implements Frame {
     }
     // And the hangar's tabs, standing in the same room — 0540.
     if (w.stand !== null) {
-      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP, w.standSpots ?? null);
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP, w.standSpots ?? null, w.standShell ?? false);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.
@@ -4120,7 +4122,13 @@ function firePulse(w: World): void {
     ⚠️ Every barrel carries the scroll rate, like everything else the player watches move.
   */
   const step = w.weapon.shots > 1 ? w.weapon.spread / (w.weapon.shots - 1) : 0;
-  const first = -(step * (w.weapon.shots - 1)) / 2;
+  /*
+    0588: and the whole volley turned by the right stick, as far as the gun's row lets it be — the ray's
+    22.5° either side of the nose, every other gun's nought. A share of the arc, so a stick half over is
+    half of it, and a released stick fires straight ahead.
+  */
+  const aim = w.weapon.aim * w.intent.aim;
+  const first = aim - (step * (w.weapon.shots - 1)) / 2;
   for (let i = 0; i < w.weapon.shots; i++) {
     const shot = w.playerShots.spawn();
     // A volley one barrel short is dropped rather than grown — `src/sim/pool.ts` has the argument.
@@ -4140,6 +4148,11 @@ function firePulse(w: World): void {
     reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, w.weapon.flight === 'burst' ? RAY_KIND : 0);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
     shot.velAcross = Math.sin(angle) * row.speed;
+    // 0588: a steered shot faces where it was thrown — the ray's rings stand square to their flight.
+    if (w.weapon.aim !== 0) {
+      shot.turn = angle;
+      shot.prevTurn = angle;
+    }
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
     shot.damage = w.weapon.damage;
     /*
@@ -5277,16 +5290,26 @@ const SPINNER_RADIUS = SPRITE_EXTENT.spinnerWheel * 0.42;
  * turns. It wears the ship's hurt twin whenever the ship does, so a hit or a blink takes the wheels too.
  * Out the step the hull is, and never on a ship with no wheels or a rim baked still.
  *
+ * 0586: and after them, the ship's lights (`lamps` on its row) — the fighter's strobes, the saucer's ring —
+ * each its own picture in turn on the run's clock, spinning if it spins, and NOT taking the hurt twin: a
+ * light is light whatever the hull under it is doing. One pool for both, because no ship has more of the two
+ * than it holds (`tests/lamps.test.ts`), and a car's wheels and a ship's lights are the same kind of thing to
+ * the painter: a picture laid on the ship.
+ *
  * ⚠️ **Carried by hand, as the exhaust is**: nothing else steps this pool. Nothing allocates.
  */
 function stepWheels(w: World): void {
   const wheels = w.shipRow.wheels;
   const row = wheels === null ? null : RIMS[wheels.rim].wheel;
-  if (wheels === null || row === null || w.shipPool.size === 0) {
+  const lamps = w.shipRow.lamps;
+  const turning = wheels === null || row === null ? 0 : wheels.at.length;
+  const wanted = turning + lamps.length;
+  if (wanted === 0 || w.shipPool.size === 0) {
     w.wheels.clear();
     return;
   }
-  while (w.wheels.size < wheels.at.length) {
+  while (w.wheels.size > wanted) w.wheels.releaseAt(w.wheels.size - 1);
+  while (w.wheels.size < wanted) {
     const wheel = w.wheels.spawn();
     if (wheel === null) break;
     reset(wheel, w.ship.along, w.ship.across, WHEEL_BODY);
@@ -5299,7 +5322,8 @@ function stepWheels(w: World): void {
   */
   const now = (w.steps * STEP_MS) / 1000;
   const was = ((w.steps - 1) * STEP_MS) / 1000;
-  for (let i = 0; i < w.wheels.size; i++) {
+  for (let i = 0; i < turning && i < w.wheels.size; i++) {
+    if (wheels === null || row === null) break;
     const wheel = w.wheels.at(i);
     const at = i === 0 ? wheels.at[0] : wheels.at[1];
     const frame = row.frames[wheelFrame(row, i, now)]!;
@@ -5316,6 +5340,21 @@ function stepWheels(w: World): void {
     const struck = row.hold > 0 && Math.floor(now / row.hold) !== Math.floor(was / row.hold);
     wheel.prevTurn = struck ? turn : wheelTurn(row, i, was);
     wheel.turn = turn;
+  }
+  for (let k = 0; k < lamps.length && turning + k < w.wheels.size; k++) {
+    const lamp = lamps[k]!;
+    const light = w.wheels.at(turning + k);
+    const sprite = SPRITE[lamp.frames[lampFrame(lamp, now)]!];
+    light.sprite = sprite;
+    light.spriteBase = sprite;
+    light.spriteHit = sprite;
+    light.swell = 1;
+    light.prevAlong = light.along;
+    light.prevAcross = light.across;
+    light.along = w.ship.along + lamp.at.along;
+    light.across = w.ship.across + lamp.at.across;
+    light.prevTurn = lampTurn(lamp, was);
+    light.turn = lampTurn(lamp, now);
   }
 }
 

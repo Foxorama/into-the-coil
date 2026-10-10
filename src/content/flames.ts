@@ -16,8 +16,10 @@
  * ⚠️ **A LOOK, NEVER A THING THE SIM READS** — the flame is in no pairing (`src/content/exhaust.ts`).
  */
 
+import { priced } from './prices.ts';
+
 /** Every flame. Closed — a new one is a row here. */
-export const FLAME_KINDS = ['standard', 'ion'] as const;
+export const FLAME_KINDS = ['standard', 'ion', 'nebula', 'plasma', 'afterburner'] as const;
 export type FlameKind = (typeof FLAME_KINDS)[number];
 
 export interface FlameRow {
@@ -36,5 +38,16 @@ export interface FlameRow {
 
 export const FLAMES: Record<FlameKind, FlameRow> = {
   standard: { name: 'Standard', hint: 'The orange the engines came with', price: null, inks: null },
-  ion: { name: 'Ion Thrusters', hint: 'Blue flame thrusters, for any ship', price: 400, inks: { outer: '#3a5cff', inner: '#9fb8ff' } },
+  ion: { name: 'Ion Thrusters', hint: 'Blue flame thrusters, for any ship', price: priced(400), inks: { outer: '#3a5cff', inner: '#9fb8ff' } },
+  /*
+    0589: *"we need more cosmetics of every shape and style"* — three more, each weighed against what it
+    trails behind (0295): a deep violet well below the serpent's void (#e86bff) on lightness and bluer than
+    it; a green in the one window between the acid's lime (#b4ff5a) and the frost's aquamarine (#40ffd0),
+    more than twenty-five degrees from each — it was a jade first, five degrees off the frost, and
+    `tests/flames.test.ts` refused it; and a white-hot afterburner, the one ink no hostile shot is. None is
+    the enemy's red or the fire's vermilion, and each keeps the white core every flame has.
+  */
+  nebula: { name: 'Nebula Burn', hint: 'Deep violet, like the gas between the stars', price: priced(450), inks: { outer: '#5a1fd6', inner: '#b496ff' } },
+  plasma: { name: 'Plasma Drive', hint: 'A green plasma jet', price: priced(450), inks: { outer: '#18c24a', inner: '#8dff9e' } },
+  afterburner: { name: 'Afterburner', hint: 'White-hot, edged in steel blue', price: priced(550), inks: { outer: '#7f9cc0', inner: '#f4f8ff' } },
 };

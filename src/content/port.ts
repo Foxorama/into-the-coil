@@ -36,6 +36,7 @@
  */
 
 import { SHIP_BOX, SPRITE_EXTENT } from './sprites.ts';
+import { SHELL_SPAN } from './ships.ts';
 import type { KeeperKind } from './keepers.ts';
 
 /**
@@ -115,6 +116,10 @@ export const PORT_KINDS = [
   'blueWheel0',
   'blueWheel1',
   'blueWheel2',
+  // 0584: the shell round the pilot's ship, while one is being chosen — a picture for each shimmer frame.
+  'blueShell0',
+  'blueShell1',
+  'blueShell2',
   // 0542: Cosmo, and the stall by the pilot's pad they keep their counter at.
   'cosmo',
   'stall',
@@ -211,6 +216,10 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   blueWheel0: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
   blueWheel1: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
   blueWheel2: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
+  // 0584: every shell at one span, so each stands at its own orbit, at hangar size.
+  blueShell0: SHELL_SPAN * HANGAR_SCALE,
+  blueShell1: SHELL_SPAN * HANGAR_SCALE,
+  blueShell2: SHELL_SPAN * HANGAR_SCALE,
   // 0542: a bust a head taller than the counter, and the stall's square box.
   cosmo: 14,
   stall: 30,

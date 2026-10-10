@@ -204,6 +204,13 @@ export interface WeaponRow {
   turn: number;
   /** The wheel a `tether` gun throws, or `null` for every other flight — 0545. */
   wheel: CatherineWheel | null;
+  /**
+   * How far the right stick may turn this gun's volley either side of straight ahead, in radians, or `0`
+   * for a gun that is not steered — `docs/decisions/0588-the-rings-are-thrown.md`. Asked for of the ray:
+   * *"use the right joystick on a controller to be able to direct the energy pulses in a 45 degree arc
+   * straight ahead"*. On the row, so a gun that is steered is a number here and nothing in the frame.
+   */
+  aim: number;
 }
 
 export const WEAPONS: Record<WeaponKind, WeaponRow> = {
@@ -235,6 +242,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 0,
     turn: 0,
     wheel: null,
+    aim: 0,
   },
   /**
    * Longshot Larry's gun on the gilded estate — chain lightning. Asked for, 2026-09-05: *"a chain
@@ -300,6 +308,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 0,
     turn: 0,
     wheel: null,
+    aim: 0,
   },
   /**
    * Backspin Bo's gun on the Firebird — the shuriken launcher,
@@ -345,6 +354,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 12,
     turn: 0.21,
     wheel: null,
+    aim: 0,
   },
   /**
    * Feather Fade's gun on the little green caddie — the ray gun, 0442. Asked for: *"a ray gun that
@@ -361,7 +371,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    */
   ray: {
     label: 'Ray',
-    hint: 'Energy rings that burst where they land',
+    hint: 'Energy rings that burst where they land — aim them with the right stick',
     shot: 'ray',
     flight: 'burst',
     fireEvery: 8,
@@ -382,6 +392,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 0,
     turn: 0,
     wheel: null,
+    // 0588: *"in a 45 degree arc straight ahead"* — half of it, 22.5°, either side of the nose.
+    aim: Math.PI / 8,
   },
   /**
    * Backspin Bo's gun on the Firebird since 0545 — the Catherine wheel. Asked for: *"it fires out a
@@ -501,5 +513,6 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       tether: 0.5,
       tetherDamage: 1,
     },
+    aim: 0,
   },
 };

@@ -19,13 +19,13 @@ export const PROBES = [
   {
     decision: '0493',
     suite: 'tests/mounts.test.ts',
-    // The muzzle back to 0467's orb: a small point that fires a large ring.
+    // The mouth a small point again, firing a large ring. Re-anchored by 0587, whose mouth is an edge-on ring.
     broke: 'the muzzle back to the small orb it was',
-    guard: 'A RING IN, A RING OUT: the muzzle is a dish the size of the smallest ring the gun fires',
+    guard: 'A RING IN, A RING OUT: the mouth is an edge-on ring as tall as the first ring the gun throws',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  dish: { x: 1.13 - 0.112, r: 0.112 },',
-      replace: '  dish: { x: 1.05, r: 0.08 },',
+      find: '    mouth(cx + R * 0.55, cy, R * 0.55);',
+      replace: '    mouth(cx + R * 0.55, cy, R * 0.25);',
     },
   },
 ];

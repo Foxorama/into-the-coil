@@ -72,7 +72,8 @@ describe.runIf(chromePath)('0528 — every ship wears its own art', () => {
     expect(await names(page)).toEqual(SHIPS.fighter.arts.map((art) => ART[art].name));
     const open = await page.locator(`${shown('parts')} [${SETTING_ATTR}="art"] .${PARTS}option`).evaluateAll((els) => els.map((el) => el.getAttribute('aria-disabled') !== 'true'));
     // 0561: a shut look is marked `aria-disabled` and stays pressable, so it can be tried on.
-    expect(open, 'a look the fighter has not been won in for is open').toEqual([true, false, false]);
+    // 0589: four looks since a fourth was drawn for every ship.
+    expect(open, 'a look the fighter has not been won in for is open').toEqual([true, false, false, false]);
     await context.close();
   });
 });

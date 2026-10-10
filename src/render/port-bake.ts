@@ -21,8 +21,8 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, HANGAR_SCALE, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeGlyph, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
-import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
+import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { CADDIE_DISC, SHELL_SPAN, SHIPS, type ShipKind } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
@@ -213,6 +213,13 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       return bakeWheel(1, palette, pixelsPerUnit, pilot);
     case 'blueWheel2':
       return bakeWheel(2, palette, pixelsPerUnit, pilot);
+    // 0584: the shell the pilot's ship wears — or the one tried on — in each of its shimmer frames.
+    case 'blueShell0':
+      return bakeShell(fitNow(pilot.ship).shell, palette, size, 0, SHELL_SPAN);
+    case 'blueShell1':
+      return bakeShell(fitNow(pilot.ship).shell, palette, size, 1, SHELL_SPAN);
+    case 'blueShell2':
+      return bakeShell(fitNow(pilot.ship).shell, palette, size, 2, SHELL_SPAN);
     // 0542: Cosmo's bust, the portrait's own drawing (`src/render/cosmo-art.ts`), behind the stall's counter.
     case 'cosmo':
       paintCosmo(ctx, palette, size);
@@ -602,6 +609,9 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'blueWheel0':
     case 'blueWheel1':
     case 'blueWheel2':
+    case 'blueShell0':
+    case 'blueShell1':
+    case 'blueShell2':
     case 'cosmo':
     case 'unity':
     case 'mmxxvi':
@@ -1651,15 +1661,8 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   // The ray gun, run out through the rim at the nose: its outline from inside the rim, and the gun on it — 0461.
   // 0526: or, flying another ship's gun, that gun's side-on mount standing on the rim at the nose.
   const fitted = gunNow('caddie');
-  if (fitted === SHIPS.caddie.weapon) {
-    const gun = raygunProfile();
-    ctx.fillStyle = palette.trim;
-    ctx.beginPath();
-    trace(ctx, box, [[0.6, gun[0]![1]], ...gun, [0.6, gun[gun.length - 1]![1]]]);
-    ctx.fill();
-    ctx.stroke();
-    paintRaygun(ctx, box, palette, false);
-  } else {
+  // 0587: its own ray gun rides the top half and is painted last, over the saucer, below.
+  if (fitted !== SHIPS.caddie.weapon) {
     // The rim's nose is the top view's hardpoint (`CADDIE_DISC` of the box), so the mount stands where
     // the fight's drawing has it, and goes under the lens with its root as the ray gun's does.
     paintMountAt(ctx, box, palette, fitted, 'side', [CADDIE_DISC, 0]);
@@ -1752,6 +1755,15 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     disc(ctx, f, shade(palette.acid, 0.2), 0.02, domeAt - 0.42 * domeHigh, 0.22);
     disc(ctx, f, palette.space, 0.15, domeAt - 0.5 * domeHigh, 0.06);
   }
+  // 0589: or quartered in four colours, seen from the side as four upright bands across the glass.
+  if (fit.art === 'rainbow') {
+    const inks = [palette.pickup, palette.hazard, palette.ally, palette.player];
+    const w = (SAUCER_DOME * 2) / inks.length;
+    inks.forEach((ink, k) => {
+      const x = -SAUCER_DOME + k * w;
+      poly(ctx, f, shade(ink, 0.1), [[x, domeAt - domeHigh - 0.02], [x + w, domeAt - domeHigh - 0.02], [x + w, domeAt + 0.02], [x, domeAt + 0.02]], 0.8);
+    });
+  }
   disc(ctx, f, shade(glass, 0.35), -0.06, domeAt - 0.18 * domeHigh, 0.3, pilot ? 0.3 : 0.8);
   disc(ctx, f, palette.impact, -0.14, domeAt - 0.36 * domeHigh, 0.11, 0.85);
   ctx.restore();
@@ -1759,6 +1771,11 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   ctx.lineWidth = outline;
   domePath();
   ctx.stroke();
+  /*
+    0587: *"it should show on the top half of the ship. It should be more saucer shaped."* Its own ray gun,
+    a little saucer riding a pylon above the rim at the nose — it hung under the rim here since 0493.
+  */
+  if (fitted === SHIPS.caddie.weapon) paintRaygunSide(ctx, box, palette, lean);
 }
 
 /**

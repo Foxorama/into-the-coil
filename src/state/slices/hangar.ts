@@ -31,6 +31,7 @@ import type { FlameKind } from '../../content/flames.ts';
 import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
 import { TUBE_WARES, TUBE_WARE_KINDS, tubesOf, type RackKind } from '../../content/racks.ts';
 import { MISSILE_KINDS } from '../../content/missiles.ts';
+import { SHELLS, type ShellKind } from '../../content/shells.ts';
 
 export interface HangarState {
   /**
@@ -100,6 +101,11 @@ export interface HangarState {
    * *"Equip them how you want on a ship."*
    */
   rack: Readonly<Record<ShipKind, RackKind>>;
+  /**
+   * The shell each ship's shields wear — 0584: its own, another ship's on the dash's rule, or one bought
+   * at Cosmo's on any ship from the moment it is bought, as the wheels are (0527).
+   */
+  shell: Readonly<Record<ShipKind, ShellKind>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -119,7 +125,9 @@ export type HangarAction =
   // 0530: what that ship's engines burn.
   | { slice: 'hangar'; type: 'flame'; ship: ShipKind; flame: FlameKind }
   // 0578: the tubes that ship carries into a run.
-  | { slice: 'hangar'; type: 'rack'; ship: ShipKind; rack: RackKind };
+  | { slice: 'hangar'; type: 'rack'; ship: ShipKind; rack: RackKind }
+  // 0584: the shell its shields wear.
+  | { slice: 'hangar'; type: 'shell'; ship: ShipKind; shell: ShellKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -142,6 +150,7 @@ export const initialHangar: HangarState = {
   livery: perShip(() => null),
   flame: perShip(() => 'standard'),
   rack: perShip(() => 'bare'),
+  shell: perShip((kind) => SHIPS[kind].shield.look),
 };
 
 /**
@@ -155,6 +164,15 @@ export function rackOpen(state: HangarState, rack: RackKind): boolean {
     if (tubesOf(rack, kind) > owned) return false;
   }
   return true;
+}
+
+/**
+ * Whether `ship`'s shields may wear `shell` — 0584, on the wheels' rule: a ship's own shell always, another
+ * ship's once both are won in, and one only Cosmo's sells on any ship once it is owned.
+ */
+export function shellOpen(state: HangarState, ship: ShipKind, shell: ShellKind): boolean {
+  const from = SHELLS[shell].from;
+  return from === null ? state.owned[shell] : plateOpen(state, ship, from);
 }
 
 /** Whether a ship may burn `flame` — 0530: the standard flame always, one bought on any ship. */
@@ -309,6 +327,10 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'rack':
       if (state.rack[action.ship] === action.rack || !rackOpen(state, action.rack)) return state;
       return { ...state, rack: { ...state.rack, [action.ship]: action.rack } };
+    // 0584: a shell open to that ship.
+    case 'shell':
+      if (state.shell[action.ship] === action.shell || !shellOpen(state, action.ship, action.shell)) return state;
+      return { ...state, shell: { ...state.shell, [action.ship]: action.shell } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

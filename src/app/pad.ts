@@ -49,6 +49,13 @@ export const PAD_DEADZONE = 0.18;
  */
 export const PAD_AXIS_X = 0;
 export const PAD_AXIS_Y = 1;
+/**
+ * The right stick, on the standard mapping — `docs/decisions/0588-the-rings-are-thrown.md`: *"use the
+ * right joystick on a controller to be able to direct the energy pulses in a 45 degree arc straight
+ * ahead."* What it asks for is the `aim` across the lane, under the same radial deadzone as the left.
+ */
+export const PAD_AIM_X = 2;
+export const PAD_AIM_Y = 3;
 export const PAD_SPECIAL_BUTTONS: readonly number[] = [0, 1, 2, 3];
 /**
  * Where each standard-mapping face button stands across the pad, left negative — 0574: the bottom
@@ -119,6 +126,9 @@ export function attachPad(options: PadOptions = {}): InputSource {
       const pads = readPads();
       let ax = 0;
       let ay = 0;
+      // 0588: the right stick, summed as the left is.
+      let rx = 0;
+      let ry = 0;
       let pauseDown = false;
 
       for (let p = 0; p < pads.length; p++) {
@@ -134,6 +144,12 @@ export function attachPad(options: PadOptions = {}): InputSource {
         if (x * x + y * y >= PAD_DEADZONE * PAD_DEADZONE) {
           ax += x;
           ay += y;
+        }
+        const aimX = pad.axes[PAD_AIM_X] ?? 0;
+        const aimY = pad.axes[PAD_AIM_Y] ?? 0;
+        if (aimX * aimX + aimY * aimY >= PAD_DEADZONE * PAD_DEADZONE) {
+          rx += aimX;
+          ry += aimY;
         }
 
         for (let i = 0; i < wasDown.length; i++) {
@@ -161,9 +177,11 @@ export function attachPad(options: PadOptions = {}): InputSource {
       if (alongAxisOf() === 'x') {
         intent.along += ax;
         intent.across += ay;
+        intent.aim += ry;
       } else {
         intent.along += -ay;
         intent.across += ax;
+        intent.aim += rx;
       }
     },
     /*

@@ -50,9 +50,9 @@ import {
   TRAIL_SAMPLES,
 } from '../content/port.ts';
 import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
-import type { ShipRow } from '../content/ships.ts';
+import { UFO_BULBS, UFO_RING, lampFrame, lampTurn, type ShipRow } from '../content/ships.ts';
 import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
-import { SPRITE_EXTENT } from '../content/sprites.ts';
+import { SHIP_BOX, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 import { SCROLL_PER_STEP } from '../sim/flight.ts';
@@ -62,6 +62,23 @@ import { screenX, screenY, type Surface } from './surface.ts';
 /** The pad's wheel pictures, in the order a rim shows its own — 0557. */
 // @setup: three indices for the lifetime of the module.
 const BLUE_WHEELS: readonly number[] = [PORT_SPRITE.blueWheel0, PORT_SPRITE.blueWheel1, PORT_SPRITE.blueWheel2];
+
+/** The saucer's bulbs in the game's atlas, in the inks its ring runs through — 0586. */
+// @setup: four indices for the lifetime of the module.
+const UFO_BULB: readonly number[] = [SPRITE.ufoBulb0, SPRITE.ufoBulb1, SPRITE.ufoBulb2, SPRITE.ufoBulb3];
+
+/** How far out the ring's bulbs run on the saucer's edge, in world units: its rim, in the box's radius. */
+const UFO_RIM = UFO_RING * SHIP_BOX * 0.42;
+
+/** The pad's shell pictures, one per shimmer frame — 0584. */
+// @setup: three indices for the lifetime of the module.
+const BLUE_SHELLS: readonly number[] = [PORT_SPRITE.blueShell0, PORT_SPRITE.blueShell1, PORT_SPRITE.blueShell2];
+
+/**
+ * How many shimmer frames the shell shows a bob on the pad — nine, so it ripples about every fifth of a second
+ * and comes back to where it was each bob, as everything on the stand does (`BLUE_BOB_RATE`).
+ */
+const SHELL_SHIMMERS = 9;
 
 /** How much bigger than its box a tile is blitted, so the seam between two can never show the space behind. */
 const TILE_OVERLAP = 1.03;
@@ -131,7 +148,7 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
  *
  * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
  */
-export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP, spots: Readonly<Record<KeeperKind, number>> | null = null): void {
+export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP, spots: Readonly<Record<KeeperKind, number>> | null = null, shell = false): void {
   surface.clear();
   /*
     ── THE DOCK — 0571 ─────────────────────────────────────────────────────────────────────────────
@@ -231,6 +248,43 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
       const at = wheels.at[i]!;
       const sprite = BLUE_WHEELS[wheelFrame(wheel, i, seconds)]!;
       put(surface, view, sprite, pad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);
+    }
+  }
+  /*
+    0584: and the shell its shields wear, round it as three shields stand in the fight, while one is being
+    chosen — on the pad it would otherwise sit over every other look. Its pictures are baked off the fitted
+    shell, or the one tried on, into `BLUE_SHELLS` (`bakePortShip`), shimmering as the fight's do.
+  */
+  if (shell) put(surface, view, BLUE_SHELLS[Math.floor(((t % BOB_STEPS) / BOB_STEPS) * SHELL_SHIMMERS) % BLUE_SHELLS.length]!, pad, across, 1, 0, size);
+  /*
+    0586: and its lights, on the stand's clock — the fighter's strobes laid as the fight lays them, from the
+    game's own pictures at the pad's size; the saucer's ring, which the pad sees edge-on, as its bulbs
+    running along the rim's near edge, each brighter as it comes round to the front.
+  */
+  /*
+    ⚠️ **ON THE BOB'S CLOCK, SO A BOB APART IS THE SAME PICTURE** — what the pad's guards read a fitting
+    against (`tests/stand.ts`). Each light runs a whole number of its own cycles a bob, the nearest to its
+    row's pace: the strobe's two thirds of a second three times, the ring's two-second turn once.
+  */
+  const bob = (t % BOB_STEPS) / BOB_STEPS;
+  const unit = HANGAR_SCALE * size;
+  for (let k = 0; k < ship.lamps.length; k++) {
+    const lamp = ship.lamps[k]!;
+    const cycle = lamp.turn ?? lamp.hold * lamp.frames.length;
+    const lit = bob * Math.max(1, Math.round(BOB_STEPS / STEPS_PER_SECOND / cycle)) * cycle;
+    const at = pad + lamp.at.along * unit;
+    const down = across + lamp.at.across * unit;
+    if (lamp.pad === 'laid') {
+      put(surface, view, GAME_BASE + SPRITE[lamp.frames[lampFrame(lamp, lit)]!], at, down, 1, lampTurn(lamp, lit), unit);
+      continue;
+    }
+    const turn = lampTurn(lamp, lit);
+    const chase = lampFrame(lamp, lit);
+    for (let b = 0; b < UFO_BULBS; b++) {
+      const a = (b * Math.PI * 2) / UFO_BULBS + turn;
+      const near = Math.sin(a);
+      if (near <= 0) continue;
+      put(surface, view, GAME_BASE + UFO_BULB[(b + chase) % UFO_BULB.length]!, at + Math.cos(a) * UFO_RIM * unit, down, 0.35 + 0.65 * near, 0, unit);
     }
   }
   paintAtShip(surface, view, spots, 'over', pad, across);

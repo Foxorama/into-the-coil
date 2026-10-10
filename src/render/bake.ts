@@ -33,7 +33,8 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { LEAN_KINDS, THRUST, THRUST_KINDS, THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, ownFit, shellOrbit, shieldPlateOf, type Fit, type GunView } from '../content/ships.ts';
+import { CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING, SHIELD_ANGLES, SHIELD_LAYOUT, SHIELD_ORBIT, SHIPS, ownFit, shellOrbit, shellSpan, type Fit, type GunView } from '../content/ships.ts';
+import { SHELLS, shieldPlateOf, type ShellKind, type ShieldLook } from '../content/shells.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
 import { FLAMES, type FlameKind } from '../content/flames.ts';
@@ -848,6 +849,42 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shieldStorm240a: 'player',
   shieldStorm240b: 'player',
   shieldStorm240c: 'player',
+  shieldAurora0a: 'player',
+  shieldAurora0b: 'player',
+  shieldAurora0c: 'player',
+  shieldAurora120a: 'player',
+  shieldAurora120b: 'player',
+  shieldAurora120c: 'player',
+  shieldAurora180a: 'player',
+  shieldAurora180b: 'player',
+  shieldAurora180c: 'player',
+  shieldAurora240a: 'player',
+  shieldAurora240b: 'player',
+  shieldAurora240c: 'player',
+  shieldRunes0a: 'player',
+  shieldRunes0b: 'player',
+  shieldRunes0c: 'player',
+  shieldRunes120a: 'player',
+  shieldRunes120b: 'player',
+  shieldRunes120c: 'player',
+  shieldRunes180a: 'player',
+  shieldRunes180b: 'player',
+  shieldRunes180c: 'player',
+  shieldRunes240a: 'player',
+  shieldRunes240b: 'player',
+  shieldRunes240c: 'player',
+  shieldDisco0a: 'player',
+  shieldDisco0b: 'player',
+  shieldDisco0c: 'player',
+  shieldDisco120a: 'player',
+  shieldDisco120b: 'player',
+  shieldDisco120c: 'player',
+  shieldDisco180a: 'player',
+  shieldDisco180b: 'player',
+  shieldDisco180c: 'player',
+  shieldDisco240a: 'player',
+  shieldDisco240b: 'player',
+  shieldDisco240c: 'player',
   // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
   // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
   auraHunt: 'ally',
@@ -936,6 +973,14 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
   spinnerWheel: 'player',
   spinnerWheelHit: 'hazard',
+  navStrobe: 'impact',
+  navDark: 'trim',
+  ufoLights0: 'player',
+  ufoLights1: 'player',
+  ufoBulb0: 'player',
+  ufoBulb1: 'ally',
+  ufoBulb2: 'hazard',
+  ufoBulb3: 'pickup',
   // 0557: and the lightning's, on the same terms.
   boltWheel0: 'player',
   boltWheel0Hit: 'hazard',
@@ -2463,23 +2508,26 @@ function roundel(cx: number, cy: number, radius: number, count: number, from: nu
   and the mounts guard are unchanged.
 */
 
-/** The ray gun, in the box's radius: the housing under the rim, its lens, the barrel's half-width and the dish. */
+/*
+  ── A LITTLE SAUCER, ON THE TOP HALF — 0587 ──────────────────────────────────────────────────────
+
+  Played: *"The ray gun still looks bad, it should show on the top half of the ship. It should be more
+  saucer shaped."* The ball, barrel and dish are gone: the emitter is a little saucer of its own — a
+  chrome disc, a dark rim band with six lavender lights round it, a lavender lens for a dome, and its
+  mouth an edge-on ring the size of the first ring it throws (0588). From the side, on the pad and in the
+  intro, it rides ABOVE the rim at the nose on a short pylon, which is the top half asked for. From above,
+  in the fight, it is the same saucer still tucked under the lip as 0493 asked, so what shows past the rim
+  is its front: the band, the front lights and the mouth.
+*/
+
+/** The ray gun's little saucer, in the box's radius: its centre and radius from above, and its front, the tip. */
 const RAYGUN = {
-  /** The emitter housing: a ball with its centre inside the rim, so its front stands out past the disc. */
-  housing: { x: 0.6, r: 0.22 },
-  /** The lens in its face and its white heart: seen only from the side, in the hangar — on top the disc covers it. */
-  lens: 0.145,
-  /** 0.055 and not 0.05: at 1280×720 the smaller was 2.37 px across, under 0106's floor for a solid mark. */
-  heart: 0.055,
-  /** The barrel's half-width, from the housing to the dish. */
-  barrel: 0.08,
-  /**
-   * The dish at the muzzle; its front is the tip, where the rings leave. Its radius is the ray's
-   * smallest ring (`ray`'s first band, 0.24 of its 1.85-unit radius, 0.44 units) in this box's 3.95-unit radius, so
-   * the gun's mouth is the size of what comes out of it — 0493.
-   */
-  dish: { x: 1.13 - 0.112, r: 0.112 },
-  tip: 1.13,
+  /** From above: its centre inside the rim, so its front stands out past the disc and its back is under it. */
+  housing: { x: 0.66, r: 0.3 },
+  /** Where the rings leave: the front of the little saucer. */
+  tip: 0.96,
+  /** From the side: its centre above the rim at the nose, and its radius — the top half. */
+  side: { x: 0.6, y: -0.2, r: 0.26 },
 };
 
 /**
@@ -2584,16 +2632,9 @@ function caddieHull(stage: number, own = true): Pt[] {
  */
 export function raygunProfile(): Pt[] {
   const { x: hx, r: hr } = RAYGUN.housing;
-  const { x: ox, r: or } = RAYGUN.dish;
   const seat = housingSeat();
-  // Where the barrel's edge leaves the housing, and where it arrives at the dish, as angles about each.
-  const leaves = Math.asin(RAYGUN.barrel / hr);
-  const arrives = Math.PI - Math.asin(RAYGUN.barrel / or);
-  // The upper side: negative `across`. The barrel is the straight run between the two arcs, and the
-  // dish's arc ends on the tip exactly.
-  const gun: Pt[] = [...roundel(hx, 0, hr, 10, -seat.onHousing, -leaves), ...roundel(ox, 0, or, 10, -arrives, 0)];
-  // The tip is shared, so the mirror starts one point back.
-  return [...gun, ...mirrored(gun).reverse().slice(1)];
+  // 0587: the little saucer's front, round from its seat in the rim on the upper side to the lower.
+  return roundel(hx, 0, hr, 24, -seat.onHousing, seat.onHousing);
 }
 
 /**
@@ -2623,37 +2664,91 @@ export function caddieMounts(): { muzzle: Pt; tubes: readonly (readonly Pt[])[] 
   numbers this drew before there was a choice: no arithmetic is added to the caddie's own pixels.
 */
 export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true, at?: Pt, s = 1): void {
-  const chrome = shade(palette.trim, 0.65);
-  const { x: hx0 } = RAYGUN.housing;
-  const P = at === undefined ? (x: number, y: number): Pt => [x, y] : (x: number, y: number): Pt => [at[0] + (x - hx0) * s, at[1] + y * s];
-  const ring = (cx: number, r: number, count: number): Pt[] => roundel(cx, 0, r, count, 0, Math.PI * 2).map(([x, y]) => P(x, y));
-  const b = RAYGUN.barrel;
+  // The caddie's own sits at its housing; a borrowed one is placed with its front on the mount's muzzle.
   const { x: hx, r: hr } = RAYGUN.housing;
-  const { x: ox, r: or } = RAYGUN.dish;
-  // The barrel first, so the housing and the dish sit over its ends: chrome lit along its top, the
-  // rings' light down its middle to the dish's mouth.
-  shaded(ctx, f, P(0, -b), P(0, b), shade(chrome, 0.4), shade(chrome, -0.35), [P(hx, -b), P(ox, -b), P(ox, b), P(hx, b)]);
-  seam(ctx, f, shade(palette.ally, 0.35), 0.045 * s, [P(hx + hr * 0.8, 0), P(ox - or * 0.7, 0)], 0.9);
-  if (onDisc) {
-    // The ball, in the rim's shadow: dark where it comes out from under the rim, lit toward the muzzle.
-    shaded(ctx, f, P(CADDIE_DISC, 0), P(hx + hr, 0), shade(chrome, -0.6), shade(chrome, 0.3), ring(hx, hr, 28));
-  } else {
-    // The ball: chrome, lit above and ahead, dark below and behind.
-    shaded(ctx, f, P(hx + hr * 0.2, -hr), P(hx - hr * 0.2, hr), shade(chrome, 0.55), shade(chrome, -0.45), ring(hx, hr, 28));
-    // The lens: the rings' lavender, deep at its edge, two rings of light in it about the heart.
-    const lens = RAYGUN.lens;
-    shaded(ctx, f, P(hx, -lens), P(hx, lens), shade(palette.ally, 0.05), shade(palette.ally, -0.5), ring(hx, lens, 24));
-    seam(ctx, f, shade(palette.ally, 0.45), 0.04 * s, ring(hx, lens * 0.74, 18), 0.9, true);
-    seam(ctx, f, shade(palette.ally, 0.6), 0.04 * s, ring(hx, lens * 0.44, 14), 0.9, true);
-    glow(ctx, f, palette.ally, ...P(hx, 0), lens * 1.25 * s, 0.65);
-    disc(ctx, f, palette.impact, ...P(hx + 0.01, 0), RAYGUN.heart * s);
+  if (at === undefined) paintEmitter(ctx, f, palette, 'top', hx, 0, hr, onDisc);
+  else paintEmitter(ctx, f, palette, 'top', at[0], at[1], hr * s, false);
+}
+
+/**
+ * The caddie's own ray gun seen from the side, at `lean` of the way over toward above — 0587, for the pad
+ * and the intro (`paintSaucer`): the little saucer on a short pylon, riding above the rim at the nose. Leaning
+ * past half way it is the view from above, sitting on the disc.
+ */
+export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: number): void {
+  const { x, y, r } = RAYGUN.side;
+  if (lean > 0.5) {
+    paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r);
+    return;
   }
-  // The dish: a chrome lip round a mouth deep in the rings' lavender, with a ring of their light lit in
-  // it. A ring goes in and a ring comes out, and nothing about it is a point.
-  disc(ctx, f, shade(palette.ally, -0.45), ...P(ox, 0), or * s);
-  glow(ctx, f, palette.ally, ...P(ox, 0), or * 0.9 * s, 0.75);
-  seam(ctx, f, shade(palette.ally, 0.55), 0.03 * s, ring(ox, or * 0.5, 16), 0.95, true);
-  seam(ctx, f, shade(chrome, 0.35), 0.035 * s, ring(ox, or - 0.02, 20), 1, true);
+  const rise = y * Math.cos((lean * Math.PI) / 2);
+  poly(ctx, f, shade(palette.trim, -0.35), [
+    [x - r * 0.35, rise],
+    [x - r * 0.15, rise],
+    [x - r * 0.25, 0],
+    [x - r * 0.55, 0],
+  ]);
+  paintEmitter(ctx, f, palette, 'side', x, rise, r);
+}
+
+/**
+ * The little saucer — 0587 — about `(cx, cy)` with radius `R`, in the frame's radius, from above or from the
+ * side. `under`: from above, painted before the disc it hangs under, so only its front past the rim shows and
+ * the lens on top is not drawn.
+ */
+export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView, cx: number, cy: number, R: number, under = false): void {
+  const chrome = shade(palette.trim, 0.65);
+  const lav = palette.ally;
+  const oval = (x: number, y: number, rx: number, ry: number, count: number, from = 0, to = Math.PI * 2): Pt[] =>
+    roundel(0, 0, 1, count, from, to).map(([c, d]): Pt => [x + c * rx, y + d * ry]);
+  const mouth = (x: number, y: number, ry: number): void => {
+    // The mouth: an edge-on ring of the rings' lavender, lit — what comes out of it is a ring like it.
+    glow(ctx, f, lav, x, y, ry * 0.8, 0.7);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = shade(lav, 0.55);
+    ctx.beginPath();
+    // A tenth of the box wider than the ring's own quarter, so at the fight's size it is over the floor.
+    trace(ctx, f, oval(x, y, ry / 4 + 0.05, ry + 0.05, 24));
+    ctx.fill();
+    // And open, deep in the rings' lavender, where the ring is big enough to have an inside that shows.
+    const inside = ry / 4 - 0.05;
+    if (inside >= 0.05) poly(ctx, f, shade(lav, -0.45), oval(x, y, inside, ry - 0.05, 24));
+  };
+  if (view === 'top') {
+    // The disc: chrome lit from ahead, dark where it goes under the rim.
+    shaded(ctx, f, [cx - R * 0.6, cy], [cx + R, cy], shade(chrome, under ? -0.35 : -0.2), shade(chrome, 0.45), oval(cx, cy, R, R, 32));
+    // Its rim band and the six lights round it.
+    band(ctx, f, shade(palette.trim, -0.2), cx, cy, R * 0.97, R * 0.8, 0.9);
+    // Lights, not marks: a glow each, so none is a solid speck under the floor at the fight's size.
+    for (let k = 0; k < 6; k++) {
+      const a = Math.PI / 6 + (k * Math.PI) / 3;
+      glow(ctx, f, lav, cx + Math.cos(a) * R * 0.885, cy + Math.sin(a) * R * 0.885, R * 0.18, 0.8);
+    }
+    if (!under) {
+      // The lens on top: lavender, deep at its edge, lit at its crown.
+      shaded(ctx, f, [cx - R * 0.2, cy - R * 0.4], [cx + R * 0.2, cy + R * 0.4], shade(lav, 0.15), shade(lav, -0.45), oval(cx, cy, R * 0.42, R * 0.42, 24));
+      glow(ctx, f, palette.impact, cx - R * 0.12, cy - R * 0.14, R * 0.16, 0.8);
+    }
+    // Inside the disc's own outline: at 0.55 of the way out it is 0.83 of the radius tall, and the ring 0.72.
+    mouth(cx + R * 0.55, cy, R * 0.55);
+    return;
+  }
+  // From the side: a lens on its edge, a lavender band round its rim, a small dome on top, the mouth ahead.
+  const up = R * 0.28;
+  const down = R * 0.22;
+  ctx.fillStyle = shade(chrome, -0.35);
+  ctx.beginPath();
+  trace(ctx, f, [...oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2), ...oval(cx, cy, R, down, 24, 0, Math.PI)]);
+  ctx.fill();
+  shaded(ctx, f, [cx, cy - up], [cx, cy], shade(chrome, 0.45), chrome, oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2));
+  // The dome: a lavender lens on top, lit at its crown.
+  shaded(ctx, f, [cx, cy - up - R * 0.32], [cx, cy - up * 0.5], shade(lav, 0.25), shade(lav, -0.35), oval(cx, cy - up * 0.6, R * 0.38, R * 0.36, 20, Math.PI, Math.PI * 2));
+  glow(ctx, f, palette.impact, cx - R * 0.1, cy - up - R * 0.18, R * 0.12, 0.8);
+  // The band round its rim: a line of the rings' light, and three lights on the near side.
+  seam(ctx, f, shade(lav, 0.4), R * 0.09, [[cx - R * 0.96, cy], [cx + R * 0.96, cy]], 0.95);
+  for (const x of [-0.55, 0, 0.55]) glow(ctx, f, lav, cx + x * R, cy, R * 0.22, 0.85);
+  // Its front edge at the radius, so the saucer and its mouth end where the muzzle is.
+  mouth(cx + R * 0.72, cy, R * 0.5);
 }
 
 /** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
@@ -3134,6 +3229,23 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
       const [tx, ty] = at(4 + dx, -2.6 + dy * 0.75);
       disc(ctx, f, gold, tx, ty, 0.42 * 0.062 * 1.2, 0.85);
     }
+  } else if (art === 'stars') {
+    // 0589: three gold stars across the tank, gold leaf on the paw print's terms.
+    const gold = shade(palette.hazard, 0.1);
+    for (const [x, y] of [
+      [1.6, -2.7],
+      [4, -2.9],
+      [6.4, -2.6],
+    ] as const) {
+      const [cx, cy] = at(x, y);
+      const star: Pt[] = [];
+      for (let k = 0; k < 10; k++) {
+        const a = -Math.PI / 2 + (k * Math.PI) / 5;
+        const reach = (k % 2 === 0 ? 1.05 : 0.45) * 0.062 * 1.2;
+        star.push([cx + Math.cos(a) * reach, cy + Math.sin(a) * reach]);
+      }
+      poly(ctx, f, gold, star, 0.85);
+    }
   } else {
     for (const y of [-3.35, -2.35]) {
       seam(ctx, f, shade(palette.hazard, 0.1), 0.03, box([
@@ -3355,6 +3467,17 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true, art: Art
       [0.36, 0.075],
       [0.7, 0.075],
     ]);
+  } else if (art === 'goldBolt') {
+    // 0589: a lightning bolt in the hazard's gold, inside the racing stripe's envelope, one bold shape.
+    poly(ctx, f, palette.hazard, [
+      [0.92, 0],
+      [0.62, -0.075],
+      [0.6, -0.01],
+      [0.36, -0.075],
+      [0.48, 0.03],
+      [0.5, 0.075],
+      [0.7, 0.04],
+    ]);
   } else {
     poly(ctx, f, palette.ally, [
       [0.74, 0],
@@ -3379,6 +3502,9 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true, art: Art
     if (pods) glow(ctx, f, palette.hazard, -0.09, -0.96 * side, 0.15, 0.6);
   }
 }
+
+/** The rainbow dome's four quarters, front first round the clock — 0589. */
+const RAINBOW_DOME: readonly ('player' | 'ally' | 'hazard' | 'pickup')[] = ['player', 'ally', 'hazard', 'pickup'];
 
 /**
  * Feather Fade's Little Green Caddie — *"a flying saucer with a 7-iron. They come in peace."* The
@@ -3430,6 +3556,13 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   if (art === 'pilot') {
     disc(ctx, f, shade(palette.acid, 0.2), 0.03 * D, 0, 0.28 * D);
     for (const side of [1, -1] as const) disc(ctx, f, palette.space, 0.13 * D, 0.1 * D * side, 0.095 * D);
+  }
+  // 0589: or the glass in four colours, quartered as a beach ball is — the player's own inks and the hazard's.
+  if (art === 'rainbow') {
+    RAINBOW_DOME.forEach((ink, k) => {
+      const from = (k * Math.PI) / 2 + Math.PI / 4;
+      poly(ctx, f, shade(palette[ink], 0.1), [[0, 0], ...roundel(0, 0, 0.44 * D, 8, from, from + Math.PI / 2)], 0.8);
+    });
   }
   disc(ctx, f, shade(glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, art === 'pilot' ? 0.3 : 0.7);
   seam(ctx, f, shade(visor ? palette.hazard : palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
@@ -3503,11 +3636,43 @@ export function paintRim(ctx: Pen, f: Frame, palette: Palette, rim: RimKind, cx:
     case 'bolts':
       paintCrackle(ctx, f, palette, 0, cx, cy, r, turn);
       return;
+    /*
+      0589: Cosmo's two more, every mark half a radius or more on the spinner's terms. The neon: a dark dish,
+      a fat band of the ray's lavender lit from inside, and a dark hub — at five pixels a glowing ring.
+    */
+    case 'neon':
+      disc(ctx, f, shade(palette.trim, -0.55), cx, cy, r * 0.84);
+      glow(ctx, f, palette.ally, cx, cy, r * 0.95, 0.6);
+      band(ctx, f, shade(palette.ally, 0.35), cx, cy, r * 0.8, r * 0.3);
+      disc(ctx, f, shade(palette.trim, -0.4), cx, cy, r * 0.3);
+      return;
+    // The wires: a silver star of ten spokes over a dark dish, round a cyan hub.
+    case 'wire':
+      disc(ctx, f, shade(palette.trim, -0.5), cx, cy, r * (2.55 / 3.6));
+      poly(ctx, f, shade(palette.trim, 0.8), snowflake(cx, cy, r * (2.5 / 3.6), turn + Math.PI / 10));
+      disc(ctx, f, palette.player, cx, cy, r * 0.28);
+      return;
     default: {
       const unhandled: never = rim;
       return unhandled;
     }
   }
+}
+
+/**
+ * A rim in its tyre, `pixels` across — 0589, for its tile on Cosmo's shelf: a rim that turns shows its
+ * turning picture there (`spinnerWheel`), and one baked still into the hull is drawn here as the hull draws it.
+ */
+export function bakeRim(rim: RimKind, palette: Palette, pixels: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = pixels;
+  canvas.height = pixels;
+  const ctx = canvas.getContext('2d') as unknown as Pen | null;
+  if (ctx === null) return canvas;
+  const f: Frame = { half: pixels / 2, r: pixels * 0.42 };
+  disc(ctx, f, shade(palette.trim, -0.25), 0, 0, 1);
+  paintRim(ctx, f, palette, rim, 0, 0, 1, 0);
+  return canvas;
 }
 
 /**
@@ -3610,6 +3775,47 @@ function paintCrackle(ctx: Pen, f: Frame, palette: Palette, k: number, cx: numbe
   // The hub is body, so it is over the floor: the old bolt's hub was 0.28 of the tyre and passed it.
   disc(ctx, f, shade(palette.trim, 0.6), cx, cy, r * 0.3);
   disc(ctx, f, shade(cyan, 0.8), cx, cy, r * 0.13, 0.85);
+}
+
+/**
+ * A wingtip strobe — `docs/decisions/0586-the-ships-are-lit.md`: lit, a white flash with the player's cyan
+ * round it; dark, the lens alone, faint. Light, added to the wingtip it sits on (`LIGHT_KINDS`).
+ *
+ * ⚠️ **WHITE, NOT A NAVIGATION LIGHT'S RED AND GREEN** — 0295's *consider the screen*: a red point blinking
+ * a wing's length from the ship is an enemy bullet arriving, in the one ink that means it. An aircraft's
+ * wingtip strobes are white, and so are these.
+ */
+function paintLamp(ctx: Pen, f: Frame, palette: Palette, lit: boolean): void {
+  if (!lit) {
+    disc(ctx, f, palette.impact, 0, 0, 0.32, 0.22);
+    return;
+  }
+  glow(ctx, f, palette.player, 0, 0, 1, 0.75);
+  glow(ctx, f, palette.impact, 0, 0, 0.6, 0.95);
+  disc(ctx, f, palette.impact, 0, 0, 0.32);
+}
+
+/**
+ * The ring of lights round the saucer's disc — 0586. Played: *"Lil caddie needs to have a spinning disc of
+ * funky alien UFO lights spinning around on its disc."* Twelve bulbs on the rim's dark band, where its six
+ * running lights are, running the player's cyan, the ray's lavender, the hazard's gold and the pickup's
+ * mint; `n` is which picture, and the second steps every colour on a bulb, so the two shown in turn chase
+ * while the frame spins the ring (`stepWheels`). Painted over the disc, not added to it: added, every
+ * bulb over the pale green burned white.
+ *
+ * ⚠️ **NO RED AND NO ACID**, on `paintLamp`'s terms: these spin a wing's length from a bullet's path.
+ */
+function paintUfoLights(ctx: Pen, f: Frame, palette: Palette, n: number): void {
+  const inks = [palette.player, palette.ally, palette.hazard, palette.pickup];
+  const ring = UFO_RING;
+  for (let k = 0; k < UFO_BULBS; k++) {
+    const a = (k * Math.PI * 2) / UFO_BULBS;
+    const ink = inks[(k + n) % inks.length]!;
+    const x = Math.cos(a) * ring;
+    const y = Math.sin(a) * ring;
+    glow(ctx, f, ink, x, y, 0.13, 0.85);
+    disc(ctx, f, shade(ink, 0.45), x, y, 0.05);
+  }
 }
 
 /** Crack `k` on its own at a radius of one, sealed in its dish as the spinner is — 0557. */
@@ -3847,6 +4053,16 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
       [14.5, 1.6],
       [-14, 1.6],
     ]));
+  } else if (art === 'tiger') {
+    // 0589: three gold claws raked back down the door, inside the rally stripe's band, each over the floor.
+    for (const x of [8, 3, -2]) {
+      poly(ctx, f, gold, box([
+        [x + 2.6, -0.6],
+        [x + 4.2, -0.6],
+        [x + 1.6, 1.6],
+        [x, 1.6],
+      ]));
+    }
   } else {
     poly(ctx, f, gold, box([
       [9.6, 0],
@@ -4046,6 +4262,21 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
       const [cx, cy] = at(x, 3);
       disc(ctx, f, shade(gilt, 0.35), cx, cy, 1.05 * 0.062);
     }
+  } else if (art === 'surf') {
+    // 0589: a white surfboard on the back panel where the daisies grow, a cyan stripe down its middle.
+    const board: Pt[] = [];
+    for (let k = 0; k < 24; k++) {
+      const a = (k * Math.PI * 2) / 24;
+      board.push([-8.75 + Math.cos(a) * 4.6, 3 + Math.sin(a) * 1.7]);
+    }
+    poly(ctx, f, palette.impact, box(board));
+    // 1.8 units deep, so at the shipped camera it is over 0106's floor.
+    poly(ctx, f, palette.player, box([
+      [-12.4, 2.1],
+      [-5.1, 2.1],
+      [-5.1, 3.9],
+      [-12.4, 3.9],
+    ]));
   }
   // Chrome bumpers, fore and aft, lit along their tops.
   for (const [from, to] of [
@@ -4222,17 +4453,20 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     },
   },
   /*
-    The ray gun: the caddie's own, a chrome emitter with a lavender lens, a short barrel and an open dish
-    the rings leave — drawn as the hangar's side view draws it (`paintRaygun`, `onDisc` false), scaled so
-    its dish's front is the muzzle. Side-on it stands on a short pylon.
+    The ray gun: the caddie's own little saucer (0587), its mouth on the muzzle — from above sitting on the
+    mount, and from the side riding a short pylon, as it rides the caddie's nose on the pad.
   */
   ray: {
     top: (ctx, f, palette, p, [mx]) => {
-      paintRaygun(ctx, f, palette, false, p(0, 0), mx / (RAYGUN.tip - RAYGUN.housing.x));
+      const c = p(mx * 0.4, 0);
+      const front = p(mx, 0);
+      paintEmitter(ctx, f, palette, 'top', c[0], c[1], Math.hypot(front[0] - c[0], front[1] - c[1]));
     },
     side: (ctx, f, palette, p, [mx, my]) => {
       poly(ctx, f, shade(palette.trim, -0.35), [p(-0.04, 0), p(0.04, 0), p(0.04, my), p(-0.04, my)]);
-      paintRaygun(ctx, f, palette, false, p(0, my), mx / (RAYGUN.tip - RAYGUN.housing.x));
+      const c = p(mx * 0.45, my);
+      const front = p(mx, my);
+      paintEmitter(ctx, f, palette, 'side', c[0], c[1], Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.02);
     },
   },
   /*
@@ -13503,6 +13737,50 @@ function drawGaze(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n:
   drawBody(ctx, f, skin, bent(GAZE_HULL, GAZE_POSES[n]!), (s) => paintGaze(ctx, f, s, theme, n));
 }
 
+/**
+ * The ray's four rings, back to front — 0588: where each stands along the line of flight and how tall it is,
+ * in the shot's frame. Each is seen edge-on, a quarter as wide as it is tall, and each a size up on the last.
+ */
+export const RAY_RINGS: readonly (readonly [number, number])[] = [
+  [-0.66, 0.42],
+  [-0.2, 0.56],
+  [0.22, 0.7],
+  [0.58, 0.85],
+];
+
+/** The dark field the train sweeps: a cone round the four rings, narrow at the back. */
+const RAY_FIELD: readonly Pt[] = [
+  [-0.97, 0],
+  [-0.86, -0.5],
+  [-0.4, -0.72],
+  [0.1, -0.9],
+  [0.5, -1.02],
+  [0.82, -0.8],
+  [1.05, -0.4],
+  [1.08, 0],
+  [1.05, 0.4],
+  [0.82, 0.8],
+  [0.5, 1.02],
+  [0.1, 0.9],
+  [-0.4, 0.72],
+  [-0.86, 0.5],
+];
+
+/** An edge-on ring at `x`, `ry` tall and a quarter of that wide, `thick` across its band — 0588. */
+function edgeRing(ctx: Pen, f: Frame, colour: string, x: number, ry: number, thick: number, alpha: number): void {
+  const oval = (rx: number, h: number): Pt[] => roundel(0, 0, 1, 28, 0, Math.PI * 2).map(([c, d]): Pt => [x + c * rx, d * h]);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  // Never narrower than 0.18 of the frame, so even the smallest ring has an inside two and a half pixels across.
+  const rx = Math.max(ry / 4, 0.18);
+  trace(ctx, f, oval(rx + thick / 2, ry + thick / 2));
+  // A ring too small to have an inside that shows is one lens of light: a sliver of a hole is no mark.
+  if (rx - thick / 2 >= 0.12) trace(ctx, f, oval(rx - thick / 2, ry - thick / 2));
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+}
+
 /** Half the sweep of one deflector plate round the ship, in radians — a hundred degrees in all. 0430. */
 const PLATE_SWEEP = (50 * Math.PI) / 180;
 /** A honeycomb cell's corner radius, in world units: two zig-zagged rows of these make the strip. */
@@ -13871,6 +14149,309 @@ function drawShieldPlate(ctx: Pen, at: PlateAt, shimmer: number, ink: string): v
   ctx.globalAlpha = 1;
 }
 
+/**
+ * The aurora — 0584, the first shell Cosmo's sells. Northern lights: three ribbons running the arc, each
+ * waving across the strip and banded cyan into lavender into mint along its length, with faint rays
+ * hanging off them toward the ship, as a curtain of aurora hangs from its bright edge. `shimmer` moves the
+ * waves and the bands along, so the three frames ripple.
+ *
+ * ⚠️ **NO RED, NO GOLD AND NO ACID** — 0295's *consider the screen*: those are what the fire, the bullets
+ * and the serpent's acid are in. Its inks are the player's own and the pickup's mint, and nothing is solid:
+ * every ribbon is a stroke and every ray a hairline (0379).
+ */
+function drawAuroraPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const inks = [palette.player, palette.ally, palette.pickup];
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.75, palette.player, edge * 2.2, 0.06, 'butt');
+  const runs = 36;
+  const run = (PLATE_SWEEP * 2) / runs;
+  const phase = (shimmer * Math.PI * 2) / 3;
+  for (let ribbon = 0; ribbon < 3; ribbon++) {
+    for (let i = 0; i < runs; i++) {
+      const a = angle - PLATE_SWEEP + i * run;
+      const wave = Math.sin(i * 0.55 + phase + ribbon * 2.1);
+      const r0 = radius + edge * (0.55 - ribbon * 0.5 + 0.28 * wave);
+      const r1 = radius + edge * (0.55 - ribbon * 0.5 + 0.28 * Math.sin((i + 1) * 0.55 + phase + ribbon * 2.1));
+      const band = ((i / runs) * 3 + shimmer * 0.6 + ribbon * 0.8) % 3;
+      const k = Math.floor(band);
+      const ink = mix(inks[k]!, inks[(k + 1) % 3]!, band - k);
+      const fade = plateFade(at, a + run / 2);
+      const [x0, y0] = platePoint(at, a, r0);
+      const [x1, y1] = platePoint(at, a + run * 1.05, r1);
+      ctx.globalAlpha = (0.85 - ribbon * 0.22) * fade;
+      ctx.strokeStyle = shade(ink, 0.25);
+      ctx.lineWidth = Math.max(1, (0.16 - ribbon * 0.03) * unit);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+      // Every third run of the bright ribbon hangs a ray in toward the ship: the curtain's folds.
+      if (ribbon === 0 && (i + shimmer) % 3 === 0) {
+        const [x2, y2] = platePoint(at, a, r0 - edge * 1.3);
+        ctx.globalAlpha = 0.3 * fade;
+        ctx.lineWidth = Math.max(1, 0.05 * unit);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The runes' alphabet — 0584: five glyphs, each a few strokes in its own square, `u` along the shell and
+ * `v` out from the ship, so a ring of them reads as writing and never as one mark repeated. An eye on a
+ * stem, a barred fork, two horns about a dot, a zigzag, and a triangle on a dash.
+ */
+const RUNES: readonly (readonly (readonly Pt[])[])[] = [
+  [
+    [
+      [0, -0.5],
+      [0, 0.05],
+    ],
+    [0, 1, 2, 3, 4, 5, 6].map((k): Pt => [Math.cos((k * Math.PI) / 3) * 0.22, 0.25 + Math.sin((k * Math.PI) / 3) * 0.22]),
+  ],
+  [
+    [
+      [-0.3, 0.5],
+      [0, 0],
+      [0.3, 0.5],
+    ],
+    [
+      [0, 0],
+      [0, -0.5],
+    ],
+    [
+      [-0.25, -0.2],
+      [0.25, -0.2],
+    ],
+  ],
+  [
+    [
+      [-0.3, 0.45],
+      [-0.35, 0],
+      [-0.3, -0.45],
+    ],
+    [
+      [0.3, 0.45],
+      [0.35, 0],
+      [0.3, -0.45],
+    ],
+    [
+      [0, 0.08],
+      [0, -0.08],
+    ],
+  ],
+  [
+    [
+      [-0.3, 0.5],
+      [0.3, 0.2],
+      [-0.3, -0.1],
+      [0.3, -0.5],
+    ],
+  ],
+  [
+    [
+      [-0.3, -0.1],
+      [0, 0.5],
+      [0.3, -0.1],
+      [-0.3, -0.1],
+    ],
+    [
+      [-0.2, -0.45],
+      [0.2, -0.45],
+    ],
+  ],
+];
+
+/** Rune `n` of the alphabet about `(x, y)`, `s` pixels tall, standing along the shell at `a` — 0584. */
+function runeGlyph(ctx: Pen, n: number, x: number, y: number, s: number, a: number): void {
+  const c = Math.cos(a + Math.PI / 2);
+  const d = Math.sin(a + Math.PI / 2);
+  const strokes = RUNES[((n % RUNES.length) + RUNES.length) % RUNES.length]!;
+  for (const stroke of strokes) {
+    ctx.beginPath();
+    stroke.forEach(([u, v], i) => {
+      const px = x + (c * u + d * v) * s;
+      const py = y + (d * u - c * v) * s;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  }
+}
+
+/**
+ * The runes — 0584. A ring of alien glyphs between two thin rails, in the pickup's mint over the player's
+ * cyan, a third of them lit — `shimmer` says which — as a script the ship is reciting. Strokes only.
+ */
+function drawRunesPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const mint = palette.pickup;
+  const rail = palette.player;
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.8, rail, edge * 2, 0.07, 'butt');
+  plateArc(ctx, at, radius - edge * 0.95, PLATE_SWEEP * 0.88, rail, Math.max(1, 0.05 * unit), 0.55, 'round');
+  plateArc(ctx, at, radius + edge * 0.95, PLATE_SWEEP * 0.88, rail, Math.max(1, 0.07 * unit), 0.8, 'round');
+  const glyphs = 7;
+  const step = (PLATE_SWEEP * 1.6) / glyphs;
+  const first = angle - (step * (glyphs - 1)) / 2;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < glyphs; i++) {
+    const a = first + i * step;
+    const fade = plateFade(at, a);
+    const lit = i % 3 === shimmer;
+    const [x, y] = platePoint(at, a, radius);
+    if (lit) {
+      ctx.globalAlpha = 0.25 * fade;
+      ctx.fillStyle = mint;
+      ctx.beginPath();
+      ctx.arc(x, y, edge * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = (lit ? 1 : 0.6) * fade;
+    ctx.strokeStyle = lit ? shade(mint, 0.5) : mint;
+    ctx.lineWidth = Math.max(1, (lit ? 0.08 : 0.06) * unit);
+    runeGlyph(ctx, i + Math.round(angle * 7), x, y, edge * 1.2, a);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The disco ball — 0584. Two rows of mirror tiles along the arc, each a silver outline nearly clear,
+ * and coloured glints flashing off a few of them — the player's cyan, the ray's lavender, the hazard's gold
+ * and the mint — on different tiles in each `shimmer`, so the three frames throw the light about.
+ *
+ * ⚠️ **THE GOLD IS A FLECK, NEVER A BAND** — 0295: gold is the bonus's colour on the field, and a four-point
+ * glint a pixel or two across reads as light off glass, not as a thing to pick up.
+ */
+function drawDiscoPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const silver = shade(palette.trim, 0.75);
+  const glints = [palette.player, palette.ally, palette.hazard, palette.pickup];
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.8, silver, edge * 2.1, 0.06, 'butt');
+  const tiles = 11;
+  const step = (PLATE_SWEEP * 1.8) / tiles;
+  const first = angle - (step * (tiles - 1)) / 2;
+  const side = step * radius * 0.42;
+  for (let row = 0; row < 2; row++) {
+    const r = radius + edge * (row === 0 ? 0.45 : -0.45);
+    for (let i = 0; i < tiles; i++) {
+      const a = first + i * step + (row === 0 ? 0 : step / 2);
+      const fade = plateFade(at, a);
+      const [x, y] = platePoint(at, a, r);
+      const c = Math.cos(a);
+      const d = Math.sin(a);
+      ctx.beginPath();
+      for (const [u, v] of [
+        [-1, -1],
+        [1, -1],
+        [1, 1],
+        [-1, 1],
+      ] as const) {
+        const px = x + (c * v - d * u) * side;
+        const py = y + (d * v + c * u) * side;
+        if (u === -1 && v === -1) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      // A quarter of the tiles throw a colour, a different quarter each frame; one in nine glints.
+      const tint = (i * 7 + row * 3 + shimmer * 5) % 4 === 0;
+      const flash = (i * 5 + row * 3 + shimmer * 4) % 9 === 0;
+      ctx.globalAlpha = (flash ? 0.5 : tint ? 0.38 : 0.16) * fade;
+      ctx.fillStyle = flash || tint ? glints[(i + row + shimmer) % glints.length]! : silver;
+      ctx.fill();
+      ctx.globalAlpha = 0.7 * fade;
+      ctx.strokeStyle = silver;
+      ctx.lineWidth = Math.max(1, 0.04 * unit);
+      ctx.stroke();
+      if (flash) {
+        // The glint: a four-point star off the tile, in the tile's colour with a white heart.
+        const ink = glints[(i + row + shimmer) % glints.length]!;
+        const g = side * 1.9;
+        ctx.globalAlpha = fade;
+        ctx.strokeStyle = shade(ink, 0.35);
+        ctx.lineWidth = Math.max(1, 0.06 * unit);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x - g, y);
+        ctx.lineTo(x + g, y);
+        ctx.moveTo(x, y - g);
+        ctx.lineTo(x, y + g);
+        ctx.stroke();
+        ctx.fillStyle = palette.impact;
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(0.8, 0.07 * unit), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** One plate of `look`'s shell at `at`, in its `shimmer` frame — every shell's draw, by its kind (0584). */
+function drawPlate(ctx: Pen, at: PlateAt, look: ShieldLook, shimmer: number, palette: Palette): void {
+  switch (look) {
+    case 'honeycomb':
+      drawShieldPlate(ctx, at, shimmer, palette.player);
+      return;
+    case 'bubble':
+      drawBubblePlate(ctx, at, shimmer, palette);
+      return;
+    case 'plumes':
+      drawPlumePlate(ctx, at, shimmer, palette);
+      return;
+    case 'lattice':
+      drawLatticePlate(ctx, at, shimmer, palette);
+      return;
+    case 'storm':
+      drawStormPlate(ctx, at, shimmer, palette);
+      return;
+    case 'aurora':
+      drawAuroraPlate(ctx, at, shimmer, palette);
+      return;
+    case 'runes':
+      drawRunesPlate(ctx, at, shimmer, palette);
+      return;
+    case 'disco':
+      drawDiscoPlate(ctx, at, shimmer, palette);
+      return;
+    default: {
+      const never: never = look;
+      throw new Error(`no shell is drawn as ${String(never)}`);
+    }
+  }
+}
+
+/**
+ * A whole shell, three plates round an empty middle, as a picture `pixels` across — 0584, for its tile on
+ * Cosmo's shelf and its card in the hangar: the shell as a ship carrying three shields wears it
+ * (`SHIELD_LAYOUT`), drawn by the same plates the fight blits.
+ */
+/*
+  0584: and on the pad, `span` world units across in `shimmer`'s frame — the same span for every shell, so
+  each stands at its own orbit round a ship drawn at one size (`SHELL_SPAN` in `src/content/port.ts`).
+*/
+export function bakeShell(shell: ShellKind, palette: Palette, pixels: number, shimmer = 0, span = shellSpan(SHELLS[shell].shell)): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = pixels;
+  canvas.height = pixels;
+  const ctx = canvas.getContext('2d') as unknown as Pen | null;
+  if (ctx === null) return canvas;
+  const row = SHELLS[shell].shell;
+  const orbit = shellOrbit(row);
+  const unit = pixels / span;
+  const cell = PLATE_CELL * unit;
+  for (const place of SHIELD_LAYOUT[MAX_SHIELDS]!) {
+    const angle = SHIELD_ANGLES[place]!;
+    drawPlate(ctx, { cx: pixels / 2, cy: pixels / 2, radius: orbit * unit, unit, angle, edge: (Math.sqrt(3) / 4) * cell + (Math.sqrt(3) / 2) * cell }, row.look, shimmer, palette);
+  }
+  return canvas;
+}
+
+
 function drawKite(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
   /*
     ⚠️ **POSED AT ITS CORNERS AND NEVER DENSIFIED.** Straight edges are one of the two channels 0314
@@ -14080,6 +14661,26 @@ export function drawKind(
     case 'boltWheel2':
     case 'boltWheel2Hit':
       drawBoltWheel(ctx, f, palette, 2);
+      return;
+    // 0586: the fighter's wingtip lamps, lit and dark, and the saucer's ring of lights in its two pictures.
+    case 'navStrobe':
+      paintLamp(ctx, f, palette, true);
+      return;
+    case 'navDark':
+      paintLamp(ctx, f, palette, false);
+      return;
+    case 'ufoLights0':
+      paintUfoLights(ctx, f, palette, 0);
+      return;
+    case 'ufoLights1':
+      paintUfoLights(ctx, f, palette, 1);
+      return;
+    case 'ufoBulb0':
+    case 'ufoBulb1':
+    case 'ufoBulb2':
+    case 'ufoBulb3':
+      glow(ctx, f, palette[INK_OF[kind]], 0, 0, 1, 0.85);
+      disc(ctx, f, shade(palette[INK_OF[kind]], 0.45), 0, 0, 0.38);
       return;
     // 0581: a loaded tube of each kind, each its own body on the spinner's terms; the frame lays it on the ship.
     case 'tubeMissile':
@@ -16062,20 +16663,25 @@ export function drawKind(
     case 'raySwell': {
       const page = kind === 'ray' ? 0 : kind === 'rayRipple' ? 1 : 2;
       const ring = palette[INK_OF[kind]];
+      /*
+        0588: *"more like Sonya Blade's four ring energy pulse"* — four rings in a train up the line of flight,
+        each seen edge-on, the smallest at the back and the biggest at the front, where it arrives. It was
+        four rings about one centre (0442). The dark field is kept, as the cone the train sweeps, so the
+        rings read on the palest sky; the lit ring steps forward a page at a time and the front one is
+        always lit, so the pulse surges toward what it is thrown at.
+      */
       ctx.fillStyle = shade(ring, -0.62);
-      ctx.arc(half, half, r * 1.0, 0, Math.PI * 2);
+      ctx.beginPath();
+      trace(ctx, f, RAY_FIELD);
       seal(ctx);
-      const radii = [0.24, 0.47, 0.7, 0.92] as const;
-      // 0520: the field glows from its heart, and the lit ring runs nearly white with its own light
-      // either side of it, so the ripple stepping outward is a ring of light rather than of paint.
-      glow(ctx, f, ring, 0, 0, 0.9, 0.45);
-      radii.forEach((at, k) => {
-        const lit = k === page + 1 || k === 3;
-        if (lit) band(ctx, f, ring, 0, 0, at + 0.11, at - 0.11, 0.5);
-        band(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), 0, 0, at + 0.07, at - 0.07, lit ? 1 : 0.8);
+      glow(ctx, f, ring, 0.2, 0, 0.85, 0.4);
+      RAY_RINGS.forEach(([x, ry], k) => {
+        const lit = k === page + 1 || k === RAY_RINGS.length - 1;
+        // A tenth of the frame thick: at the fight's size a ring is two and a half pixels across, the floor.
+        if (lit) edgeRing(ctx, f, ring, x, ry, 0.17, 0.5);
+        edgeRing(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), x, ry, 0.1, lit ? 1 : 0.8);
       });
-      glow(ctx, f, palette.impact, 0, 0, 0.3, 0.85);
-      disc(ctx, f, palette.impact, 0, 0, 0.12);
+      glow(ctx, f, palette.impact, RAY_RINGS[RAY_RINGS.length - 1]![0], 0, 0.3, 0.7);
       return;
     }
     /*
@@ -17064,32 +17670,48 @@ export function drawKind(
     case 'shieldStorm180c':
     case 'shieldStorm240a':
     case 'shieldStorm240b':
-    case 'shieldStorm240c': {
+    case 'shieldStorm240c':
+    case 'shieldAurora0a':
+    case 'shieldAurora0b':
+    case 'shieldAurora0c':
+    case 'shieldAurora120a':
+    case 'shieldAurora120b':
+    case 'shieldAurora120c':
+    case 'shieldAurora180a':
+    case 'shieldAurora180b':
+    case 'shieldAurora180c':
+    case 'shieldAurora240a':
+    case 'shieldAurora240b':
+    case 'shieldAurora240c':
+    case 'shieldRunes0a':
+    case 'shieldRunes0b':
+    case 'shieldRunes0c':
+    case 'shieldRunes120a':
+    case 'shieldRunes120b':
+    case 'shieldRunes120c':
+    case 'shieldRunes180a':
+    case 'shieldRunes180b':
+    case 'shieldRunes180c':
+    case 'shieldRunes240a':
+    case 'shieldRunes240b':
+    case 'shieldRunes240c':
+    case 'shieldDisco0a':
+    case 'shieldDisco0b':
+    case 'shieldDisco0c':
+    case 'shieldDisco120a':
+    case 'shieldDisco120b':
+    case 'shieldDisco120c':
+    case 'shieldDisco180a':
+    case 'shieldDisco180b':
+    case 'shieldDisco180c':
+    case 'shieldDisco240a':
+    case 'shieldDisco240b':
+    case 'shieldDisco240c': {
       const plate = shieldPlateOf(SPRITE[kind]);
       if (plate === null) throw new Error(`${kind} stands at no place on any ship's shell`);
-      const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!, shellOrbit(plate.ship.shield));
-      const look = plate.ship.shield.look;
-      switch (look) {
-        case 'honeycomb':
-          drawShieldPlate(ctx, at, plate.shimmer, palette[INK_OF[kind]]);
-          return;
-        case 'bubble':
-          drawBubblePlate(ctx, at, plate.shimmer, palette);
-          return;
-        case 'plumes':
-          drawPlumePlate(ctx, at, plate.shimmer, palette);
-          return;
-        case 'lattice':
-          drawLatticePlate(ctx, at, plate.shimmer, palette);
-          return;
-        case 'storm':
-          drawStormPlate(ctx, at, plate.shimmer, palette);
-          return;
-        default: {
-          const never: never = look;
-          throw new Error(`no shell is drawn as ${String(never)}`);
-        }
-      }
+      const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!, shellOrbit(plate.shell));
+      drawPlate(ctx, at, plate.shell.look, plate.shimmer, palette);
+      return;
     }
     /*
       A surge's picture — THE PODS IT ADDS, since 0379.

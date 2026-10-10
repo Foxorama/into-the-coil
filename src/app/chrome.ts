@@ -37,9 +37,10 @@ import { SHOTS } from '../content/shots.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
+import { SHELL_KINDS } from '../content/shells.ts';
 import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS } from '../content/racks.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
-import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
+import { bakeAtlas, bakeGlyph, bakeRim, bakeShell, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
@@ -2184,24 +2185,26 @@ ${each('-tab-key[hidden]')} { display: none; }
   cosmetics as well so we need to have that section capable of handling more"*: a group added is a tab.
 */
 /* Two classes, so it outranks every layout's display for a group — a phone lays one out as a grid. */
-.itc-hangar-group.itc-hangar-group-away { display: none; }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) {
+/* 0584: and Paint & Parts', since the shield made it one group too tall. */
+.itc-hangar-group.itc-hangar-group-away, .itc-parts-group.itc-parts-group-away { display: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']),
+.itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) {
   grid-column: 1 / -1;
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas: 'less track more';
   padding: 0.1em;
   row-gap: 0;
 }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-label,
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-hint { display: none; }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-options {
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-label, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-band-label,
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-band-hint, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-band-hint { display: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-options, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-options {
   display: flex;
   flex-wrap: nowrap;
   gap: 0.2em;
   padding: 0.2em 0.15em 0;
   border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 50%, transparent);
 }
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option {
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-option {
   flex: 1 1 0;
   min-width: 0;
   text-align: center;
@@ -2214,7 +2217,7 @@ ${each('-tab-key[hidden]')} { display: none; }
   padding-bottom: 0.25em;
 }
 /* A tab is where the player is looking, not a thing fitted, so it wears no tick. */
-.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option::before { content: none; }
+.itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option::before, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-option::before { content: none; }
 .itc-shop-option.itc-shop-option-tile { display: grid; grid-template-rows: auto auto auto; justify-items: center; align-content: start; gap: 0.12em; padding-top: 0.35em; padding-bottom: 0.3em; }
 .itc-shop-option-art { display: block; position: relative; width: 100%; height: 3.1em; pointer-events: none; }
 .itc-shop-option-label { line-height: 1.1; }
@@ -2635,8 +2638,7 @@ ${each('-band[hidden]')} { display: none; }
     0550 hid a keeper who only greets from a phone's plate, where the card put Back under the fold. Since
     0572 no keeper is on the plate: their words are a bubble in the stand, so the rule hid nothing and went.
   */
-  /* 0579: Hangin' Out shows one group at a time, so its one group has the plate's width. */
-  .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  /* 0579: Hangin' Out shows one group at a time, so its one group has the plate's width — and 0584, Paint & Parts too. */
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'label label label' 'less track more'; padding: 0 0.1em; row-gap: 0; }
   /* 0566: one chip a band, as wide as the band, its name cut rather than run past its edge. */
   .itc-hangar-group .itc-hangar-band .itc-hangar-option, .itc-parts-group .itc-parts-band .itc-parts-option { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -2709,17 +2711,17 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: flex; justify-content: center; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on):not(.itc-hangar-option-look), .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look) { display: none; }
   /* 0579: except the sub-tabs, every one of which is drawn — a tab shows where else there is to go. */
-  .itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option { display: block; }
+  .itc-hangar-plate .itc-hangar-settings-box > .itc-hangar-band:has([${SETTING_ATTR}='section']) .itc-hangar-option, .itc-parts-plate .itc-parts-settings-box > .itc-parts-band:has([${SETTING_ATTR}='section']) .itc-parts-option { display: block; }
   /*
     0579: and the group in view one row of its bands, side by side — three for the Loadout, two for the
     Cockpit. One under another the Loadout put Back under a 667x375's fold, and two to a row still stood
     the plate 15 px taller than Paint & Parts'. Each chip shows the one that is on, cut short where it
     must be, and the card at the foot names it whole.
   */
-  .itc-hangar-group { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: min(0.6rem, 1.5cqw); }
+  .itc-hangar-group, .itc-parts-group { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: min(0.6rem, 1.5cqw); }
   /* Its arrows as narrow as a 480x320's already are, so the chip between them has the band's width. */
-  .itc-hangar-group .itc-hangar-band { column-gap: 0.1em; }
-  .itc-hangar-group .itc-hangar-band .itc-hangar-band-step { padding-left: 0; padding-right: 0; }
+  .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { column-gap: 0.1em; }
+  .itc-hangar-group .itc-hangar-band .itc-hangar-band-step, .itc-parts-group .itc-parts-band .itc-parts-band-step { padding-left: 0; padding-right: 0; }
   /*
     0561: the one tried on in the fitted one's place; and a band with neither — the tone of a ship in the
     factory's paint — shows its first, shut, so the row is not two arrows round nothing.
@@ -3054,7 +3056,7 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { padding-bottom: 2.2em; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr); }
   /* 0579: held upright the plate scrolls and the width is the short side, so the group in view is two to a row. */
-  .itc-hangar-group { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .itc-hangar-group, .itc-parts-group { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-keeper, .itc-parts-keeper { display: none; }
   /* The readout typeset by the width up here — by the height it was the stand's full width over the ship. */
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.7rem, 3cqw, 1rem); }
@@ -3189,6 +3191,23 @@ ${each('-band[hidden]')} { display: none; }
   /* The foot stacked: the card across the plate, and the balance and the actions under it. */
   .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'focus focus' 'sheet choices' 'glyphs glyphs'; }
   .itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { font-size: 0.74em; }
+}
+/*
+  0589: a landscape phone's shelf one tile, the ware in the window — the hanging shelf has seven since 0589,
+  and in rows of three it ran three rows deep, past a 667x375's foot.
+  And the aisle's five tabs one row, each cut short rather than wrapping to a second.
+*/
+@container (max-height: 460px) {
+  /*
+    The ware in the window alone between the shelf's arrows, as a phone's hangar shows one chip a band (0566):
+    a tile scrolled out of a row is a button the player cannot press, and the layout guard counts it
+    off the screen.
+  */
+  .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-options { display: flex; flex-wrap: nowrap; justify-content: center; }
+  .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-option:not(.itc-shop-option-on) { display: none; }
+  .itc-shop-option.itc-shop-option-tile { flex: 0 1 60%; }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-options { display: flex; flex-wrap: nowrap; }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-option { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 /*
   ── ONE VOICE — 0440 ─────────────────────────────────────────────────────────────────────────────
@@ -3492,7 +3511,8 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
   golf ball dimpled. Each with the dice's hairline and void halo, so it is found on any sky.
 */
 .itc-playing-hud-hang-strand { height: 1.25em; transform: rotate(5deg); }
-.itc-playing-hud-tree, .itc-playing-hud-frame, .itc-playing-hud-ball {
+.itc-playing-hud-tree, .itc-playing-hud-frame, .itc-playing-hud-ball,
+.itc-playing-hud-duck, .itc-playing-hud-shoe, .itc-playing-hud-mirror, .itc-playing-hud-bobble {
   position: absolute;
   top: 100%;
   left: 50%;
@@ -3544,6 +3564,57 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
   background:
     radial-gradient(circle, color-mix(in srgb, var(--itc-ball-shade) 70%, var(--itc-void)) 0 0.03em, transparent 0.045em) 0 0 / 0.21em 0.21em,
     radial-gradient(circle at 34% 30%, var(--itc-lit) 0, var(--itc-lit) 30%, var(--itc-ball-shade) 100%);
+}
+/*
+  0589: four more. The duck a body and a head in the hazard's yellow, an orange bill and a dark eye; the
+  horseshoe a gilt arch, open end up so the luck stays in, with its nail holes; the mirror ball a sphere of
+  tiles in the light ink with a glint; the bobblehead an alien's own green head, far too big, on a small
+  body, its eyes dark — the family's alien, alone.
+*/
+.itc-playing-hud-duck {
+  width: 1.3em;
+  height: 1.1em;
+  margin-left: -0.65em;
+  background:
+    radial-gradient(circle at 70% 26%, var(--itc-void) 0 0.05em, transparent 0.065em),
+    radial-gradient(ellipse 0.22em 0.1em at 94% 38%, var(--itc-bill) 0 90%, transparent 100%),
+    radial-gradient(circle at 66% 32%, var(--itc-duck) 0 0.3em, transparent 0.315em),
+    radial-gradient(ellipse 0.62em 0.4em at 42% 70%, var(--itc-duck) 0 92%, transparent 100%),
+    radial-gradient(ellipse 0.2em 0.14em at 8% 54%, var(--itc-duck) 0 90%, transparent 100%);
+}
+.itc-playing-hud-shoe {
+  width: 1.05em;
+  height: 1.15em;
+  margin-left: -0.525em;
+  box-sizing: border-box;
+  border: 0.24em solid var(--itc-gilt);
+  border-top: none;
+  border-radius: 0 0 0.6em 0.6em;
+  background:
+    radial-gradient(circle at 4% 30%, var(--itc-void) 0 0.035em, transparent 0.05em),
+    radial-gradient(circle at 96% 30%, var(--itc-void) 0 0.035em, transparent 0.05em);
+}
+.itc-playing-hud-mirror {
+  width: 1.05em;
+  height: 1.05em;
+  margin-left: -0.525em;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, var(--itc-lit) 0 0.06em, transparent 0.16em),
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--itc-void) 45%, transparent) 0 0.03em, transparent 0.03em 0.17em),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--itc-void) 45%, transparent) 0 0.03em, transparent 0.03em 0.17em),
+    radial-gradient(circle at 40% 35%, var(--itc-lit) 0, var(--itc-mirror) 55%, color-mix(in srgb, var(--itc-mirror) 55%, var(--itc-void)) 100%);
+}
+.itc-playing-hud-bobble {
+  width: 1.2em;
+  height: 1.45em;
+  margin-left: -0.6em;
+  background:
+    radial-gradient(ellipse 0.13em 0.18em at 34% 34%, var(--itc-void) 0 90%, transparent 100%),
+    radial-gradient(ellipse 0.13em 0.18em at 66% 34%, var(--itc-void) 0 90%, transparent 100%),
+    radial-gradient(ellipse 0.58em 0.5em at 50% 34%, var(--itc-alien) 0 92%, transparent 100%),
+    radial-gradient(ellipse 0.06em 0.2em at 50% 78%, var(--itc-alien) 0 90%, transparent 100%),
+    radial-gradient(ellipse 0.28em 0.2em at 50% 96%, var(--itc-alien) 0 90%, transparent 100%);
 }
 .itc-playing-hud-dice-strand {
   position: absolute;
@@ -4808,6 +4879,8 @@ const SWIPE_PIXELS = 36;
 const SWIPE_SETTLE_MS = 350;
 /** How many pixels across a rim's picture is baked for its tile — 0564; the card shows the same bitmap larger. */
 const WARE_ART_PIXELS = 160;
+/** And a shell's — 0584: its plates are strokes, which a picture baked large and shown small thins to nothing. */
+const SHELL_ART_PIXELS = 64;
 /** 0572: a Hangin' Out card's picture, in canvas pixels across its sprite's box — sharp at two to one on the card. */
 const CARD_PIC_PIXELS = 112;
 /** How an option tried on is fitted, in the words of the hand holding the game — 0561. */
@@ -6448,6 +6521,10 @@ export function makeChrome(
   dice.style.setProperty('--itc-gilt', colours.hazard);
   dice.style.setProperty('--itc-alien', mix(colours.acid, colours.pickup, 0.5));
   dice.style.setProperty('--itc-ball-shade', mix(colours.impact, colours.sky, 0.45));
+  // 0589: the duck the hazard's yellow with the shot's orange for its bill, the mirror ball the light ink toward the sky.
+  dice.style.setProperty('--itc-duck', mix(colours.hazard, colours.impact, 0.15));
+  dice.style.setProperty('--itc-bill', colours.bullet);
+  dice.style.setProperty('--itc-mirror', mix(colours.impact, colours.sky, 0.3));
   const swing = document.createElement('div');
   swing.className = 'itc-playing-hud-dice-swing';
   /*
@@ -6473,11 +6550,22 @@ export function makeChrome(
     string.appendChild(die);
     diceBody.appendChild(string);
   }
-  for (const [kind, part] of [
-    ['eucalyptus', 'tree'],
-    ['family', 'frame'],
-    ['golfball', 'ball'],
-  ] as const) {
+  /*
+    0589: which drawing each dangle hangs as — a `Record` over every dangle but the dice, which hang as a
+    pair, so a dangle added to the table without a drawing here fails to compile rather than hanging nothing.
+  */
+  const DANGLE_PARTS: Record<Exclude<DangleKind, 'dice'>, string> = {
+    eucalyptus: 'tree',
+    family: 'frame',
+    golfball: 'ball',
+    duck: 'duck',
+    horseshoe: 'shoe',
+    mirrorball: 'mirror',
+    bobblehead: 'bobble',
+  };
+  for (const kind of DANGLE_KINDS) {
+    if (kind === 'dice') continue;
+    const part = DANGLE_PARTS[kind];
     const string = document.createElement('div');
     string.className = 'itc-playing-hud-dice-strand itc-playing-hud-hang-strand';
     const thing = document.createElement('div');
@@ -6513,7 +6601,7 @@ export function makeChrome(
     const dangle = DANGLE_KINDS.find((kind) => kind === ware);
     if (dangle !== undefined) {
       holder.className = 'itc-shop-art-dangle itc-playing-hud-hanging itc-playing-hud-hangs-' + dangle;
-      for (const name of ['--itc-fur', '--itc-leaf', '--itc-gilt', '--itc-alien', '--itc-ball-shade']) holder.style.setProperty(name, dice.style.getPropertyValue(name));
+      for (const name of ['--itc-fur', '--itc-leaf', '--itc-gilt', '--itc-alien', '--itc-ball-shade', '--itc-duck', '--itc-bill', '--itc-mirror']) holder.style.setProperty(name, dice.style.getPropertyValue(name));
       holder.style.setProperty('--itc-lit', colours.impact);
       holder.style.setProperty('--itc-ally', colours.ally);
       holder.appendChild(dice.cloneNode(true));
@@ -6523,8 +6611,9 @@ export function makeChrome(
     if (rim !== undefined) {
       holder.className = 'itc-shop-art-rim';
       const wheel = RIMS[rim].wheel;
-      const glyph = wheel === null ? 'spinnerWheel' : wheel.frames[0].base;
-      holder.appendChild(bakeGlyph(glyph, colours, WARE_ART_PIXELS / SPRITE_EXTENT[glyph]));
+      // 0589: a rim baked still into the hull is drawn in its tyre; one that turns, as its turning picture.
+      if (wheel === null) holder.appendChild(bakeRim(rim, colours, WARE_ART_PIXELS));
+      else holder.appendChild(bakeGlyph(wheel.frames[0].base, colours, WARE_ART_PIXELS / SPRITE_EXTENT[wheel.frames[0].base]));
       return holder;
     }
     // 0578: a tube, drawn as its missile pickup's face — the shape the field's pickup for it wears.
@@ -6533,6 +6622,14 @@ export function makeChrome(
       holder.className = 'itc-shop-art-rim';
       const glyph = SPRITE_KINDS[MISSILES[TUBE_WARES[tube].tube].pickup];
       if (glyph !== undefined) holder.appendChild(bakeGlyph(glyph, colours, WARE_ART_PIXELS / SPRITE_EXTENT[glyph]));
+      return holder;
+    }
+    // 0584: a shell, as a ship carrying three shields wears it.
+    const shell = SHELL_KINDS.find((kind) => kind === ware);
+    if (shell !== undefined) {
+      holder.className = 'itc-shop-art-rim';
+      // Near the size a tile shows it, so the plates' one-pixel floor keeps them legible rather than scaled to a hair.
+      holder.appendChild(bakeShell(shell, colours, SHELL_ART_PIXELS));
       return holder;
     }
     const flame = FLAME_KINDS.find((kind) => kind === ware);
@@ -6568,6 +6665,13 @@ export function makeChrome(
         const flame = FLAME_KINDS[i];
         if (flame === undefined) return null;
         holder.appendChild(wareArt(flame));
+        return holder;
+      }
+      // 0584: the shell, drawn as Cosmo's shelf draws it.
+      if (band === 'shell') {
+        const shell = SHELL_KINDS[i];
+        if (shell === undefined) return null;
+        holder.appendChild(wareArt(shell));
         return holder;
       }
       holder.setAttribute('aria-hidden', 'true');
