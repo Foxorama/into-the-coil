@@ -9,7 +9,7 @@ import { choose, openSettings } from './title.ts';
 import { keptContext, keyedOut, seeded } from './seed.ts';
 import { SETTINGS_KEY, serialiseSettings, settingsFrom } from '../src/save/settings.ts';
 import { initialSettings, type SettingsState } from '../src/state/slices/settings.ts';
-import { STYLE_KINDS } from '../src/content/styles.ts';
+import { HAND_KINDS } from '../src/content/touch.ts';
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { TRAVEL_KINDS } from '../src/content/travel.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -33,7 +33,7 @@ const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url))
 /** Every kept setting off its default. */
 const kept: SettingsState = {
   ...initialSettings,
-  style: STYLE_KINDS.find((k) => k !== initialSettings.style)!,
+  hand: HAND_KINDS.find((k) => k !== initialSettings.hand)!,
   sound: SOUND_KINDS.find((k) => k !== initialSettings.sound)!,
   difficulty: DIFFICULTY_KINDS.find((k) => k !== initialSettings.difficulty)!,
 };
@@ -59,7 +59,7 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
       DIFFICULTY_KINDS.indexOf(kept.difficulty),
     );
     await openSettings(page);
-    expect(await marked(page, 'settings', 'style'), 'Settings opened on the default look').toBe(STYLE_KINDS.indexOf(kept.style));
+    expect(await marked(page, 'settings', 'hand'), 'Settings opened on the default hand').toBe(HAND_KINDS.indexOf(kept.hand));
     expect(await marked(page, 'settings', 'sound'), 'Settings opened on the default sound').toBe(SOUND_KINDS.indexOf(kept.sound));
 
     // A band pressed, and the page booted again.
@@ -67,7 +67,7 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
     await choose(page, 'travel', TRAVEL_KINDS.indexOf(travel));
     const written = settingsFrom(await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY), initialSettings);
     expect(written.travel, 'pressing a band did not write it').toBe(travel);
-    expect(written.style, 'writing one setting lost another').toBe(kept.style);
+    expect(written.hand, 'writing one setting lost another').toBe(kept.hand);
 
     await page.reload();
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });

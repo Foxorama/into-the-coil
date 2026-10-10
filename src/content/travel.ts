@@ -29,7 +29,7 @@
  * on a comfort setting reaching the model — *"a player who turns the flashing down must not thereby
  * be playing an easier game"* — so `src/app/frame.ts` must never be able to see this table. The frame
  * is handed a NUMBER (`World.warp`) and never learns where it came from; `tests/travel.test.ts` scans
- * the import graph for it exactly as `tests/sound.test.ts` and `tests/style.test.ts` do for theirs.
+ * the import graph for it exactly as `tests/sound.test.ts` and `tests/hand.test.ts` do for theirs.
  *
  * ⚠️ **Every duration here is in STEPS, like every other duration in this project** —
  * `src/content/cues.ts` says so in as many words. The rate is 60Hz and is stated in
@@ -50,7 +50,7 @@ export interface TravelRow {
   /**
    * One line under it — `docs/game.md`'s voice rule: what it is, never why it is good.
    *
-   * ⚠️ On the row rather than in `src/app/chrome.ts`, for the reason `src/content/styles.ts` gives:
+   * ⚠️ On the row rather than in `src/app/chrome.ts`, for the reason 0070 gave for the look's table:
    * a second list of explanations goes on saying the old thing the day one of them changes.
    */
   hint: string;
@@ -114,7 +114,7 @@ export const TRAVELS: Record<TravelKind, TravelRow> = {
  * What a player who has chosen nothing gets.
  *
  * ⚠️ **The scene, because 0024 says there is one game and it is the loud one.** A default of *brief*
- * would make the full burn a thing nobody finds — `src/content/styles.ts`'s argument for defaulting
+ * would make the full burn a thing nobody finds — 0070's argument for defaulting
  * to the newer look, and `src/content/sound.ts`'s for defaulting to noise.
  */
 export const DEFAULT_TRAVEL: TravelKind = 'scene';

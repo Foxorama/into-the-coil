@@ -23,6 +23,14 @@
  *
  * Nothing here allocates after `combineDevices` returns. The source list is captured once; `sample`
  * walks it with an index rather than an iterator and writes into the caller's `Intent`.
+ *
+ * ── AND THE ONE PLACE A MIRRORED SCREEN IS READ BACK INTO THE WORLD ────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md`.** Played left-handed,
+ * the field is shown flipped left for right, so a push to the screen's left is a push FORWARD. Every
+ * device turns a push into `along` by its own arithmetic, and each would otherwise need to learn the
+ * hand; here, after the sum, is the one place all of them pass through. `across` and `aim` run up and
+ * down the screen, which a left-for-right mirror does not touch.
  */
 
 import type { InputSource } from './input.js';
@@ -40,7 +48,7 @@ function clamp1(n: number): number {
  * combiner inside another would zero away everything the outer one had collected. The shell attaches
  * exactly one.
  */
-export function combineDevices(sources: readonly InputSource[]): InputSource {
+export function combineDevices(sources: readonly InputSource[], mirrored: () => boolean = () => false): InputSource {
   // @setup: captured once when the shell wires input, never rebuilt per step.
   const attached = sources.slice();
 
@@ -57,6 +65,8 @@ export function combineDevices(sources: readonly InputSource[]): InputSource {
       intent.along = clamp1(intent.along);
       intent.across = clamp1(intent.across);
       intent.aim = clamp1(intent.aim);
+      // 0590: the screen is flipped, so the push is — after the clamp, which is symmetric about nought.
+      if (mirrored()) intent.along = -intent.along;
     },
     // Forwarded to every source, for the same reason `release` is: the shell holds one handle and
     // must not have to know which devices are behind it.

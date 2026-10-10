@@ -31,7 +31,7 @@ import { back, openSettings } from './title.ts';
  *
  * ⚠️ **So this counts the platform calls rather than trusting the shell.** Web Audio's own
  * constructors are wrapped before the page's script runs, which is the audible equivalent of
- * `tests/style.browser.test.ts` counting ink on the canvas — the only honest end of the chain.
+ * the look's browser test (deleted with it by 0590) counting ink on the canvas — the only honest end of the chain.
  * `docs/decisions/0027-measure-the-picture-not-the-model.md`.
  *
  * ⚠️ **READ THE SKIPPED COUNT.** `runIf` means a machine with no browser still passes.

@@ -54,14 +54,14 @@ describe.runIf(chromePath)('0512 — the touch section', () => {
   it('is offered on a touch screen and not on a desktop', async () => {
     const desk = await open(false);
     await openSettings(desk);
-    expect(await bandShown(desk, 'hand'), 'a desktop with no touchscreen was offered the trigger side').toBe(false);
     expect(await bandShown(desk, 'steer'), 'a desktop with no touchscreen was offered the steering').toBe(false);
-    expect(await bandShown(desk, 'style'), 'the check cannot see a band that is there').toBe(true);
+    // 0590: the hand is the whole game mirrored now, so a desktop is offered it — and it is the band that is there.
+    expect(await bandShown(desk, 'hand'), 'the check cannot see a band that is there').toBe(true);
     await desk.context().close();
 
     const phone = await open(true);
     await openSettings(phone);
-    expect(await bandShown(phone, 'hand'), 'a touch screen was not offered the trigger side').toBe(true);
+    expect(await bandShown(phone, 'hand'), 'a touch screen was not offered the hand').toBe(true);
     expect(await bandShown(phone, 'steer'), 'a touch screen was not offered the steering').toBe(true);
     await phone.context().close();
   });

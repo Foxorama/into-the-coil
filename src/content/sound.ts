@@ -12,8 +12,8 @@
  * import `src/content/cues.ts`. It must NEVER be able to see this file. 0024 closes the door on a
  * comfort setting reaching the model: *"a player who turns the flashing down must not thereby be
  * playing an easier game."* A step that could read whether sound is on is a step that could branch on
- * it, and `tests/sound.test.ts` scans for exactly that, the same way `tests/style.test.ts` scans for
- * the style table.
+ * it, and `tests/sound.test.ts` scans for exactly that, the same way `tests/hand.test.ts` scans for
+ * the hand.
  *
  * With one file the scan would have to allow the import and check the *usage*, which is a claim about
  * intentions rather than a fact about the import graph — and 0070 chose the graph deliberately,
@@ -32,7 +32,7 @@ export interface SoundRow {
   /**
    * One line under it — `docs/game.md`'s voice rule: what it is, never why it is good.
    *
-   * ⚠️ On the row rather than in `src/app/chrome.ts`, for the reason `src/content/styles.ts` gives:
+   * ⚠️ On the row rather than in `src/app/chrome.ts`, for the reason 0070 gave for the look's table:
    * a second list of explanations goes on saying the old thing the day one of them changes.
    */
   hint: string;
@@ -48,7 +48,7 @@ export const SOUNDS: Record<SoundKind, SoundRow> = {
  *
  * ⚠️ **On, because 0024 says there is one game and it is the loud one** — *"fast, bright, full of
  * audio cues and warnings. Nothing in this decision restrains it."* A default of silence would make
- * the whole of this a feature nobody finds, on the same argument `src/content/styles.ts` gives for
+ * the whole of this a feature nobody finds, on the same argument 0070 gave for
  * defaulting to the newer look.
  *
  * ⚠️ **It is not an autoplay problem, and that is worth knowing rather than worrying about.** Every

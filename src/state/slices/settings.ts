@@ -11,8 +11,8 @@
  * bug rather than the design.
  *
  * ⚠️ **It does not import a sibling** — `docs/decisions/0017-the-state-is-slices.md`. It knows
- * nothing about screens or runs, which is what lets the style be read by the shell without the
- * reducer growing an opinion about what a re-bake costs.
+ * nothing about screens or runs, which is what lets a setting be read by the shell without the
+ * reducer growing an opinion about what applying it costs.
  *
  * ⚠️ **Plain data, because this is the FIRST thing `save/` will persist** and the one most likely to
  * be persisted separately from a run: `docs/game.md` calls the save an interruption hedge for a run,
@@ -20,7 +20,6 @@
  */
 
 import { DEFAULT_SOUND, type SoundKind } from '../../content/sound.ts';
-import { DEFAULT_STYLE, type StyleKind } from '../../content/styles.ts';
 import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
 import { DEFAULT_GOLFER, type GolferKind } from '../../content/golfers.ts';
 import { TUNED, type DifficultyKind } from '../../content/difficulty.ts';
@@ -31,13 +30,12 @@ import { type SettingName } from '../screens.ts';
 /**
  * What each setting holds.
  *
- * ⚠️ **It may never reach the simulation.** The whole reason a style is a `content` row rather than
+ * ⚠️ **It may never reach the simulation.** The whole reason a setting is a `content` row rather than
  * an `Assists` knob is that `src/sim/assist.ts` bans a cosmetic setting from changing the outcome —
- * and this interface is where that ban would be broken first. `tests/style.test.ts` holds it.
+ * and this interface is where that ban would be broken first. `tests/touch.test.ts`,
+ * `tests/travel.test.ts` and `tests/hand.test.ts` hold it for the fields that could be reached for.
  */
 interface SettingValue {
-  /** What the game looks like. `src/content/styles.ts` is the table. */
-  style: StyleKind;
   /**
    * Whether the game makes any noise. `src/content/sound.ts` is the table.
    *
@@ -64,7 +62,7 @@ interface SettingValue {
    * screen at boot and on the title's pilot band (0458); `src/content/golfers.ts` is the table.
    *
    * ⚠️ **WHO THEY ARE, NOT WHAT THEY FLY, WHICH IS WHY IT IS A SETTING** and not on the run: it changes
-   * the pilot the intro draws and nothing the simulation reads, on `style`'s terms above. The day a
+   * the pilot the intro draws and nothing the simulation reads, on `sound`'s terms above. The day a
    * golfer owns a ship it moves to the run, because then it is a property of the game being played.
    * Not remembered between visits — asked for as *"pick each visit"*.
    */
@@ -79,11 +77,14 @@ interface SettingValue {
    */
   difficulty: DifficultyKind;
   /**
-   * Which side the trigger discs stand on — 0512. `src/content/touch.ts` is the table.
+   * Which hand the game is played in — 0590, and before it which side the trigger discs stood on
+   * (0512). `src/content/touch.ts` is the table. *Left* is the whole game mirrored: the ship flies to
+   * the left, and the discs stand up the left edge.
    *
-   * ⚠️ **IT REACHES `src/app/touch.ts` AND THE CHROME AND NOTHING ELSE**, on `sound`'s terms above: where
-   * a tap is read as a trigger, and where the disc that says so is drawn. Both read the one value, so
-   * the picture and the hit test cannot stand on different sides.
+   * ⚠️ **IT REACHES THE SHELL'S EDGES AND NOTHING ELSE**, on `sound`'s terms above: the canvas is shown
+   * flipped (`src/app/mount.ts`), the input is flipped where the devices are summed
+   * (`src/app/devices.ts`), and the discs and their hit test stand on the one side. The world steps
+   * the identical game in either hand — `tests/hand.test.ts` holds that the frame cannot see it.
    */
   hand: HandKind;
   /** How far the ship goes for a finger's travel — 0512, on `hand`'s terms. */
@@ -113,7 +114,6 @@ export type SettingsState = { readonly [K in SettingName]: SettingValue[K] };
  * rather than by switching over action names.
  */
 export type SettingsAction =
-  | { slice: 'settings'; type: 'style'; style: StyleKind }
   | { slice: 'settings'; type: 'sound'; sound: SoundKind }
   | { slice: 'settings'; type: 'travel'; travel: TravelKind }
   | { slice: 'settings'; type: 'pilot'; pilot: GolferKind }
@@ -127,7 +127,6 @@ export type SettingsAction =
  * tier the game is tuned at (`TUNED`), which is the middle one and the one 0047 calls the game.
  */
 export const initialSettings: SettingsState = {
-  style: DEFAULT_STYLE,
   sound: DEFAULT_SOUND,
   travel: DEFAULT_TRAVEL,
   pilot: DEFAULT_GOLFER,
@@ -139,12 +138,9 @@ export const initialSettings: SettingsState = {
 
 export function reduceSettings(state: SettingsState, action: SettingsAction): SettingsState {
   switch (action.type) {
-    case 'style':
-      // Identity preserved when nothing moved, so the shell can tell a real change from a repeated
-      // dispatch without comparing fields — which is what stops a re-bake per press.
-      return state.style === action.style ? state : { ...state, style: action.style };
-    // Same shape, and the identity rule matters here for a second reason: `applySound` sounds the
-    // chime, so a rebuilt slice would blip on every unrelated press of the option already chosen.
+    // Identity preserved when nothing moved, so the shell can tell a real change from a repeated
+    // dispatch without comparing fields: `applySound` sounds the chime, so a rebuilt slice would blip
+    // on every unrelated press of the option already chosen.
     case 'sound':
       return state.sound === action.sound ? state : { ...state, sound: action.sound };
     // Same shape again. The identity rule buys nothing here — nothing re-bakes or sounds on a

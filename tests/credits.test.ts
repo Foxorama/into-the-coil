@@ -73,7 +73,7 @@ describe('the credits are the run’s', () => {
   it('Freeplay is kept between visits, and a document from before it reads as no quarters', () => {
     const free = { ...initialSettings, credits: 'free' as const };
     expect(settingsFrom(serialiseSettings(free), initialSettings).credits).toBe('free');
-    const before = JSON.stringify({ v: SETTINGS_VERSION, style: initialSettings.style });
+    const before = JSON.stringify({ v: SETTINGS_VERSION, sound: initialSettings.sound });
     expect(settingsFrom(before, initialSettings).credits).toBe('none');
   });
 });

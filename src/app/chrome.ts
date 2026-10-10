@@ -1425,7 +1425,6 @@ ${each('-action-cursor')} {
 }
 .itc-intro-skip-shown { display: block; animation: itc-intro-skip-in 0.5s ease-out both; }
 .itc-intro-skip:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
-.itc-intro-skip.itc-intro-face-pixel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 @keyframes itc-intro-skip-in { from { opacity: 0; } to { opacity: 0.9; } }
 /*
   ── THE FINALE'S SPEECH BUBBLE — 0418 ──────────────────────────────────────────────────────────────
@@ -1458,6 +1457,18 @@ ${each('-action-cursor')} {
 }
 .itc-outro-bubble-below { transform: translate(0.6em, 0); }
 .itc-outro-bubble-below::after { bottom: auto; top: 0.5em; }
+/*
+  Played left-handed — 0590 — the field is mirrored and the ships face left, so the bubble hangs to the
+  LEFT of the mouth with its tail on its right, which is the same bubble seen in the mirror.
+*/
+.itc-outro-bubble-mirrored { transform: translate(calc(-100% - 0.6em), -100%); }
+.itc-outro-bubble-mirrored.itc-outro-bubble-below { transform: translate(calc(-100% - 0.6em), 0); }
+.itc-outro-bubble-mirrored::after {
+  left: auto;
+  right: -0.55em;
+  border-right: 0;
+  border-left: 0.7em solid var(--itc-ink, #fff);
+}
 .itc-outro-bubble-shown { display: block; animation: itc-outro-bubble-in 0.25s ease-out both; }
 .itc-outro-bubble-unsaid { visibility: hidden; }
 .itc-outro-bubble-who {
@@ -1470,7 +1481,6 @@ ${each('-action-cursor')} {
   text-transform: uppercase;
   opacity: 0.8;
 }
-.itc-outro-bubble.itc-outro-face-pixel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 @keyframes itc-outro-bubble-in { from { opacity: 0; } to { opacity: 1; } }
 /*
   ⚠️ A filled shield against a HOLLOW one, not two colours. Decision 0024 puts "colour never carries
@@ -2444,28 +2454,6 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
   color: var(--itc-void);
 }
 /*
-  ── THE FACE, WHICH IS THE UI HALF OF A STYLE ───────────────────────────────────────────────────
-
-  Decision 0070: the ask is *"Retro UI / Modern UI"*, and a style that changed only the background
-  would be a sky toggle with a misleading name. The stack lives here rather than in the style table
-  for the reason the palette gives about inks: a font stack is a fact about a browser, and a second
-  copy of it in a content row drifts the day one of them gains a fallback.
-
-  ⚠️ No file paths in this stylesheet — the prefix guard reads every dotted token as a class name.
-*/
-.itc-title-face-pixel,
-.itc-settings-face-pixel,
-.itc-guide-face-pixel,
-.itc-gameover-face-pixel,
-.itc-ended-face-pixel,
-.itc-cleared-face-pixel,
-.itc-victory-face-pixel,
-.itc-travel-face-pixel,
-.itc-playing-face-pixel {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  letter-spacing: 0.06em;
-}
-/*
   ── THE TRIGGER BUTTONS, DRAWN ──────────────────────────────────────────────────────────────────
 
   Decision 0060, and 0358 for the shape. Reported from play: *"how do you fire bombs on mobile? I can
@@ -2533,15 +2521,15 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
 /* A band the device has no use for is off the screen, whatever display the band rule gives it. */
 ${each('-band[hidden]')} { display: none; }
 /*
-  ⚠️ **ON A TOUCH SCREEN SETTINGS IS TWO COLUMNS, AND THE SECOND IS THE TOUCH SECTION — 0512.** Five
-  bands in one column were 505 px of content on a 390 px phone and 39 px too many on a touch laptop;
-  the width every landscape screen has to spare is the room. Filled down the columns, three to a
-  column, so down from the last of the three goes to the first of the touch section's, which is the
-  order the walk takes them in.
+  ⚠️ **ON A TOUCH SCREEN SETTINGS IS TWO COLUMNS — 0512.** Five bands in one column were 505 px of
+  content on a 390 px phone and 39 px too many on a touch laptop; the width every landscape screen has
+  to spare is the room. Filled down the columns, two to a column since 0590 took the look away and made
+  the hand a band for every device — the sound and the crossing, then the hand and the steering — so the
+  two columns are the same height and the walk goes down one and on to the next.
 */
 .itc-settings-touch .itc-settings-settings-box {
   display: grid;
-  grid-template-rows: repeat(3, auto);
+  grid-template-rows: repeat(2, auto);
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   column-gap: min(1rem, 2cqw);
@@ -2572,9 +2560,17 @@ ${each('-band[hidden]')} { display: none; }
     words under the arrows at 480 and again at 812, each a few pixels past where this machine's ended.
     A rule that holds by a margin of fonts is not a rule; this one holds at any width.
   */
-  .itc-settings-touch .itc-settings-band-step, .itc-settings-touch .itc-settings-band-label { display: none; }
-  /* One column with the steps gone, or their empty columns keep their gaps — six pixels a side, measured. */
-  .itc-settings-touch .itc-settings-band { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'track' 'hint'; gap: 0.1em; padding: 0.2em 0.25em; }
+  .itc-settings-touch .itc-settings-band-step { display: none; }
+  /*
+    One column with the steps gone, or their empty columns keep their gaps — six pixels a side, measured.
+
+    ⚠️ **AND THE LABEL BACK, OVER THE TRACK RATHER than beside it — 0590.** It went with the steps when it
+    stood beside the track, where it cost width the words needed; a band of *Right · Left* or *Gentle ·
+    Standard · Quick* with no name over it was a choice the player had to read the hint to identify. Two
+    to a column, the line it costs is the line the third band's row gave back.
+  */
+  .itc-settings-touch .itc-settings-band { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'label' 'track' 'hint'; gap: 0.1em; padding: 0.2em 0.25em; }
+  .itc-settings-touch .itc-settings-band-label { text-align: center; }
   .itc-settings-touch .itc-settings-option { font-size: 0.8em; padding: 0.3em 0.25em; }
   ${each('-band')} {
     grid-template-columns: max-content auto minmax(0, 1fr) auto;
@@ -4643,13 +4639,6 @@ export interface Chrome {
    */
   setLabels(name: ChoiceName, options: readonly { label: string; hint: string }[]): void;
   /**
-   * Switch the chrome's typeface role — the UI half of a style, decision 0070.
-   *
-   * A class on every overlay rather than on the document, because the build puts this stylesheet in
-   * a page it does not own (0003) and a rule on `body` would reach past the game.
-   */
-  setFace(face: 'pixel' | 'clean'): void;
-  /**
    * Say what the music room is playing and how far through it is — 0212. `null` hides the readout.
    *
    * Called on a change of what it displays rather than per frame, on `setTimer`'s own terms: the
@@ -4732,6 +4721,11 @@ export interface Chrome {
    * or the speaker has moved a pixel — since 0426 a bubble rides its ship.
    */
   setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name?: string, mark?: string): void;
+  /**
+   * Whether the field is shown mirrored — 0590, played left-handed. The bubble hangs to the left of the
+   * mouth with the tail on its right; the caller has already mirrored the mouth's `x`.
+   */
+  setMirrored(mirrored: boolean): void;
   /**
    * Say something under one control that the row cannot know in advance — 0415: *Pilot* on the menu
    * says who is flying. Pushed in, on `setHud`'s terms, when it changes.
@@ -6040,7 +6034,7 @@ export function makeChrome(
       /*
         ⚠️ **WHICH setting this strip belongs to, on the element rather than in a position** — added
         with the second setting (`docs/decisions/0072-a-cue-is-baked-and-played.md`), because with one
-        there was no question to answer. `tests/style.browser.test.ts` had been reaching for *the nth
+        there was no question to answer. The look's browser test (deleted with the look by 0590) had been reaching for *the nth
         option on the title screen*, which was exact while every option belonged to the same row and
         became a test about whichever setting happened to be listed first.
 
@@ -7940,22 +7934,8 @@ export function makeChrome(
         sayBand(band);
       }
     },
-    setFace(face: 'pixel' | 'clean'): void {
-      /*
-        ⚠️ **Toggled on every screen's overlay and on the readout**, because a face that changed on
-        the title and not in the game would be the setting half-applied — and the readout is the one
-        piece of chrome the player looks at while flying.
-      */
-      for (const screen of Object.keys(panels) as Screen[]) {
-        panels[screen]?.root.classList.toggle(prefixFor(screen) + 'face-pixel', face === 'pixel');
-      }
-      hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
-      trigger.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
-      bossBar.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
-      scoreBox.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
-      pause.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
-      skip.classList.toggle(prefixFor('intro') + 'face-pixel', face === 'pixel');
-      bubble.classList.toggle(prefixFor('outro') + 'face-pixel', face === 'pixel');
+    setMirrored(mirrored: boolean): void {
+      bubble.classList.toggle(prefixFor('outro') + 'bubble-mirrored', mirrored);
     },
     setSkipReady(ready: boolean): void {
       skipReady = ready;

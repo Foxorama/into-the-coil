@@ -12,7 +12,7 @@ export const PROBES = [
     decision: '0072',
     suite: 'tests/sound.test.ts',
     /*
-      ⚠️ THE BAN, and it is the same break 0070's probe makes against the style table because it is
+      ⚠️ THE BAN, and it is the same break 0590's probe makes against the hand because it is
       the same failure: a comfort setting read by the thing that decides what hits what. Nothing
       about it looks wrong at the call site — the frame already names cues — and afterwards, turning
       the sound off is a difficulty setting nobody can tell apart from one.
@@ -168,15 +168,15 @@ export const PROBES = [
     suite: 'tests/sound.test.ts',
     /*
       ⚠️ THE BUG A ONE-FIELD SLICE COULD NOT HAVE HAD. `{ sound }` type-checked perfectly while there
-      was one setting; with two it silently resets the other one, so the player's chosen look
-      disappears every time they touch the sound.
+      was one setting; with two it silently resets the others, so the player's chosen hand (0590, which
+      re-anchored this from the look it removed) flips back every time they touch the sound.
     */
-    broke: 'the settings slice rebuilt without the other field, so choosing a sound throws the style away',
-    guard: 'and does not take the style with it, which a slice of two fields makes possible for the first time',
+    broke: 'the settings slice rebuilt without the other fields, so choosing a sound throws the hand away',
+    guard: 'and does not take another setting with it, which a slice of two fields makes possible',
     edit: {
       path: 'src/state/slices/settings.ts',
       find: '      return state.sound === action.sound ? state : { ...state, sound: action.sound };',
-      replace: '      return state.sound === action.sound ? state : { style: DEFAULT_STYLE, sound: action.sound };',
+      replace: '      return state.sound === action.sound ? state : { ...initialSettings, sound: action.sound };',
     },
   },
   {

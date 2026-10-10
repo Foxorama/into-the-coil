@@ -5,10 +5,8 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { choose, openRoom, openSettings } from './title.ts';
+import { openRoom } from './title.ts';
 import { SCREENS } from '../src/state/screens.ts';
-// 0213: the sky is turned off so that ink in the lane means an entity and nothing else.
-import { STYLE_KINDS } from '../src/content/styles.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
 
@@ -97,9 +95,6 @@ async function open(): Promise<Page> {
 
 const MUSIC = '.' + prefixFor('music').slice(0, -1);
 const NOW = '.' + prefixFor('music') + 'now';
-/** Which style option is the one with no sky. Read off the table, never counted by hand. */
-const RETRO = STYLE_KINDS.indexOf('retro');
-
 /**
  * Press a control on the shown screen by its visible label.
  *
@@ -432,73 +427,17 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
  * the enemies from that starting screen."*
  */
 describe.runIf(chromePath)('the room flies the level rather than showing the boot field', () => {
-  it('opens on an empty lane, and keeps something in it for a whole walk', async () => {
-    const page = await open();
-
-    /*
-      ⚠️ **THE STAR FIELD IS TURNED OFF FIRST, AND WITHOUT THAT THIS GUARD IS VACUOUS.** The first
-      version counted lit pixels across the playfield and **stayed green with the whole mote field
-      deleted** — because what it was counting was the sky. `npm run prove` is what said so, which is
-      the entire reason 0005 exists. Retro is *the game before the sky*
-      (`docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`), so with it on, ink in the
-      lane is **entities and nothing else**.
-    */
-    // On Settings since 0458, which is also the room's door.
-    await openSettings(page);
-    await choose(page, 'style', RETRO);
-    await press(page, 'Music room');
-
-    /*
-      ⚠️ **A BAND WITH NO PANEL IN IT, NO SHIP, AND NOT THE BOX EDGE EITHER.** The ship holds station
-      at `SHIP_START_ALONG`, a fixed fifth along the camera's frame; the panel is centred; and
-      `docs/decisions/0074-the-box-is-drawn.md`'s dashed wall is drawn at the leading edge **on every
-      screen, always**. The first draft of this band ran to 1250 and included that wall, so it
-      **stayed green with the whole mote field deleted** — the second time in this one test that a
-      count of lit pixels turned out to be counting furniture. 950 to 1140 is dust or nothing.
-    */
-    const dust = (): Promise<number> =>
-      page.evaluate(() => {
-        const canvas = document.querySelector('#app canvas');
-        if (!(canvas instanceof HTMLCanvasElement)) return 0;
-        const out = document.createElement('canvas');
-        out.width = 190;
-        out.height = 600;
-        const ctx = out.getContext('2d');
-        ctx?.drawImage(canvas, 950, 60, 190, 600, 0, 0, 190, 600);
-        const data = ctx?.getImageData(0, 0, 190, 600).data;
-        if (data === undefined) return 0;
-        let lit = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i]! + data[i + 1]! + data[i + 2]! > 150) lit++;
-        }
-        return lit;
-      });
-
-    const opened = await dust();
-    await press(page, THEMES.approach.title);
-    await waitForWalk(page);
-    const early = await dust();
-
-    /*
-      ⚠️ **THE DEFECT WAS *AND THEN THERE'S NO ENEMIES AT ALL SHOWING AGAIN*, so the reading that
-      matters is at the END of a stretch of walking**, not at the start. The seeded field emptied over
-      about ten seconds; a field that wrapped incorrectly would empty over a similar stretch and look
-      identical for the first frame.
-    */
-    await page.locator(NOW + '-bar').focus();
-    await page.keyboard.press('End');
-    await page.waitForTimeout(1_000);
-    const late = await dust();
-
-    expect(opened, 'the room opens on an empty lane — there is no dust in it at all').toBeGreaterThan(0);
-    expect(early, 'the lane has no dust in it as the walk starts').toBeGreaterThan(0);
-    expect(
-      late,
-      'the lane emptied out over the walk, which is the reported defect with different bodies in it',
-    ).toBeGreaterThan(0);
-    await page.context().close();
-  });
-
+  /*
+    ⚠️ **NO GUARD HERE FOR *opens on an empty lane, and keeps something in it for a whole walk*, AND IT
+    WAS DELETED WITH THE LOOK IT WAS MEASURED THROUGH** —
+    `docs/decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md`. It counted lit pixels in
+    a band of the lane with Retro on, because Retro was the game with no sky and so ink there was entities
+    and nothing else. With the sky on, measured on the build before Retro went, the band held about 1,070
+    lit pixels against the motes' 76 — so the same count with the motes deleted stays green, which is the
+    vacuous guard 0005 exists for. The field's own arithmetic is still held by `tests/attract.test.ts`
+    (*never empties, at any point of any walk*); what is no longer held is the shell's wiring of the motes
+    into the room, and the decision names it as owed.
+  */
   /*
     ⚠️ **THE ONE CONSTRAINT THE ASK CAME WITH**: *"if we can do both without the ship getting hit by
     debris and exploding"*. It is guaranteed structurally — the room is `steps: false`, so

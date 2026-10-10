@@ -1,5 +1,8 @@
 # 0070 — A style is a setting, and the first one
 
+**Superseded in part by [0590](0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md)**: the look and
+Retro are removed. *A choice is not an action*, and *a setting may never reach the sim*, stand.
+
 **Accepted 2026-08-07.** Adds the third slice, the first thing on `SCREENS` that is chosen rather
 than pressed, and the axis every later art pass hangs off. Sits under
 [0024](0024-the-accessibility-floor-is-settings.md), which already said cosmetic settings exist and

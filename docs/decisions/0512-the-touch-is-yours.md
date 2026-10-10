@@ -1,5 +1,8 @@
 # 0512 — The touch is yours
 
+**Amended by [0590](0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md)**: the trigger side became
+the hand, offered on every device, and *Left* mirrors the whole field with the discs.
+
 **Accepted 2026-10-04.** Item 4 of [`the-menus-reviewed`](../../reports/the-menus-reviewed-2026-10-02.md),
 the touch section. Asked as *trigger side, sensitivity, both, neither?*, and answered **both**.
 

@@ -303,7 +303,7 @@ last run's shard times before choosing.
 | **the box is the screen, and the screen is 16:9** | [0080](decisions/0080-the-box-is-the-screen-and-the-screen-is-16-9.md) |
 | **what must be told apart is told apart by more than ink** | [0081](decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md) |
 | **seven levels, seven bosses, one idea each** | [0071](decisions/0071-five-more-levels-and-one-idea-each.md) |
-| **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
+| **a style is a setting, a choice is not an action, and neither may touch the sim — the look itself removed by 0590, which gave the game a left hand** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md), [0590](decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md) |
 | **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
 | **an enemy is a pilot: motion is a closed union and three of them react to the player** | [0073](decisions/0073-an-enemy-is-a-pilot.md) |
 | **the edge of the player's box is drawn, and the clamp and the mark are one number — and since 0359 it is drawn only WHILE THE SHIP IS ON IT** | [0074](decisions/0074-the-box-is-drawn.md), [0359](decisions/0359-the-wall-is-drawn-while-it-is-met.md) |
@@ -1160,6 +1160,12 @@ ONE MESSAGE.**
   **Owed from the play, and it is the whole verdict again:** a hand on `npm run dash`. The decision says
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
+
+### ⚠️ THE GAME HAS A LEFT HAND, AND RETRO IS GONE — OWED A PLAY — 2026-10-10
+
+[0590](decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md): Settings is Sound, Travel,
+Hand and (on glass) Steering; *Left* mirrors the field and the discs. Owed: a left-handed play on a desktop,
+a pad and a phone, and the picture-level guard for the music room's motes that the decision names.
 
 ### ⚠️ THE PLAY-TEST OF 2026-10-10 IS BUILT IN ONE PR AND OWED A PLAY
 
