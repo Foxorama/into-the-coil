@@ -32,6 +32,12 @@ export const ART_KINDS = [
   'boltTank',
   'pawprint',
   'pinstripes',
+  // 0589: a fourth for every ship.
+  'goldBolt',
+  'rainbow',
+  'tiger',
+  'surf',
+  'stars',
 ] as const;
 export type ArtKind = (typeof ART_KINDS)[number];
 
@@ -65,4 +71,10 @@ export const ART: Record<ArtKind, ArtRow> = {
   boltTank: { name: 'Lightning tank', hint: 'One cyan bolt down the tank', ship: 'thunderbolt' },
   pawprint: { name: 'Paw print', hint: 'The Marmot’s own paw, in gold on the tank', ship: 'thunderbolt' },
   pinstripes: { name: 'Pinstripes', hint: 'Hand-pulled gold lines along the tank', ship: 'thunderbolt' },
+  // 0589: *"we need more cosmetics of every shape and style"* — a fourth look for every ship, on its win as the others.
+  goldBolt: { name: 'Gold bolt', hint: 'A lightning bolt in gold down the nose', ship: 'fighter' },
+  rainbow: { name: 'Rainbow dome', hint: 'The glass in four colours, like a beach ball', ship: 'caddie' },
+  tiger: { name: 'Tiger stripes', hint: 'Three gold claws raked down the door', ship: 'firebird' },
+  surf: { name: 'Surf’s up', hint: 'A white surfboard on the back panel', ship: 'estate' },
+  stars: { name: 'Gold stars', hint: 'Three gold stars across the tank', ship: 'thunderbolt' },
 };

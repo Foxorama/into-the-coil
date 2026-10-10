@@ -3229,6 +3229,23 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
       const [tx, ty] = at(4 + dx, -2.6 + dy * 0.75);
       disc(ctx, f, gold, tx, ty, 0.42 * 0.062 * 1.2, 0.85);
     }
+  } else if (art === 'stars') {
+    // 0589: three gold stars across the tank, gold leaf on the paw print's terms.
+    const gold = shade(palette.hazard, 0.1);
+    for (const [x, y] of [
+      [1.6, -2.7],
+      [4, -2.9],
+      [6.4, -2.6],
+    ] as const) {
+      const [cx, cy] = at(x, y);
+      const star: Pt[] = [];
+      for (let k = 0; k < 10; k++) {
+        const a = -Math.PI / 2 + (k * Math.PI) / 5;
+        const reach = (k % 2 === 0 ? 1.05 : 0.45) * 0.062 * 1.2;
+        star.push([cx + Math.cos(a) * reach, cy + Math.sin(a) * reach]);
+      }
+      poly(ctx, f, gold, star, 0.85);
+    }
   } else {
     for (const y of [-3.35, -2.35]) {
       seam(ctx, f, shade(palette.hazard, 0.1), 0.03, box([
@@ -3450,6 +3467,17 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true, art: Art
       [0.36, 0.075],
       [0.7, 0.075],
     ]);
+  } else if (art === 'goldBolt') {
+    // 0589: a lightning bolt in the hazard's gold, inside the racing stripe's envelope, one bold shape.
+    poly(ctx, f, palette.hazard, [
+      [0.92, 0],
+      [0.62, -0.075],
+      [0.6, -0.01],
+      [0.36, -0.075],
+      [0.48, 0.03],
+      [0.5, 0.075],
+      [0.7, 0.04],
+    ]);
   } else {
     poly(ctx, f, palette.ally, [
       [0.74, 0],
@@ -3474,6 +3502,9 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true, art: Art
     if (pods) glow(ctx, f, palette.hazard, -0.09, -0.96 * side, 0.15, 0.6);
   }
 }
+
+/** The rainbow dome's four quarters, front first round the clock — 0589. */
+const RAINBOW_DOME: readonly ('player' | 'ally' | 'hazard' | 'pickup')[] = ['player', 'ally', 'hazard', 'pickup'];
 
 /**
  * Feather Fade's Little Green Caddie — *"a flying saucer with a 7-iron. They come in peace."* The
@@ -3525,6 +3556,13 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   if (art === 'pilot') {
     disc(ctx, f, shade(palette.acid, 0.2), 0.03 * D, 0, 0.28 * D);
     for (const side of [1, -1] as const) disc(ctx, f, palette.space, 0.13 * D, 0.1 * D * side, 0.095 * D);
+  }
+  // 0589: or the glass in four colours, quartered as a beach ball is — the player's own inks and the hazard's.
+  if (art === 'rainbow') {
+    RAINBOW_DOME.forEach((ink, k) => {
+      const from = (k * Math.PI) / 2 + Math.PI / 4;
+      poly(ctx, f, shade(palette[ink], 0.1), [[0, 0], ...roundel(0, 0, 0.44 * D, 8, from, from + Math.PI / 2)], 0.8);
+    });
   }
   disc(ctx, f, shade(glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, art === 'pilot' ? 0.3 : 0.7);
   seam(ctx, f, shade(visor ? palette.hazard : palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
@@ -3598,11 +3636,43 @@ export function paintRim(ctx: Pen, f: Frame, palette: Palette, rim: RimKind, cx:
     case 'bolts':
       paintCrackle(ctx, f, palette, 0, cx, cy, r, turn);
       return;
+    /*
+      0589: Cosmo's two more, every mark half a radius or more on the spinner's terms. The neon: a dark dish,
+      a fat band of the ray's lavender lit from inside, and a dark hub — at five pixels a glowing ring.
+    */
+    case 'neon':
+      disc(ctx, f, shade(palette.trim, -0.55), cx, cy, r * 0.84);
+      glow(ctx, f, palette.ally, cx, cy, r * 0.95, 0.6);
+      band(ctx, f, shade(palette.ally, 0.35), cx, cy, r * 0.8, r * 0.3);
+      disc(ctx, f, shade(palette.trim, -0.4), cx, cy, r * 0.3);
+      return;
+    // The wires: a silver star of ten spokes over a dark dish, round a cyan hub.
+    case 'wire':
+      disc(ctx, f, shade(palette.trim, -0.5), cx, cy, r * (2.55 / 3.6));
+      poly(ctx, f, shade(palette.trim, 0.8), snowflake(cx, cy, r * (2.5 / 3.6), turn + Math.PI / 10));
+      disc(ctx, f, palette.player, cx, cy, r * 0.28);
+      return;
     default: {
       const unhandled: never = rim;
       return unhandled;
     }
   }
+}
+
+/**
+ * A rim in its tyre, `pixels` across — 0589, for its tile on Cosmo's shelf: a rim that turns shows its
+ * turning picture there (`spinnerWheel`), and one baked still into the hull is drawn here as the hull draws it.
+ */
+export function bakeRim(rim: RimKind, palette: Palette, pixels: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = pixels;
+  canvas.height = pixels;
+  const ctx = canvas.getContext('2d') as unknown as Pen | null;
+  if (ctx === null) return canvas;
+  const f: Frame = { half: pixels / 2, r: pixels * 0.42 };
+  disc(ctx, f, shade(palette.trim, -0.25), 0, 0, 1);
+  paintRim(ctx, f, palette, rim, 0, 0, 1, 0);
+  return canvas;
 }
 
 /**
@@ -3983,6 +4053,16 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
       [14.5, 1.6],
       [-14, 1.6],
     ]));
+  } else if (art === 'tiger') {
+    // 0589: three gold claws raked back down the door, inside the rally stripe's band, each over the floor.
+    for (const x of [8, 3, -2]) {
+      poly(ctx, f, gold, box([
+        [x + 2.6, -0.6],
+        [x + 4.2, -0.6],
+        [x + 1.6, 1.6],
+        [x, 1.6],
+      ]));
+    }
   } else {
     poly(ctx, f, gold, box([
       [9.6, 0],
@@ -4182,6 +4262,21 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
       const [cx, cy] = at(x, 3);
       disc(ctx, f, shade(gilt, 0.35), cx, cy, 1.05 * 0.062);
     }
+  } else if (art === 'surf') {
+    // 0589: a white surfboard on the back panel where the daisies grow, a cyan stripe down its middle.
+    const board: Pt[] = [];
+    for (let k = 0; k < 24; k++) {
+      const a = (k * Math.PI * 2) / 24;
+      board.push([-8.75 + Math.cos(a) * 4.6, 3 + Math.sin(a) * 1.7]);
+    }
+    poly(ctx, f, palette.impact, box(board));
+    // 1.8 units deep, so at the shipped camera it is over 0106's floor.
+    poly(ctx, f, palette.player, box([
+      [-12.4, 2.1],
+      [-5.1, 2.1],
+      [-5.1, 3.9],
+      [-12.4, 3.9],
+    ]));
   }
   // Chrome bumpers, fore and aft, lit along their tops.
   for (const [from, to] of [

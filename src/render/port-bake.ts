@@ -1755,6 +1755,15 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     disc(ctx, f, shade(palette.acid, 0.2), 0.02, domeAt - 0.42 * domeHigh, 0.22);
     disc(ctx, f, palette.space, 0.15, domeAt - 0.5 * domeHigh, 0.06);
   }
+  // 0589: or quartered in four colours, seen from the side as four upright bands across the glass.
+  if (fit.art === 'rainbow') {
+    const inks = [palette.pickup, palette.hazard, palette.ally, palette.player];
+    const w = (SAUCER_DOME * 2) / inks.length;
+    inks.forEach((ink, k) => {
+      const x = -SAUCER_DOME + k * w;
+      poly(ctx, f, shade(ink, 0.1), [[x, domeAt - domeHigh - 0.02], [x + w, domeAt - domeHigh - 0.02], [x + w, domeAt + 0.02], [x, domeAt + 0.02]], 0.8);
+    });
+  }
   disc(ctx, f, shade(glass, 0.35), -0.06, domeAt - 0.18 * domeHigh, 0.3, pilot ? 0.3 : 0.8);
   disc(ctx, f, palette.impact, -0.14, domeAt - 0.36 * domeHigh, 0.11, 0.85);
   ctx.restore();

@@ -24,9 +24,10 @@ describe('the shelf', () => {
   it('THE ASK: a eucalyptus tree, the alien’s family in a frame and a golf ball, at 250 shards each, and 0585’s fifteen per cent on top', () => {
     // 0527: the shelf is every ownable thing with a price, the dangles first.
     const dangles = WARES.filter((kind) => DANGLE_KINDS.some((d) => d === kind));
-    expect(dangles.map((kind) => OWNABLES[kind].name)).toEqual(['Eucalyptus tree', 'Family photo', 'Golf ball']);
+    // 0589: and more after them, so the asked three are the first three.
+    expect(dangles.slice(0, 3).map((kind) => OWNABLES[kind].name)).toEqual(['Eucalyptus tree', 'Family photo', 'Golf ball']);
     // *"let's set the cheaper stuff at 250 shards for a base level"*.
-    for (const kind of dangles) expect(OWNABLES[kind].price, kind).toBe(priced(250));
+    for (const kind of dangles.slice(0, 3)) expect(OWNABLES[kind].price, kind).toBe(priced(250));
     expect(priced(250), '0585: *"increase the cost of everything by 15%"*').toBe(288);
   });
 

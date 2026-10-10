@@ -79,6 +79,36 @@ describe('the flame', () => {
     }
   });
 
+  /*
+    0589: three more, each weighed against the hostile shot nearest it — a rule about each flame, on its own
+    terms (0295), not a ranking of flames: the nebula off the serpent's void and below it; the plasma off the
+    acid and the frost; the afterburner hardly a colour at all.
+  */
+  it('0589: each new flame is held off the shot it was weighed against', () => {
+    const v = PALETTES.vivid;
+    const gap = (a: string, b: string): number => {
+      const d = Math.abs(hue(a) - hue(b)) % 360;
+      return d > 180 ? 360 - d : d;
+    };
+    const light = (ink: string): number => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16) / 255);
+      return (Math.max(r!, g!, b!) + Math.min(r!, g!, b!)) / 2;
+    };
+    const nebula = flameInks(v, 'nebula');
+    expect(gap(nebula.outer, v.void), 'the nebula burns in the void’s violet').toBeGreaterThanOrEqual(25);
+    expect(light(nebula.outer), 'the nebula is as light as the void').toBeLessThan(light(v.void));
+    const plasma = flameInks(v, 'plasma');
+    for (const ink of [plasma.outer, plasma.inner]) {
+      expect(gap(ink, v.acid), `${ink} is within reach of the acid`).toBeGreaterThanOrEqual(25);
+      expect(gap(ink, v.frost), `${ink} is within reach of the frost`).toBeGreaterThanOrEqual(25);
+    }
+    const after = flameInks(v, 'afterburner');
+    for (const ink of [after.outer, after.inner]) {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16));
+      expect(Math.max(r!, g!, b!) - Math.min(r!, g!, b!), `${ink} is a colour, not white-hot`).toBeLessThan(80);
+    }
+  });
+
   it('the flame is part of a ship’s fit', () => {
     expect(ownFit('fighter').flame).toBe('standard');
   });

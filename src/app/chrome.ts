@@ -40,7 +40,7 @@ import { FLAME_KINDS } from '../content/flames.ts';
 import { SHELL_KINDS } from '../content/shells.ts';
 import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS } from '../content/racks.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
-import { bakeAtlas, bakeGlyph, bakeShell, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
+import { bakeAtlas, bakeGlyph, bakeRim, bakeShell, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
@@ -3493,7 +3493,8 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
   golf ball dimpled. Each with the dice's hairline and void halo, so it is found on any sky.
 */
 .itc-playing-hud-hang-strand { height: 1.25em; transform: rotate(5deg); }
-.itc-playing-hud-tree, .itc-playing-hud-frame, .itc-playing-hud-ball {
+.itc-playing-hud-tree, .itc-playing-hud-frame, .itc-playing-hud-ball,
+.itc-playing-hud-duck, .itc-playing-hud-shoe, .itc-playing-hud-mirror, .itc-playing-hud-bobble {
   position: absolute;
   top: 100%;
   left: 50%;
@@ -3545,6 +3546,57 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
   background:
     radial-gradient(circle, color-mix(in srgb, var(--itc-ball-shade) 70%, var(--itc-void)) 0 0.03em, transparent 0.045em) 0 0 / 0.21em 0.21em,
     radial-gradient(circle at 34% 30%, var(--itc-lit) 0, var(--itc-lit) 30%, var(--itc-ball-shade) 100%);
+}
+/*
+  0589: four more. The duck a body and a head in the hazard's yellow, an orange bill and a dark eye; the
+  horseshoe a gilt arch, open end up so the luck stays in, with its nail holes; the mirror ball a sphere of
+  tiles in the light ink with a glint; the bobblehead an alien's own green head, far too big, on a small
+  body, its eyes dark — the family's alien, alone.
+*/
+.itc-playing-hud-duck {
+  width: 1.3em;
+  height: 1.1em;
+  margin-left: -0.65em;
+  background:
+    radial-gradient(circle at 70% 26%, var(--itc-void) 0 0.05em, transparent 0.065em),
+    radial-gradient(ellipse 0.22em 0.1em at 94% 38%, var(--itc-bill) 0 90%, transparent 100%),
+    radial-gradient(circle at 66% 32%, var(--itc-duck) 0 0.3em, transparent 0.315em),
+    radial-gradient(ellipse 0.62em 0.4em at 42% 70%, var(--itc-duck) 0 92%, transparent 100%),
+    radial-gradient(ellipse 0.2em 0.14em at 8% 54%, var(--itc-duck) 0 90%, transparent 100%);
+}
+.itc-playing-hud-shoe {
+  width: 1.05em;
+  height: 1.15em;
+  margin-left: -0.525em;
+  box-sizing: border-box;
+  border: 0.24em solid var(--itc-gilt);
+  border-top: none;
+  border-radius: 0 0 0.6em 0.6em;
+  background:
+    radial-gradient(circle at 4% 30%, var(--itc-void) 0 0.035em, transparent 0.05em),
+    radial-gradient(circle at 96% 30%, var(--itc-void) 0 0.035em, transparent 0.05em);
+}
+.itc-playing-hud-mirror {
+  width: 1.05em;
+  height: 1.05em;
+  margin-left: -0.525em;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, var(--itc-lit) 0 0.06em, transparent 0.16em),
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--itc-void) 45%, transparent) 0 0.03em, transparent 0.03em 0.17em),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--itc-void) 45%, transparent) 0 0.03em, transparent 0.03em 0.17em),
+    radial-gradient(circle at 40% 35%, var(--itc-lit) 0, var(--itc-mirror) 55%, color-mix(in srgb, var(--itc-mirror) 55%, var(--itc-void)) 100%);
+}
+.itc-playing-hud-bobble {
+  width: 1.2em;
+  height: 1.45em;
+  margin-left: -0.6em;
+  background:
+    radial-gradient(ellipse 0.13em 0.18em at 34% 34%, var(--itc-void) 0 90%, transparent 100%),
+    radial-gradient(ellipse 0.13em 0.18em at 66% 34%, var(--itc-void) 0 90%, transparent 100%),
+    radial-gradient(ellipse 0.58em 0.5em at 50% 34%, var(--itc-alien) 0 92%, transparent 100%),
+    radial-gradient(ellipse 0.06em 0.2em at 50% 78%, var(--itc-alien) 0 90%, transparent 100%),
+    radial-gradient(ellipse 0.28em 0.2em at 50% 96%, var(--itc-alien) 0 90%, transparent 100%);
 }
 .itc-playing-hud-dice-strand {
   position: absolute;
@@ -4809,6 +4861,8 @@ const SWIPE_PIXELS = 36;
 const SWIPE_SETTLE_MS = 350;
 /** How many pixels across a rim's picture is baked for its tile — 0564; the card shows the same bitmap larger. */
 const WARE_ART_PIXELS = 160;
+/** And a shell's — 0584: its plates are strokes, which a picture baked large and shown small thins to nothing. */
+const SHELL_ART_PIXELS = 64;
 /** 0572: a Hangin' Out card's picture, in canvas pixels across its sprite's box — sharp at two to one on the card. */
 const CARD_PIC_PIXELS = 112;
 /** How an option tried on is fitted, in the words of the hand holding the game — 0561. */
@@ -6449,6 +6503,10 @@ export function makeChrome(
   dice.style.setProperty('--itc-gilt', colours.hazard);
   dice.style.setProperty('--itc-alien', mix(colours.acid, colours.pickup, 0.5));
   dice.style.setProperty('--itc-ball-shade', mix(colours.impact, colours.sky, 0.45));
+  // 0589: the duck the hazard's yellow with the shot's orange for its bill, the mirror ball the light ink toward the sky.
+  dice.style.setProperty('--itc-duck', mix(colours.hazard, colours.impact, 0.15));
+  dice.style.setProperty('--itc-bill', colours.bullet);
+  dice.style.setProperty('--itc-mirror', mix(colours.impact, colours.sky, 0.3));
   const swing = document.createElement('div');
   swing.className = 'itc-playing-hud-dice-swing';
   /*
@@ -6474,11 +6532,22 @@ export function makeChrome(
     string.appendChild(die);
     diceBody.appendChild(string);
   }
-  for (const [kind, part] of [
-    ['eucalyptus', 'tree'],
-    ['family', 'frame'],
-    ['golfball', 'ball'],
-  ] as const) {
+  /*
+    0589: which drawing each dangle hangs as — a `Record` over every dangle but the dice, which hang as a
+    pair, so a dangle added to the table without a drawing here fails to compile rather than hanging nothing.
+  */
+  const DANGLE_PARTS: Record<Exclude<DangleKind, 'dice'>, string> = {
+    eucalyptus: 'tree',
+    family: 'frame',
+    golfball: 'ball',
+    duck: 'duck',
+    horseshoe: 'shoe',
+    mirrorball: 'mirror',
+    bobblehead: 'bobble',
+  };
+  for (const kind of DANGLE_KINDS) {
+    if (kind === 'dice') continue;
+    const part = DANGLE_PARTS[kind];
     const string = document.createElement('div');
     string.className = 'itc-playing-hud-dice-strand itc-playing-hud-hang-strand';
     const thing = document.createElement('div');
@@ -6514,7 +6583,7 @@ export function makeChrome(
     const dangle = DANGLE_KINDS.find((kind) => kind === ware);
     if (dangle !== undefined) {
       holder.className = 'itc-shop-art-dangle itc-playing-hud-hanging itc-playing-hud-hangs-' + dangle;
-      for (const name of ['--itc-fur', '--itc-leaf', '--itc-gilt', '--itc-alien', '--itc-ball-shade']) holder.style.setProperty(name, dice.style.getPropertyValue(name));
+      for (const name of ['--itc-fur', '--itc-leaf', '--itc-gilt', '--itc-alien', '--itc-ball-shade', '--itc-duck', '--itc-bill', '--itc-mirror']) holder.style.setProperty(name, dice.style.getPropertyValue(name));
       holder.style.setProperty('--itc-lit', colours.impact);
       holder.style.setProperty('--itc-ally', colours.ally);
       holder.appendChild(dice.cloneNode(true));
@@ -6524,8 +6593,9 @@ export function makeChrome(
     if (rim !== undefined) {
       holder.className = 'itc-shop-art-rim';
       const wheel = RIMS[rim].wheel;
-      const glyph = wheel === null ? 'spinnerWheel' : wheel.frames[0].base;
-      holder.appendChild(bakeGlyph(glyph, colours, WARE_ART_PIXELS / SPRITE_EXTENT[glyph]));
+      // 0589: a rim baked still into the hull is drawn in its tyre; one that turns, as its turning picture.
+      if (wheel === null) holder.appendChild(bakeRim(rim, colours, WARE_ART_PIXELS));
+      else holder.appendChild(bakeGlyph(wheel.frames[0].base, colours, WARE_ART_PIXELS / SPRITE_EXTENT[wheel.frames[0].base]));
       return holder;
     }
     // 0578: a tube, drawn as its missile pickup's face — the shape the field's pickup for it wears.
@@ -6540,7 +6610,8 @@ export function makeChrome(
     const shell = SHELL_KINDS.find((kind) => kind === ware);
     if (shell !== undefined) {
       holder.className = 'itc-shop-art-rim';
-      holder.appendChild(bakeShell(shell, colours, WARE_ART_PIXELS));
+      // Near the size a tile shows it, so the plates' one-pixel floor keeps them legible rather than scaled to a hair.
+      holder.appendChild(bakeShell(shell, colours, SHELL_ART_PIXELS));
       return holder;
     }
     const flame = FLAME_KINDS.find((kind) => kind === ware);

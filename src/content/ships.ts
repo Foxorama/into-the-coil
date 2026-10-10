@@ -153,11 +153,11 @@ export interface ShipRow extends Body {
    */
   wheels: Wheels | null;
   /**
-   * The three looks it may wear on its nose, its dome or its flank — `docs/decisions/0528-the-noses-are-painted.md`:
-   * the first is the one it has always worn, and the other two open with its win. Its own, and no other
+   * The looks it may wear on its nose, its dome or its flank — `docs/decisions/0528-the-noses-are-painted.md`:
+   * the first is the one it has always worn, and the rest open with its win. Four since 0589. Its own, and no other
    * ship's (`src/content/art.ts`).
    */
-  arts: readonly [ArtKind, ArtKind, ArtKind];
+  arts: readonly [ArtKind, ArtKind, ArtKind, ArtKind];
   /**
    * The deflector shell this ship wears — `docs/decisions/0492-the-shields-wear-the-ship.md`. The
    * readout wore the ship since 0451 and the shell round the hull did not: one honeycomb in the
@@ -521,7 +521,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     hangs: null,
     wheels: null,
     // 0528: its violet chevron (0461), a shark mouth, racing stripes.
-    arts: ['chevron', 'sharkmouth', 'racing'],
+    arts: ['chevron', 'sharkmouth', 'racing', 'goldBolt'],
     // The honeycomb deflector the game's shell always was, in the player's own ink — 0430.
     shield: SHELLS.honeycomb.shell,
     lamps: FIGHTER_LAMPS,
@@ -587,7 +587,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     hangs: null,
     wheels: null,
     // 0528: its clear dome (0461), its pilot under the glass, a gold visor.
-    arts: ['glass', 'pilot', 'visor'],
+    arts: ['glass', 'pilot', 'visor', 'rainbow'],
     // A soap film in its ray dish’s lavender, a light sliding over it — 0492.
     shield: SHELLS.bubble.shell,
     lamps: CADDIE_LAMPS,
@@ -637,7 +637,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0527: front and back, about the drawing's centre at (1, 1.5) — the Trans Am's gold snowflakes (0516).
     wheels: { at: [wheelAt(12, 6, 1, 1.5), wheelAt(-10, 6, 1, 1.5)], radius: 3.6 * PREDECESSOR_UNIT, rim: 'snowflake' },
     // 0528: its phoenix (0468), hot-rod flames, a rally stripe.
-    arts: ['phoenix', 'flames', 'rally'],
+    arts: ['phoenix', 'flames', 'rally', 'tiger'],
     // Its phoenix’s feathers: black lacquer read by gold edges, as the car is — 0492.
     shield: SHELLS.plumes.shell,
     lamps: [],
@@ -686,7 +686,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0527: under the sills, about the drawing's centre at (0, 1) — whitewalls, as 0461 drew them.
     wheels: { at: [wheelAt(9, 6.4, 0, 1), wheelAt(-9, 6.4, 0, 1)], radius: 2.9 * PREDECESSOR_UNIT, rim: 'whitewall' },
     // 0528: the burl as it came, a crest on the door, daisies on the tailgate panel.
-    arts: ['woody', 'crest', 'daisies'],
+    arts: ['woody', 'crest', 'daisies', 'surf'],
     // A gilt trellis between gilt rails, a stud at every crossing — 0492.
     shield: SHELLS.lattice.shell,
     lamps: [],
@@ -738,7 +738,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     hangs: null,
     wheels: { at: [wheelAt(12.6, 6.4, 0, 1), wheelAt(-11, 6.4, 0, 1)], radius: 3.8 * PREDECESSOR_UNIT, rim: 'bolts' },
     // 0545: a cyan bolt down its tank, the Marmot's paw in gold, gold pinstripes.
-    arts: ['boltTank', 'pawprint', 'pinstripes'],
+    arts: ['boltTank', 'pawprint', 'pinstripes', 'stars'],
     // A cage of forked lightning — 0545. 0557: a unit and a half further out than the rest, clear of the bike.
     shield: SHELLS.storm.shell,
     lamps: [],
