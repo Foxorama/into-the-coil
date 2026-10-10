@@ -1161,6 +1161,12 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE CATHERINE WHEEL STAYS A BEAT LONGER — OWED A PLAY — 2026-10-10
+
+[0591](decisions/0591-the-wheel-stays-a-beat-longer.md): thrown every 2.4 s, on screen 2.67 s — the half
+second asked for, rounded to the beat grid. Owed: a play on the Firebird; if neither 2 s nor 2.4 s is right,
+the decision names the next lever.
+
 ### ⚠️ THE GAME HAS A LEFT HAND, AND RETRO IS GONE — OWED A PLAY — 2026-10-10
 
 [0590](decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md): Settings is Sound, Travel,
