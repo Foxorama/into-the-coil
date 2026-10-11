@@ -9,6 +9,9 @@ import { openSettings, shown } from './title.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { SIDES, SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
+import { GOLFERS } from '../src/content/golfers.ts';
+import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
+import { initialHangar } from '../src/state/slices/hangar.ts';
 
 /**
  * THE KEY OPENS, IN THE PAGE — `docs/decisions/0580-the-key-opens.md`.
@@ -32,9 +35,23 @@ afterAll(async () => {
   await browser?.close();
 });
 
-async function opened(width: number, height: number): Promise<Page> {
+/**
+ * A player who has opened Unity — 0594: ten crashes kept, so the War Dance's face is in the key with the
+ * rest. A first-time player's key hides it (the last test below).
+ */
+const UNITY_OPEN = serialiseHangar({ ...initialHangar, crashes: GOLFERS.unity.opens.crashes });
+
+async function opened(width: number, height: number, hangar: string | null = UNITY_OPEN): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+  if (hangar !== null) {
+    await context.addInitScript(
+      ([key, kept]: [string, string]) => {
+        localStorage.setItem(key, kept);
+      },
+      [HANGAR_KEY, hangar] as [string, string],
+    );
+  }
   const page = await context.newPage();
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
@@ -95,5 +112,28 @@ describe.runIf(chromePath)('0580 — every face on How to play opens what it is'
     expect(await page.locator(`.${GUIDE}ask`).count(), 'its button left the sheet up').toBe(0);
     expect(await page.locator(`${ring}.${GUIDE}key-face`).getAttribute('aria-label'), 'the cursor did not come back to the face').toBe(label);
     await page.context().close();
+  });
+
+  it('0594 — keeps the War Dance out of a first-time player’s key, and out of the walk, and shows it once Unity is open', async () => {
+    const dance = SPECIALS.warDance.label;
+    const visible = async (page: Page): Promise<string[]> =>
+      (await page.locator(`${shown('guide')} .${GUIDE}key-face:not([hidden])`).evaluateAll((faces) => faces.map((face) => face.getAttribute('title') ?? ''))).filter((t) => t !== '');
+    const fresh = await opened(1280, 720, null);
+    const seen = await visible(fresh);
+    expect(seen, 'a first-time player is shown the War Dance before Unity is open').not.toContain(dance);
+    expect(seen.length, 'more than the War Dance went missing from the key').toBe(FACES.length - 1);
+    // Every face the cursor walks onto, along each pickup's row: never the hidden one.
+    for (let row = 0; row < PICKUP_KINDS.length; row++) {
+      await fresh.keyboard.press('ArrowDown');
+      for (let step = 0; step < 8; step++) {
+        const on = (await fresh.locator(`.${GUIDE}action-cursor.${GUIDE}key-face`).getAttribute('title')) ?? '';
+        expect(on, 'the cursor walked onto the hidden War Dance').not.toBe(dance);
+        await fresh.keyboard.press('ArrowRight');
+      }
+    }
+    await fresh.context().close();
+    const open = await opened(1280, 720);
+    expect(await visible(open), 'Unity is open and the War Dance is still kept from the key').toContain(dance);
+    await open.context().close();
   });
 });

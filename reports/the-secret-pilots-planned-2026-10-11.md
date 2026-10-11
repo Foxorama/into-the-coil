@@ -227,8 +227,11 @@ Also on the page, and not characters — each one PR, in any order after item 1:
   parts every row states.
 - **Item 2, the first half** — [0593](../docs/decisions/0593-the-hamster-ball-rolls.md): Unity, the ball,
   the ram and its heat, break and recharge, the War Dance on the ball alone, the hints on every shut card.
-  The ram is weighed on bosses at eight, and the floors fly it against the hull. **Still owed of item 2**:
-  the dance drawn on every ship, and the War Dance on the bomb pickup and in the hangar once Unity is open.
+  The ram is weighed on bosses at eight, and the floors fly it against the hull.
+- **Item 2, the second half** — [0594](../docs/decisions/0594-every-ship-dances.md): every ship's dance drawn
+  in poses of its own at every stage, and the War Dance on the bomb pickup and in How to play's key once Unity
+  is open. Item 2 is done. The fighter's dance is its canards and not the roll planned above, and the decision
+  says why.
 
 ## Owed
 

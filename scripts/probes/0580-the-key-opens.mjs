@@ -44,7 +44,8 @@ export const PROBES = [
     suite: 'tests/key-opens.browser.test.ts',
     broke: 'the faces left out of the cursor’s walk',
     guard: 'walks the keys onto the faces',
-    edit: { path: 'src/app/chrome.ts', find: '  for (const key of keys) if (key.length > 0) rows.push([...key]);\n', replace: '' },
+    // Re-anchored by 0594, which passes over a face this player may not be offered yet.
+    edit: { path: 'src/app/chrome.ts', find: '    if (shown.length > 0) rows.push(shown);\n', replace: '' },
   },
   {
     decision: '0580',
