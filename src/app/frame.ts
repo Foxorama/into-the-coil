@@ -50,7 +50,7 @@ import {
   type Collected,
   type Deaths,
 } from '../sim/collide.ts';
-import { animate, type Body, type Entity, reset, stepEntities, turnFor } from '../sim/entity.ts';
+import { animate, type Body, type Entity, reset, stand, stepEntities, turnFor } from '../sim/entity.ts';
 // `SCROLL_PER_STEP` for `PICKUP_SLOW_AT`, which is a distance derived from a duration — 0087. Every
 // other speed in this file rides `w.scrollPerStep`, which is the same number reachable from a world.
 // `PLAYER_ALONG_MARGIN` and `PLAYER_LEAD` are the two ends of the player's box, imported rather than
@@ -79,7 +79,7 @@ import { NO_HOP, paintPort, paintStand } from '../render/port.ts';
 import { hydraJointOf } from '../content/necks.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
-import { LANDMARK_SLOTS, LOADED_TUBE, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, strokeAt } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, LOADED_TUBE, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, UNSEEN, WALL_RISES, strokeAt } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import { VEINS_OF, arteryAt } from '../content/veins.ts';
@@ -1289,6 +1289,11 @@ export interface World {
   pickupRows: readonly PickupRow[];
   /** Which index each authored pickup kind is, built once at boot. */
   pickupKinds: Record<PickupKind, number>;
+  /**
+   * Which of each row's faces this player may not be offered yet, in `pickupRows`' order — 0594: the War
+   * Dance until Unity is open (`facesShut`). Set by the shell when the hangar changes, never by the frame.
+   */
+  pickupShut: readonly (readonly boolean[])[];
   /*
     ⚠️ **`pickupCycle` and `pickupFlipped` were two more fields here, and 0082 removed both.** They
     were what let a pickup be drawn as one kind and collected as another on the same step, which is
@@ -3792,8 +3797,10 @@ function steerRam(w: World): void {
   const heat = dance !== null ? 0 : w.ramHeat;
   const stage = heat >= 0.75 ? 3 : heat >= 0.5 ? 2 : heat >= 0.25 ? 1 : 0;
   // `sprite` itself is derived from these by `stepEntities`, which runs after this.
-  body.spriteBase = RAM_HEAT[stage];
-  body.spriteHit = RAM_HEAT[stage];
+  // 0594: on a dancing ship that is not the ball, nothing — the ship's own dance is the picture of it.
+  const picture = ram !== null ? RAM_HEAT[stage] : UNSEEN;
+  body.spriteBase = picture;
+  body.spriteHit = picture;
 }
 
 /** How many times the ram landed this step: what its body lost, one health an arrival (`collideInto`). */
@@ -3812,7 +3819,11 @@ function ramLanded(w: World): number {
  */
 function settleRam(w: World, landed: number): void {
   if (landed > 0) w.onCue('ram', w.ship.across);
-  if (w.danceFor > 0 && --w.danceFor === 0) w.danceKind = null;
+  if (w.danceFor > 0 && --w.danceFor === 0) {
+    w.danceKind = null;
+    // 0594: and stands still again.
+    wearHull(w);
+  }
   const ram = WEAPONS[w.weapon.kind].ram;
   if (ram === null || w.shipPool.size === 0) return;
   if (w.ramBrokenFor > 0) {
@@ -3873,6 +3884,9 @@ function startDance(w: World, kind: SpecialKind, dance: Dance): void {
   const toward = w.ship.across < ACROSS_SPAN / 2 ? 1 : -1;
   w.danceAlong = dance.speed * Math.SQRT1_2;
   w.danceAcross = toward * dance.speed * Math.SQRT1_2;
+  // 0594: and it dances — its row's poses, from the first.
+  w.ship.framePhase = 0;
+  wearHull(w);
 }
 
 /**
@@ -8656,7 +8670,7 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
   const side = stoneAt(w.corridor, item.along, item.across, item.radius);
   if (side !== 0 && w.corridor !== null) item.across = outOfStone(w.corridor, item.along, item.across, item.radius, side);
   // A dropped piece's face is drawn as an authored one's is — 0575; its kind is the drop list's.
-  putOnFace(item, row, w.pickupRng);
+  putOnFace(item, row, w.pickupRng, w.pickupShut[slot]);
   item.bobPhase = index * GOLDEN_ANGLE;
   throwArc(w, item, index, pieces, w.dropRng);
 }
@@ -8760,7 +8774,7 @@ function spawnPickup(w: World, index: number): void {
   */
   const approach = (entry.at - w.cameraAlong - PICKUP_SLOW_AT - boxPastFor(w.view.alongSpan)) / w.scrollPerStep;
   item.holdFor = PICKUP_LINGER_STEPS + Math.max(0, Math.round(approach));
-  putOnFace(item, row, w.pickupRng);
+  putOnFace(item, row, w.pickupRng, w.pickupShut[kind]);
 }
 
 /*
@@ -8775,8 +8789,9 @@ function spawnPickup(w: World, index: number): void {
  * Put a pickup on a face drawn from `row`, which it keeps — 0575: *"It doesn't rotate and can be
  * picked up as is."* In the call that resets it, so no step draws the row's first face instead.
  */
-function putOnFace(item: Entity, row: PickupRow, rng: Rng): void {
-  const face = drawFace(row, rng);
+function putOnFace(item: Entity, row: PickupRow, rng: Rng, shut: readonly boolean[] | undefined): void {
+  // 0594: over the faces this player may be offered — the War Dance not before Unity is open.
+  const face = drawFace(row, rng, shut);
   item.face = face;
   item.spriteBase = row.faces[face]!;
   item.spriteHit = item.spriteBase;
@@ -11497,6 +11512,16 @@ export function wearHull(w: World): void {
   const hull = hullFor(w.shipRow, w.weapon.launchers, w.ramBrokenFor > 0);
   w.ship.spriteBase = hull.base;
   w.ship.spriteHit = hull.hit;
+  /*
+    0594: dancing, in its row's poses at the stage its tubes say — a tube taken mid-dance dances on with it,
+    where it was in the cycle. Not a broken ball's: its poses are the whole ball's, and Unity is on their own.
+  */
+  if (w.danceFor > 0 && w.ramBrokenFor === 0) {
+    const cycle = w.shipRow.dance[w.weapon.launchers >= 2 ? 2 : w.weapon.launchers === 1 ? 1 : 0];
+    w.ship.frames = cycle.frames;
+    w.ship.framesHit = cycle.hurt;
+    w.ship.frameHold = cycle.hold;
+  } else stand(w.ship);
   // `sprite` is derived by `stepEntities`, but the frame between now and the next step draws from it.
   w.ship.sprite = w.ship.flashFor > 0 ? hull.hit : hull.base;
 }

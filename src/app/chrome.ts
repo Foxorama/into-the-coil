@@ -1024,6 +1024,8 @@ ${each('-action-cursor')} {
 /* 0580: each face a button that opens what it is — no plate of its own, a ring under a pointer and the cursor. */
 .itc-guide-key-face { display: block; padding: 0; margin: 0; border: 0; border-radius: 0.35em; background: none; color: inherit; font: inherit; line-height: 0; cursor: pointer; }
 .itc-guide-key-face:hover { background: color-mix(in srgb, var(--itc-ink) 14%, transparent); }
+/* 0594: a face this player may not be offered yet, and its line, are not drawn — the face's own display wins over the attribute otherwise. */
+.itc-guide-key-face[hidden], .itc-guide-key-line[hidden] { display: none; }
 .itc-guide-key-name { font-weight: 600; }
 .itc-guide-key-about { display: flex; flex-direction: column; min-width: 0; }
 /* A line a face: its name and what it gives — 0575. */
@@ -2963,7 +2965,8 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-guide-key-hint { flex-direction: row; flex-wrap: wrap; column-gap: 0.5em; }
   .itc-guide-key-gives { display: none; }
-  .itc-guide-key-line:not(:last-child)::after { content: ' ·'; }
+  /* 0594: a dot only where a line that is drawn follows, so a hidden last face leaves none dangling. */
+  .itc-guide-key-line:has(~ .itc-guide-key-line:not([hidden]))::after { content: ' ·'; }
   /*
     ⚠️ **AND ON A PHONE, THE TWO SECTION HEADINGS GO.** At 480x320 How to play scrolled by nine
     pixels on CI's fonts and fitted on this machine's. The headings are the one line on it that says
@@ -4239,7 +4242,11 @@ interface Band {
 function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[], keys: readonly (readonly HTMLElement[])[]): HTMLElement[][] {
   const rows: HTMLElement[][] = [];
   if (tabs.length > 0) rows.push([...tabs]);
-  for (const key of keys) if (key.length > 0) rows.push([...key]);
+  // 0594: a face this player may not be offered yet is hidden, and is not walked onto either.
+  for (const key of keys) {
+    const shown = key.filter((face) => !face.hidden);
+    if (shown.length > 0) rows.push(shown);
+  }
   for (const band of bands) if (!band.root.hidden && band.faces !== 'chip') rows.push([band.root]);
   /*
     0517: a chip is drawn among the actions, after them, so it is walked there too.
@@ -4642,6 +4649,11 @@ export interface Chrome {
   /** 0561: `whys` says why each shut option is shut, for a band that tries; the band's `why` stands in where it says nothing. */
   setOpen(name: ChoiceName, open: readonly boolean[], why: string | null, whys?: readonly (string | null)[]): void;
   /**
+   * Which of each pickup's faces this player may not be offered yet, in `PICKUP_KINDS` order — 0594. How to
+   * play's key hides them, so the War Dance is not given away before Unity is open.
+   */
+  setPickupsShut(shut: readonly (readonly boolean[])[]): void;
+  /**
    * What a band's options are called and what each means — 0528, for a slot whose options are the ship's
    * own: the art band's three places are the looks of whichever ship is on the stand. Position for
    * position, as many as the row has.
@@ -4936,6 +4948,25 @@ function triggerIn(device: GuideDevice, slot: number): string {
   icons and have a tap on them pop up a window with their stats"*. Each face's button is pushed onto
   `keys`, a row a pickup, which the cursor walks; `open` puts the sheet up.
 */
+/** One face in a pickup's row of the key — 0594: its button, its line, and what a reader is told of it. */
+interface GuideFace {
+  button: HTMLButtonElement;
+  line: HTMLElement;
+  told: string;
+}
+
+/** A pickup's row of the key — 0594: what a face this player may not be offered yet is hidden from. */
+interface GuideRow {
+  root: HTMLElement;
+  label: string;
+  how: string;
+  faces: GuideFace[];
+}
+
+/** What a reader hears of a pickup's row: its name, each face it may be drawn on, and how it is taken. */
+function guideRowLabel(label: string, told: readonly string[], how: string): string {
+  return label + ' — ' + told.join('; or ') + '. ' + how;
+}
 function buildGuide(
   prefix: string,
   iconOf: (sprite: number) => HTMLCanvasElement,
@@ -4943,6 +4974,8 @@ function buildGuide(
   keys: HTMLButtonElement[][],
   open: (kind: PickupKind, face: number, sprite: number) => void,
   listeners: (() => void)[],
+  // 0594: each pickup's row as it is built, in `PICKUP_KINDS` order, so a face can be hidden later.
+  guideRows: GuideRow[],
 ): HTMLElement {
   const body = document.createElement('div');
   body.className = prefix + 'body';
@@ -4982,6 +5015,7 @@ function buildGuide(
     hints.className = prefix + 'key-hint';
     const told: string[] = [];
     const buttons: HTMLButtonElement[] = [];
+    const faces: GuideFace[] = [];
     row.faces.forEach((sprite, face) => {
       const said = faceOf(pickup, face);
       told.push(said.label + ': ' + said.hint);
@@ -5010,6 +5044,7 @@ function buildGuide(
       gives.textContent = ' — ' + said.hint;
       line.append(called, gives);
       hints.appendChild(line);
+      faces.push({ button, line, told: said.label + ': ' + said.hint });
     });
     // 0580: the faces are buttons now, so a reader reaches them; the words beside them are the row's label's.
     for (const cell of [names, hints]) cell.setAttribute('aria-hidden', 'true');
@@ -5024,9 +5059,10 @@ function buildGuide(
     line.className = prefix + 'key-row';
     // 0580: a group and not an image, since its faces are buttons a reader can press.
     line.setAttribute('role', 'group');
-    line.setAttribute('aria-label', row.label + ' — ' + told.join('; or ') + '. ' + row.how);
+    line.setAttribute('aria-label', guideRowLabel(row.label, told, row.how));
     line.append(icons, names, about);
     key.appendChild(line);
+    guideRows.push({ root: line, label: row.label, how: row.how, faces });
   }
   section('PICKUPS').appendChild(key);
 
@@ -5553,6 +5589,8 @@ export function makeChrome(
   };
   /** How to play's controls cells, by device column — 0458, so the device in hand can be lit. */
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
+  /** How to play's pickup rows, in `PICKUP_KINDS` order — 0594, so a face not yet open is hidden. */
+  const guideRows: GuideRow[] = [];
   /** The shoulder glyphs at every tab strip's ends — 0548, shown while the device in hand is a pad. */
   const tabKeys: HTMLElement[] = [];
 
@@ -5888,7 +5926,7 @@ export function makeChrome(
       board = { root: boardRoot, body };
       panel.appendChild(body);
     } else if (screen === 'guide') {
-      panel.appendChild(buildGuide(prefix, iconOf, guideDevices, keys, (kind, face, sprite) => tell(screen, kind, face, sprite), listeners));
+      panel.appendChild(buildGuide(prefix, iconOf, guideDevices, keys, (kind, face, sprite) => tell(screen, kind, face, sprite), listeners, guideRows));
       panel.appendChild(choices);
     } else {
       /*
@@ -7899,6 +7937,21 @@ export function makeChrome(
         panel.spoken = panel.bands.find((b) => b.name === 'section') ?? spoken;
         paintCard(panel);
       }
+    },
+    setPickupsShut(shut: readonly (readonly boolean[])[]): void {
+      guideRows.forEach((row, pickup) => {
+        const told: string[] = [];
+        row.faces.forEach((face, index) => {
+          const hidden = shut[pickup]?.[index] === true;
+          face.button.hidden = hidden;
+          face.line.hidden = hidden;
+          if (!hidden) told.push(face.told);
+        });
+        row.root.setAttribute('aria-label', guideRowLabel(row.label, told, row.how));
+      });
+      // The walk passes over a hidden face, so it is rebuilt with them.
+      const guide = panels.guide;
+      if (guide !== undefined) guide.rows.splice(0, guide.rows.length, ...walkOf(guide.tabs, guide.bands, guide.controls, guide.keys));
     },
     setOpen(name: ChoiceName, open: readonly boolean[], why: string | null, whys: readonly (string | null)[] = []): void {
       for (const screen of Object.keys(panels) as Screen[]) {

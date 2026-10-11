@@ -108,4 +108,4 @@ drops them the next time it writes.
   round it should be is a play's to say.
 - **The second half of item 2**, which this does not land: a dance drawn for every ship, the War Dance a
   face on the bomb pickup once Unity is open, and any other ship opening with it then. Item 2 is not done
-  until it lands.
+  until it lands. Landed by [0594](0594-every-ship-dances.md), which took `shared` out again.

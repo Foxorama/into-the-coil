@@ -14,9 +14,10 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/hangar.ts',
       // The signature with it, since 0526's gun slot says the same line under its own.
-      // Re-anchored by 0593, which keeps a special no other ship can draw with its own.
-      find: '  if (from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) return false;\n  return plateOpen(state, ship, from);',
-      replace: '  if (from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) return false;\n  return true;',
+      // Re-anchored by 0593, which kept a special no other ship could draw with its own, and by 0594, which
+      // gave every ship its dance and took that line out again.
+      find: "  // 0594: the War Dance too, now every ship dances — and the ball is won only in Unity's hands.\n  return plateOpen(state, ship, from);",
+      replace: "  // 0594: the War Dance too, now every ship dances — and the ball is won only in Unity's hands.\n  return true;",
     },
   },
   {

@@ -19,7 +19,7 @@
  * the player spends.
  */
 
-import type { Body } from '../sim/entity.ts';
+import type { Body, Cycle } from '../sim/entity.ts';
 import type { Ink } from './palette.ts';
 import { LOADED_TUBE, SHIP_BOX, SPRITE, type SpriteKind } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
@@ -59,6 +59,13 @@ export interface ShipRow extends Body {
    * back, so the picture of a broken ball is Unity on their own. Every row says its own.
    */
   bare: readonly [Hull, Hull, Hull] | null;
+  /**
+   * The ship's War Dance at each stage — 0594: its still picture between two drawn poses of its own, its
+   * parts moving in its own drawing, cycled for as long as it dances. *"We'll need animations for all
+   * ships for that special."* Drawn rather than turned or swelled, because a pulsing sprite is still one
+   * picture (0280). Every row says its own poses and how long each is held.
+   */
+  dance: readonly [Cycle, Cycle, Cycle];
   /**
    * How far across from the ship's centre its outboard hardpoints stand, in world units — where a
    * coil gun's blades leave from, and where the intro's contrails trail from — 0441.
@@ -452,6 +459,15 @@ export interface Hull {
   hit: number;
 }
 
+/**
+ * A ship's War Dance at one stage — 0594: its pictures in the order the row says, each held `hold` steps.
+ * A rock is still, one way, still, the other; a spin is still and then each pose round once. The same list
+ * for a hit, because nothing lands on a dancing ship.
+ */
+function dancing(frames: readonly number[], hold: number): Cycle {
+  return { frames, hurt: frames, hold };
+}
+
 
 /**
  * The Hamster Ball's radius, in world units — 0593: the clear ball, inside `SHIP_BOX` with room for its rim
@@ -514,6 +530,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
     ],
     bare: null,
+    // 0594: a roll, one way and back and the other — the slowest of the six, because a roll is big.
+    dance: [
+      dancing([SPRITE.fighter, SPRITE.fighterDance1, SPRITE.fighter, SPRITE.fighterDance2], 8),
+      dancing([SPRITE.fighterTube, SPRITE.fighterTubeDance1, SPRITE.fighterTube, SPRITE.fighterTubeDance2], 8),
+      dancing([SPRITE.fighterTubes, SPRITE.fighterTubesDance1, SPRITE.fighterTubes, SPRITE.fighterTubesDance2], 8),
+    ],
     // 0581: its wingtips, 0.78 of the 7-unit hull's radius out — the pods that hung past them (0469) are gone.
     wingtip: 2.29,
     // 0581: the pulse's two mouths, at the end of its barrels on the nose — the mount's own muzzle, at its scale.
@@ -561,6 +583,13 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.caddieTubes, hit: SPRITE.caddieTubesHit },
     ],
     bare: null,
+    // 0594: spinning up — its vents and lights a third of the way round and two thirds, so still, one and
+    // two are one turn the same way, and the dome leaning into it.
+    dance: [
+      dancing([SPRITE.caddie, SPRITE.caddieDance1, SPRITE.caddieDance2], 5),
+      dancing([SPRITE.caddieTube, SPRITE.caddieTubeDance1, SPRITE.caddieTubeDance2], 5),
+      dancing([SPRITE.caddieTubes, SPRITE.caddieTubesDance1, SPRITE.caddieTubesDance2], 5),
+    ],
     /*
       ⚠️ **ITS DISC IS 0.72 OF THE BOX SINCE 0461, AND EVERY MOUNT BELOW MOVED WITH IT.**
       `docs/decisions/0461-the-ships-are-jazzed.md`: the pods hang off its sides now, and a disc the
@@ -630,6 +659,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
     ],
     bare: null,
+    // 0594: a launch and a stop — the nose up on its springs, then the tail, then level again.
+    dance: [
+      dancing([SPRITE.firebird, SPRITE.firebirdDance1, SPRITE.firebirdDance2], 6),
+      dancing([SPRITE.firebirdTube, SPRITE.firebirdTubeDance1, SPRITE.firebirdTubeDance2], 6),
+      dancing([SPRITE.firebirdTubes, SPRITE.firebirdTubesDance1, SPRITE.firebirdTubesDance2], 6),
+    ],
     // How far either side of the nose its helix's two strands open from — the height of the launcher's
     // star above the centreline. Since 0448 the pair leaves the star itself and flies out to here.
     wingtip: 1.13,
@@ -681,6 +716,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.estateTubes, hit: SPRITE.estateTubesHit },
     ],
     bare: null,
+    // 0594: the lowrider hop — the body up on one side and then the other, on its wheels.
+    dance: [
+      dancing([SPRITE.estate, SPRITE.estateDance1, SPRITE.estate, SPRITE.estateDance2], 7),
+      dancing([SPRITE.estateTube, SPRITE.estateTubeDance1, SPRITE.estateTube, SPRITE.estateTubeDance2], 7),
+      dancing([SPRITE.estateTubes, SPRITE.estateTubesDance1, SPRITE.estateTubes, SPRITE.estateTubesDance2], 7),
+    ],
     // The outside of its tyres, which is as wide as a wagon is.
     wingtip: 2.2,
     // The steel star in the launcher's face on its bonnet (`drawEstate` in the bake) — 0545. It was the
@@ -732,6 +773,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.thunderboltTubes, hit: SPRITE.thunderboltTubesHit },
     ],
     bare: null,
+    // 0594: leaning into it — the rider and the bars over to one side and then the other.
+    dance: [
+      dancing([SPRITE.thunderbolt, SPRITE.thunderboltDance1, SPRITE.thunderbolt, SPRITE.thunderboltDance2], 7),
+      dancing([SPRITE.thunderboltTube, SPRITE.thunderboltTubeDance1, SPRITE.thunderboltTube, SPRITE.thunderboltTubeDance2], 7),
+      dancing([SPRITE.thunderboltTubes, SPRITE.thunderboltTubesDance1, SPRITE.thunderboltTubes, SPRITE.thunderboltTubesDance2], 7),
+    ],
     // How far either side of the fork a borrowed gun's blades open from — the width of its fat tyres.
     wingtip: 2,
     // The lightning ball on its fork crown: the arc's first link leaves it.
@@ -787,6 +834,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.ballBare, hit: SPRITE.ballBareHit },
       { base: SPRITE.ballBareTube, hit: SPRITE.ballBareTubeHit },
       { base: SPRITE.ballBareTubes, hit: SPRITE.ballBareTubesHit },
+    ],
+    // 0594: the weasel war dance itself, Unity twisting one way and the other — the quickest, a frenzy.
+    dance: [
+      dancing([SPRITE.ball, SPRITE.ballDance1, SPRITE.ball, SPRITE.ballDance2], 4),
+      dancing([SPRITE.ballTube, SPRITE.ballTubeDance1, SPRITE.ballTube, SPRITE.ballTubeDance2], 4),
+      dancing([SPRITE.ballTubes, SPRITE.ballTubesDance1, SPRITE.ballTubes, SPRITE.ballTubesDance2], 4),
     ],
     // The ball's widest, where the intro's contrails trail from.
     wingtip: BALL_RADIUS,

@@ -17,6 +17,7 @@
  */
 
 import type { CueKind } from './cues.ts';
+import type { GolferKind } from './golfers.ts';
 import type { MissileKind } from './missiles.ts';
 import { BLADE_EDGE, type ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
@@ -305,11 +306,12 @@ export interface SpecialRow {
   /** The dance it throws the ship into, or `null` — 0593. */
   dance: Dance | null;
   /**
-   * Whether a ship other than the one whose gun brings it may ever carry it — from a pickup or fitted in
-   * the hangar — 0593. False for the War Dance until every ship has a dance of its own drawn: the plan's
-   * item 3 (`reports/the-secret-pilots-planned-2026-10-11.md`). Every row says its own.
+   * The pilot who must be open before the bomb pickup offers it in a run, or `null` for every run — 0594.
+   * The War Dance's is Unity's: *"other ships can pick up the special once the hamster ball is unlocked"*.
+   * Every row says its own. The hangar asks nothing more of it: fitting another ship's special already
+   * waits for that ship to be won (`specialOpen`), and the ball is won only in Unity's hands.
    */
-  shared: boolean;
+  opensWith: GolferKind | null;
   /*
     ── `charges` WAS HERE, AND IT WAS ONE ON EVERY ROW BUT THE BOMB'S — 0441 ─────────────────────
 
@@ -382,7 +384,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
-    shared: true,
+    opensWith: null,
     // The bomb pickup's face — the H-bomb in its bubble, since 0441; it was the bare `bomb` before.
     face: SPRITE.pickupBomb,
     cue: 'bomb',
@@ -411,7 +413,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
-    shared: true,
+    opensWith: null,
     face: SPRITE.pickupSeeker,
     cue: 'hunt',
     lands: null,
@@ -438,7 +440,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
-    shared: true,
+    opensWith: null,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
     cue: 'overdrive',
@@ -471,7 +473,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
-    shared: true,
+    opensWith: null,
     face: SPRITE.pickupArc,
     cue: 'stormThrow',
     lands: 'storm',
@@ -510,7 +512,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
-    shared: true,
+    opensWith: null,
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',
     lands: null,
@@ -542,7 +544,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
-    shared: true,
+    opensWith: null,
     // Its own face since 0447 — the swirl in its bubble. It wore the shield's while a shield was the
     // only way to earn one.
     face: SPRITE.pickupVoid,
@@ -597,7 +599,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     },
     candle: null,
     dance: null,
-    shared: true,
+    opensWith: null,
     face: SPRITE.pickupNova,
     cue: 'nova',
     lands: null,
@@ -642,7 +644,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: { stars: 8, every: 12, fan: 0.55, reaches: [72, 112, 92, 128], star: 'candleStar', burst: 'firework', bossShare: 0.01 },
     dance: null,
-    shared: true,
+    opensWith: null,
     face: SPRITE.pickupCandle,
     cue: 'candle',
     lands: 'firework',
@@ -668,7 +670,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: { steps: 180, speed: 2.2, reach: 3, damage: 3, landGap: 6 },
-    shared: false,
+    opensWith: 'unity',
     face: SPRITE.pickupDance,
     cue: 'warDance',
     lands: null,

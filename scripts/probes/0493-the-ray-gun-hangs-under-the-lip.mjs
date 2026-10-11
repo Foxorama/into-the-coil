@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'UNDER THE LIP: the emitter is painted before the disc’s face, so the face covers it to the rim',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);\n}',
-      replace: '  disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);\n  paintRaygun(ctx, f, palette);\n}',
+      // Re-anchored by 0594, which leans the dome as the saucer dances.
+      find: '  disc(ctx, f, palette.impact, dx - 0.15 * D, dy - 0.17 * D, 0.075, 0.9);\n}',
+      replace: '  disc(ctx, f, palette.impact, dx - 0.15 * D, dy - 0.17 * D, 0.075, 0.9);\n  paintRaygun(ctx, f, palette);\n}',
     },
   },
   {

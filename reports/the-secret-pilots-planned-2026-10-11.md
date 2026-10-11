@@ -171,6 +171,32 @@ Read without asking, and can be vetoed: in the hangar, fitting the War Dance as 
 special follows 0524's rule like every other special — open once the ball has won — because the answer
 was about picking it up in a run.
 
+### The dance on every ship — planned 2026-10-11, after 0593 landed the ball's
+
+**Drawn frames, because the ask is animation.** The frame can already turn and scale any blit, so the
+cheap version is every ship spinning or pulsing on its own picture. That is
+[0280](../docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md)'s case exactly: *"a pulsing
+sprite is still one picture. Animation is a body whose parts move relative to each other."* So each ship's
+dance is two drawn poses either side of its still one, cycled while it dances — its own parts moving, in
+its own drawing — at each of its three tube stages: thirty-six new bitmaps.
+
+| ship | its dance | what moves |
+|---|---|---|
+| the Hamster Ball | the weasel war dance itself, inside the ball | Unity: back arched, body twisted left then right, legs gathered; the ball's glint rolls round |
+| the Little Green Caddie | a saucer spinning up | the vents and running lights turn round the disc; the dome leans |
+| the fighter | its canards flapping | one canard swept forward and the other back, then the other way about. A roll was drawn first: foreshortened, its nose's look and half its paint fell under 0106's floor at the shipped camera |
+| the Firebird | a launch and a stop | the body lifts its nose and then its tail on its springs, the tyres where they were |
+| the estate | the lowrider hop | the body lifts to one side and then the other on its wheels |
+| the Thunderbolt | leaning into it | the rider and the bars lean one way and then the other over the frame |
+
+**What the poses may not move:** the wheels, the tubes and the flame, because the frame draws those over
+the hull where the still drawing puts them (`stepWheels`, `stepLoaded`, the exhaust). A pose that moved
+one would split the ship from its own wheel. The cars' bodies move on their wheels for that reason.
+
+**The ram on a ship that is not the ball is not drawn.** Its body rides every dancing ship and lands as it
+does on the ball; the ball's heat sheen under a fighter would be a disc round it, over the bullets beside
+it — 0373's reason. What it lands is said where it lands, as every blade's is.
+
 ## The queue
 
 1. **The count and the cause.** `onDeath` reports what killed the ship; `itc_hangar` gains a count of
@@ -201,8 +227,11 @@ Also on the page, and not characters — each one PR, in any order after item 1:
   parts every row states.
 - **Item 2, the first half** — [0593](../docs/decisions/0593-the-hamster-ball-rolls.md): Unity, the ball,
   the ram and its heat, break and recharge, the War Dance on the ball alone, the hints on every shut card.
-  The ram is weighed on bosses at eight, and the floors fly it against the hull. **Still owed of item 2**:
-  the dance drawn on every ship, and the War Dance on the bomb pickup and in the hangar once Unity is open.
+  The ram is weighed on bosses at eight, and the floors fly it against the hull.
+- **Item 2, the second half** — [0594](../docs/decisions/0594-every-ship-dances.md): every ship's dance drawn
+  in poses of its own at every stage, and the War Dance on the bomb pickup and in How to play's key once Unity
+  is open. Item 2 is done. The fighter's dance is its canards and not the roll planned above, and the decision
+  says why.
 
 ## Owed
 

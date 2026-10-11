@@ -34,7 +34,6 @@ import { TUBE_WARES, TUBE_WARE_KINDS, tubesOf, type RackKind } from '../../conte
 import { MISSILE_KINDS } from '../../content/missiles.ts';
 import { SHELLS, type ShellKind } from '../../content/shells.ts';
 import { WEAPONS } from '../../content/weapons.ts';
-import { SPECIALS } from '../../content/specials.ts';
 
 export interface HangarState {
   /**
@@ -277,8 +276,7 @@ export function plateOpen(state: HangarState, ship: ShipKind, plate: ShipKind): 
  * than a second spelling of it: a ship's own slot, open with its win, offering what won ships bring.
  */
 export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {
-  // 0593: a special no other ship has a picture for yet stays with the ship that brings it (`shared`).
-  if (from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) return false;
+  // 0594: the War Dance too, now every ship dances — and the ball is won only in Unity's hands.
   return plateOpen(state, ship, from);
 }
 

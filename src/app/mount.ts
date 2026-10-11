@@ -67,9 +67,11 @@ import { ROWS_OF } from '../content/arms.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES, reachDownLane } from '../content/bosses.ts';
 import {
+  NONE_SHUT,
   PICKUPS,
   PICKUP_KINDS,
   effectOf,
+  facesShut,
   specialOf,
   missileFaceOf,
   MAX_LAUNCHERS,
@@ -865,6 +867,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
   /** Pickup rows in `PICKUP_KINDS` order, and the reverse lookup, built the same way enemies are. */
   const pickupRows = PICKUP_KINDS.map((k) => PICKUPS[k]);
+  /** Each pickup's faces this hangar's player may not be offered yet, in `pickupRows`' order — 0594. */
+  const shutFor = (hangar: HangarState): readonly (readonly boolean[])[] => {
+    const record = pilotRecord(hangar);
+    return PICKUP_KINDS.map((k) => facesShut(k, record));
+  };
   const pickupKinds = {} as Record<PickupKind, number>;
   PICKUP_KINDS.forEach((k, index) => {
     pickupKinds[k] = index;
@@ -1308,6 +1315,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bolts,
     pickupRows,
     pickupKinds,
+    // 0594: nothing shut until the hangar is read, two dozen lines down, and again whenever it moves.
+    pickupShut: PICKUP_KINDS.map(() => NONE_SHUT),
     collected: makeCollected(CAPACITY.pickups),
     // The base weapon, which is what an empty upgrade list resolves to. There is no second
     // description of it anywhere — 0039's "back to the base weapon" is this call with `[]`.
@@ -1446,6 +1455,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     settings: readSettings(keptStore, initialState.settings),
     hangar: readHangar(keptStore, initialState.hangar),
   };
+  // 0594: what this player may not be offered yet, from the hangar just read.
+  world.pickupShut = shutFor(state.hangar);
   /** Whether the viewport is one the game may be played in at all — the orientation gate's answer. */
   let playable = false;
   /** Fixed steps left before the current screen expires by itself. `0` on a screen that waits. */
@@ -2023,6 +2034,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     if (hangarChanged) {
       writeHangar(keptStore, state.hangar);
+      // 0594: a pilot opened mid-run — the tenth crash — opens what waits on them from the next pickup on.
       fitHangar();
       /*
         0567: on a stand, a change to the hangar is a fitting or a purchase, and it is felt: the ship hops on
@@ -2575,6 +2587,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       pilotWhy(record),
       GOLFER_KINDS.map((kind) => lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name)),
     );
+    // 0594: and what waits on a pilot, kept from the pickups and from How to play's key alike.
+    world.pickupShut = shutFor(state.hangar);
+    chrome.setPickupsShut(world.pickupShut);
     const ship = GOLFERS[state.settings.pilot].ship;
     const open = SHIP_KINDS.map((plate) => plateOpen(state.hangar, ship, plate));
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);

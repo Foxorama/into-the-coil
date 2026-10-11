@@ -19,6 +19,7 @@ import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES } from '../src/content/bosses.ts';
 import {
   DRAWN_KINDS,
+  NONE_SHUT,
   PICKUPS,
   PICKUP_KINDS,
   type PickupKind,
@@ -194,6 +195,7 @@ export function inertLevel(): {
   pickups: Pool<Entity>;
   pickupRows: readonly PickupRow[];
   pickupKinds: Record<PickupKind, number>;
+  pickupShut: readonly (readonly boolean[])[];
   collected: ReturnType<typeof makeCollected>;
   onPickup: (kind: PickupKind) => void;
   weapon: ReturnType<typeof weaponFor>;
@@ -354,6 +356,7 @@ export function pickupParts(): {
   pickups: Pool<Entity>;
   pickupRows: readonly PickupRow[];
   pickupKinds: Record<PickupKind, number>;
+  pickupShut: readonly (readonly boolean[])[];
   collected: ReturnType<typeof makeCollected>;
 } {
   const pickupKinds = {} as Record<PickupKind, number>;
@@ -365,6 +368,8 @@ export function pickupParts(): {
     pickups: new Pool<Entity>(CAPACITY.pickups, makeEntity),
     pickupRows: PICKUP_KINDS.map((k) => PICKUPS[k]),
     pickupKinds,
+    // Nothing shut: a fixture's player has opened every pilot, unless the test says otherwise — 0594.
+    pickupShut: PICKUP_KINDS.map(() => NONE_SHUT),
     collected: makeCollected(CAPACITY.pickups),
   };
 }

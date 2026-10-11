@@ -66,8 +66,9 @@ export const PROBES = [
     guard: 'every gun’s own special is a face the bomb pickup shows',
     edit: {
       path: 'src/content/pickups.ts',
-      // Re-anchored by 0593, which offers only a special every ship can carry.
-      find: "export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun' && SPECIALS[k].shared);",
+      // Re-anchored by 0593, which offered only a special every ship could carry, and by 0594, which put the
+      // War Dance back with the rest.
+      find: "export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun');",
       replace: "export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => k === 'bomb');",
     },
   },
