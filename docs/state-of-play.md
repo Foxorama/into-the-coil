@@ -1161,7 +1161,7 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ BOTH SECRET PILOTS ARE IN, AND THE SUBMARINE HANGS — 2026-10-11
+### ⚠️ THE SECRET PILOTS' PAGE IS DONE — 2026-10-11
 
 [`the-secret-pilots-planned`](../reports/the-secret-pilots-planned-2026-10-11.md) is a handwritten page
 read into the game — a least weasel in a hamster ball and a space duck in the Aqua Duck — and **holds the
@@ -1169,8 +1169,8 @@ order, so this file does not.** Its *Answered* table holds the player's two answ
 [0592](decisions/0592-the-crashes-are-counted.md); item 2, Unity and the Hamster Ball, is
 [0593](decisions/0593-the-hamster-ball-rolls.md) and [0594](decisions/0594-every-ship-dances.md); item 3,
 MMXXVI and the Aqua Duck, is [0595](decisions/0595-the-aqua-duck-paints.md); item 4, the Yellow Submarine,
-is [0596](decisions/0596-the-yellow-submarine-hangs.md). Next is item 5, the title track in the menu; each
-owes a play, as the report's *Owed* says.
+is [0596](decisions/0596-the-yellow-submarine-hangs.md); item 5, the title track in the menu, is
+[0597](decisions/0597-the-title-track-plays-in-the-menu.md). Each owes a play, as the report's *Owed* says.
 
 ### ⚠️ THE CATHERINE WHEEL STAYS A BEAT LONGER — OWED A PLAY — 2026-10-10
 
