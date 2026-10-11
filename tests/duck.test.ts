@@ -25,6 +25,8 @@ import { BOMB_KINDS, facesShut, weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, SHIP_KINDS, fitted, ownFit } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { JET_BOLT_KIND, SPECIALS } from '../src/content/specials.ts';
+import { CUES } from '../src/content/cues.ts';
+import { cueSeconds } from '../src/app/sound.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
@@ -370,6 +372,76 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     const calls = mount.match(/boltInks\([^;]*\);/g) ?? [];
     expect(calls.length, 'no call that hands the bolts their inks was found').toBeGreaterThan(0);
     for (const call of calls) expect(call, 'the jet is handed an ink other than the player’s water').toContain('colours.water, colours.impact));');
+  });
+
+  /*
+    ── HEARD — `docs/decisions/0599-the-water-and-the-paint-are-heard.md` ───────────────────────────────────
+
+    ⚠️ **IN SECONDS, BECAUSE THAT IS WHAT THE GAP WAS IN.** The cannon's cue was 0.6 s and its jet 2 s: three
+    quarters of the jet was a column of water sweeping the lane in silence, which no table of cues could show.
+  */
+  it('is heard from the press to its last step, with no gap in it', () => {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    const heard: [number, number][] = [];
+    world.onCue = (kind): void => {
+      if (kind === 'waterCannon' || kind === 'spray') heard.push([world.steps, cueSeconds(CUES[kind])]);
+    };
+    const start = world.steps;
+    launchSpecial(world, 'waterCannon');
+    for (let step = 0; step < JET.steps + 30; step++) frame.step();
+    expect(heard.some(([, s]) => s === cueSeconds(CUES.waterCannon)), 'the cannon’s own cue was not heard').toBe(true);
+    // Walk the jet's two seconds in hundredths: each must be inside some cue it played.
+    const seconds = JET.steps / STEPS_PER_SECOND;
+    let silent = 0;
+    for (let t = 0; t < seconds; t += 0.01) {
+      const covered = heard.some(([at, length]) => {
+        const from = (at - start) / STEPS_PER_SECOND;
+        return t >= from && t < from + length;
+      });
+      if (!covered) silent += 0.01;
+    }
+    expect(silent, `the jet played ${silent.toFixed(2)} s of its ${seconds} s in silence`).toBeLessThan(0.02);
+    // And it stops with the jet: nothing struck after its last step.
+    const last = Math.max(...heard.map(([at]) => at - start));
+    expect(last / STEPS_PER_SECOND, 'the spray went on after the jet').toBeLessThan(seconds);
+  });
+
+  it('every body it lands on is heard, on every ship, and as the water rather than as the gun’s hit', () => {
+    for (const ship of ['duck', 'firebird', 'estate', 'fighter'] as const) {
+      const built = playableWorld(NO_LEVEL);
+      const world = built.world;
+      world.shipRow = fitted(SHIPS[ship], SHIPS[ship].weapon);
+      world.weapon = weaponFor(world.shipRow, []);
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      wearHull(world);
+      const frame = new GameFrame(world);
+      bodyAt(world, 40, 0, 1e6);
+      const heard: string[] = [];
+      world.onCue = (kind): void => {
+        heard.push(kind);
+      };
+      launchSpecial(world, 'waterCannon');
+      for (let step = 0; step < JET.steps; step++) frame.step();
+      expect(world.enemies.at(0).health, `${ship}: the jet never landed, so this asks nothing`).toBeLessThan(1e6);
+      expect(heard, `${ship}: the jet landed and was not heard`).toContain('douse');
+      // Its gun held: no shot was in flight, so a `hit` could only be the jet's landing heard as the gun's.
+      expect(heard, `${ship}: the jet's landing was heard as the gun's hit`).not.toContain('hit');
+    }
+  });
+
+  it('a paintball that lands is heard splatting, where it lands', () => {
+    const { world, frame } = inTheDuck();
+    bodyAt(world, 30, 0, 1e6);
+    const splats: number[] = [];
+    world.onCue = (kind, across): void => {
+      if (kind === 'splat') splats.push(across ?? Number.NaN);
+    };
+    for (let step = 0; step < STEPS_PER_SECOND; step++) frame.step();
+    expect(splats.length, 'a ball landed and its splat was not heard').toBeGreaterThan(0);
+    const enemy = world.enemies.at(0);
+    for (const across of splats) expect(Math.abs(across - enemy.across), 'a splat was heard somewhere it did not land').toBeLessThan(enemy.radius + 2);
   });
 
   it('a life lost takes the jet with it', () => {

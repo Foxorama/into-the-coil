@@ -3121,7 +3121,8 @@ describe('0173 — a cue happens somewhere', () => {
     // And the tether's sizzle, since 0545: it lands at the tether's rate, as `hit` lands at the gun's.
     // And the ram's thump, since 0593: on contact it lands at `landGap`'s rate, ten a second.
     // And the marker's pop, since 0595: a ball every quarter of a beat, the second-fastest gun there is.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle', 'ram', 'paintball'];
+    // And, since 0599, its splat, which lands at the marker's rate, and the jet's douse, at the tether's.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle', 'ram', 'paintball', 'splat', 'douse'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }

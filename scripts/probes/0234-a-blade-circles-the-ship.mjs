@@ -80,8 +80,9 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0375, which lets a piercing missile add to it after: `let`, not `const`.
       // Re-anchored by 0593, whose ram's landings are its own cue and not the blade's.
-      find: '    let bites = bladeHits === null ? 0 : w.hits.count - rammed;',
-      replace: '    let bites = 0 * (bladeHits === null ? 0 : w.hits.count - rammed);',
+      // Re-anchored by 0599, whose jet's landings are its own cue too.
+      find: '    let bites = bladeHits === null ? 0 : w.hits.count - rammed - doused;',
+      replace: '    let bites = 0 * (bladeHits === null ? 0 : w.hits.count - rammed - doused);',
     },
   },
   {
