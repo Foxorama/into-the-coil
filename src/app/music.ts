@@ -60,6 +60,8 @@ import {
   type ThemeLadder,
 } from '../content/themes.ts';
 import { MUSIC_ROLES, roleOf } from '../content/arrangement.ts';
+import { TITLE_BARS, TITLE_PARTS, titleMoves, type TitlePartName } from '../content/title-track.ts';
+import type { SoundKind } from '../content/sound.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 /*
@@ -268,6 +270,63 @@ export function layerNotes(
  * written, so three taps at 0.6 give a decaying series that is still audible eight or nine repeats
  * later — a tail of about a second and a half, which is a stone building.
  */
+/** The title track's parts, in a fixed order — what a menu's mixer builds a gain for and a bake walks. */
+export const TITLE_PART_NAMES = Object.keys(TITLE_PARTS) as TitlePartName[];
+
+/** A buffer's level, in dB RMS. */
+function rmsDbOf(buffer: Float32Array): number {
+  let energy = 0;
+  for (let i = 0; i < buffer.length; i++) energy += buffer[i]! * buffer[i]!;
+  return 10 * Math.log10(energy / buffer.length + 1e-20);
+}
+
+/**
+ * One part of the title track as a loop, in jobs: its notes, its room, and last its scale to the part's own `db` —
+ * `docs/decisions/0597-the-title-track-plays-in-the-menu.md`.
+ *
+ * ⚠️ **THE ALBUM'S RENDER, AND NOW THE ONLY ONE.** `scripts/album.mjs` bakes the title through this, so the piece a
+ * player hears in the menu and the one on the album are one set of samples — the notes on `layerNotes`'s own
+ * `renderNote`, each part on its own named stream (0021), the room at its `air`, and the level set in the unit a
+ * listener hears. **The scale is a job of its own and the last one**, because it measures what the notes and the
+ * room put there.
+ */
+export function titleNotes(name: TitlePartName, rate: number): { buffer: Float32Array; notes: (() => void)[] } {
+  const part = TITLE_PARTS[name];
+  const buffer = new Float32Array(Math.round(part.bars * BAR_SECONDS * rate));
+  const rng = makeRng('music').stream(`title-${name}`);
+  const notes: (() => void)[] = [];
+  for (const voice of part.voices) {
+    const step = BEAT_SECONDS / voice.perBeat;
+    for (let i = 0; i < voice.steps.length; i++) {
+      const value = voice.steps[i];
+      if (value === null || value === undefined) continue;
+      notes.push(() => renderNote(voice, value, i, i * step, rate, rng, buffer));
+    }
+  }
+  notes.push(() => addRoom(buffer, rate, part.air));
+  notes.push(() => {
+    const scale = 10 ** ((part.db - rmsDbOf(buffer)) / 20) / MUSIC_GAIN;
+    for (let i = 0; i < buffer.length; i++) buffer[i] = buffer[i]! * scale;
+  });
+  return { buffer, notes };
+}
+
+/** One part of the title track, baked straight through — a worker's and the album's. */
+export function bakeTitlePart(name: TitlePartName, rate: number): Float32Array {
+  const { buffer, notes } = titleNotes(name, rate);
+  for (const note of notes) note();
+  return buffer;
+}
+
+/** How long one pass of the title's score lasts, in seconds — the menu plays it round. */
+export const TITLE_PASS_SECONDS = TITLE_BARS * BAR_SECONDS;
+
+/**
+ * How long the menu's music takes to hand over to a run's and back, in seconds — a bar, on the bar grid both play
+ * on, so neither piece is cut mid-bar (0117) and the hand-over is heard as one.
+ */
+export const TITLE_HANDOVER_SECONDS = BAR_SECONDS;
+
 const ROOM_TAPS: readonly [number, number][] = [
   [0.0717, 0.84],
   [0.1131, 0.82],
@@ -457,6 +516,16 @@ export function placeFor(runLevel: number): ThemeKind {
 export function musicPlaceFor(screen: Screen, audition: ThemeKind | null, runLevel: number): ThemeKind {
   if (audition !== null) return audition;
   return SCREENS[screen].inRun ? placeFor(runLevel) : 'approach';
+}
+
+/**
+ * Whether the menu's title track is wanted on `screen` — `docs/decisions/0597-the-title-track-plays-in-the-menu.md`.
+ * On every screen that is not part of a run, unless a place is being auditioned (0210: the room plays the place)
+ * or the sound is not on, which holds nothing for a player who chose silence. A pure function on `musicPlaceFor`'s
+ * terms, so the rule is a unit test over every screen rather than a race in a browser.
+ */
+export function titleWanted(screen: Screen, audition: ThemeKind | null, sound: SoundKind): boolean {
+  return !SCREENS[screen].inRun && audition === null && sound === 'on';
 }
 
 /**
@@ -960,6 +1029,21 @@ export interface MusicOut {
    * `nextBarFrom` keeps answering about the piece that is actually playing.
    */
   setLoops(next: Record<MusicLayer, Float32Array>): void;
+  /**
+   * Hand the menu its title track — `docs/decisions/0597-the-title-track-plays-in-the-menu.md`. The parts are
+   * copied into buffers of the mixer's own and the arrays are not kept, so the caller lets go of them.
+   */
+  setTitle(parts: Record<TitlePartName, Float32Array>): void;
+  /**
+   * Whether the menu's music is wanted, asked every frame. Wanted and held, it takes over from the run's at the next
+   * bar and plays the score round; not wanted, it hands back at the next bar and **its buffers are let go**, so a run
+   * never holds the title's 17 MB beside its own place.
+   */
+  title(wanted: boolean): void;
+  /** Whether the title track is held, so the caller knows to bake it again. */
+  hasTitle(): boolean;
+  /** Whether the title track is on the air, and from what audio time its current pass began — for the guards. */
+  titlePass(): number | null;
 }
 
 /**
@@ -1667,6 +1751,78 @@ export function makeMusicOut(
   squeeze.connect(undo);
   undo.connect(shaper);
   shaper.connect(destination);
+  /*
+    ── THE RUN'S BUS AND THE MENU'S — `docs/decisions/0597-the-title-track-plays-in-the-menu.md` ──────────
+
+    ⚠️ **TWO GAINS IN FRONT OF THE MASTER, AND THE HAND-OVER IS THE ONLY THING THAT MOVES THEM.** The run's
+    twenty-three layers keep free-running under the menu as they always have (0160) — the place a run starts in is
+    already playing when it starts — and the menu's title track is the seven parts of `src/content/title-track.ts`
+    on gains the score drives. Both reach the same compressor and shaper, so the menu is mastered as the run is.
+
+    ⚠️ **`@setup` NODES AT CONTEXT CREATION** — sixteen of them, on the panners' own terms (0118): a part's place in
+    the field is the part's, and nothing here is built per frame.
+  */
+  const runBus = ctx.createGain();
+  runBus.connect(master);
+  const titleBus = ctx.createGain();
+  titleBus.gain.value = 0;
+  titleBus.connect(master);
+  const titleGains = {} as Record<TitlePartName, GainNode>;
+  for (const name of TITLE_PART_NAMES) {
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = TITLE_PARTS[name].pan;
+    gain.connect(pan);
+    pan.connect(titleBus);
+    titleGains[name] = gain;
+  }
+  /** The title track's buffers while the menu holds it, and `null` once a run has let it go. */
+  let titleBuffers: Record<TitlePartName, AudioBuffer> | null = null;
+  /** The title's sources: the pass on the air, and the pass after it once that has been written. */
+  const titleSources: AudioBufferSourceNode[] = [];
+  /** Audio time the pass on the air began, or `null` when the title is not on the air. */
+  let titleFrom: number | null = null;
+  /** Audio time the next pass begins, once it has been written, or `null`. */
+  let titleNext: number | null = null;
+
+  /**
+   * Write one pass of the score from `when`: seven loops started together, and each part's level as the score moves
+   * it. **The pass before it stops at exactly `when`**, so the join has no gap, as `swapTo`'s has none.
+   *
+   * ⚠️ **EVERY PASS RESTARTS ITS LOOPS, AND THE THEME IS WHY.** The score is seventy-two bars and the lead's loop is
+   * sixteen, so a lead left running would enter the second pass half way through its theme; a part's position in its
+   * loop is the score's, and the score starts again at bar one.
+   */
+  const writePass = (when: number, again: boolean): void => {
+    if (titleBuffers === null) return;
+    // The pass before the one on the air has already stopped: let it go.
+    if (titleSources.length > TITLE_PART_NAMES.length) titleSources.splice(0, TITLE_PART_NAMES.length);
+    for (let i = 0; i < titleSources.length; i++) titleSources[i]!.stop(when);
+    for (const name of TITLE_PART_NAMES) {
+      const source = ctx.createBufferSource();
+      source.buffer = titleBuffers[name];
+      source.loop = true;
+      source.connect(titleGains[name]);
+      source.start(when);
+      titleSources.push(source);
+      const param = titleGains[name].gain;
+      for (const move of titleMoves(name, again)) {
+        const at = when + move.at * BAR_SECONDS;
+        param.setValueAtTime(move.from, at);
+        param.linearRampToValueAtTime(move.to, at + move.over * BAR_SECONDS);
+      }
+    }
+  };
+
+  /** Take the title off the air at `at`: its sources stop and every level written past that is forgotten. */
+  const stopTitle = (at: number): void => {
+    for (let i = 0; i < titleSources.length; i++) titleSources[i]!.stop(at);
+    titleSources.length = 0;
+    for (const name of TITLE_PART_NAMES) titleGains[name].gain.cancelScheduledValues(at);
+    titleFrom = null;
+    titleNext = null;
+  };
 
   for (const layer of MUSIC_LAYERS) {
     const data = loops[layer];
@@ -1687,7 +1843,8 @@ export function makeMusicOut(
     const pan = ctx.createStereoPanner();
     pan.pan.value = LAYER_PAN[layer];
     gain.connect(pan);
-    pan.connect(master);
+    // Through the run's bus — 0597, which is what the menu's music takes over from.
+    pan.connect(runBus);
     gains[layer] = gain;
     pans[layer] = pan;
   }
@@ -1893,6 +2050,15 @@ export function makeMusicOut(
       sources.length = 0;
       started = false;
       /*
+        ⚠️ **AND THE TITLE'S, ON THE SAME TERMS** — 0597. Off is off for the menu's music too, and the buses go back
+        to the run's, so whichever piece is wanted when the sound comes back on takes over as it would at any start.
+      */
+      stopTitle(off);
+      runBus.gain.cancelScheduledValues(off);
+      runBus.gain.setValueAtTime(1, off);
+      titleBus.gain.cancelScheduledValues(off);
+      titleBus.gain.setValueAtTime(0, off);
+      /*
         ⚠️ **And what each layer was heading for is forgotten with them** — 0117. A restart re-anchors
         the bar grid, so every ramp is scheduled afresh; leaving the old destinations in place would
         make `levelWrites` skip a layer whose gain now belongs to a different anchor.
@@ -1956,6 +2122,72 @@ export function makeMusicOut(
         the bar is the only answer left.
       */
       swapTo(placeArrivesAt(anchorAudio, ctx.currentTime, SCHEDULE_AHEAD));
+    },
+    setTitle(parts: Record<TitlePartName, Float32Array>): void {
+      // @setup: seven buffers, once each time the menu is come back to — 0597.
+      const made = {} as Record<TitlePartName, AudioBuffer>;
+      for (const name of TITLE_PART_NAMES) {
+        const data = parts[name];
+        const buffer = ctx.createBuffer(1, data.length, rate);
+        buffer.getChannelData(0).set(data);
+        made[name] = buffer;
+      }
+      titleBuffers = made;
+    },
+    title(wanted: boolean): void {
+      /*
+        ⚠️ **NOT WANTED, THE BUFFERS GO WHETHER OR NOT THEY WERE EVER PLAYED** — 0597. A run is the place the
+        memory is spent (`tests/sound.test.ts`'s 145 MB), and a title baked on the menu and never heard because the
+        player pressed start first is seventeen megabytes nobody can hear. A source already started keeps its own
+        buffer until it stops, so letting go here cannot cut the hand-over short.
+      */
+      if (!wanted) {
+        titleBuffers = null;
+        if (titleFrom === null) return;
+        const at = placeArrivesAt(anchorAudio, ctx.currentTime, SCHEDULE_AHEAD);
+        const until = at + TITLE_HANDOVER_SECONDS;
+        titleBus.gain.cancelScheduledValues(at);
+        titleBus.gain.setValueAtTime(1, at);
+        titleBus.gain.linearRampToValueAtTime(0, until);
+        runBus.gain.cancelScheduledValues(at);
+        runBus.gain.setValueAtTime(0, at);
+        runBus.gain.linearRampToValueAtTime(1, until);
+        stopTitle(until);
+        return;
+      }
+      if (!started || !on || titleBuffers === null) return;
+      const now = ctx.currentTime;
+      if (titleFrom === null) {
+        /*
+          ⚠️ **AT THE RUN'S NEXT BAR, SO THE MENU'S PIECE IS ON THE RUN'S GRID** — 0117's rule, and it is what lets
+          either piece hand over to the other on a downbeat both of them have. The score opens on its drone and pad
+          rising out of silence over a bar, so the title's bus is simply open and the run's falls away beneath it.
+        */
+        const when = placeArrivesAt(anchorAudio, now, SCHEDULE_AHEAD);
+        runBus.gain.cancelScheduledValues(when);
+        runBus.gain.setValueAtTime(1, when);
+        runBus.gain.linearRampToValueAtTime(0, when + TITLE_HANDOVER_SECONDS);
+        titleBus.gain.cancelScheduledValues(when);
+        titleBus.gain.setValueAtTime(1, when);
+        writePass(when, false);
+        titleFrom = when;
+        return;
+      }
+      // Half a pass gone, the next is written — one comparison a frame, and a write once every minute.
+      if (titleNext === null && now > titleFrom + TITLE_PASS_SECONDS / 2) {
+        titleNext = titleFrom + TITLE_PASS_SECONDS;
+        writePass(titleNext, true);
+      }
+      if (titleNext !== null && now >= titleNext) {
+        titleFrom = titleNext;
+        titleNext = null;
+      }
+    },
+    hasTitle(): boolean {
+      return titleBuffers !== null;
+    },
+    titlePass(): number | null {
+      return titleFrom;
     },
   };
 }

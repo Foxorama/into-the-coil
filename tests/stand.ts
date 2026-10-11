@@ -55,6 +55,12 @@ async function snap(page: Page, screen: Screen, key: string): Promise<void> {
   );
 }
 
+/**
+ * How little of the band may move a bob apart for the stand to count as still — under half the least any guard asks
+ * a change to clear (`tests/pad.browser.test.ts`'s flame, 0.0002).
+ */
+export const STILL = 0.00008;
+
 /** Half the width of the band read round the ship, as a share of the stand — the ship and a little either side. */
 const SHIP_BAND = 0.2;
 
@@ -107,23 +113,57 @@ export async function samePhase(page: Page, screen: Screen, act: () => Promise<v
     apart were the same picture every time; under the whole batch of browser suites, once, the stand read
     as moving 2.7 % of its box between them — a page the load had left mid-way through something when its
     clock was taken. So the reads go on, a bob apart, until two agree, and `noise` is what the last pair
-    left; a stand that never settles in six bobs is reported as that noise, and fails the bar loudly.
+    left; a stand that never settles in twelve bobs is reported as that noise, and fails the bar loudly.
+
+    ⚠️ **AND *STILL* IS UNDER HALF THE SMALLEST BAR A CHANGE IS HELD TO, AND IT WAS TWICE IT** — the review of
+    the secret pilots (0598). *Still* was 0.0005 of the band, and `tests/pad.browser.test.ts` holds a flame to a
+    floor of 0.0002: a stand still settling under `npm run prove`'s load passed as still, and its drift across the
+    next bob read as the look arriving. Its probes went green under their breaks on two PRs in a row, and red
+    every time alone — measured, the break leaves the stand at exactly 0 when nothing is loading it.
   */
-  await snap(page, screen, 'b');
-  for (let tries = 0; tries < 6; tries++) {
+  /*
+    ⚠️ **AND A BOB OF THE PAGE'S CLOCK IS NOT ALWAYS A BOB OF THE GAME'S** — the review of the secret pilots
+    (0598). The taken clock fires a frame every 16 ms and the game steps every 16⅔ from a carried remainder
+    (`src/app/loop.ts`), so `BOB_MS` of the page's clock is 104 or 105 of the game's steps depending on where
+    the carry stood — and the stand's lights, on the bob's clock (0586), are a frame of their chase off when it
+    is 104. Measured: the saucer's rim bulbs, 80 to 110 pixels of the band, moving between two reads of a stand
+    nobody touched; under `npm run prove`'s load it landed between the reads either side of a press, and three
+    of 0541's probes read a look arriving that their breaks had taken away. So every read is taken three times,
+    a frame apart, and a later read is compared with whichever of the three it is nearest: a step slipped reads
+    as nothing, and a change is a change from all three.
+  */
+  await readAround(page, screen, 'b');
+  for (let tries = 0; tries < 12; tries++) {
     await page.evaluate(() => {
       const kept = (window as unknown as { itcStand: Record<string, Uint8ClampedArray> }).itcStand;
-      kept['a'] = kept['b']!;
+      for (const end of ['-', '', '+']) kept['a' + end] = kept['b' + end]!;
     });
-    await page.clock.runFor(BOB_MS);
-    await snap(page, screen, 'b');
-    if ((await changed(page, 'a', 'b')) < 0.0005) break;
+    await page.clock.runFor(BOB_MS - 2 * FRAME_MS);
+    await readAround(page, screen, 'b');
+    if ((await nearest(page, 'a', 'b')) < STILL) break;
   }
   await act();
-  await page.clock.runFor(BOB_MS);
-  await snap(page, screen, 'c');
-  await page.clock.runFor(BOB_MS);
-  await snap(page, screen, 'd');
+  await page.clock.runFor(BOB_MS - 2 * FRAME_MS);
+  await readAround(page, screen, 'c');
+  await page.clock.runFor(BOB_MS - 2 * FRAME_MS);
+  await readAround(page, screen, 'd');
   await page.clock.resume();
-  return { noise: await changed(page, 'a', 'b'), change: await changed(page, 'b', 'c'), after: await changed(page, 'c', 'd') };
+  return { noise: await nearest(page, 'a', 'b'), change: await nearest(page, 'b', 'c'), after: await nearest(page, 'c', 'd') };
+}
+
+/** One frame of the page's taken clock — what Playwright advances a frame by. */
+const FRAME_MS = 16;
+
+/** Read the stand under `key` three times, a frame apart: `key-`, `key` and `key+`, the middle one the read. */
+async function readAround(page: Page, screen: Screen, key: string): Promise<void> {
+  await snap(page, screen, key + '-');
+  await page.clock.runFor(FRAME_MS);
+  await snap(page, screen, key);
+  await page.clock.runFor(FRAME_MS);
+  await snap(page, screen, key + '+');
+}
+
+/** How much of the stand moved from `from` to `to`, against whichever of `from`'s three reads `to` is nearest. */
+async function nearest(page: Page, from: string, to: string): Promise<number> {
+  return Math.min(await changed(page, from + '-', to), await changed(page, from, to), await changed(page, from + '+', to));
 }

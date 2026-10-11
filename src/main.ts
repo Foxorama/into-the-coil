@@ -2,7 +2,7 @@ import { APP_VERSION, BUILD_ID, GAME_TITLE } from './brand.ts';
 import { DEFAULT_PALETTE, PALETTES } from './content/palette.ts';
 import { mount } from './app/mount.ts';
 import { makeBakePool } from './app/bake-pool.ts';
-import { useLayerBaker } from './app/sound.ts';
+import { useLayerBaker, useTitleBaker } from './app/sound.ts';
 
 /**
  * The boot watchdog's half of the contract, declared where TypeScript can see it.
@@ -38,7 +38,10 @@ if (app instanceof HTMLElement) {
   app.style.inset = '0';
 
   // 0331: a place's music is synthesised on workers where the browser has them — see `useLayerBaker`.
-  useLayerBaker(makeBakePool());
+  // 0597: and the title track's, for the menu.
+  const pool = makeBakePool();
+  useLayerBaker(pool?.layer ?? null);
+  useTitleBaker(pool?.title ?? null);
   const mounted = mount(app, DEFAULT_PALETTE);
   if (mounted === null) {
     // No 2D context. Say so where a player can read it, rather than showing a black rectangle.

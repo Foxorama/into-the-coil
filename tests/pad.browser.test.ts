@@ -39,6 +39,16 @@ const band = (setting: string): string => `${shown('parts')} [${SETTING_ATTR}="$
  */
 const FLOOR = 0.0002;
 
+/**
+ * The least the visor must move for the DOME to have taken it — the review of the secret pilots (0598).
+ *
+ * ⚠️ **THE VISOR IS MORE THAN THE DOME, AND `FLOOR` COULD NOT TELL THEM APART.** With the dome left plain glass,
+ * picking the visor still moves a thin band across the saucer's middle — measured, 0.0003 to 0.0005 of the stand,
+ * over `FLOOR` — and the whole look with its dome moves 0.0075 to 0.0081. So the dome's claim is held to a bar
+ * between the two, as every other look on the pad is (`tests/art.browser.test.ts`'s 0.002).
+ */
+const DOME_FLOOR = 0.002;
+
 let browser: Browser | undefined;
 afterAll(async () => {
   await browser?.close();
@@ -74,7 +84,7 @@ describe.runIf(chromePath)('0541 — every look reaches the ship on the pad', ()
     const paint = await samePhase(page, 'parts', () => page.locator(`${band('livery')} >> nth=${1 + red}`).dispatchEvent('click'));
     expect(paint.change, `the saucer on the pad is still in the factory's paint: ${paint.change.toFixed(5)} against ${paint.noise.toFixed(5)}`).toBeGreaterThan(Math.max(3 * paint.noise, FLOOR));
     const visor = await samePhase(page, 'parts', () => page.locator(`${band('art')} >> nth=${SHIPS.caddie.arts.indexOf('visor')}`).dispatchEvent('click'));
-    expect(visor.change, `the saucer's dome is still plain glass: ${visor.change.toFixed(5)} against ${visor.noise.toFixed(5)}`).toBeGreaterThan(Math.max(3 * visor.noise, FLOOR));
+    expect(visor.change, `the saucer's dome is still plain glass: ${visor.change.toFixed(5)} against ${visor.noise.toFixed(5)}`).toBeGreaterThan(Math.max(3 * visor.noise, DOME_FLOOR));
     await page.context().close();
   });
 });

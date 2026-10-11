@@ -17,17 +17,20 @@
  * the same cross-origin fetch off a file path that the rule exists to avoid.
  */
 
-import { bakeLayer } from './music.ts';
+import { bakeLayer, bakeTitlePart } from './music.ts';
 import type { MusicLayer } from '../content/music.ts';
 import type { ThemeKind } from '../content/themes.ts';
+import type { TitlePartName } from '../content/title-track.ts';
 
-export interface BakeRequest {
-  readonly id: number;
-  readonly layer: MusicLayer;
-  readonly rate: number;
-  /** The place whose version of the layer is wanted — absent is the shared composition's. */
-  readonly theme: ThemeKind | undefined;
-}
+/** A layer of a place's music, or — 0597 — a part of the title track, which the menu bakes each time it is come to. */
+export type BakeRequest = { readonly id: number; readonly rate: number } & (
+  | {
+      readonly layer: MusicLayer;
+      /** The place whose version of the layer is wanted — absent is the shared composition's. */
+      readonly theme: ThemeKind | undefined;
+    }
+  | { readonly title: TitlePartName }
+);
 
 export interface BakeReply {
   readonly id: number;
@@ -37,8 +40,9 @@ export interface BakeReply {
 const scope = self as unknown as { onmessage: ((event: MessageEvent<BakeRequest>) => void) | null; postMessage(reply: BakeReply, transfer: Transferable[]): void };
 
 scope.onmessage = (event) => {
-  const { id, layer, rate, theme } = event.data;
-  const buffer = bakeLayer(layer, rate, theme);
+  const request = event.data;
+  const buffer = 'title' in request ? bakeTitlePart(request.title, request.rate) : bakeLayer(request.layer, request.rate, request.theme);
+  const { id } = request;
   // Transferred, not copied: a forty-two bar loop is twelve megabytes.
   scope.postMessage({ id, buffer }, [buffer.buffer]);
 };

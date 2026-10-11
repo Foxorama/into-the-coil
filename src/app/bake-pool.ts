@@ -8,7 +8,7 @@
 
 import BakeWorker from './bake.worker.ts?worker&inline';
 import type { BakeReply, BakeRequest } from './bake.worker.ts';
-import type { LayerBaker } from './sound.ts';
+import type { LayerBaker, TitleBaker } from './sound.ts';
 import { SAMPLE_RATE } from './sound.ts';
 
 /**
@@ -19,7 +19,7 @@ import { SAMPLE_RATE } from './sound.ts';
 const workersFor = (cores: number): number => Math.max(1, Math.min(4, cores - 2));
 
 /** A baker backed by workers, or `null` where a worker cannot be made. */
-export function makeBakePool(): LayerBaker | null {
+export function makeBakePool(): { layer: LayerBaker; title: TitleBaker } | null {
   if (typeof Worker === 'undefined') return null;
   const waiting: { request: BakeRequest; done: (buffer: Float32Array) => void }[] = [];
   const pending = new Map<number, (buffer: Float32Array) => void>();
@@ -50,9 +50,14 @@ export function makeBakePool(): LayerBaker | null {
     }
   };
 
-  return (layer, theme) =>
+  const ask = (request: BakeRequest): Promise<Float32Array> =>
     new Promise<Float32Array>((done) => {
-      waiting.push({ request: { id: nextId++, layer, rate: SAMPLE_RATE, theme }, done });
+      waiting.push({ request, done });
       feed();
     });
+  return {
+    layer: (layer, theme) => ask({ id: nextId++, layer, rate: SAMPLE_RATE, theme }),
+    // 0597: the title track's parts, on the same workers and the same queue.
+    title: (title) => ask({ id: nextId++, title, rate: SAMPLE_RATE }),
+  };
 }

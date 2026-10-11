@@ -8,8 +8,9 @@
  * the instrument the whole album keeps coming back to — for the breakdown.
  *
  * ⚠️ **A SCORE OF SECTIONS ON A CLOCK, NOT A CAMERA** — the title has no scroll, so each section names how many
- * bars it lasts and how loud each part is in it. `scripts/album.mjs` plays it; the title screen in the game
- * still loops its two bars, and walking this score there is its own change.
+ * bars it lasts and how loud each part is in it. `scripts/album.mjs` plays it once and strikes a coda; the title
+ * screen and every menu play it round, in place of the two bars they looped until 0597
+ * (`docs/decisions/0597-the-title-track-plays-in-the-menu.md`).
  */
 
 import { BEAT_SECONDS, MUSIC, type MusicVoice } from './music.ts';
@@ -48,6 +49,15 @@ export interface TitlePart {
   readonly bars: number;
   readonly air: number;
   readonly pan: number;
+  /**
+   * Where the part sits at its own level of 1, in dBFS RMS on the bus before the shaper — `bakeTitlePart` in
+   * `src/app/music.ts` scales its loop to it.
+   *
+   * ⚠️ **SET IN THE UNIT A LISTENER HEARS, BECAUSE THE PARTS WERE NEVER MIXED AGAINST EACH OTHER** — three of them
+   * are new. It was `TARGET_DB` in `scripts/album.mjs` until the game played the piece too (0597): a level the
+   * album and the menu each kept would be two mixes of one track.
+   */
+  readonly db: number;
 }
 
 /** The theme: eight bars that rise and fall back to B, then eight that climb higher and come home. */
@@ -89,8 +99,8 @@ export type TitlePartName = 'drone' | 'bass' | 'heart' | 'pad' | 'arp' | 'lead' 
 
 export const TITLE_PARTS: Record<TitlePartName, TitlePart> = {
   // The drone's saws only: its sine an octave under them sat at 55–65 Hz, on the heart's own body (see TITLE_SCORE).
-  drone: { voices: MUSIC.drone.filter((v) => v.octave > 0).map((v) => ({ ...v, steps: v.steps[0] === 7 ? TITLE_FIFTH : TITLE_ROOT })), bars: 8, air: 0.6, pan: 0 },
-  bass: { voices: MUSIC.bass.map((v) => (v.pitched ? { ...v, steps: walked(v.steps) } : v)), bars: 8, air: 0.05, pan: 0 },
+  drone: { voices: MUSIC.drone.filter((v) => v.octave > 0).map((v) => ({ ...v, steps: v.steps[0] === 7 ? TITLE_FIFTH : TITLE_ROOT })), bars: 8, air: 0.6, pan: 0, db: -31 },
+  bass: { voices: MUSIC.bass.map((v) => (v.pitched ? { ...v, steps: walked(v.steps) } : v)), bars: 8, air: 0.05, pan: 0, db: -26 },
   /*
     ⚠️ **THE TITLE'S KIT STOOD HERE, AND IT WAS THE METRONOME** — heard on the album: *"there's a back and forth
     sound which is overpowering the rest of the music, I was calling it the metronome previously… can we replace
@@ -107,6 +117,7 @@ export const TITLE_PARTS: Record<TitlePartName, TitlePart> = {
     bars: 4,
     air: 0.08,
     pan: 0,
+    db: -34,
   },
   pad: {
     voices: [
@@ -117,6 +128,7 @@ export const TITLE_PARTS: Record<TitlePartName, TitlePart> = {
     bars: 8,
     air: 0.35,
     pan: -0.15,
+    db: -31,
   },
   arp: {
     voices: [
@@ -126,6 +138,7 @@ export const TITLE_PARTS: Record<TitlePartName, TitlePart> = {
     bars: 8,
     air: 0.3,
     pan: 0.35,
+    db: -31,
   },
   lead: {
     voices: [
@@ -136,6 +149,9 @@ export const TITLE_PARTS: Record<TitlePartName, TitlePart> = {
     bars: 16,
     air: 0.3,
     pan: -0.1,
+    // −28.5, where it was −25: heard, *"into the coil title at 53 — wham, suddenly loud."* It arrived over one bar six
+    // decibels over every other part, and the track rose four decibels in two seconds.
+    db: -28.5,
   },
   flute: {
     voices: [
@@ -145,6 +161,7 @@ export const TITLE_PARTS: Record<TitlePartName, TitlePart> = {
     bars: 8,
     air: 0.5,
     pan: 0.15,
+    db: -25.5,
   },
 };
 
@@ -185,3 +202,46 @@ export const TITLE_SCORE: readonly { bars: number; glide?: number; rise?: number
   */
   { bars: 16, rise: 4, glide: 4, parts: { drone: 0.32, bass: 0.9, heart: 1, arp: 0.65, lead: 0.85, flute: 0.45 } },
 ];
+
+/** How many bars the score lasts before the album's coda, which is one pass of it in the menu (0597). */
+export const TITLE_BARS = TITLE_SCORE.reduce((n, s) => n + s.bars, 0);
+
+/** One move of a part's level: from `from` at bar `at`, arriving at `to` `over` bars later and holding there. */
+export interface TitleMove {
+  readonly at: number;
+  readonly from: number;
+  readonly to: number;
+  readonly over: number;
+}
+
+/**
+ * Where a part's level goes across one pass of the score — what `scripts/album.mjs` walks sample by sample and
+ * what the menu writes onto a gain (`makeMusicOut` in `src/app/music.ts`), so the two are one reading of the score.
+ *
+ * A part falling away takes the section's `glide` and one arriving its `rise`, each a bar when the section does
+ * not say. **`again` is a pass that follows a pass**, which enters at the last section's levels rather than from
+ * silence: the menu plays the score round, and the album plays it once and strikes its coda.
+ */
+export function titleMoves(name: TitlePartName, again: boolean): TitleMove[] {
+  const moves: TitleMove[] = [];
+  let at = 0;
+  let was = again ? TITLE_SCORE[TITLE_SCORE.length - 1]!.parts[name] ?? 0 : 0;
+  for (const section of TITLE_SCORE) {
+    const level = section.parts[name] ?? 0;
+    moves.push({ at, from: was, to: level, over: level < was ? section.glide ?? 1 : section.rise ?? 1 });
+    was = level;
+    at += section.bars;
+  }
+  return moves;
+}
+
+/** A part's level `bar` bars into a pass, from its moves; past the last section it holds that section's level. */
+export function titleLevelAt(moves: readonly TitleMove[], bar: number): number {
+  for (let i = moves.length - 1; i >= 0; i--) {
+    const move = moves[i]!;
+    if (bar < move.at) continue;
+    const into = (bar - move.at) / move.over;
+    return into >= 1 ? move.to : move.from + (move.to - move.from) * into;
+  }
+  return moves[0]?.from ?? 0;
+}

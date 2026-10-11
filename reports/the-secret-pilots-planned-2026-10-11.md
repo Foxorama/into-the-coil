@@ -240,9 +240,14 @@ Also on the page, and not characters — each one PR, in any order after item 1:
   tail rather than bobbing whole. The paintball is weighed on bosses at 1.1, and 1.6 on the jellyfish.
 - **Item 4** — [0596](../docs/decisions/0596-the-yellow-submarine-hangs.md): the Yellow Submarine, a dangle at
   Cosmo's for 300, priced with the mirror ball and the bobblehead.
+- **Item 5** — [0597](../docs/decisions/0597-the-title-track-plays-in-the-menu.md): the title track plays round
+  on every screen that is not part of a run, from the album's own parts; a run hands it back at a bar and lets it
+  go. *Title → menu* is read as the title track carried on into the menu, and the decision says what the menu
+  does not do that the album does — the coda. The page is done.
 
 ## Owed
 
 A play of each pilot on its branch preview; the ear on every new cue; the ball's heat and recharge and the
-duck's unlock count, which are play numbers; paintballs looked at in every place for 0295's question; and
-the submarine seen swinging on the dash.
+duck's unlock count, which are play numbers; paintballs looked at in every place for 0295's question;
+the submarine seen swinging on the dash; and the title track heard in the menu — its take-over, its hand-back
+into a run, and the join where the score goes round.

@@ -95,11 +95,13 @@ import {
   musicPlaceFor,
   picturePlaceFor,
   placeFor,
+  titleWanted,
   UNITS_PER_SECOND,
+  type MusicOut,
 } from './music.ts';
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
-import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone, type PlaceBake } from './sound.ts';
+import { bakePlace, bakeTitle, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone, type PlaceBake } from './sound.ts';
 import { DOCK, INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
@@ -3306,6 +3308,40 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
 
   /*
+    ── THE MENU'S MUSIC — `docs/decisions/0597-the-title-track-plays-in-the-menu.md` ────────────────────
+
+    The page: *"title → menu music"*, read as the title track carried on into the menu. **Every screen that is
+    not part of a run plays the title track round** — the title, the hangar, Cosmo's, the settings, How to play —
+    in place of the two-bar bed it looped there, and a run hands it back to the run's music at a bar.
+
+    ⚠️ **BAKED HERE AND LET GO IN A RUN**, and `bakeTitle` has the memory argument. Until it lands the run's bed
+    plays, which is what this screen played for the game's whole life before; once it lands it takes over at the
+    next bar. **Not before the prewarm**, because the walk is the prewarm's own thread and the run's material is
+    what a press needs first.
+
+    ⚠️ **THE MUSIC ROOM IS NOT THE MENU** — 0210. A listener who picked a place hears that place.
+
+    ⚠️ **AND *OFF* WANTS NO TITLE** — the speaker is muted rather than torn down (0119), so the bake would run,
+    and seventeen megabytes would be held for a player who chose silence. `crossingIsReady` reads the setting
+    as *nobody is listening* for the same reason. Turning the sound back on bakes it again.
+  */
+  let titleBake: { stop(): void } | null = null;
+  const keepTitle = (music: MusicOut): void => {
+    const wanted = titleWanted(state.screen.current, audition, state.settings.sound);
+    if (!wanted) {
+      titleBake?.stop();
+      titleBake = null;
+    } else if (!music.hasTitle() && titleBake === null && prewarmDone()) {
+      titleBake = bakeTitle((parts) => {
+        titleBake = null;
+        // The mixer copies them into buffers of its own; nothing here keeps the arrays.
+        audioOut.music()?.setTitle(parts);
+      });
+    }
+    music.title(wanted);
+  };
+
+  /*
     ── THE CROSSING'S ONE QUESTION, AND ITS STEP — 0340 ────────────────────────────────────────────
 
     The rule is in `src/content/travel.ts` and is pure. What is here is the one fact the shell owns —
@@ -3830,6 +3866,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       after the last boss it was The Black Heart's until a new run began.
     */
     bakeIncomingPlace(musicPlaceFor(state.screen.current, audition, state.run.level));
+    // 0597: and the menu's own music, on every screen that is not part of a run.
+    keepTitle(music);
     /*
       ⚠️ **`music.phaseTo(world.steps)` WAS THE LINE ABOVE THIS AND 0160 REMOVED IT.** It ran every
       frame and did nothing almost every time: it kept the loops in phase with the sim's step clock

@@ -60,7 +60,8 @@ import {
   type CueRow,
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
-import { makeMusicOut, bakeLayer, bakeLoops, layerNotes, panGains, panStereoGains, type MusicOut } from './music.ts';
+import { makeMusicOut, bakeLayer, bakeLoops, layerNotes, panGains, panStereoGains, titleNotes, TITLE_PART_NAMES, type MusicOut } from './music.ts';
+import type { TitlePartName } from '../content/title-track.ts';
 import { bakedBy, cueRowOf, cuedBy, type ThemeKind } from '../content/themes.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
 /*
@@ -1909,6 +1910,79 @@ export function takePrewarmed(): { cues: Float32Array[][]; loops: Record<MusicLa
  */
 export function prewarmDone(): boolean {
   return prewarmed !== null;
+}
+
+/** Something that synthesises one part of the title track somewhere other than here — the same worker pool. */
+export type TitleBaker = (part: TitlePartName) => Promise<Float32Array>;
+
+/** Who bakes the title's parts, if not this thread — `useLayerBaker`'s argument, for the menu's music. */
+let titleBaker: TitleBaker | null = null;
+export function useTitleBaker(baker: TitleBaker | null): void {
+  titleBaker = baker;
+}
+
+/**
+ * Bake the title track for the menu — `docs/decisions/0597-the-title-track-plays-in-the-menu.md` — and hand the
+ * seven parts over once every one has landed.
+ *
+ * ⚠️ **BAKED AT THE MENU AND LET GO AT A RUN, WHICH IS 0133'S BOUNDARY BAKE ONE SCREEN OVER.** Held for the
+ * process, the title's 17 MB would sit beside every place a run loads, and The Black Heart's peak is already
+ * 141 MB of a 145 MB budget (`tests/sound.test.ts`). So the menu bakes it each time it is come back to and the
+ * run's bed plays meanwhile, as it did on the title for the game's whole life before this.
+ *
+ * ⚠️ **ON THE WORKERS WHERE THERE ARE ANY, AND ON THE SLICED WALK WHERE THERE ARE NOT** — `bakePlace`'s two
+ * routes, the same samples either way. Cancellable for the same reason: a player who presses start before the
+ * menu's music has arrived leaves a half-built title that is never handed anywhere.
+ */
+export function bakeTitle(
+  ready: (parts: Record<TitlePartName, Float32Array>) => void,
+  schedule: (run: () => void) => void = (run) => void setTimeout(run, 0),
+): { stop(): void } {
+  const parts = {} as Record<TitlePartName, Float32Array>;
+  const baker = titleBaker;
+  let stopped = false;
+  let waitingOn = 0;
+  let walked = false;
+  const finish = (): void => {
+    if (stopped || !walked || waitingOn > 0) return;
+    stopped = true;
+    ready(parts);
+  };
+  const jobs: (() => void)[] = [];
+  for (const name of TITLE_PART_NAMES) {
+    if (baker !== null) {
+      waitingOn++;
+      void baker(name).then((buffer) => {
+        if (stopped) return;
+        parts[name] = buffer;
+        waitingOn--;
+        finish();
+      });
+      continue;
+    }
+    jobs.push(() => {
+      const { buffer, notes } = titleNotes(name, SAMPLE_RATE);
+      parts[name] = buffer;
+      for (const note of notes) jobs.push(note);
+    });
+  }
+  let at = 0;
+  const step = (): void => {
+    if (stopped) return;
+    at = sliceOf(jobs, at);
+    if (at >= jobs.length) {
+      walked = true;
+      finish();
+      return;
+    }
+    schedule(step);
+  };
+  schedule(step);
+  return {
+    stop(): void {
+      stopped = true;
+    },
+  };
 }
 
 /** Every layer a loaded place has let go of the shared copy of — for `tests/sound.test.ts`. */
