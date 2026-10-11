@@ -13,7 +13,7 @@
 import type { ShipKind } from './ships.ts';
 
 /** Every golfer, in the predecessor's roster order — the order the select screen offers them in. Closed. */
-export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo', 'marmot'] as const;
+export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo', 'marmot', 'unity'] as const;
 
 export type GolferKind = (typeof GOLFER_KINDS)[number];
 
@@ -45,10 +45,12 @@ export interface RunnerRow {
   longSleeves?: boolean;
   /**
    * What body they are drawn with — 0546. Absent is a golfer; the Marmot is a marmot, in a riding suit
-   * (`shirt`) and a full-face helmet (`cap`), his fur `skin` and `hair`. A row says its own, and the
-   * painter's fallback is the person every other runner is (0282).
+   * (`shirt`) and a full-face helmet (`cap`), his fur `skin` and `hair`. Unity is a least weasel (0593),
+   * in a hi-vis shirt (`shirt`), navy overalls (`pants`) and a bush hat (`cap`), their cream front `skin`
+   * and their brown back `hair`. A row says its own, and the painter's fallback is the person every other
+   * runner is (0282).
    */
-  figure?: 'marmot';
+  figure?: 'marmot' | 'weasel';
 }
 
 export interface GolferRow extends RunnerRow {
@@ -327,6 +329,55 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
       'Nobody gets left behind. Not on my bike.',
       'Last call, pal. We’re going home.',
       'Heard you were stuck. Came straight over.',
+    ],
+  },
+  /**
+   * Unity — 0593. The least weasel who keeps Hangin' Out (0550), the Aussie trader mechanic, flying: they roll
+   * out in a hamster ball, and anything in the way finds out why. The page: *"Least Weasel Pilot — Hamster
+   * ball — flies into things to kill them … Unlock – 10 non-bullet deaths."*
+   *
+   * ⚠️ **LOCKED BEHIND TEN CRASHES, AND RESCUABLE BEFORE IT** — the Marmot's terms (0546): `rescuable` walks
+   * every pilot, so Unity is in the Viper's pool from the first run, and the band's hint counts the crashes
+   * down (*"hints for unlocks is good"*). Ten lives lost to something the ship flew into (0592).
+   *
+   * ⚠️ **THE AUSSIE IS IN THE LINES, AND THE LINES LAND FOR A PLAYER WHO NEVER MET THEM** — 0426's rule. They
+   * are *they*, as 0550 has them.
+   */
+  unity: {
+    name: 'Unity',
+    goesBy: 'Unity',
+    ship: 'ball',
+    home: 'Hangin’ Out',
+    pronouns: 'they/them',
+    // Their bush hat, felt brown; their hi-vis shirt; their cream front, and their warm brown back.
+    cap: '#5b4a35',
+    shirt: '#ff9f1c',
+    skin: '#fff0d8',
+    hair: '#94591a',
+    cut: 'crop',
+    stubble: false,
+    // Smaller than the Marmot: a least weasel is the smallest of them all.
+    build: 0.72,
+    // Navy overalls over the shirt, as on their bench (0554).
+    pants: '#1d2c40',
+    figure: 'weasel',
+    bio: 'Fixes every ship in the port and drives none of them; rolls out in a hamster ball, and whatever is in the way finds out why.',
+    // Quick and a little high: a small animal's voice, and lower than the Marmot's whistle.
+    voice: 1.26,
+    opens: { after: [], crashes: 10, bought: 0 },
+    saved: [
+      'Fair dinkum, you came for me! I owe you a full service, free.',
+      'Strewth, that thing had me rattled. Ta for getting me out.',
+      'Out at last! Never been so glad to see an open sky.',
+      'You flew all the way in here? Legend. Absolute legend.',
+      'Reckoned I was stuck in there for good. Thank you, mate.',
+    ],
+    saving: [
+      'Hop in, mate! Plenty of room in the ball.',
+      'Found ya. Stick close, we’re rolling home.',
+      'Nobody gets left behind. Not while I’m driving.',
+      'You right? Good. Hang on, this bit gets bumpy.',
+      'Took a few bumps getting here. Worth every one.',
     ],
   },
 };

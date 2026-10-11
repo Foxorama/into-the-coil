@@ -69,6 +69,11 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: RunnerRow, po
     paintMarmotRunner(ctx, golfer, leap, lean, [ft, fs, bt, bs], line, disc);
     return;
   }
+  // 0593: a least weasel, long and low, on the same stride.
+  if (golfer.figure === 'weasel') {
+    paintWeaselRunner(ctx, golfer, leap, [ft, fs, bt, bs], line, disc);
+    return;
+  }
   // The arms swing against the legs.
   const armFront = leap ? 150 : -ft * 0.9;
   const armBack = leap ? 130 : -bt * 0.9;
@@ -409,6 +414,174 @@ function paintMarmotPortrait(ctx: CanvasRenderingContext2D, marmot: GolferRow): 
   ctx.globalAlpha = 1;
 }
 
+/** Unity's own colours, beside their row's: nose, eyes and the silver tape on the hi-vis — 0593. */
+const WEASEL = {
+  nose: '#e8908a',
+  eye: '#140d08',
+  tape: '#dfe6ee',
+  whisker: '#fff8ec',
+} as const;
+
+/**
+ * Unity running out of the bar, side on, facing +x — 0593: a least weasel bounding, the body long and low
+ * and nearly level, on short legs that land where a golfer's feet do. The hi-vis shirt and the navy
+ * overalls over it (0554), the brown back meeting the cream front along the flank, the short tail out
+ * behind, and the bush hat on a small round head carried forward.
+ */
+function paintWeaselRunner(
+  ctx: CanvasRenderingContext2D,
+  weasel: RunnerRow,
+  leap: boolean,
+  [ft, fs, bt, bs]: readonly [number, number, number, number],
+  line: (points: readonly Pt[], colour: string, width: number) => void,
+  disc: (x: number, y: number, r: number, colour: string) => void,
+): void {
+  const deg = Math.PI / 180;
+  const pants = weasel.pants ?? KIT.pants;
+  // Short legs under a long body: hips and shoulders level, the feet still on the deck at +5.
+  const hip: Pt = [-1.4, 2.6];
+  const shoulder: Pt = [1.4, leap ? 1.9 : 2.3];
+  const limb = (from: Pt, a1: number, l1: number, a2: number, l2: number): [Pt, Pt] => {
+    const knee: Pt = [from[0] + Math.sin(a1 * deg) * l1, from[1] + Math.cos(a1 * deg) * l1];
+    const foot: Pt = [knee[0] + Math.sin((a1 + a2) * deg) * l2, knee[1] + Math.cos((a1 + a2) * deg) * l2];
+    return [knee, foot];
+  };
+  // The tail, short and brown, out behind and up with the bound.
+  line([[hip[0] - 0.6, hip[1] - 0.3], [hip[0] - 1.6, hip[1] - (leap ? 0.4 : 0.9)], [hip[0] - 2.1, hip[1] - (leap ? 0.3 : 1.2)]], weasel.hair, 0.6);
+  // The far legs, in shadow: a hind leg off the hip and a foreleg off the shoulder.
+  const [bk, bf] = limb(hip, bt, 1.2, bs, 1.2);
+  line([hip, bk, bf], shade(pants, -0.3), 0.75);
+  const [bek, bef] = limb(shoulder, -bt * 0.8, 1.1, 20, 1.1);
+  line([shoulder, bek, bef], shade(weasel.hair, -0.3), 0.6);
+  // The body: the overalls over the hindquarters, the hi-vis shirt over the chest, the cream belly under.
+  ctx.fillStyle = pants;
+  ctx.beginPath();
+  ctx.ellipse(hip[0] + 0.6, hip[1] - 0.15, 1.6, 0.95, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = weasel.shirt;
+  ctx.beginPath();
+  ctx.ellipse(shoulder[0] - 0.5, shoulder[1] - 0.2, 1.5, 0.95, 0, 0, Math.PI * 2);
+  ctx.fill();
+  line([[shoulder[0] - 0.7, shoulder[1] - 1.05], [shoulder[0] - 0.7, shoulder[1] + 0.65]], WEASEL.tape, 0.3);
+  // The overalls' strap over the shirt.
+  line([[hip[0] + 1.6, hip[1] - 0.8], [shoulder[0] + 0.1, shoulder[1] - 1]], pants, 0.35);
+  // The near legs.
+  const [fk, ff] = limb(hip, ft, 1.2, fs, 1.2);
+  line([hip, fk, ff], pants, 0.8);
+  disc(ff[0] + 0.2, ff[1], 0.3, weasel.hair);
+  const [fek, fef] = limb(shoulder, leap ? 140 : -ft * 0.8, 1.1, leap ? -30 : 20, 1.1);
+  line([shoulder, fek, fef], weasel.hair, 0.65);
+  disc(fef[0] + 0.15, fef[1], 0.28, weasel.skin);
+  // The neck, long, and the head carried forward: brown over, cream under, the line between them clean.
+  const head: Pt = [shoulder[0] + 1.5, shoulder[1] - 1.4];
+  const [hx, hy] = head;
+  line([[shoulder[0] + 0.2, shoulder[1] - 0.5], [hx - 0.4, hy + 0.2]], weasel.hair, 1.1);
+  line([[shoulder[0] + 0.4, shoulder[1] - 0.1], [hx - 0.2, hy + 0.55]], weasel.skin, 0.5);
+  disc(hx, hy, 0.85, weasel.hair);
+  ctx.fillStyle = weasel.skin;
+  ctx.beginPath();
+  ctx.ellipse(hx + 0.35, hy + 0.35, 0.65, 0.4, 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  disc(hx + 0.95, hy + 0.15, 0.2, WEASEL.nose);
+  disc(hx + 0.35, hy - 0.15, 0.17, WEASEL.eye);
+  disc(hx - 0.35, hy - 0.55, 0.32, shade(weasel.hair, -0.2));
+  // The bush hat: a wide brim and a pinched crown, tipped back.
+  ctx.fillStyle = weasel.cap;
+  ctx.beginPath();
+  ctx.ellipse(hx - 0.1, hy - 0.75, 1.35, 0.28, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(hx - 0.75, hy - 0.8);
+  ctx.quadraticCurveTo(hx - 0.6, hy - 1.75, hx - 0.05, hy - 1.55);
+  ctx.quadraticCurveTo(hx + 0.45, hy - 1.75, hx + 0.6, hy - 0.85);
+  ctx.closePath();
+  ctx.fill();
+  line([[hx - 0.7, hy - 0.95], [hx + 0.55, hy - 1]], shade(weasel.cap, -0.35), 0.18);
+}
+
+/**
+ * Unity's portrait for the select screen — 0593: head and shoulders, front on, in twentieths of the square.
+ * The hi-vis shirt with its silver tape and the navy overalls' straps, the long cream throat with brown
+ * either side, the head brown over and cream under with the line between them down each cheek, small
+ * round ears, two bead eyes, a pink nose and whiskers — and the bush hat with its crown pinched (0550).
+ */
+function paintWeaselPortrait(ctx: CanvasRenderingContext2D, weasel: GolferRow): void {
+  const pants = weasel.pants ?? KIT.pants;
+  const disc = (x: number, y: number, r: number, colour: string): void => {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  // The shirt: hi-vis shoulders, the silver tape across them, and the overalls' straps over it.
+  ctx.fillStyle = weasel.shirt;
+  ctx.beginPath();
+  ctx.moveTo(2.2, 20);
+  ctx.quadraticCurveTo(2.4, 15.8, 6.8, 15.2);
+  ctx.lineTo(13.2, 15.2);
+  ctx.quadraticCurveTo(17.6, 15.8, 17.8, 20);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = WEASEL.tape;
+  ctx.fillRect(2.3, 17.6, 15.4, 0.9);
+  ctx.fillStyle = pants;
+  ctx.fillRect(6.2, 15.4, 1.4, 4.6);
+  ctx.fillRect(12.4, 15.4, 1.4, 4.6);
+  // The throat: long, cream down the middle, brown either side.
+  ctx.fillStyle = weasel.hair;
+  ctx.fillRect(7.6, 11.4, 4.8, 4.4);
+  ctx.fillStyle = weasel.skin;
+  ctx.fillRect(8.7, 11.4, 2.6, 4.4);
+  // The ears, small and round, then the head: brown over, the cream muzzle and cheeks under it.
+  disc(5.6, 7.2, 1.3, weasel.hair);
+  disc(14.4, 7.2, 1.3, weasel.hair);
+  disc(5.6, 7.2, 0.6, shade(weasel.hair, 0.35));
+  disc(14.4, 7.2, 0.6, shade(weasel.hair, 0.35));
+  ctx.fillStyle = weasel.hair;
+  ctx.beginPath();
+  ctx.ellipse(10, 9.6, 4.2, 3.9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = weasel.skin;
+  ctx.beginPath();
+  ctx.moveTo(6.1, 10.6);
+  ctx.quadraticCurveTo(10, 9.4, 13.9, 10.6);
+  ctx.quadraticCurveTo(13.2, 13.6, 10, 13.8);
+  ctx.quadraticCurveTo(6.8, 13.6, 6.1, 10.6);
+  ctx.closePath();
+  ctx.fill();
+  // The eyes, beads with a glint; the nose, pink; and the whiskers, three each side.
+  disc(8.1, 9.2, 0.6, WEASEL.eye);
+  disc(11.9, 9.2, 0.6, WEASEL.eye);
+  disc(8.3, 9, 0.2, '#ffffff');
+  disc(12.1, 9, 0.2, '#ffffff');
+  disc(10, 11.2, 0.55, WEASEL.nose);
+  ctx.strokeStyle = WEASEL.whisker;
+  ctx.lineWidth = 0.18;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (const side of [-1, 1] as const) {
+    for (const lift of [-0.5, 0, 0.5]) {
+      ctx.moveTo(10 + side * 1.2, 11.8 + lift * 0.3);
+      ctx.lineTo(10 + side * 4.2, 11.4 + lift);
+    }
+  }
+  ctx.stroke();
+  // The bush hat: a wide brim, a crown pinched in at the front, and a darker band round it.
+  ctx.fillStyle = weasel.cap;
+  ctx.beginPath();
+  ctx.ellipse(10, 6.2, 6.6, 1.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(6.4, 6.2);
+  ctx.quadraticCurveTo(6.6, 2.2, 8.6, 2.4);
+  ctx.quadraticCurveTo(10, 3.2, 11.4, 2.4);
+  ctx.quadraticCurveTo(13.4, 2.2, 13.6, 6.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = shade(weasel.cap, -0.35);
+  ctx.fillRect(6.5, 5, 7, 0.9);
+}
+
 /**
  * A head under a hood, in profile, facing +x — 0416. The hood is a cowl bigger than the skull, its back
  * falling to the shoulders and its peak overhanging the brow, so the face is a lit edge in a shadow:
@@ -466,6 +639,12 @@ export function paintPortrait(ctx: CanvasRenderingContext2D, golfer: GolferRow, 
   // 0546: the Marmot in his helmet, visor up.
   if (golfer.figure === 'marmot') {
     paintMarmotPortrait(ctx, golfer);
+    ctx.restore();
+    return;
+  }
+  // 0593: Unity in their bush hat.
+  if (golfer.figure === 'weasel') {
+    paintWeaselPortrait(ctx, golfer);
     ctx.restore();
     return;
   }

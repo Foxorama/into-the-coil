@@ -92,6 +92,23 @@ export const SPRITE_KINDS = [
   'thunderboltTubeHit',
   'thunderboltTubes',
   'thunderboltTubesHit',
+  /*
+    Unity's Hamster Ball — 0593: a clear ball from above with Unity running in it, at no tubes, one and two.
+    And the same at each stage with the ball gone — `bare` on its row — for while it is broken: Unity on
+    their own, the tubes on a harness on their back.
+  */
+  'ball',
+  'ballHit',
+  'ballTube',
+  'ballTubeHit',
+  'ballTubes',
+  'ballTubesHit',
+  'ballBare',
+  'ballBareHit',
+  'ballBareTube',
+  'ballBareTubeHit',
+  'ballBareTubes',
+  'ballBareTubesHit',
   // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
   'spinnerWheel',
   'spinnerWheelHit',
@@ -1060,6 +1077,8 @@ export const SPRITE_KINDS = [
   'pickupShuriken',
   // The bomb pickup's roman candle face — 0537: a striped tube throwing a star, the candle's own glyph.
   'pickupCandle',
+  // The War Dance — 0593: a little ball hopping, three hops drawn behind it. The ball's special's face.
+  'pickupDance',
   /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
@@ -1197,6 +1216,19 @@ export const SPRITE_KINDS = [
   'shieldDisco240a',
   'shieldDisco240b',
   'shieldDisco240c',
+  // 0593: the Hamster Ball's own — sunflower seeds, striped, laid round the ball.
+  'shieldSeed0a',
+  'shieldSeed0b',
+  'shieldSeed0c',
+  'shieldSeed120a',
+  'shieldSeed120b',
+  'shieldSeed120c',
+  'shieldSeed180a',
+  'shieldSeed180b',
+  'shieldSeed180c',
+  'shieldSeed240a',
+  'shieldSeed240b',
+  'shieldSeed240c',
   /*
     ── A SURGE IS WORN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────────────────
 
@@ -1237,6 +1269,17 @@ export const SPRITE_KINDS = [
   'catherineFade',
   'cinder',
   'cinderCool',
+  /*
+    The ram — 0593. `ram` is the gun's own glyph, which the hangar shows for it: a ball with speed lines. The
+    body the frame pins to the ball wears the heat instead, from cool to the edge of breaking, inside the
+    ball's outline and under its clear shell, so the heat is seen where it is and covers nothing the ball
+    does not.
+  */
+  'ram',
+  'ramHeat0',
+  'ramHeat1',
+  'ramHeat2',
+  'ramHeat3',
   /*
     ── THE RAY GUN'S RINGS, IN THREE PAGES, AND WHERE THEY LAND IN TWO — 0442 ──────────────────────
 
@@ -1729,6 +1772,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   thunderboltTubeHit: SHIP_BOX,
   thunderboltTubes: SHIP_BOX,
   thunderboltTubesHit: SHIP_BOX,
+  ball: SHIP_BOX,
+  ballHit: SHIP_BOX,
+  ballTube: SHIP_BOX,
+  ballTubeHit: SHIP_BOX,
+  ballTubes: SHIP_BOX,
+  ballTubesHit: SHIP_BOX,
+  ballBare: SHIP_BOX,
+  ballBareHit: SHIP_BOX,
+  ballBareTube: SHIP_BOX,
+  ballBareTubeHit: SHIP_BOX,
+  ballBareTubes: SHIP_BOX,
+  ballBareTubesHit: SHIP_BOX,
   /*
     0527: a box whose frame's radius is the Firebird's tyre — 3.6 of the predecessor's units, each 0.062
     of a ship's box radius — so the spinner is painted to a radius of one and stands over that tyre at
@@ -2583,6 +2638,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupArc: 8,
   pickupShuriken: 8,
   pickupCandle: 8,
+  pickupDance: 8,
   pickupMissile: 7.33,
   pickupSeeker: 7.33,
   pickupShield: 6.67,
@@ -2695,6 +2751,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shieldDisco240a: 12,
   shieldDisco240b: 12,
   shieldDisco240c: 12,
+  shieldSeed0a: 12,
+  shieldSeed0b: 12,
+  shieldSeed0c: 12,
+  shieldSeed120a: 12,
+  shieldSeed120b: 12,
+  shieldSeed120c: 12,
+  shieldSeed180a: 12,
+  shieldSeed180b: 12,
+  shieldSeed180c: 12,
+  shieldSeed240a: 12,
+  shieldSeed240b: 12,
+  shieldSeed240c: 12,
   // Round the whole hull with a margin — the ship is 7, so its wingtips sit inside the rim. 0373.
   auraHunt: 12,
   auraOverdrive: 12,
@@ -2740,6 +2808,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     a shorter one.
   */
   catherine: 8,
+  // 0593: the gun's glyph at a pickup's size; the heat at the ship's box, so it lies on the ball it is in.
+  ram: 8,
+  ramHeat0: SHIP_BOX,
+  ramHeat1: SHIP_BOX,
+  ramHeat2: SHIP_BOX,
+  ramHeat3: SHIP_BOX,
   catherineFade: 8,
   cinder: 4.5,
   cinderCool: 3.6,

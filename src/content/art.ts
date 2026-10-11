@@ -38,6 +38,11 @@ export const ART_KINDS = [
   'tiger',
   'surf',
   'stars',
+  // 0593: the Hamster Ball's four.
+  'clearBall',
+  'sunflower',
+  'amberTint',
+  'speedStripes',
 ] as const;
 export type ArtKind = (typeof ART_KINDS)[number];
 
@@ -77,4 +82,9 @@ export const ART: Record<ArtKind, ArtRow> = {
   tiger: { name: 'Tiger stripes', hint: 'Three gold claws raked down the door', ship: 'firebird' },
   surf: { name: 'Surf’s up', hint: 'A white surfboard on the back panel', ship: 'estate' },
   stars: { name: 'Gold stars', hint: 'Three gold stars across the tank', ship: 'thunderbolt' },
+  // The Hamster Ball's plastic — 0593: as it came out of the pet shop, and what is stuck on it or done to it since.
+  clearBall: { name: 'Clear ball', hint: 'Plain clear plastic, as the pet shop sold it', ship: 'ball' },
+  sunflower: { name: 'Sunflower', hint: 'A sunflower sticker on the crown', ship: 'ball' },
+  amberTint: { name: 'Amber tint', hint: 'The plastic tinted amber, like a sweet', ship: 'ball' },
+  speedStripes: { name: 'Speed stripes', hint: 'Two orange stripes round the ball', ship: 'ball' },
 };

@@ -646,6 +646,8 @@ export function specialWhy(ship: ShipKind, won: boolean, borrowable: boolean): s
 
 /** What the gun band says when `ship`'s other guns are shut — 0526, on the same words. */
 export function gunWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
+  // 0593: a ship that flies a ram flies nothing else, won or not.
+  if (!WEAPONS[SHIPS[ship].weapon].lends) return 'The ' + plainLabel(ship) + ' flies nothing but its ' + WEAPONS[SHIPS[ship].weapon].label.toLowerCase();
   return slotWhy(ship, won, borrowable, 'gun');
 }
 
@@ -713,6 +715,14 @@ export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Re
     case 'gun': {
       const from = SHIP_KINDS[index];
       if (from === undefined) return null;
+      // 0593: a ram goes on no other ship and its ship flies no other gun; a dance waits for its pictures.
+      if (name === 'gun' && from !== ship) {
+        if (!WEAPONS[SHIPS[ship].weapon].lends) return 'The ' + plainLabel(ship) + ' flies nothing but its ' + WEAPONS[SHIPS[ship].weapon].label.toLowerCase();
+        if (!WEAPONS[SHIPS[from].weapon].lends) return 'The ' + WEAPONS[SHIPS[from].weapon].label.toLowerCase() + ' is the ' + plainLabel(from) + ' itself';
+      }
+      if (name === 'special' && from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) {
+        return 'The ' + SPECIALS[WEAPONS[SHIPS[from].weapon].special].label + ' is the ' + plainLabel(from) + '’s alone, for now';
+      }
       if (!won[ship]) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its ' + what[name];
       return 'Beat the jellyfish in the ' + plainLabel(from) + ' to borrow its ' + what[name];
     }

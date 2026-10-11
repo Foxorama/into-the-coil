@@ -114,6 +114,10 @@ export const CUE_KINDS = [
   'wheel',
   'crackle',
   'sizzle',
+  // The Hamster Ball's — 0593: the ram landing, the ball cracking apart at full heat, and coming back whole.
+  'ram',
+  'ballBreak',
+  'ballMend',
   'threat',
   'hit',
   'kill',
@@ -141,6 +145,8 @@ export const CUE_KINDS = [
   'candle',
   'candleStar',
   'firework',
+  // The War Dance thrown — 0593.
+  'warDance',
   'shield',
   'death',
   'pickup',
@@ -222,6 +228,14 @@ export const TWIN_KINDS = [
   'wheel-thrown',
   /** Embers spray off a burning wheel's rim — `throwEmbers`, 0545. */
   'embers-fly',
+  /** The ball lands on a body: the body flashes and the heat inside the ball climbs a stage — `stepRam`, 0593. */
+  'ball-rams',
+  /** The ball breaks: its shell bursts into pieces and Unity is left on their own — `breakBall`, 0593. */
+  'ball-breaks',
+  /** The ball comes back whole round Unity, cool — `stepRam`, 0593. */
+  'ball-mends',
+  /** The ship starts bouncing round the box on its own — `startDance`, 0593. */
+  'dance-starts',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
   /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
@@ -1009,6 +1023,53 @@ export const CUES: Record<CueKind, CueRow> = {
     layers: [
       { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.55, attack: 0.002, curve: 2.6, lowFrom: 11000, lowTo: 5000, highFrom: 3000, highTo: 1800, q: 0.9 },
       { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.06, gain: 0.3, attack: 0.001, curve: 4 },
+    ],
+  },
+  /**
+   * The ram lands — 0593: a rubber ball hitting something hard. A thump that drops a fifth, over a short
+   * plastic knock. Dry, as `sizzle` is, because it comes at the ram's landing rate, and `hold` keeps a ball
+   * pushed through a pack from being one long drum roll.
+   */
+  ram: {
+    twin: 'ball-rams',
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'sine', from: inKey(7), to: inKey(3), seconds: 0.12, gain: 0.8, attack: 0.001, curve: 3.2, drive: 0.3 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.35, attack: 0.0005, curve: 4, lowFrom: 4200, lowTo: 2400, highFrom: 900, q: 1.4 },
+    ],
+  },
+  /**
+   * The ball cracks apart at full heat — 0593: a bright plastic snap, a scatter of pieces left and right, and
+   * a low thud under them. Loud, because it is the one thing about the ram the player must not miss.
+   */
+  ballBreak: {
+    twin: 'ball-breaks',
+    air: 0.2,
+    hold: 30,
+    gain: 0.36,
+    glue: 0.12,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.09, gain: 0.7, attack: 0.0005, curve: 3, lowFrom: 12000, lowTo: 6000, highFrom: 2400 },
+      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.05, gain: 0.4, attack: 0.0005, curve: 4, lowFrom: 9000, highFrom: 3000, pan: -0.5 },
+      { wave: 'noise', from: 0, to: 0, at: 0.09, seconds: 0.05, gain: 0.36, attack: 0.0005, curve: 4, lowFrom: 9000, highFrom: 3200, pan: 0.5 },
+      { wave: 'sine', from: inKey(0), to: inKey(-5), seconds: 0.25, gain: 0.6, attack: 0.002, curve: 3, drive: 0.4 },
+    ],
+  },
+  /**
+   * The ball comes back whole — 0593: a bubble's bloop rising a fifth, the ram ready again. Soft: it is
+   * good news and not a warning.
+   */
+  ballMend: {
+    twin: 'ball-mends',
+    air: 0.2,
+    hold: 30,
+    gain: 0.24,
+    glue: 0.1,
+    layers: [
+      { wave: 'sine', from: inKey(7), to: inKey(14), seconds: 0.16, gain: 0.7, attack: 0.004, curve: 2 },
+      { wave: 'tri', from: inKey(14), to: inKey(18), at: 0.08, seconds: 0.12, gain: 0.3, attack: 0.004, curve: 2.4 },
     ],
   },
   throw: {
@@ -2182,6 +2243,24 @@ export const CUES: Record<CueKind, CueRow> = {
    * as it burns down, and inside it the first star's pop: the press is one cue, heard as itself (0378),
    * and the seven stars after it are `candleStar`.
    */
+  /**
+   * The War Dance thrown — 0593: three hops climbing, a weasel's war dance, each a short bounce of a sine with
+   * a click on its landing. A press, as the bomb's is: immediate, and short.
+   */
+  warDance: {
+    twin: 'dance-starts',
+    air: 0.2,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'sine', from: inKey(4), to: inKey(9), seconds: 0.08, gain: 0.7, attack: 0.002, curve: 2.6 },
+      { wave: 'sine', from: inKey(7), to: inKey(12), at: 0.1, seconds: 0.08, gain: 0.7, attack: 0.002, curve: 2.6 },
+      { wave: 'sine', from: inKey(11), to: inKey(16), at: 0.2, seconds: 0.1, gain: 0.75, attack: 0.002, curve: 2.6 },
+      { wave: 'noise', from: 0, to: 0, at: 0.08, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: -0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.18, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: 0.3 },
+    ],
+  },
   candle: {
     twin: 'candle-fires',
     // A press, like the bomb's: immediate, and only its consequences get much of the room.

@@ -27,7 +27,7 @@ import type { GunView, Mount } from './ships.ts';
 /**
  * Every gun. Closed — and since 0441 the order means nothing: no pickup cycles over it.
  */
-export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray', 'catherine'] as const;
+export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray', 'catherine', 'ram'] as const;
 
 /** Derived from the list, so a kind cannot exist in the union and be missing from the table. */
 export type WeaponKind = (typeof WEAPON_KINDS)[number];
@@ -53,8 +53,10 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *                 tether back to the muzzle, for the row's `wheel.life`. It lands on what it touches
  *                 as a blade does, throws embers that are spent by arriving, and the tether lands on
  *                 whatever crosses it. Past the leash it is towed after the ship. 0545, 0549
+ *   **ram**       nothing leaves the ship: the ship is the shot. One body rides the hull, lands on what
+ *                 the ship flies into as a blade does, and heats the ship each time it lands. 0593
  */
-export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether';
+export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether' | 'ram';
 
 /**
  * A Catherine wheel on a tether — `docs/decisions/0545-the-catherine-wheel.md`. *"A spinning fire
@@ -98,6 +100,28 @@ export interface CatherineWheel {
   tether: number;
   /** What the tether takes off a body each time it lands, gated by the row's `landGap` as a blade is. */
   tetherDamage: number;
+}
+
+/**
+ * A ram — `docs/decisions/0593-the-hamster-ball-rolls.md`. The page: *"Hamster ball — flies into things to
+ * kill them — how to die? / challenge — "overheat" → need to let shields recharge. Hamster ball break +
+ * recharge."* The ship is the shot, and the cost of a landing is heat: a full gauge breaks the ball, and it
+ * comes back whole and cool after `recharge`. Every number in steps and world units, and every one a play
+ * number.
+ */
+export interface Ram {
+  /** How far from the ship's centre a body is rammed, in world units: the drawn ball's edge. */
+  readonly reach: number;
+  /** What one landing adds to the gauge, which breaks the ball at 1. */
+  readonly heat: number;
+  /** What a step against the stone adds — scraping a wall heats the ball as a landing does, slower. */
+  readonly scrape: number;
+  /** Steps after the last landing before the gauge starts to cool. */
+  readonly cool: number;
+  /** What the gauge loses each step while it cools. */
+  readonly drain: number;
+  /** Steps the ball is broken for before it comes back whole and cool. */
+  readonly recharge: number;
 }
 
 /**
@@ -204,6 +228,14 @@ export interface WeaponRow {
   turn: number;
   /** The wheel a `tether` gun throws, or `null` for every other flight — 0545. */
   wheel: CatherineWheel | null;
+  /** The ram a `ram` gun is, or `null` for every other flight — 0593. */
+  ram: Ram | null;
+  /**
+   * Whether another ship may fly this gun, and this ship another's — 0593. Answered of the Hamster Ball:
+   * *"No weapon change for hamster ball."* A ram is the ship it is fitted to, so its ship flies nothing
+   * else and nothing else flies it. Every row says its own; the hangar's gun band reads it (`gunOpen`).
+   */
+  lends: boolean;
   /**
    * How far the right stick may turn this gun's volley either side of straight ahead, in radians, or `0`
    * for a gun that is not steered — `docs/decisions/0588-the-rings-are-thrown.md`. Asked for of the ray:
@@ -242,6 +274,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 0,
     turn: 0,
     wheel: null,
+    ram: null,
+    lends: true,
     aim: 0,
   },
   /**
@@ -308,6 +342,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 0,
     turn: 0,
     wheel: null,
+    ram: null,
+    lends: true,
     aim: 0,
   },
   /**
@@ -354,6 +390,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 12,
     turn: 0.21,
     wheel: null,
+    ram: null,
+    lends: true,
     aim: 0,
   },
   /**
@@ -392,6 +430,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     coil: 0,
     turn: 0,
     wheel: null,
+    ram: null,
+    lends: true,
     // 0588: *"in a 45 degree arc straight ahead"* — half of it, 22.5°, either side of the nose.
     aim: Math.PI / 8,
   },
@@ -524,6 +564,49 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       tether: 0.5,
       tetherDamage: 1,
     },
+    ram: null,
+    lends: true,
+    aim: 0,
+  },
+  /**
+   * Unity's ram — 0593: the Hamster Ball flown into things. Nothing leaves the ship; one body rides the
+   * hull at the ball's edge and lands on what it meets as a blade does, once per its own flash and only so
+   * often on each target (`landGap`, 0391's clock). Every landing heats the ball, and a full gauge breaks it.
+   *
+   * ⚠️ **EVERY NUMBER HERE IS A PLAY NUMBER**, set where the boss floor and the fight's own ceiling sit
+   * (`tests/ball.test.ts`); none of them has been played.
+   */
+  ram: {
+    label: 'Ram',
+    hint: 'The ball itself, flown into things',
+    shot: 'ram',
+    flight: 'ram',
+    // Nothing is fired, so nothing waits on this; on the beat grid all the same, as every gun's is (0094).
+    fireEvery: 24,
+    barrels: 1,
+    links: 1,
+    weight: 1,
+    bossWeight: 1,
+    landGap: 6,
+    special: 'warDance',
+    // Never drawn: no other ship flies it (`lends`). The ball's own front, from either view, so a reader
+    // is not handed a mount at the origin.
+    mount: { top: { along: 3, across: 0 }, side: { along: 3, across: 0 } },
+    bursts: null,
+    reach: 0,
+    falloff: 0,
+    coil: 0,
+    turn: 0,
+    wheel: null,
+    ram: {
+      reach: 3,
+      heat: 0.15,
+      scrape: 0.01,
+      cool: 30,
+      drain: 0.01,
+      recharge: 180,
+    },
+    lends: false,
     aim: 0,
   },
 };

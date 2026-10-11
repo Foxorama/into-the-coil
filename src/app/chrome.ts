@@ -2346,11 +2346,12 @@ ${each('-tab-key[hidden]')} { display: none; }
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
   what hangs, five, in rows of three. A phone shows only the one that is on, below. Five a row since
-  0546 put a fifth ship in the hangar: one row each still, as tall as it was.
+  0546 put a fifth ship in the hangar: one row each still, as tall as it was. And as many as there are
+  ships since 0593 put a sixth there — read off the table, so the next ship is a row and not this rule.
 */
 .itc-hangar-band:has([${SETTING_ATTR}="plate"]) .itc-hangar-options,
 .itc-hangar-band:has([${SETTING_ATTR}="gun"]) .itc-hangar-options,
-.itc-hangar-band:has([${SETTING_ATTR}="special"]) .itc-hangar-options { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.itc-hangar-band:has([${SETTING_ATTR}="special"]) .itc-hangar-options { grid-template-columns: repeat(${SHIP_KINDS.length}, minmax(0, 1fr)); }
 .itc-hangar-band:has([${SETTING_ATTR}="dangle"]) .itc-hangar-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
 .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: grid; gap: 0.3em; }

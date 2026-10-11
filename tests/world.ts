@@ -39,6 +39,7 @@ import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng, type Rng } from '../src/sim/rng.ts';import { SHIP_START_ALONG, corridorFor, firstVolleyIn, layRoom, respawn, type LevelScore, type World } from '../src/app/frame.ts';
 import type { DeathCause } from '../src/state/slices/run.ts';
+import type { SpecialKind } from '../src/content/specials.ts';
 import { CAPACITY, CHAIN_TRAIL, NECK_SLOTS } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -178,6 +179,13 @@ export function inertLevel(): {
   frozenFor: number;
   dyingIn: number;
   killedBy: DeathCause;
+  ramHeat: number;
+  ramCoolIn: number;
+  ramBrokenFor: number;
+  danceFor: number;
+  danceKind: SpecialKind | null;
+  danceAlong: number;
+  danceAcross: number;
   deathOffset: number;
   deathAcross: number;
   onWreck: () => void;
@@ -308,6 +316,13 @@ export function inertLevel(): {
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
     killedBy: 'fire',
+    ramHeat: 0,
+    ramCoolIn: 0,
+    ramBrokenFor: 0,
+    danceFor: 0,
+    danceKind: null,
+    danceAlong: 0,
+    danceAcross: 0,
     deathAcross: ACROSS_SPAN / 2,
     // A fixture carries no arsenal, so there is nothing for a wreck to light. `tests/death.test.ts`
     // is what drives the shell's real answer.
@@ -480,6 +495,14 @@ export function playableWorld(
     aura,
     surgeFor: 0,
     surgeKind: null,
+    // 0593: a ram cool and whole, and no dance.
+    ramHeat: 0,
+    ramCoolIn: 0,
+    ramBrokenFor: 0,
+    danceFor: 0,
+    danceKind: null,
+    danceAlong: 0,
+    danceAcross: 0,
     whirl,
     whirlKind: null,
     whirlAge: 0,

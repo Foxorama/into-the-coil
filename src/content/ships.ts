@@ -31,7 +31,7 @@ import type { FlameKind } from './flames.ts';
 import { SHELLS, SHELL_KINDS, type ShellKind, type ShieldShell } from './shells.ts';
 
 /** Every flyable ship. Closed. */
-export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt';
+export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball';
 
 export interface ShipRow extends Body {
   /** What the player would call it — the pilot select's line under the golfer. */
@@ -53,6 +53,12 @@ export interface ShipRow extends Body {
    * flashing as the bare hull on every hit.
    */
   hulls: readonly [Hull, Hull, Hull];
+  /**
+   * The ship at each stage while its ram is broken, or `null` for a ship that is never drawn without
+   * something it wears — 0593. The Hamster Ball breaks at full heat and Unity runs on alone until it comes
+   * back, so the picture of a broken ball is Unity on their own. Every row says its own.
+   */
+  bare: readonly [Hull, Hull, Hull] | null;
   /**
    * How far across from the ship's centre its outboard hardpoints stand, in world units — where a
    * coil gun's blades leave from, and where the intro's contrails trail from — 0441.
@@ -446,8 +452,17 @@ export interface Hull {
   hit: number;
 }
 
+
+/**
+ * The Hamster Ball's radius, in world units — 0593: the clear ball, inside `SHIP_BOX` with room for its rim
+ * and the cradles either side. The ram reaches to here (`WEAPONS.ram.ram.reach`).
+ */
+export const BALL_RADIUS = 3;
+
+/** How far across from the ball's centre its tube cradles stand, in world units — on the axle, just outside the ball. */
+export const BALL_CRADLE = 3.5;
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird', 'estate', 'thunderbolt'];
+export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird', 'estate', 'thunderbolt', 'ball'];
 
 /**
  * Which hull a ship carrying `launchers` missile tubes is drawn as.
@@ -456,9 +471,10 @@ export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird',
  * if the two ever disagree — and the failure it prevents is an `undefined` reaching `Entity.sprite`,
  * which is a blit of nothing rather than an error anybody would see.
  */
-export function hullFor(ship: ShipRow, launchers: number): Hull {
+export function hullFor(ship: ShipRow, launchers: number, bare = false): Hull {
   const stage = launchers < 0 ? 0 : launchers > 2 ? 2 : Math.floor(launchers);
-  return ship.hulls[stage]!;
+  // 0593: the ship without what it wears, where its row draws one — the Hamster Ball broken.
+  return (bare && ship.bare !== null ? ship.bare : ship.hulls)[stage]!;
 }
 
 /**
@@ -497,6 +513,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
       { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
     ],
+    bare: null,
     // 0581: its wingtips, 0.78 of the 7-unit hull's radius out — the pods that hung past them (0469) are gone.
     wingtip: 2.29,
     // 0581: the pulse's two mouths, at the end of its barrels on the nose — the mount's own muzzle, at its scale.
@@ -543,6 +560,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.caddieTube, hit: SPRITE.caddieTubeHit },
       { base: SPRITE.caddieTubes, hit: SPRITE.caddieTubesHit },
     ],
+    bare: null,
     /*
       ⚠️ **ITS DISC IS 0.72 OF THE BOX SINCE 0461, AND EVERY MOUNT BELOW MOVED WITH IT.**
       `docs/decisions/0461-the-ships-are-jazzed.md`: the pods hang off its sides now, and a disc the
@@ -611,6 +629,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
       { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
     ],
+    bare: null,
     // How far either side of the nose its helix's two strands open from — the height of the launcher's
     // star above the centreline. Since 0448 the pair leaves the star itself and flies out to here.
     wingtip: 1.13,
@@ -661,6 +680,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.estateTube, hit: SPRITE.estateTubeHit },
       { base: SPRITE.estateTubes, hit: SPRITE.estateTubesHit },
     ],
+    bare: null,
     // The outside of its tyres, which is as wide as a wagon is.
     wingtip: 2.2,
     // The steel star in the launcher's face on its bonnet (`drawEstate` in the bake) — 0545. It was the
@@ -711,6 +731,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.thunderboltTube, hit: SPRITE.thunderboltTubeHit },
       { base: SPRITE.thunderboltTubes, hit: SPRITE.thunderboltTubesHit },
     ],
+    bare: null,
     // How far either side of the fork a borrowed gun's blades open from — the width of its fat tyres.
     wingtip: 2,
     // The lightning ball on its fork crown: the arc's first link leaves it.
@@ -741,6 +762,57 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     arts: ['boltTank', 'pawprint', 'pinstripes', 'stars'],
     // A cage of forked lightning — 0545. 0557: a unit and a half further out than the rest, clear of the bike.
     shield: SHELLS.storm.shell,
+    lamps: [],
+  },
+  /**
+   * Unity's Hamster Ball — `docs/decisions/0593-the-hamster-ball-rolls.md`: a clear plastic ball, drawn from
+   * above, with Unity — the least weasel who keeps Hangin' Out — running inside it, and a little thruster
+   * pack strapped behind. It flies the ram, which is the ball itself (`WEAPONS.ram`), and nothing else.
+   */
+  ball: {
+    label: 'Hamster Ball',
+    sprite: SPRITE.ball,
+    spriteHit: SPRITE.ballHit,
+    radius: 2,
+    health: 1,
+    damage: 0,
+    weapon: 'ram',
+    hulls: [
+      { base: SPRITE.ball, hit: SPRITE.ballHit },
+      { base: SPRITE.ballTube, hit: SPRITE.ballTubeHit },
+      { base: SPRITE.ballTubes, hit: SPRITE.ballTubesHit },
+    ],
+    // Unity on their own, the tubes on a harness on their back — while the ball is broken.
+    bare: [
+      { base: SPRITE.ballBare, hit: SPRITE.ballBareHit },
+      { base: SPRITE.ballBareTube, hit: SPRITE.ballBareTubeHit },
+      { base: SPRITE.ballBareTubes, hit: SPRITE.ballBareTubesHit },
+    ],
+    // The ball's widest, where the intro's contrails trail from.
+    wingtip: BALL_RADIUS,
+    // The front of the ball: where it meets what it rams, and where nothing leaves.
+    muzzle: { along: BALL_RADIUS, across: 0 },
+    view: 'top',
+    // Nothing is ever mounted on it (`WEAPONS.ram.lends`); the front of the ball, so no reader is handed the centre.
+    hardpoint: { along: BALL_RADIUS, across: 0 },
+    mountScale: 1,
+    // The warhead of each tube in a cradle either side of the ball, on its axle, the tube's middle over the axle: the near one, then both.
+    tubes: [[], [{ along: LOADED_TUBE / 2, across: -BALL_CRADLE }], [{ along: LOADED_TUBE / 2, across: -BALL_CRADLE }, { along: LOADED_TUBE / 2, across: BALL_CRADLE }]],
+    tubeLength: LOADED_TUBE,
+    tubeLook: 'dart',
+    // The thruster pack strapped behind the ball.
+    nozzles: [{ along: -BALL_RADIUS - 0.55, across: 0 }],
+    // Unity, in the middle of the ball.
+    cockpit: { along: 0, across: 0 },
+    intro: { hangar: 1, outside: 1 },
+    // A hamster wheel turning round its readout: seed-husk amber for the counts, the plastic's blue for the trim.
+    hud: { name: 'Hamster wheel', motif: 'orbit', ink: { from: 'hazard', lift: 0.15 }, trim: { from: 'player', lift: 0.25 } },
+    hangs: null,
+    wheels: null,
+    // 0593: clear plastic, a sunflower on its crown, an amber tint, and speed stripes.
+    arts: ['clearBall', 'sunflower', 'amberTint', 'speedStripes'],
+    // Sunflower seeds laid round it — 0593.
+    shield: SHELLS.seeds.shell,
     lamps: [],
   },
 };

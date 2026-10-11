@@ -126,7 +126,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rackWhy, rimWhy, shellWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, lockHint, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rackWhy, rimWhy, shellWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor, liveryInk } from '../content/livery.ts';
@@ -1134,6 +1134,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     aura,
     surgeFor: 0,
     surgeKind: null,
+    // 0593: a ram cool and whole, and no dance.
+    ramHeat: 0,
+    ramCoolIn: 0,
+    ramBrokenFor: 0,
+    danceFor: 0,
+    danceKind: null,
+    danceAlong: 0,
+    danceAcross: 0,
     whirl,
     whirlKind: null,
     whirlAge: 0,
@@ -2560,7 +2568,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   function fitHangar(): void {
     // 0546: which pilots may fly, by the wins so far, on the title's band and the hangar's alike.
     const record = pilotRecord(state.hangar);
-    chrome.setOpen('pilot', GOLFER_KINDS.map((kind) => pilotOpen(kind, record)), pilotWhy(record));
+    // 0593: and each shut card its own hint, so the Marmot's and Unity's are each said on their own card.
+    chrome.setOpen(
+      'pilot',
+      GOLFER_KINDS.map((kind) => pilotOpen(kind, record)),
+      pilotWhy(record),
+      GOLFER_KINDS.map((kind) => lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name)),
+    );
     const ship = GOLFERS[state.settings.pilot].ship;
     const open = SHIP_KINDS.map((plate) => plateOpen(state.hangar, ship, plate));
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);

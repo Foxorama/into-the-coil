@@ -49,7 +49,8 @@ import { MISSILES, MISSILE_KINDS, type MissileKind } from './missiles.ts';
  * own, whatever gun the ship that takes it flies. Derived from the specials' table rather than listed,
  * so a gun special added there is a face here.
  */
-export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun');
+// 0593: and only a special every ship can carry (`shared`) — the War Dance waits for every ship's dance.
+export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun' && SPECIALS[k].shared);
 
 /**
  * Every pickup in the game. Closed.

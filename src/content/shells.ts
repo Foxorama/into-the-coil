@@ -33,7 +33,7 @@ import type { ShipKind } from './ships.ts';
  *   **runes**      a ring of alien glyphs between two thin rails, a third of them lit (0584)
  *   **disco**      a band of mirror tiles with coloured glints flashing over it (0584)
  */
-export const SHELL_KINDS = ['honeycomb', 'bubble', 'plumes', 'lattice', 'storm', 'aurora', 'runes', 'disco'] as const;
+export const SHELL_KINDS = ['honeycomb', 'bubble', 'plumes', 'lattice', 'storm', 'seeds', 'aurora', 'runes', 'disco'] as const;
 export type ShellKind = (typeof SHELL_KINDS)[number];
 
 /** The shell's draw — the shell's own kind, since a shell IS its look. */
@@ -151,6 +151,22 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
         [SPRITE.shieldStorm120a, SPRITE.shieldStorm120b, SPRITE.shieldStorm120c],
         [SPRITE.shieldStorm180a, SPRITE.shieldStorm180b, SPRITE.shieldStorm180c],
         [SPRITE.shieldStorm240a, SPRITE.shieldStorm240b, SPRITE.shieldStorm240c],
+      ],
+    },
+  },
+  // Sunflower seeds, striped black and cream, laid round the ball — 0593.
+  seeds: {
+    name: 'Sunflower seeds',
+    hint: 'A ring of striped seeds, a hamster’s hoard',
+    from: 'ball',
+    price: null,
+    shell: {
+      look: 'seeds',
+      places: [
+        [SPRITE.shieldSeed0a, SPRITE.shieldSeed0b, SPRITE.shieldSeed0c],
+        [SPRITE.shieldSeed120a, SPRITE.shieldSeed120b, SPRITE.shieldSeed120c],
+        [SPRITE.shieldSeed180a, SPRITE.shieldSeed180b, SPRITE.shieldSeed180c],
+        [SPRITE.shieldSeed240a, SPRITE.shieldSeed240b, SPRITE.shieldSeed240c],
       ],
     },
   },
