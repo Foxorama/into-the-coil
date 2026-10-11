@@ -180,8 +180,8 @@ describe('0592 — a lock may name the two counts, and the band says what is lef
   });
 
   it('the hint counts down what is left, and is gone once the lock is met', () => {
-    expect(lockHint(lock, NOBODY, 'Unity')).toBe('Crash into something 10 more times and buy 5 more things at Cosmo’s to fly Unity');
-    expect(lockHint(lock, { ...NOBODY, crashes: 9, bought: 4 }, 'Unity')).toBe('Crash into something 1 more time and buy 1 more thing at Cosmo’s to fly Unity');
+    expect(lockHint(lock, NOBODY, 'Unity')).toBe('Lose 10 more lives to a crash and buy 5 more things at Cosmo’s to fly Unity');
+    expect(lockHint(lock, { ...NOBODY, crashes: 9, bought: 4 }, 'Unity')).toBe('Lose 1 more life to a crash and buy 1 more thing at Cosmo’s to fly Unity');
     expect(lockHint(lock, { ...NOBODY, crashes: 10, bought: 2 }, 'Unity')).toBe('Buy 3 more things at Cosmo’s to fly Unity');
     expect(lockHint(lock, { ...NOBODY, crashes: 10, bought: 5 }, 'Unity')).toBe(null);
   });

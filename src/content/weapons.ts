@@ -24,6 +24,7 @@ import type { ShotKind } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
 import type { GunView, Mount } from './ships.ts';
 import { SPRITE } from './sprites.ts';
+import type { ThemeKind } from './themes.ts';
 
 /**
  * Every gun. Closed — and since 0441 the order means nothing: no pickup cycles over it.
@@ -151,6 +152,13 @@ export interface PaintColour {
   /** The splat, wet as it lands and then dried flat. */
   readonly splat: number;
   readonly dry: number;
+  /**
+   * The places this colour is left out of the hopper in — the review of 0595: where the place's own hostile shot
+   * (`foe.shot` on its theme) is this colour's hue, so a ball of it would be a round dot of the bullet's colour
+   * beside the bullets, and a splat of it would lie under them for two-thirds of a second. A rule on the colour's
+   * own row and not a threshold, on 0295's terms: which hues are *the same* is argued per colour, here.
+   */
+  readonly not: readonly ThemeKind[];
 }
 
 /**
@@ -712,11 +720,17 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     paint: {
       scatter: 0.09,
       // The paint shop's own: a bubblegum pink, a sunshine yellow, a sky blue and a grape — none the enemy's red.
+      /*
+        ⚠️ **AND NONE A PLACE'S OWN BULLET, WHICH 0595 DID NOT ASK** — the review of 0595. A hostile shot is the
+        place's `foe.shot`, not the palette's red: The Approach's `#ff2e4d`, Ember Nebula's `#ff2f8f` and The
+        Toxic Mire's `#ff2e6b` are this pink's hue, and The Labyrinth's `#ffd12e` is this yellow's. Each is left
+        out where its place's bullets wear it; the blue and the grape are no place's bullet and go everywhere.
+      */
       colours: [
-        { ink: '#ff5fb4', ball: SPRITE.paintballPink, splat: SPRITE.splatPink, dry: SPRITE.splatPinkDry },
-        { ink: '#ffe14d', ball: SPRITE.paintballYellow, splat: SPRITE.splatYellow, dry: SPRITE.splatYellowDry },
-        { ink: '#4fc3ff', ball: SPRITE.paintballBlue, splat: SPRITE.splatBlue, dry: SPRITE.splatBlueDry },
-        { ink: '#a46bff', ball: SPRITE.paintballGrape, splat: SPRITE.splatGrape, dry: SPRITE.splatGrapeDry },
+        { ink: '#ff5fb4', ball: SPRITE.paintballPink, splat: SPRITE.splatPink, dry: SPRITE.splatPinkDry, not: ['approach', 'nebula', 'mire'] },
+        { ink: '#ffe14d', ball: SPRITE.paintballYellow, splat: SPRITE.splatYellow, dry: SPRITE.splatYellowDry, not: ['labyrinth'] },
+        { ink: '#4fc3ff', ball: SPRITE.paintballBlue, splat: SPRITE.splatBlue, dry: SPRITE.splatBlueDry, not: [] },
+        { ink: '#a46bff', ball: SPRITE.paintballGrape, splat: SPRITE.splatGrape, dry: SPRITE.splatGrapeDry, not: [] },
       ],
     },
     lends: true,

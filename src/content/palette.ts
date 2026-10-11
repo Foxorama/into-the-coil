@@ -70,6 +70,13 @@ export type Ink =
   */
   | 'frost'
   /*
+    ⚠️ **`water` is the player's water — the review of 0595.** The Water Cannon's jet and its pickup's face. It
+    was `frost`, a meaning ink of the other side — *this will slow you* — and 0081 keeps the ship's fire out of
+    the ink of what is trying to kill it: a column of frost's own ink swept over the lane hid every frost shard
+    and hail stone under it. An azure, bluer than `frost`'s teal and the ship's own cyan.
+  */
+  | 'water'
+  /*
     ⚠️ **`blade` is the player's steel — 0238.** Played: *"shurikens need to be… steel coloured."* A
     role rather than a colour name, on this file's own rule: what it means is *a blade of mine, in
     flight*, and the high-contrast palette answers it in its own terms. It is a MEANING ink and is
@@ -161,6 +168,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
       the old ink sat seven degrees of hue from. `docs/decisions/0534-the-frost-reaches-across.md`.
     */
     frost: '#40ffd0',
+    // Azure: the player's water, a hue away from frost's teal and the ship's cyan — the review of 0595.
+    water: '#5aa8ff',
     // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
     // because it is momentarily louder than everything around it, not because of its hue.
     impact: '#fff4e6',
@@ -210,6 +219,8 @@ export const PALETTES: Record<PaletteName, Palette> = {
     fire: '#e04000',
     // Pure cyan: its own corner of the hue wheel, opposite everything that burns — 0253.
     frost: '#00e0ff',
+    // A deep azure, below frost's cyan and the ship's on lightness — the review of 0595.
+    water: '#3399ff',
     impact: '#ffffff',
     // A step below the two whites, so a blade and a pickup are apart on the one channel this
     // palette exists for, and still far above the void. 0238.

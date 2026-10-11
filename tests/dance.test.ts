@@ -12,7 +12,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GameFrame, RAM_KIND, launchSpecial, wearHull, type World } from '../src/app/frame.ts';
+import { GameFrame, RAM_KIND, SPLAT_KIND, launchSpecial, wearHull, type World } from '../src/app/frame.ts';
+import { BOSSES, gunWeightOn } from '../src/content/bosses.ts';
+import { ENEMIES } from '../src/content/enemies.ts';
+import { reset } from '../src/sim/entity.ts';
 import { GOLFERS } from '../src/content/golfers.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { BOMB_KINDS, NONE_SHUT, PICKUP_KINDS, PICKUPS, drawFace, facesShut, weaponFor } from '../src/content/pickups.ts';
@@ -198,5 +201,55 @@ describe('0594 — every ship dances in poses of its own', () => {
     paintScene(surface, viewOf(1280, 720), [world.playerShots, world.shipPool], world.cameraAlong, 0.5);
     expect(blitted.length, 'nothing was painted, so this measured nothing').toBeGreaterThan(0);
     expect(blitted, 'the unseen ram was blitted').not.toContain(UNSEEN);
+  });
+});
+
+/*
+  ── THE DANCE LANDS ON ITS OWN TERMS, AND THE GUN ON THE GUN'S — the review of 0595 ─────────────────────────
+
+  The ram rides the gun's pool, and it was landed in the gun's pass: while any ship danced, every shot in the pool
+  took the dance's log and its gap, and the dance took the gun's weight on a boss.
+*/
+describe('0594 — a dance leaves the ship’s own gun as it was, and weighs the same on a boss whatever the gun', () => {
+  it('a dancing duck’s paintballs still splat where they land', () => {
+    const { world, frame } = flying('duck');
+    // A wall of bodies across the lane ahead, so wherever the dance takes the ship its balls meet one.
+    for (let across = 4; across < world.view.acrossSpan - 4; across += 6) {
+      const enemy = world.enemies.spawn()!;
+      reset(enemy, world.ship.along + 45, across, ENEMIES.drifter);
+      enemy.health = 1e6;
+      enemy.fireIn = Number.MAX_SAFE_INTEGER;
+      enemy.velAlong = world.scrollPerStep;
+    }
+    launchSpecial(world, 'warDance');
+    let splats = 0;
+    for (let step = 0; step < SPECIALS.warDance.dance!.steps - 10; step++) {
+      frame.step();
+      for (let i = 0; i < world.blasts.size; i++) if (world.blasts.at(i).kind === SPLAT_KIND) splats++;
+    }
+    expect(world.danceFor, 'the ship stopped dancing before the string had landed').toBeGreaterThan(0);
+    expect(splats, 'a paintball landed while the ship danced and did not splat').toBeGreaterThan(0);
+  });
+
+  it('on a boss, the War Dance lands as much from every ship but the ball, whatever its gun weighs there', () => {
+    const took: Record<string, number> = {};
+    for (const ship of SHIP_KINDS) {
+      if (ship === 'ball') continue;
+      const { world, frame } = flying(ship);
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      const boss = world.bossPool.spawn()!;
+      reset(boss, world.ship.along, world.ship.across, BOSSES.sentinel);
+      boss.health = 1e6;
+      world.bossFullHealth = 1e6;
+      boss.fireIn = Number.MAX_SAFE_INTEGER;
+      launchSpecial(world, 'warDance');
+      frame.step();
+      took[ship] = 1e6 - boss.health;
+    }
+    const weights = Object.keys(took).map((ship) => gunWeightOn(playableWorld(NO_LEVEL).world.bossRow, SHIPS[ship as ShipKind].weapon));
+    expect(new Set(weights).size, 'every gun here weighs the same on this boss, so this asks nothing').toBeGreaterThan(1);
+    const first = Object.values(took)[0]!;
+    expect(first, 'the dance did not land on the boss it was thrown into').toBeGreaterThan(0);
+    for (const [ship, hp] of Object.entries(took)) expect(hp, `${ship}'s dance landed ${hp} where the first landed ${first}`).toBeCloseTo(first, 9);
   });
 });

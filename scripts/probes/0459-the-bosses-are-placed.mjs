@@ -73,7 +73,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every beam is stroked before the hull is blitted',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    if (beams !== null && (e.kind === BEAM_BOLT_KIND) !== beams) continue;',
+      // Re-anchored by 0598, which gives the Water Cannon's jet a pass of its own under the bullets.
+      find: "    if (beams !== null && (e.kind === BEAM_BOLT_KIND ? true : e.kind === JET_BOLT_KIND ? 'jets' : false) !== beams) continue;",
       replace: '    if (beams === true) continue;',
     },
   },

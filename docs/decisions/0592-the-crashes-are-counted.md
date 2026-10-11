@@ -21,7 +21,7 @@ crashes for good. A pilot's lock can name a number of crashes and a number of th
 | **the count** | `crashes` on the hangar, raised by `src/state/root.ts`'s fourth agreement: a `lifeLost` that spent a life, with `body` as its cause. Across every run, pilot and tier, and never taken back |
 | **what was bought** | `waresBought`: every ware with a price the player owns. Read off `owned`, so nothing new is saved for it |
 | **the lock** | `opens` on every pilot row (it was `opensAfter`): `after`, `crashes`, `bought`. All three must be met; the four starting pilots' and the Marmot's say 0 for both counts. `pilotRecord` builds what a lock is read against |
-| **the hint** | `lockHint`: what is left of each part, joined into a sentence — *Crash into something 3 more times and buy 1 more thing at Cosmo's to fly …*. 0546's sentence is its first part, unchanged |
+| **the hint** | `lockHint`: what is left of each part, joined into a sentence — *Lose 3 more lives to a crash and buy 1 more thing at Cosmo's to fly …* (it said *crash into something*, which a crash a shield takes does not count; reworded by the review of the secret pilots) 0546's sentence is its first part, unchanged |
 
 ## Why it is built the way it is
 

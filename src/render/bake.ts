@@ -715,8 +715,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupCandle: 'hazard',
   // 0593: the War Dance — in the acid's green, which no face of the bomb pickup wears.
   pickupDance: 'acid',
-  // 0595: the Water Cannon — in the frost's aquamarine, the one water ink, which no face of the bomb pickup wears.
-  pickupWater: 'frost',
+  // 0595: the Water Cannon — in the player's water, as its jet is, which no other face of the bomb pickup wears.
+  pickupWater: 'water',
   pickupShield: 'pickup',
   /*
     The ward's faces — 0447. The void wears its own lavender; the nova wears the white of the heart it
