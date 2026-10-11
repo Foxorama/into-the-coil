@@ -85,7 +85,7 @@ const go: Record<string, () => void> = {
   },
   gameOver: () => {
     flown();
-    while (stateOf().run.lives > 0) dispatch({ slice: 'run', type: 'lifeLost' });
+    while (stateOf().run.lives > 0) dispatch({ slice: 'run', type: 'lifeLost', cause: 'fire' });
   },
   victory: () => {
     bankLevels(LEVEL_KINDS.length - 1 - stateOf().run.level);

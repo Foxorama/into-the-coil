@@ -89,8 +89,9 @@ export const PROBES = [
     guard: 'is untouched by a run, which is the whole reason it is not on one',
     edit: {
       path: 'src/state/root.ts',
-      find: '  return agree(run === state.run ? state : { ...state, run });',
-      replace: '  return agree(run === state.run ? state : { ...state, run, settings: initialSettings });',
+      // Re-anchored by 0592, which returns the unmoved run first and counts a crash on the way out.
+      find: '  return agree({ ...state, run, hangar });',
+      replace: '  return agree({ ...state, run, hangar, settings: initialSettings });',
     },
   },
   {

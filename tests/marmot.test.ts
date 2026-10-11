@@ -4,6 +4,7 @@ import { GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind } from '..
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
 import { pilotWhy } from '../src/state/screens.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
+import { pilotRecord } from '../src/state/slices/hangar.ts';
 import { paintPortrait, paintRunner } from '../src/render/golfer-art.ts';
 
 /**
@@ -56,29 +57,29 @@ describe('0546 — the Marmot is locked behind the four', () => {
   });
 
   it('every one of the four flies from the first run, and he does not', () => {
-    for (const kind of FOUR) expect(pilotOpen(kind, initialState.hangar.won), kind).toBe(true);
-    expect(pilotOpen('marmot', initialState.hangar.won)).toBe(false);
+    for (const kind of FOUR) expect(pilotOpen(kind, pilotRecord(initialState.hangar)), kind).toBe(true);
+    expect(pilotOpen('marmot', pilotRecord(initialState.hangar))).toBe(false);
   });
 
   it('he is shut until the last of the four has won, whichever order, and open the moment it has', () => {
     for (const last of FOUR) {
       const others = FOUR.filter((k) => k !== last).map((k) => GOLFERS[k].ship);
       const three = wonIn(...others);
-      expect(pilotOpen('marmot', three.hangar.won), `open with ${last} still to win`).toBe(false);
+      expect(pilotOpen('marmot', pilotRecord(three.hangar)), `open with ${last} still to win`).toBe(false);
       const four = reduce(three, { slice: 'hangar', type: 'won', ship: GOLFERS[last].ship });
-      expect(pilotOpen('marmot', four.hangar.won), `shut after ${last} won`).toBe(true);
+      expect(pilotOpen('marmot', pilotRecord(four.hangar)), `shut after ${last} won`).toBe(true);
     }
   });
 
   it('a win in his own ship counts for nothing toward him', () => {
     const state = wonIn('thunderbolt', 'fighter', 'caddie', 'firebird');
-    expect(pilotOpen('marmot', state.hangar.won)).toBe(false);
+    expect(pilotOpen('marmot', pilotRecord(state.hangar))).toBe(false);
   });
 
   it('the band says who still has to clear the game, and nothing once he is open', () => {
-    expect(pilotWhy(initialState.hangar.won)).toBe('Beat the jellyfish with Feather Fade, Huang-Woo Hook, Longshot Larry and Backspin Bo to fly The Marmot');
-    expect(pilotWhy(wonIn('caddie', 'fighter', 'estate').hangar.won)).toBe('Beat the jellyfish with Backspin Bo to fly The Marmot');
-    expect(pilotWhy(wonIn(...SHIP_KINDS).hangar.won)).toBe(null);
+    expect(pilotWhy(pilotRecord(initialState.hangar))).toBe('Beat the jellyfish with Feather Fade, Huang-Woo Hook, Longshot Larry and Backspin Bo to fly The Marmot');
+    expect(pilotWhy(pilotRecord(wonIn('caddie', 'fighter', 'estate').hangar))).toBe('Beat the jellyfish with Backspin Bo to fly The Marmot');
+    expect(pilotWhy(pilotRecord(wonIn(...SHIP_KINDS).hangar))).toBe(null);
   });
 });
 

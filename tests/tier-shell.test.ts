@@ -130,7 +130,7 @@ describe('0355 — a life opens on its tier’s shell', () => {
       // A CONTINUE: every life spent the way `mount` spends them, then the offer taken.
       for (let lives = run.state().run.lives; lives > 0; lives--) {
         world.ship.health = 0;
-        run.dispatch({ slice: 'run', type: 'lifeLost' });
+        run.dispatch({ slice: 'run', type: 'lifeLost', cause: 'fire' });
         if (run.state().run.lives > 0) respawn(world);
       }
       world.ship.health = 0;

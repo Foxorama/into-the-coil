@@ -158,13 +158,18 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     const raw = SHELL_KINDS.find((k) => k === shellDoc?.[kind]);
     if (raw !== undefined && shellOpen(holding, kind, raw)) shell[kind] = raw;
   }
-  return { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell };
+  /*
+    0592: the crashes — a new field on version 1, on the shards' terms: a whole number at least nought, or
+    none for a document written before it.
+  */
+  const crashes = Number.isSafeInteger(doc.crashes) && (doc.crashes as number) >= 0 ? (doc.crashes as number) : base.crashes;
+  return { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  const { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell } = hangar;
-  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell });
+  const { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes } = hangar;
+  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

@@ -163,7 +163,7 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
     expect(state.run.tallies).toEqual([one, two]);
     expect(bankedScore(state.run)).toBe(one.total + two.total);
     expect(bankedBonus(state.run)).toBe(one.bonus + two.bonus);
-    state = reduce(state, { slice: 'run', type: 'lifeLost' });
+    state = reduce(state, { slice: 'run', type: 'lifeLost', cause: 'fire' });
     expect(bankedScore(state.run), 'a death cost the score').toBe(one.total + two.total);
     state = reduce(state, { slice: 'run', type: 'begin', difficulty: 'burn', ship: SHIP, credits: 'free' });
     expect(state.run.tallies).toEqual([]);

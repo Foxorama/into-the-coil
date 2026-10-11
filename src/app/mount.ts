@@ -155,7 +155,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { artOpen, flameOpen, gunOpen, needsFirst, plateOpen, rackOpen, reduceHangar, rimOpen, shellOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
+import { artOpen, flameOpen, gunOpen, needsFirst, pilotRecord, plateOpen, rackOpen, reduceHangar, rimOpen, shellOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1292,6 +1292,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // — the middle of the lane is the honest blank, since it is where a ship starts. 0079.
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
+    // Nothing has hit a ship at boot; every death is preceded by the hit that sets this — 0592.
+    killedBy: 'fire',
     deathAcross: ACROSS_SPAN / 2,
     nextPickup: 0,
     pickups: pickupPool,
@@ -2424,7 +2426,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       */
       const kind = GOLFER_KINDS[index] ?? DEFAULT_GOLFER;
       // 0546: a shut pilot's card cannot be pressed; this is the belt to that brace, for a pad's press.
-      if (!pilotOpen(kind, state.hangar.won)) return;
+      if (!pilotOpen(kind, pilotRecord(state.hangar))) return;
       /*
         ⚠️ **ONLY WHERE THE BAND TAKES — 0521.** The hangar offers the same band and its press steps: a
         pilot is looked at there to be fitted out, and *Fly* is the title's. Read off the shown row's band.
@@ -2557,7 +2559,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   function fitHangar(): void {
     // 0546: which pilots may fly, by the wins so far, on the title's band and the hangar's alike.
-    chrome.setOpen('pilot', GOLFER_KINDS.map((kind) => pilotOpen(kind, state.hangar.won)), pilotWhy(state.hangar.won));
+    const record = pilotRecord(state.hangar);
+    chrome.setOpen('pilot', GOLFER_KINDS.map((kind) => pilotOpen(kind, record)), pilotWhy(record));
     const ship = GOLFERS[state.settings.pilot].ship;
     const open = SHIP_KINDS.map((plate) => plateOpen(state.hangar, ship, plate));
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);
@@ -4378,9 +4381,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     detonateArsenal(world, chargesIn(state.run.arsenal));
   };
 
-  world.onDeath = (): void => {
+  world.onDeath = (cause): void => {
     // Nothing is thrown: a death keeps the ladders — `docs/decisions/0372-a-death-keeps-the-ladders.md`.
-    dispatch({ slice: 'run', type: 'lifeLost' });
+    // What did it rides the action — 0592: a life lost to a body is counted in `src/state/root.ts`.
+    dispatch({ slice: 'run', type: 'lifeLost', cause });
     if (state.run.lives > 0) respawn(world);
   };
 

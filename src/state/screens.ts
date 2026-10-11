@@ -28,7 +28,7 @@ import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { CREDITS, CREDIT_KINDS } from '../content/credits.ts';
 import { INTRO_STEPS, type StandCamera } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
-import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
+import { GOLFERS, GOLFER_KINDS, lockLeft, type GolferKind, type PilotLock, type PilotRecord } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
@@ -600,19 +600,35 @@ function plainLabel(kind: ShipKind): string {
   return SHIPS[kind].label.replace(/^The /, '');
 }
 
+/** `parts` as a sentence's list: *a*, *a and b*, *a, b and c*. */
+function listed(parts: readonly string[]): string {
+  return parts.length === 1 ? parts[0]! : parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1]!;
+}
+
 /**
  * What the pilot band says while a pilot is still shut — 0546, or `null` when every pilot may fly. It
- * names who has still to clear the game, so the band says how far there is to go as well as where.
+ * names what is left of the first shut pilot's lock, so the band says how far there is to go as well as
+ * where: who has still to clear the game, and since 0592 how many more crashes and how many more things
+ * to buy — the hint the player asked for, *"hints for unlocks is good"*.
  */
-export function pilotWhy(won: Readonly<Record<ShipKind, boolean>>): string | null {
+export function pilotWhy(record: PilotRecord): string | null {
   for (const kind of GOLFER_KINDS) {
-    const left = GOLFERS[kind].opensAfter.filter((k) => !won[GOLFERS[k].ship]);
-    if (left.length === 0) continue;
-    const names = left.map((k) => GOLFERS[k].name);
-    const list = names.length === 1 ? names[0]! : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1]!;
-    return 'Beat the jellyfish with ' + list + ' to fly ' + GOLFERS[kind].name;
+    const hint = lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name);
+    if (hint !== null) return hint;
   }
   return null;
+}
+
+/** What is left of `lock`, as the band says it of the pilot called `name` — or `null` once it is met. */
+export function lockHint(lock: PilotLock, record: PilotRecord, name: string): string | null {
+  const left = lockLeft(lock, record);
+  const owed: string[] = [];
+  if (left.after.length > 0) owed.push('beat the jellyfish with ' + listed(left.after.map((k) => GOLFERS[k].name)));
+  if (left.crashes > 0) owed.push('crash into something ' + left.crashes + ' more ' + (left.crashes === 1 ? 'time' : 'times'));
+  if (left.bought > 0) owed.push('buy ' + left.bought + ' more ' + (left.bought === 1 ? 'thing' : 'things') + ' at Cosmo’s');
+  if (owed.length === 0) return null;
+  const said = listed(owed);
+  return said.charAt(0).toUpperCase() + said.slice(1) + ' to fly ' + name;
 }
 
 /**

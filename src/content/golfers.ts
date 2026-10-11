@@ -96,13 +96,57 @@ export interface GolferRow extends RunnerRow {
   /** And what they might say when they are the one who came for them — *"relatable to their character"*, on the same terms. */
   saving: readonly string[];
   /**
-   * Who must have cleared the game before this pilot may fly, or empty for one who flies from the first
-   * run — 0546. Asked: *"locked until you beat the game with every pilot (on any difficulty, but must
-   * clear it with all four starting pilots) - he can show up on the list of random rescuee's with some
-   * voice lines before he's unlocked as a teaser though."* A clear is a win in the pilot's own ship
-   * (`won` in `src/state/slices/hangar.ts`): any tier, any credits, as 0521 counts every win.
+   * What must happen before this pilot may fly — every part of it, and nothing for one who flies from the
+   * first run. Each row says its own lock, the four starting pilots' as nothing (0282).
    */
-  opensAfter: readonly GolferKind[];
+  opens: PilotLock;
+}
+
+/**
+ * A pilot's lock — 0546 for `after`, 0592 for the two counts. Every part must be met; a part of nothing
+ * (an empty list, a count of 0) is met from the first run.
+ */
+export interface PilotLock {
+  /**
+   * Who must have cleared the game — 0546. Asked: *"locked until you beat the game with every pilot (on
+   * any difficulty, but must clear it with all four starting pilots) - he can show up on the list of random
+   * rescuee's with some voice lines before he's unlocked as a teaser though."* A clear is a win in the
+   * pilot's own ship (`won` in `src/state/slices/hangar.ts`): any tier, any credits, as 0521 counts every
+   * win.
+   */
+  readonly after: readonly GolferKind[];
+  /**
+   * How many lives must have been lost to something the ship flew into rather than to enemy fire — 0592,
+   * the page's *"10 non-bullet deaths"*.
+   */
+  readonly crashes: number;
+  /** How many things must have been bought, from any shelf — 0592, the page's *"x customisations"*. */
+  readonly bought: number;
+}
+
+/**
+ * What a lock is read against — 0592: which ships have won, and the two counts. The hangar slice builds
+ * it (`pilotRecord`); it is named here because content may not import state (0015).
+ */
+export interface PilotRecord {
+  readonly won: Readonly<Record<ShipKind, boolean>>;
+  readonly crashes: number;
+  readonly bought: number;
+}
+
+/** What is still owed on `lock` — 0592: the pilots still to clear, and what is left of each count. */
+export function lockLeft(lock: PilotLock, record: PilotRecord): { after: GolferKind[]; crashes: number; bought: number } {
+  return {
+    after: lock.after.filter((k) => !record.won[GOLFERS[k].ship]),
+    crashes: Math.max(0, lock.crashes - record.crashes),
+    bought: Math.max(0, lock.bought - record.bought),
+  };
+}
+
+/** Whether `lock` is met — every part of it. */
+export function lockOpen(lock: PilotLock, record: PilotRecord): boolean {
+  const left = lockLeft(lock, record);
+  return left.after.length === 0 && left.crashes === 0 && left.bought === 0;
 }
 
 /** What every golfer wears under the cap and polo: the predecessor intro's trousers, shoes and bag. */
@@ -129,7 +173,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 0.98,
     bio: 'Learned to read solar wind flying kites over the Ngong Hills; a feather on the dash, and a slow, sure drift through any crossfire.',
     voice: 1.14,
-    opensAfter: [],
+    opens: { after: [], crashes: 0, bought: 0 },
     saved: [
       'You found me! I felt the wind change, and I hoped it was you.',
       'I was starting to think nobody was coming. Thank you.',
@@ -160,7 +204,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1,
     bio: 'Flies by ear with the canopy blacked out and names every gun by its report; once hooked under the Gwangalli bridge at full burn.',
     voice: 1.03,
-    opensAfter: [],
+    opens: { after: [], crashes: 0, bought: 0 },
     saved: [
       'I heard your guns through the walls. I knew someone had come.',
       'It was so dark in there. Thank you for finding me.',
@@ -191,7 +235,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1.08,
     bio: 'Three long-haul records, a dented fender on the mantel, two kids and a kelpie, and a wagon that once towed a road train through a meteor storm.',
     voice: 0.8,
-    opensAfter: [],
+    opens: { after: [], crashes: 0, bought: 0 },
     saved: [
       'Mate! You came for me! Thought I was a goner in there.',
       'Get me home to the kids and the dog. I owe you a cold one.',
@@ -222,7 +266,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1,
     bio: 'Puts spin on everything, shots included; roasts coffee named for their barrel rolls; once lost a dogfight to their own ricochet.',
     voice: 0.95,
-    opensAfter: [],
+    opens: { after: [], crashes: 0, bought: 0 },
     saved: [
       'You came back for me. I’m naming my next coffee roast after you.',
       'I thought I’d be stuck in there forever. Thank you. Really.',
@@ -245,7 +289,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
    *
    * ⚠️ **LOCKED BEHIND THE FOUR, AND RESCUABLE BEFORE IT** — *"he can show up on the list of random
    * rescuee's with some voice lines before he's unlocked as a teaser though."* `rescuable` walks every
-   * kind, so he is in the Viper's pool from the first run; `opensAfter` is what keeps him off the
+   * kind, so he is in the Viper's pool from the first run; `opens` is what keeps him off the
    * select until all four have cleared the game.
    *
    * ⚠️ **HIS LINES LAND FOR A PLAYER WHO NEVER MET HIM** — 0426's rule: *you came, I'm out, thank you*,
@@ -269,7 +313,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     bio: 'Tends the spaceport bar on tips and pockets whatever the trade tents drop; rides the Thunderbolt out whenever the jar is full.',
     // High and quick: a small animal's voice, and the whistle a marmot is named for.
     voice: 1.38,
-    opensAfter: ['feather', 'woo', 'larry', 'bo'],
+    opens: { after: ['feather', 'woo', 'larry', 'bo'], crashes: 0, bought: 0 },
     saved: [
       'About time! I was down to my last golf ball in there.',
       'You came for me? Drinks are on the house. Forever.',
@@ -288,11 +332,11 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
 };
 
 /**
- * Whether `golfer` may fly, by the ships that have cleared the game — 0546. A pilot whose `opensAfter`
- * is empty always may; one who names pilots may once every one of them has won in their own ship.
+ * Whether `golfer` may fly — 0546, and since 0592 by the whole of their lock: the ships that have cleared
+ * the game, the crashes and what has been bought.
  */
-export function pilotOpen(golfer: GolferKind, won: Readonly<Record<ShipKind, boolean>>): boolean {
-  return GOLFERS[golfer].opensAfter.every((k) => won[GOLFERS[k].ship]);
+export function pilotOpen(golfer: GolferKind, record: PilotRecord): boolean {
+  return lockOpen(GOLFERS[golfer].opens, record);
 }
 
 /** Who flies if nobody has chosen — Bo, the pilot 0412 drew, for a player who skips straight past. */

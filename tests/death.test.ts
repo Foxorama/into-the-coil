@@ -146,8 +146,8 @@ function shell(level = LEVELS[LEVEL_KINDS[0]!]) {
   world.onWreck = (): void => {
     detonateArsenal(world, chargesIn(current.run.arsenal));
   };
-  world.onDeath = (): void => {
-    dispatch({ slice: 'run', type: 'lifeLost' });
+  world.onDeath = (cause): void => {
+    dispatch({ slice: 'run', type: 'lifeLost', cause });
     if (current.run.lives > 0) respawn(world);
   };
   return {
@@ -280,7 +280,7 @@ describe('the ship comes apart, and the player watches it happen', () => {
     const built = shell(NO_LEVEL);
     built.lifecycle.begin(TIER, shipOf(built.world), 'free');
     for (let i = 0; i < A_WHILE && built.state().run.lives > 1; i++) {
-      built.dispatch({ slice: 'run', type: 'lifeLost' });
+      built.dispatch({ slice: 'run', type: 'lifeLost', cause: 'fire' });
     }
     expect(built.state().run.lives, 'the run was not brought down to its last life').toBe(1);
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });

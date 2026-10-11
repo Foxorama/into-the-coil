@@ -501,7 +501,7 @@ describe('a tier is a property of the run, and never an assist', () => {
       { slice: 'run', type: 'took', special: 'bomb' },
       { slice: 'run', type: 'spent', side: 'gun' },
       { slice: 'run', type: 'levelCleared' },
-      { slice: 'run', type: 'lifeLost' },
+      { slice: 'run', type: 'lifeLost', cause: 'fire' },
     ];
     for (const tier of DIFFICULTY_KINDS) {
       let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: tier, ship: initialState.run.ship, credits: 'free' });

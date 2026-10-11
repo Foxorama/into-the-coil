@@ -97,7 +97,14 @@ export function reduce(state: State, action: Action): State {
     return hangar === state.hangar ? state : { ...state, hangar };
   }
   const run = reduceRun(state.run, action);
-  return agree(run === state.run ? state : { ...state, run });
+  if (run === state.run) return agree(state);
+  /*
+    THE FOURTH AGREEMENT: a life lost to a body is a crash, counted for good — 0592. The hangar is its
+    subject, as it is of 0521's win: the run says what did it, and the count outlives the run. Only a life
+    the run actually spent is counted — one dispatched at nought lives moves no run, and returned above.
+  */
+  const hangar = action.type === 'lifeLost' && action.cause === 'body' ? reduceHangar(state.hangar, CRASHED) : state.hangar;
+  return agree({ ...state, run, hangar });
 }
 
 /** The actions the agreements below need. Module-level, so routing allocates nothing extra. */
@@ -108,6 +115,8 @@ const SHOW_ENDED: ScreenAction = { slice: 'screen', type: 'show', screen: 'ended
 const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outro' };
 // A run that reaches the title is over — 0558.
 const END_RUN: RunAction = { slice: 'run', type: 'ended' };
+// A life lost to a body — 0592.
+const CRASHED: HangarAction = { slice: 'hangar', type: 'crashed' };
 
 /**
  * THE AGREEMENTS BETWEEN TWO SLICES, deliberately here rather than in either of them.
