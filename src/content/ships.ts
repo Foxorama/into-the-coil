@@ -31,7 +31,7 @@ import type { FlameKind } from './flames.ts';
 import { SHELLS, SHELL_KINDS, type ShellKind, type ShieldShell } from './shells.ts';
 
 /** Every flyable ship. Closed. */
-export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball';
+export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball' | 'duck';
 
 export interface ShipRow extends Body {
   /** What the player would call it — the pilot select's line under the golfer. */
@@ -185,6 +185,12 @@ export interface ShipRow extends Body {
    * Each row authors its own (0282), so a light lands on one ship and not the others.
    */
   lamps: readonly Lamp[];
+  /**
+   * What its engines burn as it comes — 0595: the standard flame on every ship but the Aqua Duck, which blows
+   * its Bubble Jets. It was `'standard'` for every ship in `ownFit` and the hangar's first visit; a ship's own
+   * is a row's to say (0282), and the hangar may change it.
+   */
+  flame: FlameKind;
 }
 
 /**
@@ -312,7 +318,7 @@ export interface Fit {
 /** A ship as it comes: its own gun, its own rim, its own look, the factory's paint, the standard flame, no tubes and its own shell. */
 export function ownFit(ship: ShipKind): Fit {
   const row = SHIPS[ship];
-  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: 'standard', tubes: [], shell: row.shield.look };
+  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: row.flame, tubes: [], shell: row.shield.look };
 }
 
 /**
@@ -368,6 +374,8 @@ function wheelAt(x: number, y: number, cx: number, cy: number): Mount {
  */
 const FIREBIRD_HUB = wheelAt(13.6, -5.4, 1, 1.5);
 const ESTATE_STAR = wheelAt(14.2, -0.1, 0, 1);
+/** The paintball marker's mouth under the Aqua Duck's chin, drawn about (0, 1) — `DUCK_MUZZLE` in the bake, 0595. */
+const DUCK_MUZZLE = wheelAt(17.2, 1.2, 0, 1);
 
 /**
  * `row` flying `gun` — 0525. Its own gun is the row as it is. Another's is the row with that gun, and a
@@ -478,7 +486,7 @@ export const BALL_RADIUS = 3;
 /** How far across from the ball's centre its tube cradles stand, in world units — on the axle, just outside the ball. */
 export const BALL_CRADLE = 3.5;
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird', 'estate', 'thunderbolt', 'ball'];
+export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird', 'estate', 'thunderbolt', 'ball', 'duck'];
 
 /**
  * Which hull a ship carrying `launchers` missile tubes is drawn as.
@@ -564,6 +572,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // The honeycomb deflector the game's shell always was, in the player's own ink — 0430.
     shield: SHELLS.honeycomb.shell,
     lamps: FIGHTER_LAMPS,
+    flame: 'standard',
   },
   /**
    * Feather Fade's — *The Far Carry*'s Little Green Caddie, *"a flying saucer with a 7-iron. They come
@@ -638,6 +647,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // A soap film in its ray dish’s lavender, a light sliding over it — 0492.
     shield: SHELLS.bubble.shell,
     lamps: CADDIE_LAMPS,
+    flame: 'standard',
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
@@ -695,6 +705,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // Its phoenix’s feathers: black lacquer read by gold edges, as the car is — 0492.
     shield: SHELLS.plumes.shell,
     lamps: [],
+    flame: 'standard',
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
@@ -751,6 +762,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // A gilt trellis between gilt rails, a stud at every crossing — 0492.
     shield: SHELLS.lattice.shell,
     lamps: [],
+    flame: 'standard',
   },
   /**
    * The Marmot's — `docs/decisions/0546-the-marmot-rides.md`. *The Far Carry*'s Thunderbolt, *"a hot-rod
@@ -810,6 +822,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // A cage of forked lightning — 0545. 0557: a unit and a half further out than the rest, clear of the bike.
     shield: SHELLS.storm.shell,
     lamps: [],
+    flame: 'standard',
   },
   /**
    * Unity's Hamster Ball — `docs/decisions/0593-the-hamster-ball-rolls.md`: a clear plastic ball, drawn from
@@ -867,6 +880,63 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // Sunflower seeds laid round it — 0593.
     shield: SHELLS.seeds.shell,
     lamps: [],
+    flame: 'standard',
+  },
+  /**
+   * MMXXVI's Aqua Duck — `docs/decisions/0595-the-aqua-duck-paints.md`. The page: *"Aqua duck for Space duck →
+   * bubble jets"*. A little submarine shaped like a bath duck, drawn from the side as the cars are, in the
+   * predecessor's frame about (0, 1) (`drawDuck` in the bake; `CAR_MOUNTS` holds every place below to the
+   * drawing): a round yellow hull riding on its flat keel, a head with a bill out front, a tail up behind,
+   * a periscope on its back, and the paintball marker under its chin with the hopper over it. It blows
+   * bubbles where the others burn (`flame`).
+   */
+  duck: {
+    label: 'Aqua Duck',
+    sprite: SPRITE.duck,
+    spriteHit: SPRITE.duckHit,
+    radius: 2,
+    health: 1,
+    damage: 0,
+    weapon: 'paintball',
+    hulls: [
+      { base: SPRITE.duck, hit: SPRITE.duckHit },
+      { base: SPRITE.duckTube, hit: SPRITE.duckTubeHit },
+      { base: SPRITE.duckTubes, hit: SPRITE.duckTubesHit },
+    ],
+    bare: null,
+    // 0595: bobbing — the head down to dabble and up again, and then the tail up and the head back.
+    dance: [
+      dancing([SPRITE.duck, SPRITE.duckDance1, SPRITE.duck, SPRITE.duckDance2], 6),
+      dancing([SPRITE.duckTube, SPRITE.duckTubeDance1, SPRITE.duckTube, SPRITE.duckTubeDance2], 6),
+      dancing([SPRITE.duckTubes, SPRITE.duckTubesDance1, SPRITE.duckTubes, SPRITE.duckTubesDance2], 6),
+    ],
+    // How far either side of the hull a borrowed gun's blades open from — the hull's half-height.
+    wingtip: 1.6,
+    // The marker's mouth under the chin, ahead of the bill's root (`DUCK_MUZZLE` in the bake).
+    muzzle: DUCK_MUZZLE,
+    view: 'side',
+    // A borrowed gun stands on its back, ahead of the periscope, where a car's stands on its hood.
+    hardpoint: wheelAt(0.2, -3.1, 0, 1),
+    mountScale: 1,
+    // The orange nose of the missile in each pod on its back, between the tail and the periscope.
+    tubes: [[], [wheelAt(-7.1, -4.6, 0, 1)], [wheelAt(-9.1, -4.6, 0, 1), wheelAt(-5.7, -4.6, 0, 1)]],
+    tubeLength: TURRET_NOSE,
+    tubeLook: 'nose',
+    // One jet, low at the stern under the tail.
+    nozzles: [wheelAt(-15.9, 2.6, 0, 1)],
+    // Its porthole, on the flank behind the chest: the intro's duck drops in here.
+    cockpit: wheelAt(4.4, 1.2, 0, 1),
+    intro: { hangar: 1, outside: 1 },
+    // Bath bubbles orbiting the readout: the bath duck's yellow for the counts, the water's blue for the trim.
+    hud: { name: 'Bath bubbles', motif: 'orbit', ink: { from: 'hazard', lift: 0.1 }, trim: { from: 'player', toward: 'ally', by: 0.3 } },
+    hangs: null,
+    wheels: null,
+    // 0595: bath-duck yellow as it came, MMXXVI's splashes, polka dots, and gilt.
+    arts: ['bathYellow', 'paintSplats', 'polkaDots', 'gildedDuck'],
+    // Drops of paint in the marker's four colours, round the duck — 0595.
+    shield: SHELLS.drips.shell,
+    lamps: [],
+    flame: 'bubbleJets',
   },
 };
 

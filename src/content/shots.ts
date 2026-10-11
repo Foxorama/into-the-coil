@@ -41,6 +41,9 @@ export type ShotKind =
   // The ray gun's rings and what they go off as where they land — 0442.
   | 'ray'
   | 'rayBurst'
+  // The paintball marker's ball and the splat it lands as — 0595.
+  | 'paintball'
+  | 'splat'
   | 'spit'
   | 'lance'
   | 'flak'
@@ -390,6 +393,8 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'ram',
   'ray',
   'rayBurst',
+  'paintball',
+  'splat',
   'spit',
   'lance',
   'flak',
@@ -579,6 +584,18 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * never the next rank of a wave.
    */
   rayBurst: { sprite: SPRITE.rayBurst, spriteHit: SPRITE.rayBurst, radius: 5, health: 1, damage: 3, speed: 0, fission: SPENT_BY_ARRIVING },
+  /**
+   * A paintball — 0595: small and quick, one a volley, spent by arriving. In flight its picture is the colour
+   * the frame gave it (`WEAPONS.paintball.paint`); this is the first colour's. The hangar shows the gun's
+   * own glyph (`WEAPONS.paintball.glyph`), the marker.
+   */
+  paintball: { sprite: SPRITE.paintballPink, spriteHit: SPRITE.paintballPink, radius: 1.1, health: 1, damage: 3, speed: 2.4, fission: SPENT_BY_ARRIVING },
+  /**
+   * Where a paintball lands — 0595: a splat, on the ring's burst's terms — a blast that lands on everything
+   * inside it once, drawn at its reach — and smaller than it, so it reaches a body pressed against the one
+   * the ball found and no further.
+   */
+  splat: { sprite: SPRITE.splatPink, spriteHit: SPRITE.splatPink, radius: 4, health: 1, damage: 2, speed: 0, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

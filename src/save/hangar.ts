@@ -134,7 +134,7 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
   const holding: HangarState = { ...opened, owned };
   for (const kind of SHIP_KINDS) {
     const raw = FLAME_KINDS.find((f) => f === flameDoc?.[kind]);
-    if (raw !== undefined && flameOpen(holding, raw)) flame[kind] = raw;
+    if (raw !== undefined && flameOpen(holding, kind, raw)) flame[kind] = raw;
   }
   /*
     0578: each ship's rack — one the document's own list owns enough tubes for, or none. A new field on

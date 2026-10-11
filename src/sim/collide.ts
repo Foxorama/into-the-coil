@@ -241,6 +241,8 @@ export function collideInto(
       if (hits !== null && hits.count < hits.along.length) {
         hits.along[hits.count] = shot.along;
         hits.across[hits.count] = shot.across;
+        // 0595: and the shot's own kind, as `deaths` keeps its target's — a paintball's colour rides it to the splat.
+        hits.kind[hits.count] = shot.kind;
         hits.count++;
       }
       /*

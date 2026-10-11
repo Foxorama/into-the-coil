@@ -32,7 +32,7 @@ import { SPRITE } from './sprites.ts';
  * The ray's nova came after them (0447), and the roman candle after that (0537) — the special of a gun
  * that has not landed yet, so it is thrown from every bomb pickup before any ship opens on it.
  */
-export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova', 'candle', 'warDance'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova', 'candle', 'warDance', 'waterCannon'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -305,6 +305,8 @@ export interface SpecialRow {
   candle: Candle | null;
   /** The dance it throws the ship into, or `null` — 0593. */
   dance: Dance | null;
+  /** The jet it plays from the ship's gun, or `null` — 0595. */
+  jet: Jet | null;
   /**
    * The pilot who must be open before the bomb pickup offers it in a run, or `null` for every run — 0594.
    * The War Dance's is Unity's: *"other ships can pick up the special once the hamster ball is unlocked"*.
@@ -384,6 +386,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
+    jet: null,
     opensWith: null,
     // The bomb pickup's face — the H-bomb in its bubble, since 0441; it was the bare `bomb` before.
     face: SPRITE.pickupBomb,
@@ -413,6 +416,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
+    jet: null,
     opensWith: null,
     face: SPRITE.pickupSeeker,
     cue: 'hunt',
@@ -440,6 +444,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
+    jet: null,
     opensWith: null,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
@@ -473,6 +478,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
+    jet: null,
     opensWith: null,
     face: SPRITE.pickupArc,
     cue: 'stormThrow',
@@ -512,6 +518,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
+    jet: null,
     opensWith: null,
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',
@@ -544,6 +551,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
+    jet: null,
     opensWith: null,
     // Its own face since 0447 — the swirl in its bubble. It wore the shield's while a shield was the
     // only way to earn one.
@@ -599,6 +607,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     },
     candle: null,
     dance: null,
+    jet: null,
     opensWith: null,
     face: SPRITE.pickupNova,
     cue: 'nova',
@@ -644,6 +653,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: { stars: 8, every: 12, fan: 0.55, reaches: [72, 112, 92, 128], star: 'candleStar', burst: 'firework', bossShare: 0.01 },
     dance: null,
+    jet: null,
     opensWith: null,
     face: SPRITE.pickupCandle,
     cue: 'candle',
@@ -670,13 +680,70 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: { steps: 180, speed: 2.2, reach: 3, damage: 3, landGap: 6 },
+    jet: null,
     opensWith: 'unity',
     face: SPRITE.pickupDance,
     cue: 'warDance',
     lands: null,
     hushes: false,
   },
+  /**
+   * The Water Cannon — 0595: the paintball's special, and the page's *"water guns?"*, read as *a jet of water
+   * swept across the lane for two seconds.* Nothing is thrown: the jet plays from the ship's own gun, sweeping
+   * from one side of the nose to the other and back, and lands on everything it crosses on the blades' clock.
+   * Once MMXXVI is open the bomb pickup offers it to every ship, as 0594 opened the War Dance with Unity.
+   */
+  waterCannon: {
+    label: 'Water Cannon',
+    hint: 'A jet of water swept across the lane',
+    side: 'gun',
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: null,
+    storm: null,
+    whirl: null,
+    rift: null,
+    nova: null,
+    candle: null,
+    dance: null,
+    jet: { steps: 120, sweep: 0.55, period: 60, length: 72, width: 2.2, damage: 2, landGap: 4 },
+    opensWith: 'mmxxvi',
+    face: SPRITE.pickupWater,
+    cue: 'waterCannon',
+    lands: null,
+    hushes: false,
+  },
 };
+
+/**
+ * The `kind` the Water Cannon's jet carries in the bolt pool — 0595, beside the serpent's rain (1), a boss's
+ * beam (2) and the Catherine wheel's tether (3). Here because the frame lays it and the painter strokes it,
+ * and this layer is below both.
+ */
+export const JET_BOLT_KIND = 4;
+
+/**
+ * The Water Cannon's jet — `docs/decisions/0595-the-aqua-duck-paints.md`. For `steps` a jet of water `length`
+ * long plays from the gun's muzzle, turned `sweep` radians either side of straight ahead and back once every
+ * `period` steps, so it swings across the lane ahead of the ship. It lands on whatever lies within `width` of
+ * it, `damage` a landing, and a body takes it only once every `landGap` steps — 0391's clock, as the blades'.
+ * Every number a play number.
+ */
+export interface Jet {
+  readonly steps: number;
+  /** Radians either side of straight ahead at the ends of its swing. */
+  readonly sweep: number;
+  /** Steps for one swing across and back. */
+  readonly period: number;
+  /** How far it reaches from the muzzle, in world units. */
+  readonly length: number;
+  /** How far either side of its line it lands, in world units. */
+  readonly width: number;
+  readonly damage: number;
+  readonly landGap: number;
+}
 
 /**
  * The War Dance — `docs/decisions/0593-the-hamster-ball-rolls.md`, named for the frenzied hopping a weasel

@@ -33,7 +33,6 @@ import { SCREENS, faceCard, type ChoiceName, type Screen } from '../state/screen
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf, type PickupKind } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS, SPECIALS } from '../content/specials.ts';
-import { SHOTS } from '../content/shots.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAME_KINDS } from '../content/flames.ts';
@@ -6717,7 +6716,8 @@ export function makeChrome(
       }
       holder.setAttribute('aria-hidden', 'true');
       if (band === 'gun' && ship !== undefined) {
-        const glyph = SPRITE_KINDS[SHOTS[WEAPONS[SHIPS[ship].weapon].shot].sprite];
+        // 0595: the gun's own glyph, which was its shot's picture until a gun's shot was four.
+        const glyph = SPRITE_KINDS[WEAPONS[SHIPS[ship].weapon].glyph];
         if (glyph === undefined) return null;
         holder.appendChild(bakeGlyph(glyph, colours, CARD_PIC_PIXELS / SPRITE_EXTENT[glyph]));
         return holder;

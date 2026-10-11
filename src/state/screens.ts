@@ -732,8 +732,16 @@ export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Re
       return 'Beat the jellyfish in the ' + plainLabel(RIMS[rim].from) + ' to borrow its wheels';
     }
     case 'dangle':
-    case 'flame':
       return 'Sold at Cosmo’s, the next tab';
+    // 0595: a flame Cosmo's sells, or one a ship comes with on the shell's words.
+    case 'flame': {
+      const flame = FLAME_KINDS[index];
+      if (flame === undefined) return null;
+      const from = FLAMES[flame].from;
+      if (from === null) return 'Sold at Cosmo’s, the next tab';
+      if (!won[ship]) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its flame';
+      return 'Beat the jellyfish in the ' + plainLabel(from) + ' to borrow its flame';
+    }
     // 0584: a ship's own shell, another ship's on the dash's words, or one Cosmo's sells.
     case 'shell': {
       const shell = SHELL_KINDS[index];

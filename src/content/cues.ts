@@ -118,6 +118,8 @@ export const CUE_KINDS = [
   'ram',
   'ballBreak',
   'ballMend',
+  // The paintball marker's — 0595: each ball leaving with a pneumatic pop.
+  'paintball',
   'threat',
   'hit',
   'kill',
@@ -147,6 +149,8 @@ export const CUE_KINDS = [
   'firework',
   // The War Dance thrown — 0593.
   'warDance',
+  // The Water Cannon opening up — 0595.
+  'waterCannon',
   'shield',
   'death',
   'pickup',
@@ -236,6 +240,8 @@ export const TWIN_KINDS = [
   'ball-mends',
   /** The ship starts bouncing round the box on its own — `startDance`, 0593. */
   'dance-starts',
+  /** A jet of water appears from the gun and starts sweeping the lane — `startJet`, 0595. */
+  'jet-appears',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
   /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
@@ -1040,6 +1046,27 @@ export const CUES: Record<CueKind, CueRow> = {
     layers: [
       { wave: 'sine', from: inKey(7), to: inKey(3), seconds: 0.12, gain: 0.8, attack: 0.001, curve: 3.2, drive: 0.3 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.35, attack: 0.0005, curve: 4, lowFrom: 4200, lowTo: 2400, highFrom: 900, q: 1.4 },
+    ],
+  },
+  /**
+   * A paintball leaves the marker — 0595: the pneumatic pop a marker makes, a short puff of air with a hollow
+   * knock under it, a little brighter than the ray's pew and far softer than a pulse. The gun's stream in
+   * MMXXVI's run, so it is dry, short enough to end before the next ball (`fireEvery`), and at a gun's level
+   * (0145).
+   */
+  paintball: {
+    twin: 'shot-appears',
+    hold: 2,
+    gain: 0.22,
+    glue: 0.12,
+    figure: [1, 0.72, 0.86, 0.72],
+    layers: [
+      // The air: a short breath of bright noise, opening and gone.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.42, attack: 0.0008, curve: 5, lowFrom: 7000, lowTo: 3200, highFrom: 1400, q: 0.9 },
+      // The knock: a hollow sine on the fifth falling to the root, as a ball leaves a tube.
+      { wave: 'sine', from: inKey(19), to: inKey(12), seconds: 0.05, gain: 0.5, attack: 0.001, curve: 4.5, drive: 0.15 },
+      // The guns' shared bottom — 0102.
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.05, gain: 0.36, attack: 0.002, curve: 4, drive: 0.2 },
     ],
   },
   /**
@@ -2263,6 +2290,27 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(11), to: inKey(16), at: 0.2, seconds: 0.08, gain: 0.32, attack: 0.002, curve: 3.2 },
       { wave: 'noise', from: 0, to: 0, at: 0.08, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: -0.3 },
       { wave: 'noise', from: 0, to: 0, at: 0.18, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: 0.3 },
+    ],
+  },
+  /**
+   * The Water Cannon opening up — 0595: a valve's knock and then the rush of a hose at full pressure, the
+   * spray swept from one side to the other as the jet is, settling as it runs. A press, like the bomb's:
+   * immediate.
+   */
+  waterCannon: {
+    // A thing appearing, as the whirlpool's is: so it rings out over the bed and never ducks it (0308).
+    twin: 'jet-appears',
+    air: 0.25,
+    hold: 6,
+    gain: 0.32,
+    glue: 0.08,
+    layers: [
+      // The valve: a low knock on the root.
+      { wave: 'sine', from: inKey(5), to: inKey(0), seconds: 0.07, gain: 0.7, attack: 0.001, curve: 3.6, drive: 0.3 },
+      // The rush: broad noise swelling in, brightening, swept across the field as the jet is.
+      { wave: 'noise', from: 0, to: 0, at: 0.02, seconds: 0.6, gain: 0.55, attack: 0.04, curve: 1.6, lowFrom: 3200, lowTo: 9000, highFrom: 600, highTo: 1400, q: 0.8, pan: -0.45, panTo: 0.45 },
+      // The spray's hiss over it, finer and higher, settling as it runs.
+      { wave: 'noise', from: 0, to: 0, at: 0.1, seconds: 0.5, gain: 0.25, attack: 0.06, curve: 2, lowFrom: 12000, highFrom: 4200, pan: 0.3, panTo: -0.3 },
     ],
   },
   candle: {

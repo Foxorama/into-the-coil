@@ -109,6 +109,13 @@ export const SPRITE_KINDS = [
   'ballBareTubeHit',
   'ballBareTubes',
   'ballBareTubesHit',
+  // MMXXVI's Aqua Duck — 0595: a bath-duck submarine from the side, at no tubes, one and two.
+  'duck',
+  'duckHit',
+  'duckTube',
+  'duckTubeHit',
+  'duckTubes',
+  'duckTubesHit',
   /*
     0594: every ship's War Dance — two poses either side of its still one, at no tubes, one and two, its
     own parts moving in its own drawing (`dance` on its row). No hurt twin: nothing lands on a dancing ship.
@@ -149,6 +156,12 @@ export const SPRITE_KINDS = [
   'ballTubeDance2',
   'ballTubesDance1',
   'ballTubesDance2',
+  'duckDance1',
+  'duckDance2',
+  'duckTubeDance1',
+  'duckTubeDance2',
+  'duckTubesDance1',
+  'duckTubesDance2',
   // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
   'spinnerWheel',
   'spinnerWheelHit',
@@ -1119,6 +1132,8 @@ export const SPRITE_KINDS = [
   'pickupCandle',
   // The War Dance — 0593: a little ball hopping, three hops drawn behind it. The ball's special's face.
   'pickupDance',
+  // The Water Cannon — 0595: a brass nozzle throwing a curling jet of water. The paintball's special's face.
+  'pickupWater',
   /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
@@ -1269,6 +1284,19 @@ export const SPRITE_KINDS = [
   'shieldSeed240a',
   'shieldSeed240b',
   'shieldSeed240c',
+  // 0595: the Aqua Duck's own — drops of paint in the marker's four colours, laid round the duck.
+  'shieldDrip0a',
+  'shieldDrip0b',
+  'shieldDrip0c',
+  'shieldDrip120a',
+  'shieldDrip120b',
+  'shieldDrip120c',
+  'shieldDrip180a',
+  'shieldDrip180b',
+  'shieldDrip180c',
+  'shieldDrip240a',
+  'shieldDrip240b',
+  'shieldDrip240c',
   /*
     ── A SURGE IS WORN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────────────────
 
@@ -1320,6 +1348,24 @@ export const SPRITE_KINDS = [
   'ramHeat1',
   'ramHeat2',
   'ramHeat3',
+  /*
+    The paintball marker — 0595. `paintball` is the gun's own glyph, which the hangar shows for it: the
+    marker and its hopper with a ball leaving. In flight each ball is one of four colours, and where it lands
+    it splats in that colour, wet and then dried flat — a splat is paint, so it is a body and not light.
+  */
+  'paintball',
+  'paintballPink',
+  'paintballYellow',
+  'paintballBlue',
+  'paintballGrape',
+  'splatPink',
+  'splatPinkDry',
+  'splatYellow',
+  'splatYellowDry',
+  'splatBlue',
+  'splatBlueDry',
+  'splatGrape',
+  'splatGrapeDry',
   /*
     ── THE RAY GUN'S RINGS, IN THREE PAGES, AND WHERE THEY LAND IN TWO — 0442 ──────────────────────
 
@@ -1831,6 +1877,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ballBareTubeHit: SHIP_BOX,
   ballBareTubes: SHIP_BOX,
   ballBareTubesHit: SHIP_BOX,
+  duck: SHIP_BOX,
+  duckHit: SHIP_BOX,
+  duckTube: SHIP_BOX,
+  duckTubeHit: SHIP_BOX,
+  duckTubes: SHIP_BOX,
+  duckTubesHit: SHIP_BOX,
   fighterDance1: SHIP_BOX,
   fighterDance2: SHIP_BOX,
   fighterTubeDance1: SHIP_BOX,
@@ -1867,6 +1919,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ballTubeDance2: SHIP_BOX,
   ballTubesDance1: SHIP_BOX,
   ballTubesDance2: SHIP_BOX,
+  duckDance1: SHIP_BOX,
+  duckDance2: SHIP_BOX,
+  duckTubeDance1: SHIP_BOX,
+  duckTubeDance2: SHIP_BOX,
+  duckTubesDance1: SHIP_BOX,
+  duckTubesDance2: SHIP_BOX,
   /*
     0527: a box whose frame's radius is the Firebird's tyre — 3.6 of the predecessor's units, each 0.062
     of a ship's box radius — so the spinner is painted to a radius of one and stands over that tyre at
@@ -2722,6 +2780,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupShuriken: 8,
   pickupCandle: 8,
   pickupDance: 8,
+  pickupWater: 8,
   pickupMissile: 7.33,
   pickupSeeker: 7.33,
   pickupShield: 6.67,
@@ -2846,6 +2905,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shieldSeed240a: 12,
   shieldSeed240b: 12,
   shieldSeed240c: 12,
+  shieldDrip0a: 12,
+  shieldDrip0b: 12,
+  shieldDrip0c: 12,
+  shieldDrip120a: 12,
+  shieldDrip120b: 12,
+  shieldDrip120c: 12,
+  shieldDrip180a: 12,
+  shieldDrip180b: 12,
+  shieldDrip180c: 12,
+  shieldDrip240a: 12,
+  shieldDrip240b: 12,
+  shieldDrip240c: 12,
   // Round the whole hull with a margin — the ship is 7, so its wingtips sit inside the rim. 0373.
   auraHunt: 12,
   auraOverdrive: 12,
@@ -2897,6 +2968,20 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ramHeat1: SHIP_BOX,
   ramHeat2: SHIP_BOX,
   ramHeat3: SHIP_BOX,
+  // 0595: the glyph at a pickup's size; a ball a little over its body; a splat at exactly its reach, on the burst's rule.
+  paintball: 8,
+  paintballPink: 2.6,
+  paintballYellow: 2.6,
+  paintballBlue: 2.6,
+  paintballGrape: 2.6,
+  splatPink: 8,
+  splatPinkDry: 8,
+  splatYellow: 8,
+  splatYellowDry: 8,
+  splatBlue: 8,
+  splatBlueDry: 8,
+  splatGrape: 8,
+  splatGrapeDry: 8,
   catherineFade: 8,
   cinder: 4.5,
   cinderCool: 3.6,

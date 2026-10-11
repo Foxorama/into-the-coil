@@ -61,8 +61,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // 0549 weighted the Catherine wheel on the same row, and 0551 re-weighed it; the break still takes only the arc's.
-      find: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9 },',
-      replace: '    gunWeights: { arc: 1.5, catherine: 0.5, ram: 9 },',
+      // And 0595 the paintball on it; still only the arc's is taken.
+      find: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9, paintball: 1.6 },',
+      replace: '    gunWeights: { arc: 1.5, catherine: 0.5, ram: 9, paintball: 1.6 },',
     },
   },
 ];

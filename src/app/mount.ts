@@ -1057,7 +1057,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // the player's weapon; the core is the brightest ink there is, because lightning is.
   // And the serpent's lightning in the enemy's ink with the same white core — 0248.
   // Solved once per palette by `boltInks`, which gives each a hot heart — 0520.
-  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard));
+  // 0595: and the Water Cannon's jet in the frost's aquamarine round the same white.
+  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.frost, colours.impact));
 
   /*
     Whether the canvas is shown mirrored, left for right — 0590, played left-handed. Held so `applyMirror`
@@ -1149,6 +1150,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     danceKind: null,
     danceAlong: 0,
     danceAcross: 0,
+    // 0595: and no jet.
+    jetFor: 0,
+    jetKind: null,
+    jetAt: 0,
     whirl,
     whirlKind: null,
     whirlAge: 0,
@@ -1190,6 +1195,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // What a pickup is — 0575. Reseeded by `begin` for every run from the seed the shell draws.
     pickupRng: makeRng('proof-scene').stream('pickups'),
     arcRng: makeRng('proof-scene').stream('arc'),
+    // Where a paintball scatters and what colour it is — 0595, its own stream per 0021.
+    paintRng: makeRng('proof-scene').stream('paint'),
     stormRng: makeRng('proof-scene').stream('storm'),
     bodyBoltRng: makeRng('proof-scene').stream('body-bolt'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
@@ -2647,8 +2654,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const base = hangarFit(ship);
     chrome.setThumbs('rim', RIM_KINDS.map((rim) => (SHIPS[ship].wheels === null ? null : thumbOf(ship, { ...base, rim }))));
     chrome.setThumbs('art', SHIPS[ship].arts.map((art) => thumbOf(ship, { ...base, art })));
-    // 0530: the flame — the standard always, a bought one on any ship.
-    const flames = FLAME_KINDS.map((kind) => flameOpen(state.hangar, kind));
+    // 0530: the flame — the standard always, a bought one on any ship; 0595: a ship's own on the shells' rule.
+    const flames = FLAME_KINDS.map((kind) => flameOpen(state.hangar, ship, kind));
     chrome.setOpen('flame', flames, flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])), whysOf('flame', flames));
     chrome.setChoice('flame', FLAME_KINDS.indexOf(state.hangar.flame[ship]));
     // 0584: the shell — its own always, another ship's on the dash's rule, a bought one on any ship.
@@ -3085,7 +3092,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surface.setSpace(want);
     // A hostile bolt in the place's own glow where it authors one, the enemy's ink elsewhere — 0459.
     const hostile = place === null ? null : THEMES[place].bolt;
-    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard));
+    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.frost, colours.impact));
     /*
       ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
 

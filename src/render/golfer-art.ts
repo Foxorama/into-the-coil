@@ -74,6 +74,11 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: RunnerRow, po
     paintWeaselRunner(ctx, golfer, leap, [ft, fs, bt, bs], line, disc);
     return;
   }
+  // 0595: a space duck, round and upright, waddling on the same stride.
+  if (golfer.figure === 'duck') {
+    paintDuckRunner(ctx, golfer, leap, [ft, fs, bt, bs], line, disc);
+    return;
+  }
   // The arms swing against the legs.
   const armFront = leap ? 150 : -ft * 0.9;
   const armBack = leap ? 130 : -bt * 0.9;
@@ -582,6 +587,196 @@ function paintWeaselPortrait(ctx: CanvasRenderingContext2D, weasel: GolferRow): 
   ctx.fillRect(6.5, 5, 7, 0.9);
 }
 
+/** MMXXVI's own colours, beside their row's: the bill and feet, the eye, the cheek, and the paint on the apron — 0595. */
+const DUCK = {
+  bill: '#ff9028',
+  eye: '#140d08',
+  cheek: '#ff9db4',
+  splashes: ['#ff5fb4', '#4fc3ff', '#a46bff'],
+} as const;
+
+/**
+ * MMXXVI waddling out of the bar, side on, facing +x — 0595: a round duck body carried upright in a white
+ * suit with the painter's apron over the front, short legs ending in wide orange feet on the deck at +5,
+ * a wing swinging for an arm, the head up on its neck with the bill out front, a dark bead of an eye, and
+ * the beret tipped back with its stalk on top. Its stride is the golfers' own, shortened to a duck's legs.
+ */
+function paintDuckRunner(
+  ctx: CanvasRenderingContext2D,
+  duck: RunnerRow,
+  leap: boolean,
+  [ft, fs, bt, bs]: readonly [number, number, number, number],
+  line: (points: readonly Pt[], colour: string, width: number) => void,
+  disc: (x: number, y: number, r: number, colour: string) => void,
+): void {
+  const deg = Math.PI / 180;
+  const apron = duck.pants ?? KIT.pants;
+  const hip: Pt = [-0.2, 2.4];
+  const limb = (from: Pt, a1: number, l1: number, a2: number, l2: number): [Pt, Pt] => {
+    const knee: Pt = [from[0] + Math.sin(a1 * deg) * l1, from[1] + Math.cos(a1 * deg) * l1];
+    const foot: Pt = [knee[0] + Math.sin((a1 + a2) * deg) * l2, knee[1] + Math.cos((a1 + a2) * deg) * l2];
+    return [knee, foot];
+  };
+  const foot = (at: Pt, colour: string): void => {
+    // A wide webbed foot, flat to the deck, toes forward.
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.moveTo(at[0] - 0.4, at[1] - 0.2);
+    ctx.lineTo(at[0] + 1.1, at[1] - 0.15);
+    ctx.lineTo(at[0] + 1.25, at[1] + 0.25);
+    ctx.lineTo(at[0] - 0.4, at[1] + 0.25);
+    ctx.closePath();
+    ctx.fill();
+  };
+  // The far leg and foot, in shadow — a duck's legs are short, so the stride is two thirds of a golfer's.
+  const [bk, bf] = limb(hip, bt * 0.66, 1.3, bs * 0.66, 1.3);
+  line([hip, bk, bf], shade(DUCK.bill, -0.3), 0.45);
+  foot(bf, shade(DUCK.bill, -0.3));
+  // The tail, a little flick up behind.
+  ctx.fillStyle = duck.skin;
+  ctx.beginPath();
+  ctx.moveTo(-2.2, 0.4);
+  ctx.lineTo(-3.3, -0.6);
+  ctx.lineTo(-2.4, 1.4);
+  ctx.closePath();
+  ctx.fill();
+  // The body: round and upright, the suit's white over the down, and the apron down its front.
+  ctx.fillStyle = duck.shirt;
+  ctx.beginPath();
+  ctx.ellipse(0, 0.6, 2.4, 2.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = apron;
+  ctx.beginPath();
+  ctx.moveTo(0.6, -1.2);
+  ctx.quadraticCurveTo(2.6, -0.4, 2.3, 1.4);
+  ctx.quadraticCurveTo(1.9, 2.7, 0.8, 2.9);
+  ctx.closePath();
+  ctx.fill();
+  disc(1.6, 0.4, 0.3, DUCK.splashes[0]);
+  disc(1.3, 1.8, 0.22, DUCK.splashes[1]);
+  // The near leg and foot.
+  const [fk, ff] = limb(hip, ft * 0.66, 1.3, fs * 0.66, 1.3);
+  line([hip, fk, ff], DUCK.bill, 0.5);
+  foot(ff, DUCK.bill);
+  // The wing for an arm, swinging against the near leg — or up, reaching for the cockpit.
+  const swing = leap ? -140 : -ft * 0.8;
+  const shoulder: Pt = [0.2, -0.6];
+  const tip: Pt = [shoulder[0] + Math.sin(swing * deg) * 2, shoulder[1] + Math.cos(swing * deg) * 2];
+  line([shoulder, tip], shade(duck.shirt, -0.12), 0.9);
+  disc(tip[0], tip[1], 0.42, duck.skin);
+  // The neck, and the head up on it: yellow down, the bill out front, the eye and a pink cheek.
+  const head: Pt = [0.9, -3.2];
+  const [hx, hy] = head;
+  line([[0.3, -1.4], [hx - 0.2, hy + 0.6]], duck.skin, 1.2);
+  disc(hx, hy, 1.15, duck.skin);
+  ctx.fillStyle = DUCK.bill;
+  ctx.beginPath();
+  ctx.moveTo(hx + 0.8, hy - 0.05);
+  ctx.quadraticCurveTo(hx + 2.4, hy - 0.2, hx + 2.5, hy + 0.3);
+  ctx.quadraticCurveTo(hx + 2.2, hy + 0.65, hx + 0.8, hy + 0.55);
+  ctx.closePath();
+  ctx.fill();
+  disc(hx + 0.35, hy - 0.35, 0.22, DUCK.eye);
+  disc(hx + 0.42, hy - 0.42, 0.07, '#ffffff');
+  disc(hx + 0.2, hy + 0.35, 0.26, DUCK.cheek);
+  // The beret, tipped back over the crown, its stalk on top.
+  ctx.fillStyle = duck.cap;
+  ctx.beginPath();
+  ctx.ellipse(hx - 0.25, hy - 1.05, 1.35, 0.55, -0.25, 0, Math.PI * 2);
+  ctx.fill();
+  line([[hx - 0.2, hy - 1.55], [hx - 0.1, hy - 1.95]], shade(duck.cap, -0.3), 0.22);
+}
+
+/**
+ * MMXXVI's portrait for the select screen — 0595: head and shoulders, front on, in twentieths of the square.
+ * The white suit and its collar, the painter's apron's bib over it splashed in the shop's inks, the yellow
+ * neck rising out of the collar, the round head with its bill — wide, flat and spoon-tipped, a smile at the
+ * corners — two dark bead eyes set high, a pink cheek each side, and the beret tipped over one ear (0555).
+ */
+function paintDuckPortrait(ctx: CanvasRenderingContext2D, duck: GolferRow): void {
+  const apron = duck.pants ?? KIT.pants;
+  const disc = (x: number, y: number, r: number, colour: string): void => {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  // The suit's shoulders, and the apron's bib over them with paint splashed on it.
+  ctx.fillStyle = duck.shirt;
+  ctx.beginPath();
+  ctx.moveTo(2.2, 20);
+  ctx.quadraticCurveTo(2.4, 15.8, 6.8, 15.2);
+  ctx.lineTo(13.2, 15.2);
+  ctx.quadraticCurveTo(17.6, 15.8, 17.8, 20);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = apron;
+  ctx.beginPath();
+  ctx.moveTo(6.6, 16.2);
+  ctx.lineTo(13.4, 16.2);
+  ctx.lineTo(14, 20);
+  ctx.lineTo(6, 20);
+  ctx.closePath();
+  ctx.fill();
+  disc(7.8, 17.6, 0.55, DUCK.splashes[0]);
+  disc(12.4, 18.4, 0.5, DUCK.splashes[1]);
+  disc(10.4, 19.2, 0.4, DUCK.splashes[2]);
+  // The neck, out of the collar.
+  ctx.fillStyle = duck.skin;
+  ctx.fillRect(8, 12.2, 4, 4.2);
+  ctx.fillStyle = shade(duck.hair, -0.05);
+  ctx.fillRect(8, 15.2, 4, 0.6);
+  // The head: round and yellow, its down a little darker under the cheeks.
+  ctx.fillStyle = duck.skin;
+  ctx.beginPath();
+  ctx.ellipse(10, 9.4, 4.6, 4.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = duck.hair;
+  ctx.beginPath();
+  ctx.ellipse(10, 12.2, 3.6, 1.2, 0, 0, Math.PI);
+  ctx.fill();
+  // The cheeks, pink, out past the eyes; the eyes, beads with a glint.
+  disc(6.6, 11, 0.9, DUCK.cheek);
+  disc(13.4, 11, 0.9, DUCK.cheek);
+  disc(8.2, 8.6, 0.65, DUCK.eye);
+  disc(11.8, 8.6, 0.65, DUCK.eye);
+  disc(8.4, 8.35, 0.22, '#ffffff');
+  disc(12, 8.35, 0.22, '#ffffff');
+  // The bill: wide and flat, spoon-tipped, the lower bill a darker line under it, smiling at the corners.
+  ctx.fillStyle = DUCK.bill;
+  ctx.beginPath();
+  ctx.moveTo(7.2, 10.4);
+  ctx.quadraticCurveTo(10, 9.4, 12.8, 10.4);
+  ctx.quadraticCurveTo(13.4, 12.2, 10, 12.6);
+  ctx.quadraticCurveTo(6.6, 12.2, 7.2, 10.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = shade(DUCK.bill, -0.35);
+  ctx.lineWidth = 0.28;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(7.6, 11.3);
+  ctx.quadraticCurveTo(10, 12.1, 12.4, 11.3);
+  ctx.stroke();
+  disc(9.2, 10.3, 0.18, shade(DUCK.bill, -0.45));
+  disc(10.8, 10.3, 0.18, shade(DUCK.bill, -0.45));
+  // The beret, tipped over the left ear, its stalk on top.
+  ctx.fillStyle = duck.cap;
+  ctx.beginPath();
+  ctx.ellipse(9.2, 5.4, 5.2, 1.9, -0.18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = shade(duck.cap, -0.3);
+  ctx.beginPath();
+  ctx.ellipse(9.4, 6.4, 4.4, 0.6, -0.18, 0, Math.PI);
+  ctx.fill();
+  ctx.strokeStyle = shade(duck.cap, -0.35);
+  ctx.lineWidth = 0.45;
+  ctx.beginPath();
+  ctx.moveTo(9, 3.6);
+  ctx.lineTo(9.3, 2.6);
+  ctx.stroke();
+}
+
 /**
  * A head under a hood, in profile, facing +x — 0416. The hood is a cowl bigger than the skull, its back
  * falling to the shoulders and its peak overhanging the brow, so the face is a lit edge in a shadow:
@@ -645,6 +840,12 @@ export function paintPortrait(ctx: CanvasRenderingContext2D, golfer: GolferRow, 
   // 0593: Unity in their bush hat.
   if (golfer.figure === 'weasel') {
     paintWeaselPortrait(ctx, golfer);
+    ctx.restore();
+    return;
+  }
+  // 0595: MMXXVI in their beret.
+  if (golfer.figure === 'duck') {
+    paintDuckPortrait(ctx, golfer);
     ctx.restore();
     return;
   }

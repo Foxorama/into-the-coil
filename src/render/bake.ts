@@ -38,7 +38,7 @@ import { SHELLS, shieldPlateOf, type ShellKind, type ShieldLook } from '../conte
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
 import { FLAMES, type FlameKind } from '../content/flames.ts';
-import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
+import { WEAPONS, type PaintColour, type WeaponKind } from '../content/weapons.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
@@ -715,6 +715,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupCandle: 'hazard',
   // 0593: the War Dance — in the acid's green, which no face of the bomb pickup wears.
   pickupDance: 'acid',
+  // 0595: the Water Cannon — in the frost's aquamarine, the one water ink, which no face of the bomb pickup wears.
+  pickupWater: 'frost',
   pickupShield: 'pickup',
   /*
     The ward's faces — 0447. The void wears its own lavender; the nova wears the white of the heart it
@@ -899,6 +901,18 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shieldSeed240a: 'player',
   shieldSeed240b: 'player',
   shieldSeed240c: 'player',
+  shieldDrip0a: 'player',
+  shieldDrip0b: 'player',
+  shieldDrip0c: 'player',
+  shieldDrip120a: 'player',
+  shieldDrip120b: 'player',
+  shieldDrip120c: 'player',
+  shieldDrip180a: 'player',
+  shieldDrip180b: 'player',
+  shieldDrip180c: 'player',
+  shieldDrip240a: 'player',
+  shieldDrip240b: 'player',
+  shieldDrip240c: 'player',
   // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
   // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
   auraHunt: 'ally',
@@ -997,6 +1011,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   ballBareTubeHit: 'hazard',
   ballBareTubes: 'player',
   ballBareTubesHit: 'hazard',
+  // 0595: the Aqua Duck, the player's as every ship is, and flashing as every ship does.
+  duck: 'player',
+  duckHit: 'hazard',
+  duckTube: 'player',
+  duckTubeHit: 'hazard',
+  duckTubes: 'player',
+  duckTubesHit: 'hazard',
   // 0594: every ship dancing, the player's as the ship standing still is.
   fighterDance1: 'player',
   fighterDance2: 'player',
@@ -1034,12 +1055,32 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   ballTubeDance2: 'player',
   ballTubesDance1: 'player',
   ballTubesDance2: 'player',
+  duckDance1: 'player',
+  duckDance2: 'player',
+  duckTubeDance1: 'player',
+  duckTubeDance2: 'player',
+  duckTubesDance1: 'player',
+  duckTubesDance2: 'player',
   // The ram's glyph and its heat — the player's, as everything the ship is.
   ram: 'player',
   ramHeat0: 'player',
   ramHeat1: 'player',
   ramHeat2: 'player',
   ramHeat3: 'player',
+  // 0595: the paintball's glyph, its balls and its splats — the player's, as all its fire is; the paint's own colours are the row's.
+  paintball: 'player',
+  paintballPink: 'player',
+  paintballYellow: 'player',
+  paintballBlue: 'player',
+  paintballGrape: 'player',
+  splatPink: 'player',
+  splatPinkDry: 'player',
+  splatYellow: 'player',
+  splatYellowDry: 'player',
+  splatBlue: 'player',
+  splatBlueDry: 'player',
+  splatGrape: 'player',
+  splatGrapeDry: 'player',
   // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
   spinnerWheel: 'player',
   spinnerWheelHit: 'hazard',
@@ -2394,7 +2435,7 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, po
 */
 
 /** Every flyable ship's art, by kind — what `drawKind` and the port both draw. */
-type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball';
+type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball' | 'duck';
 
 /*
   ── THE FIGHTER'S TUBES WERE HERE — ON ITS CHIN AND ITS WING ROOTS — AND 0581 HUNG THEM UNDER ITS WINGS ──
@@ -2540,17 +2581,20 @@ function paintPylon(ctx: Pen, f: Frame, palette: Palette, [x, y]: Pt): void {
  * the missile in each roof turret at one tube and two — 0448. `tests/mounts.test.ts` holds the ship rows'
  * `muzzle` and `tubes` to these, so a turret moved in the drawing cannot leave its missiles behind.
  */
-export function carMounts(ship: 'firebird' | 'estate' | 'thunderbolt'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
+export function carMounts(ship: 'firebird' | 'estate' | 'thunderbolt' | 'duck'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
   const firebird = ship === 'firebird';
   const box = (x: number, y: number): Pt => (firebird ? inBox([[x, y]], 1, 1.5) : inBox([[x, y]], 0, 1))[0]!;
   // 0545: the Thunderbolt's pods on its rear fender, and its lightning ball on the fork crown.
-  const spans = firebird ? FIREBIRD_TURRETS : ship === 'estate' ? ESTATE_TURRETS : THUNDERBOLT_PODS;
+  // 0595: the Aqua Duck's pods on its back, and its marker's mouth under its chin.
+  const spans = firebird ? FIREBIRD_TURRETS : ship === 'estate' ? ESTATE_TURRETS : ship === 'duck' ? DUCK_PODS : THUNDERBOLT_PODS;
   const mid = firebird
     ? (FIREBIRD_TURRET_TOP + FIREBIRD_TURRET_BASE) / 2
     : ship === 'estate'
       ? (ESTATE_TURRET_TOP + ESTATE_RACK) / 2
-      : (THUNDERBOLT_POD_TOP + THUNDERBOLT_FENDER) / 2;
-  const muzzle = firebird ? FIREBIRD_HUB : ship === 'estate' ? ESTATE_STAR : THUNDERBOLT_BALL;
+      : ship === 'duck'
+        ? (DUCK_POD_TOP + DUCK_BACK) / 2
+        : (THUNDERBOLT_POD_TOP + THUNDERBOLT_FENDER) / 2;
+  const muzzle = firebird ? FIREBIRD_HUB : ship === 'estate' ? ESTATE_STAR : ship === 'duck' ? DUCK_MUZZLE : THUNDERBOLT_BALL;
   return {
     muzzle: box(muzzle[0], muzzle[1]),
     // The orange nose `paintTurrets` draws runs to a tenth short of the turret's front.
@@ -3501,6 +3545,310 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
   }
 }
 
+/*
+  ── THE AQUA DUCK — 0595 ───────────────────────────────────────────────────────────────────────────
+
+  MMXXVI's little submarine shaped like a bath duck, from the side in the predecessor's ±20 frame about
+  (0, 1) as the cars and the Thunderbolt are: a round yellow hull on a flat keel, the tail kicked up at
+  the stern, a periscope on its back, the head on the bow with a bill out front, and the paintball marker
+  slung under its chin with its hopper on top. One outline takes in the hull, the tail, the periscope, the
+  head and bill, the marker and the pods on its back, so every one is silhouette.
+*/
+
+/** Its back, where the pods and a borrowed gun stand, and how high a pod stands on it — the predecessor's frame. */
+const DUCK_BACK = -3;
+const DUCK_POD_TOP = -6.2;
+/** Where its pods stand on its back, at one tube and two, as `[back, front]` spans. */
+const DUCK_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-10.2, -7]], [[-12, -9], [-8.6, -5.6]]];
+/** Its head: the centre and the radius. */
+const DUCK_HEAD: Pt = [9.5, -6.5];
+const DUCK_HEAD_R = 4.6;
+/** The marker's mouth under its chin, where the paintballs leave; `DUCK_MUZZLE` on its row. */
+const DUCK_MUZZLE: Pt = [17.2, 1.2];
+/** Half the marker barrel's height: two units of chrome across, over 0106's floor at the shipped camera. */
+const DUCK_BORE = 0.95;
+/** The hopper on the marker, feeding it. */
+const DUCK_HOPPER: Pt = [13.4, -0.7];
+const DUCK_HOPPER_R = 1.5;
+/** The porthole in its flank, where MMXXVI sits — its row's `cockpit`. */
+const DUCK_PORTHOLE: Pt = [4.4, 1.2];
+const DUCK_PORTHOLE_R = 1.9;
+/** The root of its neck, which the head bobs about, and the root of its tail, which the tail kicks up from — 0595. */
+const DUCK_NECK: Pt = [6, -2.6];
+const DUCK_TAIL: Pt = [-12.2, -3];
+/** How far the head dips to dabble and tips back, and how far the tail kicks up, in its War Dance — in radians. */
+const DUCK_DIP = 0.32;
+const DUCK_TIP = -0.18;
+const DUCK_KICK = 0.34;
+
+/** Points on an arc of the head, from `from` to `to` in degrees, in the canvas's sense (y down). */
+function duckHeadArc(from: number, to: number, count: number): Pt[] {
+  return roundel(DUCK_HEAD[0], DUCK_HEAD[1], DUCK_HEAD_R, count, (from * Math.PI) / 180, (to * Math.PI) / 180);
+}
+
+/** Its bill, from where it leaves the head's brow round the spoon tip to where the lower bill meets the cheek. */
+const DUCK_BILL: readonly Pt[] = [
+  [15.6, -7.7],
+  [17.6, -7.5],
+  [18.9, -6.9],
+  [19.2, -6],
+  [18.6, -5.3],
+  [16.6, -5],
+  [14.6, -4.7],
+];
+
+/**
+ * The Aqua Duck from the side, in the predecessor's frame, at `stage` tubes — 0595. With another ship's gun
+ * it has no marker: the chest runs on down from the chin to the keel.
+ */
+function duckOutline(stage: number, own = true): Pt[] {
+  const marker: Pt[] = own
+    ? [
+        // Under the chin: the marker's top, the hopper standing on it, the barrel out to its mouth, and back under.
+        [11.4, -0.4],
+        [DUCK_HOPPER[0] - DUCK_HOPPER_R, -0.2],
+        ...roundel(DUCK_HOPPER[0], DUCK_HOPPER[1], DUCK_HOPPER_R, 10, Math.PI * 1.08, Math.PI * 1.92),
+        [DUCK_HOPPER[0] + DUCK_HOPPER_R, -0.2],
+        [16.2, 0.1],
+        [16.3, DUCK_MUZZLE[1] - DUCK_BORE],
+        [DUCK_MUZZLE[0] + 0.1, DUCK_MUZZLE[1] - DUCK_BORE],
+        [DUCK_MUZZLE[0] + 0.1, DUCK_MUZZLE[1] + DUCK_BORE],
+        [16.3, DUCK_MUZZLE[1] + DUCK_BORE],
+        [16, 2.4],
+        [11.6, 2.4],
+      ]
+    : [
+        [12.2, 0.6],
+        [12.1, 2.4],
+      ];
+  return [
+    // The stern, rounding down from under the tail to the keel.
+    [-14.6, 5.6],
+    [-15.6, 3.9],
+    [-16, 2],
+    [-15.6, 0],
+    // The tail, kicked up off the stern to its tip and back down to the back.
+    [-16.4, -2],
+    [-17.4, -4.6],
+    [-17.8, -7.2],
+    [-16.6, -7.6],
+    [-15.2, -6],
+    [-13.6, -4],
+    [DUCK_TAIL[0], DUCK_BACK],
+    ...turretsOn(DUCK_PODS[stage]!, () => DUCK_BACK, DUCK_POD_TOP),
+    // The periscope: up its tube from the back, round its elbow, and its eyepiece looking ahead.
+    [-4.4, DUCK_BACK],
+    [-4.4, -10.4],
+    [-4.1, -11.4],
+    [-3.3, -11.9],
+    [-0.6, -11.9],
+    [-0.6, -9.5],
+    [-2.9, -9.5],
+    [-2.9, DUCK_BACK],
+    // Along the back to the neck, and up it to the head.
+    [1, -3.1],
+    [3.4, -3.4],
+    [5, -4.6],
+    // The head over the crown to the brow, the bill, and the cheek back round to the chin.
+    ...duckHeadArc(205, 338, 14),
+    ...DUCK_BILL,
+    ...duckHeadArc(22, 62, 4),
+    // The chest down to the marker under the chin, or straight on down without one.
+    [11.5, -1.6],
+    ...marker,
+    // The chest rounding into the keel, and the keel flat back to the stern.
+    [10.8, 4.2],
+    [9, 5.9],
+    [6, 6.6],
+    [-10, 6.6],
+    [-13, 6.3],
+  ];
+}
+
+/**
+ * A point of the Aqua Duck as it bobs in its War Dance — 0595: the head turned about the neck by `head`, as
+ * much of it as the point is the head's, and the tail about its root by `tail`, as much as the point is the
+ * tail's. Nothing below the chin and nothing on the back moves — the marker the paintballs leave, the pods
+ * the frame lays tubes in, the periscope and the stern its jet blows from.
+ */
+function duckBobs(head: number, tail: number): (p: Pt) => Pt {
+  if (head === 0 && tail === 0) return (p) => p;
+  return ([x, y]) => {
+    /*
+      The head turns from above the cheek: nothing under it moves, so the chin never dips onto the hopper
+      it is over — turned from the neck's root, the cheek came down through the hopper and the outline
+      folded over itself there.
+    */
+    const headShare = Math.min(1, Math.max(0, (x - 3.6) / 2.4)) * Math.min(1, Math.max(0, (-y - 3.4) / 1.6));
+    const tailShare = Math.min(1, Math.max(0, (DUCK_TAIL[0] - x) / 2.4));
+    const [hx, hy] = pitchAbout(DUCK_NECK, head * headShare)([x, y]);
+    return pitchAbout(DUCK_TAIL, tail * tailShare)([hx, hy]);
+  };
+}
+
+function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'bathYellow', livery: string | null = null, pose: DancePose = 0): void {
+  /*
+    Bath-toy yellow, warmed a little toward the light, its bill and feet in the shot's orange — every
+    colour a palette role, so the high-contrast palette answers it as it answers every hull. Gilded, the
+    body is gold leaf over the yellow.
+  */
+  const gilded = art === 'gildedDuck';
+  const body = livery ?? (gilded ? shade(mix(palette.hazard, palette.bullet, 0.35), 0.05) : palette.hazard);
+  const bill = palette.bullet;
+  const chrome = shade(palette.trim, 0.7);
+  /*
+    0595: its War Dance bobs it — the head down to dabble (pose 1), then the tail kicked up and the head
+    tipped back (pose 2). Every point goes through the bob, which moves only the head and the tail.
+  */
+  const bob = duckBobs(pose === 1 ? DUCK_DIP : pose === 2 ? DUCK_TIP : 0, pose === 2 ? DUCK_KICK : 0);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points.map(bob), 0, 1);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  const outline = box(densified(duckOutline(stage, own), 1));
+  ctx.fillStyle = body;
+  trace(ctx, f, outline);
+  seal(ctx);
+  // Lit from above: the crown of the head and the back bright, the keel in shade.
+  shaded(ctx, f, at(0, -11), at(0, 6.6), shade(body, 0.3), shade(body, -0.18), outline);
+  // The keel band, darker, from the chest to the stern — where a bath duck sits in the water. Two units
+  // deep, so it clears 0106's floor at the shipped camera.
+  poly(ctx, f, shade(body, -0.38), box([
+    [9.4, 5.6],
+    [6, 6.3],
+    [-10, 6.3],
+    [-13.4, 5.8],
+    [-14.4, 4.2],
+    [-10, 4.3],
+    [6, 4.3],
+    [9.9, 4.2],
+  ]));
+  // The wing on its flank, a darker yellow tucked back from the shoulder, its tip lifted.
+  poly(ctx, f, shade(body, -0.16), box([
+    [-0.6, -1.2],
+    [-4.6, -1.8],
+    [-9.6, -1.6],
+    [-12.4, -0.6],
+    [-10.6, 0.6],
+    [-6.6, 1.6],
+    [-2.4, 1.6],
+    [0.2, 0.4],
+  ]));
+  seam(ctx, f, shade(body, 0.35), 0.035, box([
+    [-1.2, -1.1],
+    [-5, -1.6],
+    [-9.2, -1.4],
+  ]), 0.8);
+  /*
+    Its looks, on the flank — 0528's slot. Paint on the hull, each mark two units and more across so it
+    clears 0106's floor at the shipped camera.
+  */
+  if (art === 'paintSplats') {
+    // MMXXVI's own: splashed in the marker's colours, as their apron is.
+    for (const [x, y, r, ink] of [
+      [-7.6, 2.6, 1.5, WEAPONS.paintball.paint!.colours[0]!.ink],
+      [-1.8, 3.6, 1.3, WEAPONS.paintball.paint!.colours[2]!.ink],
+      [-11, 3.4, 1.2, WEAPONS.paintball.paint!.colours[3]!.ink],
+      [0.6, -1.6, 1.15, WEAPONS.paintball.paint!.colours[1]!.ink],
+    ] as const) {
+      const [cx, cy] = at(x, y);
+      disc(ctx, f, ink, cx, cy, r * 0.062);
+      const [sx, sy] = at(x + r * 0.95, y + r * 0.7);
+      disc(ctx, f, ink, sx, sy, r * 0.45 * 0.062, 0.85);
+    }
+  } else if (art === 'polkaDots') {
+    for (const [x, y] of [
+      [-9.4, 3.2],
+      [-5.2, 3.6],
+      [-1, 3.4],
+      [-7.4, -0.4],
+      [-2.8, 0.4],
+    ] as const) {
+      const [cx, cy] = at(x, y);
+      disc(ctx, f, palette.impact, cx, cy, 1.15 * 0.062);
+    }
+  } else if (gilded) {
+    // Gold leaf: a sheen laid along the back and the crown, light on 0227's paint-on-hull terms.
+    shaded(ctx, f, at(-6, -4), at(-6, 2), shade(palette.hazard, 0.55), shade(palette.hazard, 0.1), box([
+      [-11.6, -2.6],
+      [0.6, -2.8],
+      [3, -1.6],
+      [-1, -0.8],
+      [-11, -1.6],
+    ]), 0.6);
+  }
+  // The porthole in its flank: a brass ring round the glass, a glint on the glass.
+  const [hx, hy] = at(DUCK_PORTHOLE[0], DUCK_PORTHOLE[1]);
+  disc(ctx, f, shade(palette.hazard, -0.35), hx, hy, DUCK_PORTHOLE_R * 0.062);
+  disc(ctx, f, mix(palette.frost, palette.space, 0.55), hx, hy, (DUCK_PORTHOLE_R - 0.5) * 0.062);
+  const [gx, gy] = at(DUCK_PORTHOLE[0] - 0.5, DUCK_PORTHOLE[1] - 0.5);
+  disc(ctx, f, palette.impact, gx, gy, 0.45 * 0.062, 0.8);
+  // The bill, in the shot's orange, a darker line where the lower bill closes under it, and its nostril.
+  /*
+    From the brow round the bill to the cheek on the outline's own points, and back across the head, all
+    split as the outline is — so in a pose it bends exactly as the edge it is painted to does.
+  */
+  const brow = duckHeadArc(338, 338, 1)[0]!;
+  const cheek = duckHeadArc(22, 22, 1)[0]!;
+  poly(ctx, f, bill, box(densified([brow, ...DUCK_BILL, cheek, brow], 1)));
+  seam(ctx, f, shade(bill, -0.35), 0.04, box([
+    [14.8, -5.6],
+    [17, -5.9],
+    [18.3, -6],
+  ]), 0.9);
+  const [nx, ny] = at(15.4, -6.9);
+  disc(ctx, f, shade(bill, -0.45), nx, ny, 0.35 * 0.062, 0.8);
+  // The eye: a dark bead set high, and its glint — far enough in from the crown that it is no notch in it.
+  const [ex, ey] = at(10.2, -7.2);
+  disc(ctx, f, palette.space, ex, ey, 0.95 * 0.062);
+  const [lx, ly] = at(10.55, -7.6);
+  disc(ctx, f, palette.impact, lx, ly, 0.42 * 0.062, 0.85);
+  // The periscope in chrome, its eyepiece's glass catching the light.
+  shaded(ctx, f, at(-4.4, -8), at(-2.9, -8), shade(chrome, 0.3), shade(chrome, -0.35), box([
+    [-4.4, DUCK_BACK],
+    [-4.4, -10.4],
+    [-4.1, -11.4],
+    [-3.3, -11.9],
+    [-0.6, -11.9],
+    [-0.6, -9.5],
+    [-2.9, -9.5],
+    [-2.9, DUCK_BACK],
+  ]));
+  // Its lens, catching the light: light on the chrome, so it may be finer than the floor (0227).
+  poly(ctx, f, mix(palette.frost, palette.space, 0.3), box([
+    [-1.6, -11.5],
+    [-0.9, -11.5],
+    [-0.9, -9.9],
+    [-1.6, -9.9],
+  ]), 0.85);
+  // The marker under its chin: a dark body, a chrome barrel, and the hopper over it in the paint's pink.
+  if (own) {
+    poly(ctx, f, shade(palette.space, 0.2), box([
+      [11.4, -0.4],
+      [16.2, 0.1],
+      [16, 2.4],
+      [11.6, 2.4],
+    ]));
+    // The barrel, run back into the marker's body so it is two units of chrome either way — 0106's floor.
+    poly(ctx, f, chrome, box([
+      [15.3, DUCK_MUZZLE[1] - DUCK_BORE],
+      [DUCK_MUZZLE[0], DUCK_MUZZLE[1] - DUCK_BORE],
+      [DUCK_MUZZLE[0], DUCK_MUZZLE[1] + DUCK_BORE],
+      [15.3, DUCK_MUZZLE[1] + DUCK_BORE],
+    ]));
+    const [px, py] = at(DUCK_HOPPER[0], DUCK_HOPPER[1]);
+    disc(ctx, f, shade(palette.frost, -0.2), px, py, (DUCK_HOPPER_R - 0.1) * 0.062, 0.85);
+    for (const [dx, dy, i] of [
+      [-0.55, 0.35, 0],
+      [0.55, 0.3, 2],
+      [0, -0.4, 1],
+    ] as const) {
+      const [bx, by] = at(DUCK_HOPPER[0] + dx, DUCK_HOPPER[1] + dy);
+      disc(ctx, f, WEAPONS.paintball.paint!.colours[i]!.ink, bx, by, 0.9 * 0.062);
+    }
+  }
+  // The pods on its back, in its own yellow banded in chrome.
+  paintTurrets(ctx, f, DUCK_PODS[stage]!, DUCK_POD_TOP, DUCK_BACK, box, { shell: shade(body, -0.1), band: chrome });
+}
+
 /**
  * A ship in the one box, at no tubes, one or two — 0441. `f` is the box's frame; the fighter is drawn
  * at its own hull's size inside it, as its capped tier always was (0229).
@@ -3611,6 +3959,10 @@ export function drawPlayerShip(
     // Unity in their ball, which flies nothing but itself — 0593.
     case 'ball':
       drawBall(ctx, f, palette, stage, false, art, livery, pose);
+      break;
+    // MMXXVI's bath-duck submarine, its marker under its chin — 0595.
+    case 'duck':
+      drawDuck(ctx, f, palette, stage, own, art, livery, pose);
       break;
     default: {
       const unhandled: never = ship;
@@ -3953,6 +4305,47 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boo
   band(ctx, f, shade(plastic, 0.15), 0, 0, BALL_R * 0.99, BALL_R * 0.86, 0.85);
   seam(ctx, f, shade(plastic, 0.6), 0.05, roundel(0, 0, BALL_R * 0.8, 14, Math.PI * 1.05, Math.PI * 1.6), 0.8, true);
   disc(ctx, f, palette.impact, -BALL_R * 0.45, -BALL_R * 0.48, 0.07, 0.85);
+}
+
+/** Which of the marker's colours a paintball or splat sprite is, read off its name — 0595. */
+function paintColour(kind: SpriteKind): PaintColour {
+  const colours = WEAPONS.paintball.paint!.colours;
+  const index = SPRITE[kind];
+  const found = colours.find((c) => c.ball === index || c.splat === index || c.dry === index);
+  if (found === undefined) throw new Error(`${kind} is no colour in the hopper`);
+  return found;
+}
+
+/**
+ * A splat — 0595: a blob of paint thrown flat, lobed round its edge and flung drops about it, out to the
+ * blast's reach and no further — the bitmap's edge is the splat's radius, on the ring burst's rule. Wet, it
+ * is bright with a glint on it; dried, it is flat and darker and fading.
+ */
+function drawSplat(ctx: Pen, f: Frame, palette: Palette, ink: string, dry: boolean): void {
+  const reach = 0.5 / 0.42;
+  const lobes = 7;
+  const blob: Pt[] = [];
+  for (let i = 0; i <= 42; i++) {
+    const a = (i / 42) * Math.PI * 2;
+    // A round lobe every seventh of a turn, a little uneven, so it is thrown paint and not a star.
+    const lobe = Math.pow(Math.abs(Math.cos((a * lobes) / 2)), 2) * (0.85 + 0.15 * Math.cos(a * 3));
+    blob.push([Math.cos(a) * reach * (0.56 + 0.24 * lobe), Math.sin(a) * reach * (0.56 + 0.24 * lobe)]);
+  }
+  ctx.globalAlpha = dry ? 0.6 : 1;
+  ctx.fillStyle = dry ? shade(ink, -0.25) : ink;
+  trace(ctx, f, blob);
+  // The drops flung past the lobes, between them, each its own sub-path of the one splat.
+  for (let k = 0; k < lobes; k++) {
+    const a = ((k + 0.5) / lobes) * Math.PI * 2;
+    const d = reach * (0.86 + 0.06 * (k % 2));
+    ring(ctx, f, Math.cos(a) * d, Math.sin(a) * d, reach * 0.08);
+  }
+  seal(ctx);
+  ctx.globalAlpha = 1;
+  if (!dry) {
+    disc(ctx, f, shade(ink, 0.45), -reach * 0.12, -reach * 0.14, reach * 0.26, 0.6);
+    disc(ctx, f, palette.impact, -reach * 0.2, -reach * 0.22, reach * 0.09, 0.85);
+  }
 }
 
 /**
@@ -4985,7 +5378,42 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     top: (ctx, f, palette, p) => disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13),
     side: (ctx, f, palette, p) => disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13),
   },
+  /*
+    The paintball marker — 0595: the Aqua Duck's, a dark body with a chrome barrel out to its mouth and the
+    clear hopper over it, three of its balls showing through. From above, the same marker lying along its
+    line, the hopper round over its back.
+  */
+  paintball: {
+    top: (ctx, f, palette, p, [mx]) => {
+      const chrome = shade(palette.trim, 0.65);
+      poly(ctx, f, shade(palette.space, 0.2), [p(-0.06, -0.075), p(mx * 0.6, -0.075), p(mx * 0.6, 0.075), p(-0.06, 0.075)]);
+      shaded(ctx, f, p(0, -0.06), p(0, 0.06), shade(chrome, 0.3), shade(chrome, -0.35), [p(mx * 0.55, -0.06), p(mx, -0.06), p(mx, 0.06), p(mx * 0.55, 0.06)]);
+      disc(ctx, f, shade(palette.frost, -0.2), ...p(0.04, 0), 0.13, 0.85);
+      paintHopper(ctx, f, p(0.04, 0), 0.13);
+    },
+    side: (ctx, f, palette, p, [mx, my]) => {
+      const chrome = shade(palette.trim, 0.65);
+      // A post up from the hull to the marker, the marker's body, and the barrel out to its mouth.
+      poly(ctx, f, shade(palette.trim, -0.35), [p(-0.05, 0), p(0.05, 0), p(0.05, my), p(-0.05, my)]);
+      poly(ctx, f, shade(palette.space, 0.2), [p(-0.1, my - 0.07), p(mx * 0.6, my - 0.07), p(mx * 0.6, my + 0.07), p(-0.1, my + 0.07)]);
+      shaded(ctx, f, p(0, my - 0.06), p(0, my + 0.06), shade(chrome, 0.3), shade(chrome, -0.35), [p(mx * 0.55, my - 0.06), p(mx, my - 0.06), p(mx, my + 0.06), p(mx * 0.55, my + 0.06)]);
+      disc(ctx, f, shade(palette.frost, -0.2), ...p(0.02, my - 0.17), 0.12, 0.85);
+      paintHopper(ctx, f, p(0.02, my - 0.17), 0.12);
+    },
+  },
 };
+
+/** Three of the hopper's balls showing through its clear shell, about `at`, inside `radius` — 0595. */
+function paintHopper(ctx: Pen, f: Frame, at: Pt, radius: number): void {
+  const colours = WEAPONS.paintball.paint!.colours;
+  for (const [dx, dy, i] of [
+    [-0.36, 0.25, 0],
+    [0.36, 0.22, 2],
+    [0, -0.3, 1],
+  ] as const) {
+    disc(ctx, f, colours[i]!.ink, at[0] + dx * radius, at[1] + dy * radius, radius * 0.5);
+  }
+}
 
 /**
  * The fighter's own pulse's silhouette, in the box's radius — 0581: its pad and its block to its mouth, laid
@@ -5163,9 +5591,53 @@ export function bakeFlame(atlas: Atlas, palette: Palette, flame: FlameKind): voi
   }
 }
 
+/**
+ * Bubble Jets — 0595, the Aqua Duck's: a stream of bubbles blown out behind in place of a tongue of fire,
+ * each a ring in the flame's body ink round a clear middle with a glint of its tongue's. Few and small at
+ * rest, a long stream of them swelling as they go on the burn, two little ones on the reverse; `flick`
+ * moves every bubble on a little, so the stream runs as the frames flick, as a flame's tongue does.
+ */
+function paintBubbles(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, flick: boolean, lean: number, outer: string, inner: string): void {
+  const shift = (x: number): number => lean * THRUST_LEAN * (THRUST_ROOT - x);
+  const stream: readonly (readonly [number, number, number])[] =
+    state === 'burn'
+      ? [
+          [0.78, 0.04, 0.11],
+          [0.5, -0.07, 0.15],
+          [0.18, 0.06, 0.18],
+          [-0.18, -0.05, 0.21],
+          [-0.55, 0.07, 0.19],
+          [-0.86, -0.03, 0.14],
+        ]
+      : state === 'idle'
+        ? [
+            [0.74, 0.03, 0.1],
+            [0.46, -0.05, 0.13],
+            [0.16, 0.04, 0.11],
+          ]
+        : [
+            [0.8, -0.03, 0.08],
+            [0.6, 0.04, 0.07],
+          ];
+  const on = flick ? -0.09 : 0;
+  for (const [x0, y0, r] of stream) {
+    const x = x0 + on;
+    const y = (flick ? -y0 : y0) + shift(x);
+    glow(ctx, f, outer, x, y, r * 1.5, 0.25);
+    band(ctx, f, outer, x, y, r, r * 0.7, 0.85);
+    disc(ctx, f, rgba(inner, 0.25), x, y, r * 0.7, 0.85);
+    disc(ctx, f, palette.impact, x - r * 0.35, y - r * 0.35, r * 0.26, 0.85);
+  }
+}
+
 function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, flick: boolean, lean: number, flame: FlameKind = flaming): void {
   // 0530: in the flame's own inks — the standard's orange round yellow, or the ion's blues.
   const { outer, inner, wisp } = flameInks(palette, flame);
+  // 0595: and drawn as its row says — a tongue of fire, or the Aqua Duck's stream of bubbles.
+  if (FLAMES[flame].look === 'bubbles') {
+    paintBubbles(ctx, f, palette, state, flick, lean, outer, inner);
+    return;
+  }
   const y = 0;
   const side = 1;
   const at = (x: number, off: number, side: 1 | -1): Pt => [x, off * side + lean * THRUST_LEAN * (THRUST_ROOT - x)];
@@ -14777,6 +15249,49 @@ function drawRunesPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette
 }
 
 /**
+ * Paint drips — 0595, the Aqua Duck's own: five round drops of paint laid along the arc, in the marker's
+ * colours in turn, each with a tail running back along the arc as if it were flung, on a faint rail of the
+ * water's blue. In each `shimmer` a different drop is wet with a glint, so the three frames glisten.
+ */
+function drawDripPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const colours = WEAPONS.paintball.paint!.colours;
+  const { radius, edge, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.8, palette.frost, edge * 1.4, 0.08, 'butt');
+  const drops = 5;
+  const step = (PLATE_SWEEP * 1.6) / drops;
+  const first = angle - (step * (drops - 1)) / 2;
+  for (let i = 0; i < drops; i++) {
+    const a = first + i * step;
+    const fade = plateFade(at, a);
+    const [x, y] = platePoint(at, a, radius);
+    const tx = -Math.sin(a);
+    const ty = Math.cos(a);
+    const r = edge * 0.72;
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = colours[i % colours.length]!.ink;
+    // The drop, round at its head and tapering back along the arc to its tail.
+    ctx.beginPath();
+    for (let k = 0; k <= 16; k++) {
+      const t = (k / 16) * Math.PI * 2;
+      const back = Math.cos(t) < 0 ? 1.9 : 1;
+      const px = x + tx * r * back * Math.cos(t) - ty * r * Math.sin(t) * (Math.cos(t) < 0 ? 1 + 0.45 * Math.cos(t) : 1);
+      const py = y + ty * r * back * Math.cos(t) + tx * r * Math.sin(t) * (Math.cos(t) < 0 ? 1 + 0.45 * Math.cos(t) : 1);
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.fill();
+    if (i % 3 === shimmer) {
+      ctx.globalAlpha = 0.85 * fade;
+      ctx.fillStyle = palette.impact;
+      ctx.beginPath();
+      ctx.arc(x + tx * r * 0.3 - ty * r * 0.3, y + ty * r * 0.3 + tx * r * 0.3, r * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
  * Sunflower seeds — 0593, the Hamster Ball's own: five seeds laid along the arc end to end, each a dark
  * teardrop with two cream stripes down it, on a faint rail of the plastic's blue. In each `shimmer` a
  * different seed catches the light — a glint on its round end — so the three frames turn the hoard.
@@ -14934,6 +15449,9 @@ function drawPlate(ctx: Pen, at: PlateAt, look: ShieldLook, shimmer: number, pal
       return;
     case 'seeds':
       drawSeedPlate(ctx, at, shimmer, palette);
+      return;
+    case 'drips':
+      drawDripPlate(ctx, at, shimmer, palette);
       return;
     default: {
       const never: never = look;
@@ -15179,6 +15697,19 @@ export function drawKind(
     case 'ballBareTubesHit':
       drawBall(ctx, f, palette, 2, true);
       return;
+    // 0595: MMXXVI's Aqua Duck at each stage.
+    case 'duck':
+    case 'duckHit':
+      drawPlayerShip(ctx, f, palette, 'duck', 0);
+      return;
+    case 'duckTube':
+    case 'duckTubeHit':
+      drawPlayerShip(ctx, f, palette, 'duck', 1);
+      return;
+    case 'duckTubes':
+    case 'duckTubesHit':
+      drawPlayerShip(ctx, f, palette, 'duck', 2);
+      return;
     // 0594: every ship's War Dance, its two poses at each stage — `danceOf` reads which from the name.
     case 'fighterDance1':
     case 'fighterDance2':
@@ -15215,7 +15746,13 @@ export function drawKind(
     case 'ballTubeDance1':
     case 'ballTubeDance2':
     case 'ballTubesDance1':
-    case 'ballTubesDance2': {
+    case 'ballTubesDance2':
+    case 'duckDance1':
+    case 'duckDance2':
+    case 'duckTubeDance1':
+    case 'duckTubeDance2':
+    case 'duckTubesDance1':
+    case 'duckTubesDance2': {
       const { ship, stage, pose } = danceOf(kind);
       const fit = fitNow(ship);
       drawPlayerShip(ctx, f, palette, ship, stage, gunNow(ship), fit.rim, fit.art, fit.livery, pose);
@@ -15237,6 +15774,65 @@ export function drawKind(
       band(ctx, f, shade(palette.player, 0.2), 0.2, 0, 0.62, 0.5);
       disc(ctx, f, palette.impact, -0.05, -0.25, 0.1, 0.9);
       for (const y of [-0.35, 0, 0.35]) seam(ctx, f, palette.player, 0.12, [[-0.55, y], [-0.95, y]], 0.85);
+      return;
+    // 0595: the paintball's glyph — the marker side-on, its hopper over it, and a ball leaving its mouth.
+    case 'paintball': {
+      const colours = WEAPONS.paintball.paint!.colours;
+      ctx.fillStyle = shade(palette.space, 0.3);
+      ctx.beginPath();
+      trace(ctx, f, [
+        [-0.85, -0.05],
+        [0.3, -0.05],
+        [0.3, -0.12],
+        [0.62, -0.12],
+        [0.62, 0.16],
+        [0.3, 0.16],
+        [0.3, 0.3],
+        [-0.3, 0.3],
+        [-0.45, 0.62],
+        [-0.72, 0.62],
+        [-0.6, 0.3],
+        [-0.85, 0.3],
+      ]);
+      // The hopper standing on its back, and the ball leaving its mouth — each its own ring of the outline.
+      ring(ctx, f, -0.32, -0.38, 0.32);
+      ring(ctx, f, 0.86, 0.02, 0.15);
+      seal(ctx);
+      disc(ctx, f, shade(palette.frost, -0.2), -0.32, -0.38, 0.3, 0.85);
+      for (const [x, y, i] of [
+        [-0.45, -0.3, 0],
+        [-0.2, -0.32, 2],
+        [-0.32, -0.5, 1],
+      ] as const) {
+        disc(ctx, f, colours[i]!.ink, x, y, 0.13);
+      }
+      disc(ctx, f, colours[3]!.ink, 0.86, 0.02, 0.15);
+      return;
+    }
+    // A ball in flight, in its colour, a glint on it.
+    case 'paintballPink':
+    case 'paintballYellow':
+    case 'paintballBlue':
+    case 'paintballGrape': {
+      const colour = paintColour(kind);
+      ctx.fillStyle = colour.ink;
+      ctx.beginPath();
+      ring(ctx, f, 0, 0, 0.82);
+      seal(ctx);
+      shaded(ctx, f, [-0.4, -0.5], [0.4, 0.6], shade(colour.ink, 0.35), shade(colour.ink, -0.3), roundel(0, 0, 0.8, 16, 0, Math.PI * 2));
+      disc(ctx, f, palette.impact, -0.28, -0.3, 0.22, 0.85);
+      return;
+    }
+    // Where a ball lands — 0595: a splat at exactly the blast's reach, wet, and then the same splat dried flat.
+    case 'splatPink':
+    case 'splatYellow':
+    case 'splatBlue':
+    case 'splatGrape':
+    case 'splatPinkDry':
+    case 'splatYellowDry':
+    case 'splatBlueDry':
+    case 'splatGrapeDry':
+      drawSplat(ctx, f, palette, paintColour(kind).ink, kind.endsWith('Dry'));
       return;
     /*
       0527: the Mothership's spinner at its own radius of one, unturned; the frame turns the blit. A body
@@ -17202,6 +17798,64 @@ export function drawKind(
       }
       return;
     }
+    case 'pickupWater': {
+      /*
+        THE WATER CANNON — 0595: a brass nozzle at the bottom left throwing a jet of water up and across
+        the bubble, curling over at its top and falling in drops. Told from the bomb and the dance by being
+        a line and not a ball, from the bolt by its curl, and from the candle by the nozzle's flare.
+        Glyph at three quarters of the box and a bubble round it, on the arc face's terms — 0236.
+      */
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      /*
+        The jet's line, up out of the mouth and curling over to the right — sampled off one curve, so the
+        outline and the light down it are the same line.
+      */
+      const jet: Pt[] = [];
+      for (let i = 0; i <= 12; i++) {
+        const t = i / 12;
+        // A quadratic from the mouth over the top to where it starts to fall.
+        const x = (1 - t) * (1 - t) * -0.2 + 2 * (1 - t) * t * 0.24 + t * t * 0.74;
+        const y = (1 - t) * (1 - t) * 0.2 + 2 * (1 - t) * t * -0.86 + t * t * -0.22;
+        jet.push([x, y]);
+      }
+      const side = (by: number): Pt[] =>
+        jet.map(([x, y], i) => {
+          const [nx, ny] = jet[Math.min(i + 1, jet.length - 1)]!;
+          const [px, py] = jet[Math.max(i - 1, 0)]!;
+          const dx = nx - px;
+          const dy = ny - py;
+          const d = Math.hypot(dx, dy) || 1;
+          return [x - (dy / d) * by, y + (dx / d) * by];
+        });
+      // The hull: the nozzle running on into the jet as one outline — two overlapping would be a hole under
+      // `evenodd` — and the three drops falling off its end.
+      trace(ctx, fg, [[-0.86, 0.62], [-0.62, 0.86], [-0.12, 0.26], ...side(0.09), ...side(-0.09).reverse(), [-0.26, 0.12]]);
+      for (const [x, y] of [
+        [0.76, 0.02],
+        [0.72, 0.26],
+        [0.8, 0.48],
+      ] as const) {
+        ring(ctx, fg, x, y, 0.09);
+      }
+      seal(ctx);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
+      poly(ctx, fg, shade(palette.hazard, -0.2), [
+        [-0.8, 0.62],
+        [-0.62, 0.8],
+        [-0.16, 0.24],
+        [-0.24, 0.16],
+      ]);
+      // The water's light down the middle of the jet, and a glint on each drop.
+      seam(ctx, fg, shade(palette.frost, 0.6), 0.06, jet.slice(1, -1), 0.85);
+      for (const [x, y] of [
+        [0.74, 0],
+        [0.7, 0.24],
+        [0.78, 0.46],
+      ] as const) {
+        disc(ctx, fg, shade(palette.frost, 0.6), x, y, 0.04, 0.85);
+      }
+      return;
+    }
     case 'pickupDance': {
       /*
         THE WAR DANCE — 0593: a ball at the top right that has bounced there, its last three hops drawn
@@ -18342,7 +18996,19 @@ export function drawKind(
     case 'shieldSeed180c':
     case 'shieldSeed240a':
     case 'shieldSeed240b':
-    case 'shieldSeed240c': {
+    case 'shieldSeed240c':
+    case 'shieldDrip0a':
+    case 'shieldDrip0b':
+    case 'shieldDrip0c':
+    case 'shieldDrip120a':
+    case 'shieldDrip120b':
+    case 'shieldDrip120c':
+    case 'shieldDrip180a':
+    case 'shieldDrip180b':
+    case 'shieldDrip180c':
+    case 'shieldDrip240a':
+    case 'shieldDrip240b':
+    case 'shieldDrip240c': {
       const plate = shieldPlateOf(SPRITE[kind]);
       if (plate === null) throw new Error(`${kind} stands at no place on any ship's shell`);
       const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!, shellOrbit(plate.shell));

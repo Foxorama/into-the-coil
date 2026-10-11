@@ -9,11 +9,12 @@ export const PROBES = [
     decision: '0530',
     suite: 'tests/flames.test.ts',
     broke: 'the thrusters burned on any ship without a shard spent',
-    guard: 'every ship burns the standard, and the ion once bought',
+    // ⚠️ Re-anchored by 0595, which reads a ship's own flame on the shells' rule beside the bought ones.
+    guard: 'every ship burns its own, and the ion once bought',
     edit: {
       path: 'src/state/slices/hangar.ts',
-      find: '  return state.owned[flame];',
-      replace: '  return true;',
+      find: '  return from === null ? state.owned[flame] : plateOpen(state, ship, from);',
+      replace: '  return from === null ? true : plateOpen(state, ship, from);',
     },
   },
   {
@@ -23,7 +24,7 @@ export const PROBES = [
     guard: 'keeps each ship’s flame, and refuses one its own list does not own',
     edit: {
       path: 'src/save/hangar.ts',
-      find: '    if (raw !== undefined && flameOpen(holding, raw)) flame[kind] = raw;',
+      find: '    if (raw !== undefined && flameOpen(holding, kind, raw)) flame[kind] = raw;',
       replace: '    if (raw !== undefined) flame[kind] = raw;',
     },
   },

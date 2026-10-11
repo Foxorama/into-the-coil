@@ -29,8 +29,13 @@ import { initialHangar, pilotRecord, specialOpen } from '../src/state/slices/han
 import { NO_LEVEL, NO_SECTIONS, playableWorld } from './world.ts';
 import { tracingPen } from './paths.ts';
 
-const LOCKED = pilotRecord(initialHangar);
-const OPENED = pilotRecord({ ...initialHangar, crashes: GOLFERS.unity.opens.crashes });
+/*
+  0595: MMXXVI's Water Cannon waits on its pilot as the War Dance waits on Unity, so the record these hold
+  the dance against has MMXXVI open — what they ask is the dance's gate, and the cannon's is
+  `tests/duck.test.ts`'s.
+*/
+const LOCKED = { ...pilotRecord(initialHangar), bought: GOLFERS.mmxxvi.opens.bought };
+const OPENED = { ...pilotRecord({ ...initialHangar, crashes: GOLFERS.unity.opens.crashes }), bought: GOLFERS.mmxxvi.opens.bought };
 const DANCE_FACE = BOMB_KINDS.indexOf('warDance');
 
 /** A world flying `ship`, its own gun fitted. */
@@ -46,7 +51,9 @@ function flying(ship: ShipKind, level: LevelRow = NO_LEVEL): { world: World; fra
 describe('0594 — the War Dance is offered once Unity is open', () => {
   it('waits on Unity, and on nobody else', () => {
     expect(SPECIALS.warDance.opensWith).toBe('unity');
-    for (const kind of SPECIAL_KINDS) if (kind !== 'warDance') expect(SPECIALS[kind].opensWith, kind).toBe(null);
+    // 0595: and the Water Cannon on MMXXVI, on the same terms; every other special on nobody.
+    expect(SPECIALS.waterCannon.opensWith).toBe('mmxxvi');
+    for (const kind of SPECIAL_KINDS) if (kind !== 'warDance' && kind !== 'waterCannon') expect(SPECIALS[kind].opensWith, kind).toBe(null);
     expect(DANCE_FACE, 'the War Dance is no face of the bomb pickup at all').toBeGreaterThanOrEqual(0);
   });
 

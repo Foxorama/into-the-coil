@@ -43,6 +43,11 @@ export const ART_KINDS = [
   'sunflower',
   'amberTint',
   'speedStripes',
+  // 0595: the Aqua Duck's four.
+  'bathYellow',
+  'paintSplats',
+  'polkaDots',
+  'gildedDuck',
 ] as const;
 export type ArtKind = (typeof ART_KINDS)[number];
 
@@ -87,4 +92,9 @@ export const ART: Record<ArtKind, ArtRow> = {
   sunflower: { name: 'Sunflower', hint: 'A sunflower sticker on the crown', ship: 'ball' },
   amberTint: { name: 'Amber tint', hint: 'The plastic tinted amber, like a sweet', ship: 'ball' },
   speedStripes: { name: 'Speed stripes', hint: 'Two orange stripes round the ball', ship: 'ball' },
+  // The Aqua Duck's flank — 0595: bath-toy yellow as it came, and what MMXXVI has painted on it since.
+  bathYellow: { name: 'Bath yellow', hint: 'Plain bath-toy yellow, as it floated off the shelf', ship: 'duck' },
+  paintSplats: { name: 'Paint splats', hint: 'Splashed in the shop’s inks, as MMXXVI’s apron is', ship: 'duck' },
+  polkaDots: { name: 'Polka dots', hint: 'Big white spots down the flank', ship: 'duck' },
+  gildedDuck: { name: 'Gilded duck', hint: 'Gold leaf from bill to tail', ship: 'duck' },
 };

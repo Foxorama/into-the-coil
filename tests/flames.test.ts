@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { priced } from '../src/content/prices.ts';
 import { FLAMES, FLAME_KINDS } from '../src/content/flames.ts';
 import { OWNABLES, WARES } from '../src/content/wares.ts';
-import { SHIP_KINDS, ownFit } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS, ownFit } from '../src/content/ships.ts';
 import { PALETTES } from '../src/content/palette.ts';
 import { flameInks } from '../src/render/bake.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
@@ -47,9 +47,10 @@ describe('the shop', () => {
 });
 
 describe('the flame', () => {
-  it('every ship burns the standard, and the ion once bought, on any ship, won in or not', () => {
-    for (const ship of SHIP_KINDS) expect(initialHangar.flame[ship], ship).toBe('standard');
-    expect(flameOpen(initialHangar, 'ion')).toBe(false);
+  it('every ship burns its own, and the ion once bought, on any ship, won in or not', () => {
+    // 0595: its own is the standard on every ship but the Aqua Duck, which blows its Bubble Jets.
+    for (const ship of SHIP_KINDS) expect(initialHangar.flame[ship], ship).toBe(SHIPS[ship].flame);
+    for (const ship of SHIP_KINDS) expect(flameOpen(initialHangar, ship, 'ion'), ship).toBe(false);
     expect(reduce(initialState, { slice: 'hangar', type: 'flame', ship: 'fighter', flame: 'ion' }).hangar.flame.fighter, 'burned before it was bought').toBe('standard');
     const bought = reduce(holding(priced(400)), { slice: 'hangar', type: 'bought', ware: 'ion' });
     for (const ship of SHIP_KINDS) expect(reduce(bought, { slice: 'hangar', type: 'flame', ship, flame: 'ion' }).hangar.flame[ship], ship).toBe('ion');

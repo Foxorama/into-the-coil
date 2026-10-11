@@ -25,9 +25,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE, IN LANDINGS A SECOND',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0442, which puts the ray's own log in front of the armour's choice.
-      find: 'null, rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, hull);',
-      replace: 'null, rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, null);',
+      // ⚠️ Re-anchored by 0442, which puts the ray's own log in front of the armour's choice, and by 0595.
+      find: 'null, landings ?? (armoured ? w.hits : bladeHits), bladeGap, hull);',
+      replace: 'null, landings ?? (armoured ? w.hits : bladeHits), bladeGap, null);',
     },
   },
   {

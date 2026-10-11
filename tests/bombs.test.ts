@@ -383,11 +383,11 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     // opened rather than thrown: four shapes, and a row is exactly one of them. 0377 adds the rift,
     // which is thrown and opens where it lands: five. 0447 adds the nova, burst from the ship: six.
     // 0537 adds the candle, whose stars are thrown and go off as fireworks: seven. 0593 adds the dance,
-    // which flies the ship itself: eight.
+    // which flies the ship itself: eight. 0595 adds the jet, played from the gun: nine.
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
-      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova, row.candle, row.dance].filter((shape) => shape !== null).length;
-      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift, a nova, a candle and a dance`).toBe(1);
+      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova, row.candle, row.dance, row.jet].filter((shape) => shape !== null).length;
+      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift, a nova, a candle, a dance and a jet`).toBe(1);
       expect(
         row.shot !== null,
         `${kind} throws something it does not go off as, or goes off as something it never throws`,

@@ -187,6 +187,9 @@ export function inertLevel(): {
   danceKind: SpecialKind | null;
   danceAlong: number;
   danceAcross: number;
+  jetFor: number;
+  jetKind: SpecialKind | null;
+  jetAt: number;
   deathOffset: number;
   deathAcross: number;
   onWreck: () => void;
@@ -325,6 +328,9 @@ export function inertLevel(): {
     danceKind: null,
     danceAlong: 0,
     danceAcross: 0,
+    jetFor: 0,
+    jetKind: null,
+    jetAt: 0,
     deathAcross: ACROSS_SPAN / 2,
     // A fixture carries no arsenal, so there is nothing for a wreck to light. `tests/death.test.ts`
     // is what drives the shell's real answer.
@@ -508,6 +514,9 @@ export function playableWorld(
     danceKind: null,
     danceAlong: 0,
     danceAcross: 0,
+    jetFor: 0,
+    jetKind: null,
+    jetAt: 0,
     whirl,
     whirlKind: null,
     whirlAge: 0,
@@ -547,6 +556,7 @@ export function playableWorld(
     dropRng: makeRng('test').stream('drop'),
     pickupRng: makeRng('test').stream('pickups'),
     arcRng: makeRng('test').stream('arc'),
+    paintRng: makeRng('test').stream('paint'),
     stormRng: makeRng('test').stream('storm'),
     bodyBoltRng: makeRng('test').stream('body-bolt'),
     rainRng: makeRng('test').stream('rain'),
