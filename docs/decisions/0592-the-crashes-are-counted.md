@@ -55,7 +55,8 @@ still read everything it knows.
 ## What guards it
 
 `tests/crashes.test.ts`: the frame names an enemy shot as fire, and an enemy body and the stone as bodies;
-a body death is one crash, a fire death none, and a report at nought lives none; the count survives the
+a body death is one crash, a fire death none, the death that ends the run one like any other, and a
+report at nought lives none; the count survives the
 save, and a document written before it, or holding something that is not a whole count, reads as none;
 nothing free counts as bought; a lock is shut until every part is met; and the hint counts down. Probes in
 `scripts/probes/0592-the-crashes-are-counted.mjs`. 0546's, 0522's and 0590's probes are re-anchored.
