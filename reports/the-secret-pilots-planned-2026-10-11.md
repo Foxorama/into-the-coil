@@ -238,8 +238,11 @@ Also on the page, and not characters — each one PR, in any order after item 1:
   Jets. Two readings above are replaced, and the decision says why: Bubble Jets are the duck's own and
   borrowed on the shells' rule, not sold at Cosmo's; and the duck bobs by dabbling its head and kicking its
   tail rather than bobbing whole. The paintball is weighed on bosses at 1.1, and 1.6 on the jellyfish.
+- **Item 4** — [0596](../docs/decisions/0596-the-yellow-submarine-hangs.md): the Yellow Submarine, a dangle at
+  Cosmo's for 300, priced with the mirror ball and the bobblehead.
 
 ## Owed
 
 A play of each pilot on its branch preview; the ear on every new cue; the ball's heat and recharge and the
-duck's unlock count, which are play numbers; and paintballs looked at in every place for 0295's question.
+duck's unlock count, which are play numbers; paintballs looked at in every place for 0295's question; and
+the submarine seen swinging on the dash.

@@ -18,7 +18,7 @@
 import { priced } from './prices.ts';
 
 /** Every dangle. Closed — a new one is a row here and a drawing in the chrome. */
-export const DANGLE_KINDS = ['dice', 'eucalyptus', 'family', 'golfball', 'duck', 'horseshoe', 'mirrorball', 'bobblehead'] as const;
+export const DANGLE_KINDS = ['dice', 'eucalyptus', 'family', 'golfball', 'duck', 'horseshoe', 'mirrorball', 'bobblehead', 'submarine'] as const;
 export type DangleKind = (typeof DANGLE_KINDS)[number];
 
 export interface DangleRow {
@@ -45,6 +45,11 @@ export const DANGLES: Record<DangleKind, DangleRow> = {
   horseshoe: { name: 'Lucky horseshoe', hint: 'Gilt, and hung the right way up', price: priced(250) },
   mirrorball: { name: 'Mini mirror ball', hint: 'A disco ball the size of a thumb', price: priced(300) },
   bobblehead: { name: 'Alien bobblehead', hint: 'Nods along to every turn', price: priced(300) },
+  /*
+    0596: *"Yellow submarine hangy"* — item 4 of the secret pilots' page, read as a yellow submarine to hang
+    from the dash. Priced with the mirror ball and the bobblehead, the dangles drawn in the most parts.
+  */
+  submarine: { name: 'Yellow submarine', hint: 'A little yellow sub, periscope up', price: priced(300) },
 };
 
 // What Cosmo's sells is every ownable row with a price — `src/content/wares.ts` since 0527.
