@@ -46,6 +46,17 @@ export const PROBES = [
   {
     decision: '0592',
     suite: 'tests/crashes.test.ts',
+    broke: 'the life that ends the run left uncounted, as if game over were not a death',
+    guard: 'the life that ends the run is a crash like any other',
+    edit: {
+      path: 'src/state/root.ts',
+      find: "action.type === 'lifeLost' && action.cause === 'body' ?",
+      replace: "action.type === 'lifeLost' && action.cause === 'body' && run.lives > 0 ?",
+    },
+  },
+  {
+    decision: '0592',
+    suite: 'tests/crashes.test.ts',
     broke: 'a report at nought lives counted, though the run spent nothing',
     guard: 'only a life the run spent is a crash',
     edit: {

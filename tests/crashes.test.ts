@@ -112,6 +112,17 @@ describe('0592 — a crash is counted for good', () => {
     expect(reduce(state, { slice: 'run', type: 'lifeLost', cause: 'fire' }).hangar.crashes).toBe(0);
   });
 
+  it('the life that ends the run is a crash like any other', () => {
+    // Asked of the rule below: *"does that mean the players final death at game over will never count?"*
+    let state = flying();
+    for (let i = 0; i < 100 && state.run.lives > 1; i++) state = reduce(state, { slice: 'run', type: 'lifeLost', cause: 'fire' });
+    expect(state.run.lives).toBe(1);
+    const last = reduce(state, { slice: 'run', type: 'lifeLost', cause: 'body' });
+    expect(last.run.lives, 'that was not the last life').toBe(0);
+    expect(last.screen.current, 'the run did not end on it').not.toBe('playing');
+    expect(last.hangar.crashes, 'the death that ended the run was not counted').toBe(1);
+  });
+
   it('only a life the run spent is a crash: a report at nought lives counts nothing', () => {
     let state = flying();
     for (let i = 0; i < 100 && state.run.lives > 0; i++) state = reduce(state, { slice: 'run', type: 'lifeLost', cause: 'fire' });
