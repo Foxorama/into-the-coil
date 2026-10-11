@@ -33,7 +33,7 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { LEAN_KINDS, THRUST, THRUST_KINDS, THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { BALL_CRADLE, BALL_RADIUS, CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING, SHIELD_ANGLES, SHIELD_LAYOUT, SHIELD_ORBIT, SHIPS, ownFit, shellOrbit, shellSpan, type Fit, type GunView } from '../content/ships.ts';
+import { BALL_CRADLE, BALL_RADIUS, CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING, SHIELD_ANGLES, SHIELD_LAYOUT, SHIELD_ORBIT, SHIPS, SHIP_KINDS, ownFit, shellOrbit, shellSpan, type Fit, type GunView } from '../content/ships.ts';
 import { SHELLS, shieldPlateOf, type ShellKind, type ShieldLook } from '../content/shells.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
@@ -997,6 +997,43 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   ballBareTubeHit: 'hazard',
   ballBareTubes: 'player',
   ballBareTubesHit: 'hazard',
+  // 0594: every ship dancing, the player's as the ship standing still is.
+  fighterDance1: 'player',
+  fighterDance2: 'player',
+  fighterTubeDance1: 'player',
+  fighterTubeDance2: 'player',
+  fighterTubesDance1: 'player',
+  fighterTubesDance2: 'player',
+  caddieDance1: 'player',
+  caddieDance2: 'player',
+  caddieTubeDance1: 'player',
+  caddieTubeDance2: 'player',
+  caddieTubesDance1: 'player',
+  caddieTubesDance2: 'player',
+  firebirdDance1: 'player',
+  firebirdDance2: 'player',
+  firebirdTubeDance1: 'player',
+  firebirdTubeDance2: 'player',
+  firebirdTubesDance1: 'player',
+  firebirdTubesDance2: 'player',
+  estateDance1: 'player',
+  estateDance2: 'player',
+  estateTubeDance1: 'player',
+  estateTubeDance2: 'player',
+  estateTubesDance1: 'player',
+  estateTubesDance2: 'player',
+  thunderboltDance1: 'player',
+  thunderboltDance2: 'player',
+  thunderboltTubeDance1: 'player',
+  thunderboltTubeDance2: 'player',
+  thunderboltTubesDance1: 'player',
+  thunderboltTubesDance2: 'player',
+  ballDance1: 'player',
+  ballDance2: 'player',
+  ballTubeDance1: 'player',
+  ballTubeDance2: 'player',
+  ballTubesDance1: 'player',
+  ballTubesDance2: 'player',
   // The ram's glyph and its heat — the player's, as everything the ship is.
   ram: 'player',
   ramHeat0: 'player',
@@ -2115,6 +2152,37 @@ const SHIP_CANARD: readonly Pt[] = [
   [0.38, -0.247],
 ];
 
+/**
+ * How far a canard's tip sweeps forward or back in the fighter's War Dance, in the hull's radius — 0594.
+ * About three pixels at the shipped camera: a flap that reads, and short of the wing behind it.
+ */
+const FIGHTER_CANARD_SWEEP = 0.16;
+
+/** How far out a canard's root reaches, and its tip — what `swept` measures a point's share of the sweep by. */
+const CANARD_ROOT = 0.25;
+const CANARD_TIP = 0.72;
+
+/**
+ * Points on a canard swept by `by` at its tip — 0594: none of it at the root, which is on the hull, and all
+ * of it at the tip, so the outline never folds over the hull it is traced with.
+ */
+function swept(points: readonly Pt[], by: number): Pt[] {
+  return points.map(([x, y]) => [x + by * sweepShare(y), y]);
+}
+
+/** How much of a canard's sweep a point a distance `y` across gets: none at the root, all at the tip. */
+function sweepShare(y: number): number {
+  return Math.min(1, Math.max(0, (Math.abs(y) - CANARD_ROOT) / (CANARD_TIP - CANARD_ROOT)));
+}
+
+/** Each canard's sweep: the one up the screen and the one down it — 0594. Neither, standing still. */
+interface Sweeps {
+  readonly upper: number;
+  readonly lower: number;
+}
+
+const NO_SWEEP: Sweeps = { upper: 0, lower: 0 };
+
 /*
   ⚠️ **NO MARK BELOW 0.145 OF `r`.** The ship is 7 units, which at the 1280×720 the play-tests are
   given on is a hull radius of about 17.6 CSS pixels since the view zoomed out (0364); 0106's floor of
@@ -2199,7 +2267,7 @@ function traceStar(ctx: Pen, f: Frame, scale: number, phase: number): void {
   ctx.closePath();
 }
 
-export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, pods = true, paint: string = palette.player): void {
+export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, pods = true, paint: string = palette.player, sweeps: Sweeps = NO_SWEEP): void {
   const body = paint;
   const dark = shade(body, -0.32);
   const light = shade(body, 0.5);
@@ -2273,18 +2341,28 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, po
   if (tier >= 2) {
     // The canards' leading edges lit, in the hull's own light, and a trim seam down each.
     for (const side of [1, -1] as const) {
-      poly(ctx, f, light, [
+      // 0594: swept with the canard they are on, while the fighter dances.
+      const by = side === 1 ? sweeps.upper : sweeps.lower;
+      poly(ctx, f, light, swept([
         [0.57, -0.24 * side],
         [0.5, -0.66 * side],
         [0.4, -0.66 * side],
         [0.45, -0.26 * side],
-      ]);
-      poly(ctx, f, palette.trim, [
-        [0.42, -0.3 * side],
-        [0.34, -0.62 * side],
-        [0.27, -0.62 * side],
-        [0.36, -0.3 * side],
-      ]);
+      ], by));
+      /*
+        ⚠️ **0594: AND THE TRIM ONLY STANDING STILL.** It is two and a half pixels across at the shipped camera,
+        on 0106's floor, a hundredth of the hull inside the canard's trailing edge: swept, it was either under
+        the floor or over the edge, three ways of drawing it running. A flapping canard is read by its lit
+        edge, which sweeps with it; the trim is back the moment the canard is.
+      */
+      if (by === 0) {
+        poly(ctx, f, palette.trim, [
+          [0.42, -0.3 * side],
+          [0.34, -0.62 * side],
+          [0.27, -0.62 * side],
+          [0.36, -0.3 * side],
+        ]);
+      }
     }
   }
 }
@@ -2903,7 +2981,13 @@ const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
  * The Firebird from the side, in the predecessor's frame: ducktail, cabin, long hood to a pointed nose,
  * the shuriken launcher standing on the hood, turrets on the roof, and fat tyres under the sills.
  */
-function firebirdOutline(stage: number, own = true): Pt[] {
+function firebirdOutline(stage: number, own = true, body: (p: Pt) => Pt = (p) => p): Pt[] {
+  // 0594: the body as its dance pitches it, over tyres that stay where `paintWheels` draws them.
+  return [...densified(firebirdBody(stage, own), 1).map(body), ...wheelUnder(12, 6, 3.6, 5), ...wheelUnder(-10, 6, 3.6, 5)];
+}
+
+/** The Firebird's outline above its tyres — `firebirdOutline` less the bottoms of its wheels. */
+function firebirdBody(stage: number, own: boolean): Pt[] {
   /*
     0545: the Catherine wheel's spindle on the hood — a post up from it and the spare wheel on its top,
     the next one lit from it. 0525: with another ship's gun the hood runs straight from the cowl to
@@ -2951,8 +3035,6 @@ function firebirdOutline(stage: number, own = true): Pt[] {
     [19.3, 1.4],
     [18.8, 2.8],
     [16.5, 5],
-    ...wheelUnder(12, 6, 3.6, 5),
-    ...wheelUnder(-10, 6, 3.6, 5),
   ];
 }
 
@@ -2965,7 +3047,31 @@ const estateRoof = (): number => ESTATE_RACK;
  * windscreen sloping to the bonnet, the lightning rod standing on the bonnet with its ball, turrets on
  * the rack, and its wheels under the sills.
  */
-function estateOutline(stage: number, own = true): Pt[] {
+function estateOutline(stage: number, own = true, body: (p: Pt) => Pt = (p) => p): Pt[] {
+  // 0594: the body as its dance hops it, over tyres that stay where `paintWheels` draws them.
+  return [...densified(estateBody(stage, own), 1).map(body), ...wheelUnder(9, 6.4, 2.9, 6), ...wheelUnder(-9, 6.4, 2.9, 6)];
+}
+
+/**
+ * An open run of points with every edge longer than `most` split into equal pieces — 0594. A body on its
+ * springs (`onSprings`) is not moved in straight lines, so an outline moved by its corners alone would cut
+ * the corner off a mark moved the same way under its long edges; split, it bends with them. Nothing
+ * changes where nothing moves: the extra points lie on the edges they split.
+ */
+function densified(points: readonly Pt[], most: number): Pt[] {
+  const out: Pt[] = [];
+  points.forEach((point, i) => {
+    const next = points[i + 1];
+    out.push(point);
+    if (next === undefined) return;
+    const pieces = Math.ceil(Math.hypot(next[0] - point[0], next[1] - point[1]) / most);
+    for (let k = 1; k < pieces; k++) out.push([point[0] + ((next[0] - point[0]) * k) / pieces, point[1] + ((next[1] - point[1]) * k) / pieces]);
+  });
+  return out;
+}
+
+/** The estate's outline above its tyres — `estateOutline` less the bottoms of its wheels. */
+function estateBody(stage: number, own: boolean): Pt[] {
   return [
     [-18, 6],
     [-18, 3],
@@ -2983,8 +3089,6 @@ function estateOutline(stage: number, own = true): Pt[] {
     ...(own ? ([[12.6, 1.22], [12.6, -1.6], [15.9, -1.6], [15.9, 1.7]] as Pt[]) : []),
     [18, 2],
     [18, 6],
-    ...wheelUnder(9, 6.4, 2.9, 6),
-    ...wheelUnder(-9, 6.4, 2.9, 6),
   ];
 }
 
@@ -3123,7 +3227,25 @@ const THUNDERBOLT_GAP: readonly Pt[] = [
   [2.8, -3.8],
 ];
 
-function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'boltTank', livery: string | null = null): void {
+/** How far the Marmot leans in the Thunderbolt's War Dance, in radians, and the hip he leans from — 0594. */
+const THUNDERBOLT_LEAN = 0.14;
+const THUNDERBOLT_HIP: Pt = [-7, -2];
+
+/**
+ * A point of the Thunderbolt as its rider leans by `by` — 0594: turned about his hip by as much of `by` as
+ * the point is his. All of it from his back up, none of it from the seat down — the pods, the fender, the
+ * engine, the wheels — and none at the grip, so his paw stays on the bar; in between, a share, so nothing
+ * tears where the two meet.
+ */
+function marmotLeans(by: number): (p: Pt) => Pt {
+  if (by === 0) return (p) => p;
+  return ([x, y]) => {
+    const share = Math.min(1, Math.max(0, (-y - 2) / 3)) * Math.min(1, Math.max(0, (6 - x) / 4.5));
+    return pitchAbout(THUNDERBOLT_HIP, by * share)([x, y]);
+  };
+}
+
+function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'boltTank', livery: string | null = null, pose: DancePose = 0): void {
   /*
     Black lacquer with a blue cast, as the predecessor's `#16181f` was, read by its chrome and its flame;
     the arc's cyan as light (the ball, the rims, the helmet's bolt); and the Marmot in a riding suit the
@@ -3135,7 +3257,12 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
   const fur = shade(mix(palette.bullet, palette.space, 0.42), 0.05);
   const suit = shade(mix(palette.bullet, palette.space, 0.62), -0.05);
   const helmet = shade(palette.space, 0.18);
-  const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
+  /*
+    0594: its War Dance is the Marmot leaning into it — tucked down over the tank and then sat back up off
+    it. Every point of the bike goes through his lean, which moves only what is his (`marmotLeans`).
+  */
+  const lean = marmotLeans(pose === 0 ? 0 : pose === 1 ? THUNDERBOLT_LEAN : -THUNDERBOLT_LEAN);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points.map(lean), 0, 1);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
   const outline = box(thunderboltOutline(stage, own));
   ctx.fillStyle = body;
@@ -3378,6 +3505,21 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
  * A ship in the one box, at no tubes, one or two — 0441. `f` is the box's frame; the fighter is drawn
  * at its own hull's size inside it, as its capped tier always was (0229).
  */
+/**
+ * Which pose of its War Dance a ship is drawn in — 0594: 0 is the ship standing still, and 1 and 2 the two
+ * either side of it that `dance` on its row cycles through. What a pose moves is each ship's own drawing's.
+ */
+export type DancePose = 0 | 1 | 2;
+
+/** Which ship, stage and pose a dance sprite is — 0594, read off its name: `<ship>[Tube|Tubes]Dance<1|2>`. */
+function danceOf(kind: SpriteKind): { ship: ShipArt; stage: number; pose: DancePose } {
+  const ship = SHIP_KINDS.find((k) => kind.startsWith(k));
+  const at = kind.indexOf('Dance');
+  if (ship === undefined || at < 0) throw new Error(`${kind} is no ship's dance`);
+  const tubes = kind.slice(ship.length, at);
+  return { ship, stage: tubes === 'Tubes' ? 2 : tubes === 'Tube' ? 1 : 0, pose: kind.endsWith('2') ? 2 : 1 };
+}
+
 /*
   ⚠️ **A GUN IS FITTED, AND ITS OWN IS DRAWN AS IT ALWAYS WAS — 0525.** `gun` is the ship's own by
   default, and then every line below runs exactly as it did before there was a choice: the same calls
@@ -3404,6 +3546,8 @@ export function drawPlayerShip(
   art: ArtKind = fitNow(ship).art,
   // 0529: and the colour its body is painted, or `null` for the factory's — the body's ink and nothing else.
   livery: string | null = fitNow(ship).livery,
+  // 0594: and which of its War Dance's poses, or 0 standing still — each ship's own parts moving.
+  pose: DancePose = 0,
 ): void {
   const own = gun === SHIPS[ship].weapon;
   // A borrowed gun stands on its mount, laid on last; 0581: and the fighter's own does too.
@@ -3412,11 +3556,23 @@ export function drawPlayerShip(
   switch (ship) {
     case 'fighter': {
       mounted = true;
+      /*
+        0594: its War Dance flaps its canards, one swept forward and the other back and then the other way
+        about — a weasel's forelegs flailing. Their roots stay on the hull, so the outline never folds over
+        itself, and the tips sweep; what is painted on them sweeps with them (`paintShip`'s `sweeps`).
+
+        ⚠️ **NOT A ROLL, AND A ROLL WAS DRAWN FIRST.** Foreshortened across, its nose's look, its keel, its
+        wingtips' gold and its engines' cores were all under 0106's floor at the shipped camera — the ship
+        would have lost its look for half of every dance, and its tubes and strobes would have had to move
+        with a frame-side width for one ship alone.
+      */
+      const up = pose === 0 ? 0 : pose === 1 ? FIGHTER_CANARD_SWEEP : -FIGHTER_CANARD_SWEEP;
+      const sweeps = { upper: up, lower: -up };
       const fh: Frame = { half: f.half, r: f.r * (FIGHTER_HULL / SHIP_BOX) };
       ctx.fillStyle = livery ?? palette.player;
       trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_CANARD);
-      trace(ctx, fh, mirrored(SHIP_CANARD));
+      trace(ctx, fh, swept(SHIP_CANARD, sweeps.upper));
+      trace(ctx, fh, swept(mirrored(SHIP_CANARD), sweeps.lower));
       // 0581: its own pulse's silhouette on its nose, as the pods were in its outline before it.
       if (own) trace(ctx, f, fighterPulseHull());
       seal(ctx);
@@ -3428,7 +3584,7 @@ export function drawPlayerShip(
         the player liked best; it is drawn on the nose as any borrowed gun is, below — so `own` no longer
         changes the fighter's drawing, and its pods' glow went with them.
       */
-      paintShip(ctx, fh, palette, 2, false, livery ?? palette.player);
+      paintShip(ctx, fh, palette, 2, false, livery ?? palette.player, sweeps);
       jazzFighter(ctx, fh, palette, false, art);
       // 0581: its pylons, one under each wing that carries a tube; the tube itself is the frame's (`stepTubes`).
       // Each under the tube's middle: the place is its nose, and the tube lies half its length behind it.
@@ -3439,22 +3595,22 @@ export function drawPlayerShip(
     }
     // The saucer hangs its pods off its sides, in its own outline — 0461.
     case 'caddie':
-      drawCaddie(ctx, f, palette, stage, own, art, livery);
+      drawCaddie(ctx, f, palette, stage, own, art, livery, pose);
       break;
     // The cars carry their tubes as turrets in their own rooflines.
     case 'firebird':
-      drawFirebird(ctx, f, palette, stage, own, rim, art, livery);
+      drawFirebird(ctx, f, palette, stage, own, rim, art, livery, pose);
       break;
     case 'estate':
-      drawEstate(ctx, f, palette, stage, own, rim, art, livery);
+      drawEstate(ctx, f, palette, stage, own, rim, art, livery, pose);
       break;
     // The Marmot riding it, as the cars carry their tubes in their rooflines — 0545.
     case 'thunderbolt':
-      drawThunderbolt(ctx, f, palette, stage, own, rim, art, livery);
+      drawThunderbolt(ctx, f, palette, stage, own, rim, art, livery, pose);
       break;
     // Unity in their ball, which flies nothing but itself — 0593.
     case 'ball':
-      drawBall(ctx, f, palette, stage, false, art, livery);
+      drawBall(ctx, f, palette, stage, false, art, livery, pose);
       break;
     default: {
       const unhandled: never = ship;
@@ -3549,11 +3705,19 @@ const RAINBOW_DOME: readonly ('player' | 'ally' | 'hazard' | 'pickup')[] = ['pla
  * glass dome and six lights round it. The lights are the player's cyan here, and the nose carries the
  * ray gun, fed from a chamber on its face ahead of the dome (0463).
  */
-function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'glass', livery: string | null = null): void {
+function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'glass', livery: string | null = null, pose: DancePose = 0): void {
   // 0529: or its paint.
   const body = livery ?? mix(palette.player, palette.acid, 0.55);
   const dark = shade(body, -0.5);
   const D = CADDIE_DISC;
+  /*
+    0594: its War Dance spins it up. The vents and the lights are a sixth of a turn apart, so a third and
+    two thirds of that — `pose` 1 and 2 — and back to still is the same turn the same way, round and
+    round; and the dome leans out over the lip as it goes, a saucer wobbling on its spin.
+  */
+  const spin = (pose * Math.PI) / 9;
+  const leanX = pose === 0 ? 0 : 0.05 * D;
+  const leanY = pose === 0 ? 0 : (pose === 1 ? -0.05 : 0.05) * D;
   ctx.fillStyle = body;
   trace(ctx, f, caddieHull(stage, own));
   seal(ctx);
@@ -3568,7 +3732,7 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   seam(ctx, f, shade(body, 0.55), 0.05, roundel(0, 0, 0.9 * D, 12, Math.PI * 1.08, Math.PI * 1.72), 0.85, true);
   // Six vents between the rim and the inner ring: dark slots, each with the acid it runs on glowing in it.
   for (let k = 0; k < 6; k++) {
-    const a = (k * Math.PI) / 3;
+    const a = (k * Math.PI) / 3 + spin;
     const c = Math.cos(a);
     const s = Math.sin(a);
     const at = (along: number, off: number): Pt => [c * along - s * off, s * along + c * off];
@@ -3578,7 +3742,7 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   band(ctx, f, shade(body, -0.3), 0, 0, 0.6 * D, 0.5 * D);
   // Six running lights round the rim, between the vents, in the player's cyan with a light round each.
   for (let k = 0; k < 6; k++) {
-    const a = Math.PI / 6 + (k * Math.PI) / 3;
+    const a = Math.PI / 6 + (k * Math.PI) / 3 + spin;
     glow(ctx, f, palette.player, Math.cos(a) * 0.885 * D, Math.sin(a) * 0.885 * D, 0.15, 0.55);
     disc(ctx, f, shade(palette.player, 0.3), Math.cos(a) * 0.885 * D, Math.sin(a) * 0.885 * D, 0.065);
   }
@@ -3589,21 +3753,24 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   */
   const visor = art === 'visor';
   const glass = visor ? palette.hazard : palette.glass;
-  shaded(ctx, f, [-0.2 * D, -0.45 * D], [0.2 * D, 0.45 * D], shade(glass, 0.25), shade(glass, -0.35), roundel(0, 0, 0.46 * D, 28, 0, Math.PI * 2));
+  // 0594: everything of the dome stands where its lean puts it — at its middle standing still.
+  const dx = leanX;
+  const dy = leanY;
+  shaded(ctx, f, [dx - 0.2 * D, dy - 0.45 * D], [dx + 0.2 * D, dy + 0.45 * D], shade(glass, 0.25), shade(glass, -0.35), roundel(dx, dy, 0.46 * D, 28, 0, Math.PI * 2));
   if (art === 'pilot') {
-    disc(ctx, f, shade(palette.acid, 0.2), 0.03 * D, 0, 0.28 * D);
-    for (const side of [1, -1] as const) disc(ctx, f, palette.space, 0.13 * D, 0.1 * D * side, 0.095 * D);
+    disc(ctx, f, shade(palette.acid, 0.2), dx + 0.03 * D, dy, 0.28 * D);
+    for (const side of [1, -1] as const) disc(ctx, f, palette.space, dx + 0.13 * D, dy + 0.1 * D * side, 0.095 * D);
   }
   // 0589: or the glass in four colours, quartered as a beach ball is — the player's own inks and the hazard's.
   if (art === 'rainbow') {
     RAINBOW_DOME.forEach((ink, k) => {
       const from = (k * Math.PI) / 2 + Math.PI / 4;
-      poly(ctx, f, shade(palette[ink], 0.1), [[0, 0], ...roundel(0, 0, 0.44 * D, 8, from, from + Math.PI / 2)], 0.8);
+      poly(ctx, f, shade(palette[ink], 0.1), [[dx, dy], ...roundel(dx, dy, 0.44 * D, 8, from, from + Math.PI / 2)], 0.8);
     });
   }
-  disc(ctx, f, shade(glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, art === 'pilot' ? 0.3 : 0.7);
-  seam(ctx, f, shade(visor ? palette.hazard : palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
-  disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);
+  disc(ctx, f, shade(glass, 0.4), dx - 0.06 * D, dy - 0.1 * D, 0.28 * D, art === 'pilot' ? 0.3 : 0.7);
+  seam(ctx, f, shade(visor ? palette.hazard : palette.player, 0.4), 0.04, roundel(dx, dy, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
+  disc(ctx, f, palette.impact, dx - 0.15 * D, dy - 0.17 * D, 0.075, 0.9);
 }
 
 /*
@@ -3668,12 +3835,28 @@ function ballHull(stage: number, rx: number, ry: number): Pt[] {
  * Unity from above, running up the lane — 0593: a least weasel, long and low, the brown back and the
  * hi-vis shirt across it, four legs out mid-stride, the short tail behind and the bush hat over the head
  * with an ear either side of its brim. Every mark at least 0.12 of the box across, over 0106's floor.
+ *
+ * ⚠️ **0594: AND THE WEASEL WAR DANCE, IN `pose`.** A least weasel's war dance is a frenzy of twisting
+ * hops with the back arched. Each pose turns Unity half a radian about their middle, one way and then the
+ * other, gathers the body shorter for the arch, draws the legs in under it and flicks the tail out the
+ * other way — the body's parts moving against each other, which is what makes it a dance and not a turn.
  */
-function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number): void {
+function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, pose: DancePose = 0): void {
   const k = scale;
   const fur = shade(palette.bullet, -0.42);
   const furDark = shade(palette.bullet, -0.6);
   const felt = shade(mix(palette.bullet, palette.blade, 0.25), -0.55);
+  const side = pose === 1 ? -1 : 1;
+  const turn = pose === 0 ? 0 : side * 0.5;
+  const gather = pose === 0 ? 1 : 0.86;
+  const legsIn = pose === 0 ? 1 : 0.72;
+  const cos = Math.cos(turn);
+  const sin = Math.sin(turn);
+  // A point of the still drawing, in the pose: shortened for the arch, turned about the middle, and scaled.
+  const p = (x: number, y: number): Pt => {
+    const ax = (x - 0.05) * gather + 0.05;
+    return [(ax * cos - y * sin) * k, (ax * sin + y * cos) * k];
+  };
   // The legs first, so the body lies over their roots: forelegs reaching, hind legs pushing off.
   for (const [x, y] of [
     [0.22, -0.2],
@@ -3681,45 +3864,38 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number): v
     [-0.28, 0.19],
     [-0.2, -0.21],
   ] as const) {
-    disc(ctx, f, furDark, x * k, y * k, 0.075 * k);
+    const [lx, ly] = p(x, y * legsIn);
+    disc(ctx, f, furDark, lx, ly, 0.075 * k);
   }
-  // The tail, short and brown, a least weasel's.
-  seam(ctx, f, fur, 0.12 * k, [
-    [-0.36 * k, 0],
-    [-0.52 * k, 0.05 * k],
-    [-0.6 * k, 0.02 * k],
-  ], 1, true);
+  // The tail, short and brown, a least weasel's — flicked out against the turn while it dances.
+  const flick = pose === 0 ? 0 : -side * 0.12;
+  seam(ctx, f, fur, 0.12 * k, [p(-0.36, 0), p(-0.52, 0.05 + flick), p(-0.6, 0.02 + flick * 1.6)], 1, true);
   // The body: long and thin, lit along the spine.
-  shaded(ctx, f, [0, -0.2 * k], [0, 0.2 * k], shade(fur, 0.2), furDark, roundel(-0.04 * k, 0, 0.36 * k, 24, 0, Math.PI * 2).map(([x, y]) => [x, y * 0.55] as const));
+  const back = roundel(-0.04, 0, 0.36, 24, 0, Math.PI * 2).map(([x, y]) => p(x, y * 0.55));
+  shaded(ctx, f, p(0, -0.2), p(0, 0.2), shade(fur, 0.2), furDark, back);
   // The hi-vis shirt across the shoulders, with its silver tape.
-  poly(ctx, f, palette.bullet, [
-    [0.12 * k, -0.19 * k],
-    [0.26 * k, -0.15 * k],
-    [0.26 * k, 0.15 * k],
-    [0.12 * k, 0.19 * k],
-    [-0.04 * k, 0.19 * k],
-    [-0.04 * k, -0.19 * k],
-  ]);
-  poly(ctx, f, shade(palette.trim, 0.7), [
-    [0.02 * k, -0.19 * k],
-    [0.13 * k, -0.19 * k],
-    [0.13 * k, 0.19 * k],
-    [0.02 * k, 0.19 * k],
-  ], 0.9);
+  poly(ctx, f, palette.bullet, [p(0.12, -0.19), p(0.26, -0.15), p(0.26, 0.15), p(0.12, 0.19), p(-0.04, 0.19), p(-0.04, -0.19)]);
+  poly(ctx, f, shade(palette.trim, 0.7), [p(0.02, -0.19), p(0.13, -0.19), p(0.13, 0.19), p(0.02, 0.19)], 0.9);
   // The head: ears either side, the bush hat over it, and the nose out past its brim.
-  for (const side of [-1, 1] as const) disc(ctx, f, fur, 0.36 * k, side * 0.14 * k, 0.07 * k);
-  disc(ctx, f, fur, 0.5 * k, 0, 0.08 * k);
-  disc(ctx, f, palette.space, 0.56 * k, 0, 0.06 * k);
-  disc(ctx, f, felt, 0.38 * k, 0, 0.16 * k);
-  disc(ctx, f, shade(felt, -0.3), 0.38 * k, 0, 0.09 * k);
-  seam(ctx, f, shade(felt, 0.35), 0.03 * k, roundel(0.38 * k, 0, 0.14 * k, 10, Math.PI * 1.1, Math.PI * 1.7), 0.7, true);
+  for (const ear of [-1, 1] as const) {
+    const [ex, ey] = p(0.36, ear * 0.14);
+    disc(ctx, f, fur, ex, ey, 0.07 * k);
+  }
+  const [hx, hy] = p(0.5, 0);
+  disc(ctx, f, fur, hx, hy, 0.08 * k);
+  const [nx, ny] = p(0.56, 0);
+  disc(ctx, f, palette.space, nx, ny, 0.06 * k);
+  const [cx, cy] = p(0.38, 0);
+  disc(ctx, f, felt, cx, cy, 0.16 * k);
+  disc(ctx, f, shade(felt, -0.3), cx, cy, 0.09 * k);
+  seam(ctx, f, shade(felt, 0.35), 0.03 * k, roundel(cx, cy, 0.14 * k, 10, Math.PI * 1.1 + turn, Math.PI * 1.7 + turn), 0.7, true);
 }
 
 /**
  * The Hamster Ball at a stage — 0593. `bare` is it broken: Unity alone on their harness, the axle, the
  * cradles and the pack, and no ball. `art` is the plastic's look and `livery` its tint.
  */
-function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boolean, art: ArtKind = 'clearBall', livery: string | null = null): void {
+function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boolean, art: ArtKind = 'clearBall', livery: string | null = null, pose: DancePose = 0): void {
   const amber = art === 'amberTint';
   const plastic = livery ?? (amber ? palette.hazard : palette.player);
   const slate = palette.trim;
@@ -3748,27 +3924,31 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boo
   for (const place of SHIPS.ball.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
     paintPylon(ctx, f, palette, [(place.along - SHIPS.ball.tubeLength / 2) / BOX_R, place.across / BOX_R]);
   }
-  paintUnityAbove(ctx, f, palette, 1);
+  paintUnityAbove(ctx, f, palette, 1, pose);
   if (bare) return;
   // The plastic over them: its tint, the look on it, and the rim and its light — what says *ball*.
   disc(ctx, f, plastic, 0, 0, BALL_R * 0.98, amber ? 0.22 : 0.12);
+  // 0594: what is on the plastic turns with the ball as Unity dances in it; the light on it does not.
+  const roll = pose === 0 ? 0 : pose === 1 ? 0.7 : -0.7;
+  const rolled = ([x, y]: Pt): Pt => [x * Math.cos(roll) - y * Math.sin(roll), x * Math.sin(roll) + y * Math.cos(roll)];
   if (art === 'speedStripes') {
     for (const y of [-0.38, 0.31]) {
-      shaded(ctx, f, [0, y - 0.07], [0, y + 0.07], palette.bullet, shade(palette.bullet, -0.25), [
-        [-Math.sqrt(BALL_R * BALL_R - y * y) * 0.95, y - 0.07],
-        [Math.sqrt(BALL_R * BALL_R - y * y) * 0.95, y - 0.07],
-        [Math.sqrt(BALL_R * BALL_R - (y + 0.07) * (y + 0.07)) * 0.95, y + 0.07],
-        [-Math.sqrt(BALL_R * BALL_R - (y + 0.07) * (y + 0.07)) * 0.95, y + 0.07],
+      shaded(ctx, f, rolled([0, y - 0.07]), rolled([0, y + 0.07]), palette.bullet, shade(palette.bullet, -0.25), [
+        rolled([-Math.sqrt(BALL_R * BALL_R - y * y) * 0.95, y - 0.07]),
+        rolled([Math.sqrt(BALL_R * BALL_R - y * y) * 0.95, y - 0.07]),
+        rolled([Math.sqrt(BALL_R * BALL_R - (y + 0.07) * (y + 0.07)) * 0.95, y + 0.07]),
+        rolled([-Math.sqrt(BALL_R * BALL_R - (y + 0.07) * (y + 0.07)) * 0.95, y + 0.07]),
       ], 0.85);
     }
   }
   if (art === 'sunflower') {
     // A sticker on the crown, behind Unity's head: gold petals round a dark seed face.
+    const [sx, sy] = rolled([-0.3, 0.3]);
     for (let n = 0; n < 8; n++) {
       const a = (n * Math.PI) / 4;
-      disc(ctx, f, palette.hazard, -0.3 + Math.cos(a) * 0.13, 0.3 + Math.sin(a) * 0.13, 0.07);
+      disc(ctx, f, palette.hazard, sx + Math.cos(a) * 0.13, sy + Math.sin(a) * 0.13, 0.07);
     }
-    disc(ctx, f, shade(palette.bullet, -0.6), -0.3, 0.3, 0.1);
+    disc(ctx, f, shade(palette.bullet, -0.6), sx, sy, 0.1);
   }
   band(ctx, f, shade(plastic, 0.15), 0, 0, BALL_R * 0.99, BALL_R * 0.86, 0.85);
   seam(ctx, f, shade(plastic, 0.6), 0.05, roundel(0, 0, BALL_R * 0.8, 14, Math.PI * 1.05, Math.PI * 1.6), 0.8, true);
@@ -4134,7 +4314,35 @@ function paintTurrets(
  * phoenix across the flank — with the shuriken launcher standing on the hood, its steel star where the
  * blades leave from (the ship's `wingtip`), and its turrets on the roof.
  */
-function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'phoenix', livery: string | null = null): void {
+/** How far the Firebird's body pitches on its springs in its War Dance, in radians, and about where along — 0594. */
+/*
+  About a bumper, and it was the middle of the roof at 0.05: photographed on the sheet, the pitch was too
+  slight to read, and pitched harder about the middle the tail's dip squeezed one of its marks under 0106's
+  floor. About the far bumper the whole body lifts and none of it dips, as the estate's does.
+*/
+const FIREBIRD_PITCH = 0.04;
+
+/**
+ * A car's body on its springs, pitched by `by` radians about `pivot` along — 0594: each point lifted or
+ * dropped by the pitch at its place along, by as much of it as the point is above the sill. Nothing at the
+ * sill and below it moves, so the outline still meets the tyres the frame draws where it always did and an
+ * arch over a wheel still stops short of it; the roof and the ends pitch in full a `soft` above it.
+ */
+function onSprings(sill: number, soft: number, pivot: number, by: number): (p: Pt) => Pt {
+  if (by === 0) return (p) => p;
+  // Straight along: at any one height a point moves in proportion to how far along it is from the pivot.
+  return ([x, y]) => [x, y + by * (x - pivot) * Math.min(1, Math.max(0, (sill - y) / soft))];
+}
+
+/** A body's points pitched by `by` radians about `at`, in the predecessor's side-on frame — 0594. Nothing at 0. */
+function pitchAbout(at: Pt, by: number): (p: Pt) => Pt {
+  if (by === 0) return (p) => p;
+  const cos = Math.cos(by);
+  const sin = Math.sin(by);
+  return ([x, y]) => [at[0] + (x - at[0]) * cos - (y - at[1]) * sin, at[1] + (x - at[0]) * sin + (y - at[1]) * cos];
+}
+
+function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'phoenix', livery: string | null = null, pose: DancePose = 0): void {
   /*
     ── BLACK, READ BY ITS GOLD EDGES — 0468 ──────────────────────────────────────────────────────────
     Played: *"the firebird has gone too far away from the black and gold trans am."* It had: the body
@@ -4155,9 +4363,15 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
   const body = livery ?? shade(mix(palette.space, palette.hazard, 0.08), 0.16);
   const gold = palette.hazard;
   const stripe = shade(gold, 0.15);
-  const box = (points: readonly Pt[]): Pt[] => inBox(points, 1, 1.5);
+  /*
+    0594: its War Dance is a launch and a stop — the nose up on its springs about the tail, then the tail up
+    about the nose. The tyres do not move: `paintWheels` draws them from the row, and the body moves by as
+    much as it stands above the sill (`onSprings`), so the outline still meets them.
+  */
+  const tilt = onSprings(5, 6, pose === 1 ? -17.5 : 19.3, pose === 0 ? 0 : pose === 1 ? -FIREBIRD_PITCH : FIREBIRD_PITCH);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points.map(tilt), 1, 1.5);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
-  const outline = box(firebirdOutline(stage, own));
+  const outline = inBox(firebirdOutline(stage, own, tilt), 1, 1.5);
   ctx.fillStyle = body;
   trace(ctx, f, outline);
   seal(ctx);
@@ -4383,11 +4597,20 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
  * along the doors, the player's cyan as its running light, the lightning gun as a tesla rod standing on
  * the bonnet, and its turrets on the roof rack.
  */
-function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'woody', livery: string | null = null): void {
+/** How far the estate's body lifts on its hydraulics in its War Dance, in radians — 0594: about one bumper, then the other. */
+const ESTATE_HOP = 0.05;
+
+function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'woody', livery: string | null = null, pose: DancePose = 0): void {
   const gilt = palette.hazard;
-  const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
+  /*
+    0594: its War Dance is the lowrider's hop — the nose up on its hydraulics, then the tail. The tyres stay
+    where `paintWheels` draws them; only the body moves (`onSprings`), and about the far bumper, so all of it
+    lifts and none of it dips: about the axle the overhang dipped, and squeezed a mark under 0106's floor.
+  */
+  const tilt = onSprings(6, 7, pose === 1 ? -18 : 18, pose === 0 ? 0 : pose === 1 ? -ESTATE_HOP : ESTATE_HOP);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points.map(tilt), 0, 1);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
-  const outline = box(estateOutline(stage, own));
+  const outline = inBox(estateOutline(stage, own, tilt), 0, 1);
   // 0529: its paint is the body the burl is panelled into — the wood stays wood, and the trim stays gilt.
   const paint = livery ?? gilt;
   ctx.fillStyle = paint;
@@ -4618,6 +4841,14 @@ export function bakeShipFit(atlas: Atlas, palette: Palette, ship: ShipArt, fit: 
     for (const index of [hull.base, hull.hit]) {
       const kind = SPRITE_KINDS[index];
       if (kind === undefined) continue;
+      bitmaps[index] = withFit(ship, fit, () => bakeOne(kind, palette, atlas.view, atlas.pixelsPerUnit, atlas.theme));
+    }
+  }
+  // 0594: and its dance's poses in the same fitting, so it dances in its own paint, look and gun.
+  for (const cycle of SHIPS[ship].dance) {
+    for (const index of cycle.frames) {
+      const kind = SPRITE_KINDS[index];
+      if (kind === undefined || !kind.includes('Dance')) continue;
       bitmaps[index] = withFit(ship, fit, () => bakeOne(kind, palette, atlas.view, atlas.pixelsPerUnit, atlas.theme));
     }
   }
@@ -14948,6 +15179,48 @@ export function drawKind(
     case 'ballBareTubesHit':
       drawBall(ctx, f, palette, 2, true);
       return;
+    // 0594: every ship's War Dance, its two poses at each stage — `danceOf` reads which from the name.
+    case 'fighterDance1':
+    case 'fighterDance2':
+    case 'fighterTubeDance1':
+    case 'fighterTubeDance2':
+    case 'fighterTubesDance1':
+    case 'fighterTubesDance2':
+    case 'caddieDance1':
+    case 'caddieDance2':
+    case 'caddieTubeDance1':
+    case 'caddieTubeDance2':
+    case 'caddieTubesDance1':
+    case 'caddieTubesDance2':
+    case 'firebirdDance1':
+    case 'firebirdDance2':
+    case 'firebirdTubeDance1':
+    case 'firebirdTubeDance2':
+    case 'firebirdTubesDance1':
+    case 'firebirdTubesDance2':
+    case 'estateDance1':
+    case 'estateDance2':
+    case 'estateTubeDance1':
+    case 'estateTubeDance2':
+    case 'estateTubesDance1':
+    case 'estateTubesDance2':
+    case 'thunderboltDance1':
+    case 'thunderboltDance2':
+    case 'thunderboltTubeDance1':
+    case 'thunderboltTubeDance2':
+    case 'thunderboltTubesDance1':
+    case 'thunderboltTubesDance2':
+    case 'ballDance1':
+    case 'ballDance2':
+    case 'ballTubeDance1':
+    case 'ballTubeDance2':
+    case 'ballTubesDance1':
+    case 'ballTubesDance2': {
+      const { ship, stage, pose } = danceOf(kind);
+      const fit = fitNow(ship);
+      drawPlayerShip(ctx, f, palette, ship, stage, gunNow(ship), fit.rim, fit.art, fit.livery, pose);
+      return;
+    }
     // The ram's heat, from cool to breaking, laid under the ball.
     case 'ramHeat0':
     case 'ramHeat1':

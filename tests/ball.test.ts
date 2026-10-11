@@ -20,7 +20,6 @@ import { GameFrame, RAM_KIND, canThrow, launchSpecial, wearHull, type World } fr
 import { ENEMIES } from '../src/content/enemies.ts';
 import { GOLFERS } from '../src/content/golfers.ts';
 import type { LevelRow } from '../src/content/levels.ts';
-import { PICKUPS } from '../src/content/pickups.ts';
 import { BALL_RADIUS, SHIPS, SHIP_KINDS, fitted } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPECIALS } from '../src/content/specials.ts';
@@ -31,7 +30,7 @@ import { reset } from '../src/sim/entity.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND, lockHint, gunWhy } from '../src/state/screens.ts';
-import { gunOpen, initialHangar, pilotRecord, specialOpen } from '../src/state/slices/hangar.ts';
+import { gunOpen, initialHangar, pilotRecord } from '../src/state/slices/hangar.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 const RAM = WEAPONS.ram.ram!;
@@ -205,11 +204,6 @@ describe('0593 — the ram is the ball, and goes on no other ship', () => {
     expect(gunWhy('ball', true, false)).toBe('The Hamster Ball flies nothing but its ram');
   });
 
-  it('and no other ship may open with the War Dance until every ship can dance', () => {
-    expect(SPECIALS.warDance.shared).toBe(false);
-    for (const ship of SHIP_KINDS) if (ship !== 'ball') expect(specialOpen(everyWin, ship, 'ball'), ship).toBe(false);
-    expect(PICKUPS.bomb.faces, 'the War Dance is a face on the bomb pickup before every ship can dance').not.toContain(SPRITE.pickupDance);
-  });
 });
 
 describe('0593 — the War Dance', () => {

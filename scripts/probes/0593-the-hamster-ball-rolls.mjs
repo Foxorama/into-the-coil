@@ -98,24 +98,8 @@ export const PROBES = [
       replace: '  if (from !== ship && !WEAPONS[SHIPS[from].weapon].lends) return false;',
     },
   },
-  {
-    decision: '0593',
-    suite: 'tests/ball.test.ts',
-    broke: 'the War Dance opened on every ship before any other can dance',
-    guard: 'and no other ship may open with the War Dance until every ship can dance',
-    edit: { path: 'src/state/slices/hangar.ts', find: '  if (from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) return false;\n', replace: '' },
-  },
-  {
-    decision: '0593',
-    suite: 'tests/ball.test.ts',
-    broke: 'the War Dance a face on the bomb pickup',
-    guard: 'and no other ship may open with the War Dance until every ship can dance',
-    edit: {
-      path: 'src/content/pickups.ts',
-      find: "SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun' && SPECIALS[k].shared);",
-      replace: "SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun');",
-    },
-  },
+  // The War Dance kept to the ball until every ship could dance was 0593's, and 0594 retired it: its
+  // gate on the pickup is `scripts/probes/0594-every-ship-dances.mjs`'s now.
   {
     decision: '0593',
     suite: 'tests/ball.test.ts',

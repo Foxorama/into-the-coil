@@ -590,6 +590,14 @@ export function animate(e: Entity, cycle: Cycle): void {
   e.framePhase = Math.floor(Math.abs(e.along * 3.7 + e.across * 6.1)) % (cycle.frames.length * cycle.hold);
 }
 
+/** Back to one picture — 0594: a ship whose dance is over stands as it did before it. */
+export function stand(e: Entity): void {
+  e.frames = STILL;
+  e.framesHit = STILL;
+  e.frameHold = 1;
+  e.framePhase = 0;
+}
+
 /** A blank entity. Called only while a pool is being constructed. */
 export function makeEntity(): Entity {
   // @setup: entities are built when the pool is constructed, never during a frame.

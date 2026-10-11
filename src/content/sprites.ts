@@ -109,6 +109,46 @@ export const SPRITE_KINDS = [
   'ballBareTubeHit',
   'ballBareTubes',
   'ballBareTubesHit',
+  /*
+    0594: every ship's War Dance — two poses either side of its still one, at no tubes, one and two, its
+    own parts moving in its own drawing (`dance` on its row). No hurt twin: nothing lands on a dancing ship.
+  */
+  'fighterDance1',
+  'fighterDance2',
+  'fighterTubeDance1',
+  'fighterTubeDance2',
+  'fighterTubesDance1',
+  'fighterTubesDance2',
+  'caddieDance1',
+  'caddieDance2',
+  'caddieTubeDance1',
+  'caddieTubeDance2',
+  'caddieTubesDance1',
+  'caddieTubesDance2',
+  'firebirdDance1',
+  'firebirdDance2',
+  'firebirdTubeDance1',
+  'firebirdTubeDance2',
+  'firebirdTubesDance1',
+  'firebirdTubesDance2',
+  'estateDance1',
+  'estateDance2',
+  'estateTubeDance1',
+  'estateTubeDance2',
+  'estateTubesDance1',
+  'estateTubesDance2',
+  'thunderboltDance1',
+  'thunderboltDance2',
+  'thunderboltTubeDance1',
+  'thunderboltTubeDance2',
+  'thunderboltTubesDance1',
+  'thunderboltTubesDance2',
+  'ballDance1',
+  'ballDance2',
+  'ballTubeDance1',
+  'ballTubeDance2',
+  'ballTubesDance1',
+  'ballTubesDance2',
   // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
   'spinnerWheel',
   'spinnerWheelHit',
@@ -1603,6 +1643,13 @@ function blitIndices<K extends string>(kinds: readonly K[]): Record<K, number> {
 export const SPRITE: Record<SpriteKind, number> = blitIndices(SPRITE_KINDS);
 
 /**
+ * A body with no picture — 0594: the ram riding a dancing ship that is not the ball. It lands as the ball's
+ * does, and what it lands is said where it lands; the ball's heat under a fighter would be a disc round it,
+ * over the bullets beside it, which 0373 took the surge's aura out from under. The painter passes over it.
+ */
+export const UNSEEN = -1;
+
+/**
  * The atlas slots a landmark can be cast into. A `LandmarkEntry.variant` indexes this — 0225.
  *
  * ⚠️ **HERE AND NOT IN `src/render/bake.ts`, BECAUSE THE FRAME MAY NOT REACH THE BAKER.** It was
@@ -1784,6 +1831,42 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ballBareTubeHit: SHIP_BOX,
   ballBareTubes: SHIP_BOX,
   ballBareTubesHit: SHIP_BOX,
+  fighterDance1: SHIP_BOX,
+  fighterDance2: SHIP_BOX,
+  fighterTubeDance1: SHIP_BOX,
+  fighterTubeDance2: SHIP_BOX,
+  fighterTubesDance1: SHIP_BOX,
+  fighterTubesDance2: SHIP_BOX,
+  caddieDance1: SHIP_BOX,
+  caddieDance2: SHIP_BOX,
+  caddieTubeDance1: SHIP_BOX,
+  caddieTubeDance2: SHIP_BOX,
+  caddieTubesDance1: SHIP_BOX,
+  caddieTubesDance2: SHIP_BOX,
+  firebirdDance1: SHIP_BOX,
+  firebirdDance2: SHIP_BOX,
+  firebirdTubeDance1: SHIP_BOX,
+  firebirdTubeDance2: SHIP_BOX,
+  firebirdTubesDance1: SHIP_BOX,
+  firebirdTubesDance2: SHIP_BOX,
+  estateDance1: SHIP_BOX,
+  estateDance2: SHIP_BOX,
+  estateTubeDance1: SHIP_BOX,
+  estateTubeDance2: SHIP_BOX,
+  estateTubesDance1: SHIP_BOX,
+  estateTubesDance2: SHIP_BOX,
+  thunderboltDance1: SHIP_BOX,
+  thunderboltDance2: SHIP_BOX,
+  thunderboltTubeDance1: SHIP_BOX,
+  thunderboltTubeDance2: SHIP_BOX,
+  thunderboltTubesDance1: SHIP_BOX,
+  thunderboltTubesDance2: SHIP_BOX,
+  ballDance1: SHIP_BOX,
+  ballDance2: SHIP_BOX,
+  ballTubeDance1: SHIP_BOX,
+  ballTubeDance2: SHIP_BOX,
+  ballTubesDance1: SHIP_BOX,
+  ballTubesDance2: SHIP_BOX,
   /*
     0527: a box whose frame's radius is the Firebird's tyre — 3.6 of the predecessor's units, each 0.062
     of a ship's box radius — so the spinner is painted to a radius of one and stands over that tyre at

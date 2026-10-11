@@ -11,7 +11,7 @@
  */
 
 import { BEAM_BOLT_KIND, BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, RAIN_BOLT_KIND, type RoomPiece } from '../content/bosses.ts';
-import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
+import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, SPRITE, SPRITE_EXTENT, UNSEEN } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
 import { arteryAt, trunkAt, type Veins } from '../content/veins.ts';
@@ -337,6 +337,8 @@ export function paintScene(
     */
     for (let i = 0; i < count; i++) {
       const e = entities.at(i);
+      // 0594: a body with no picture of its own — a ram riding a dancing ship that is not the ball.
+      if (e.sprite === UNSEEN) continue;
       const along = e.prevAlong + (e.along - e.prevAlong) * alpha;
       const across = e.prevAcross + (e.across - e.prevAcross) * alpha;
       let swing = e.turn - e.prevTurn;

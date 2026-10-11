@@ -24,7 +24,7 @@ export const PROBES = [
     guard: 'and hands over the face it shows, never the row’s first',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const face = drawFace(row, rng);',
+      find: '  const face = drawFace(row, rng, shut);',
       replace: '  const face = 0;',
     },
   },
@@ -35,7 +35,7 @@ export const PROBES = [
     guard: 'and each dropped piece is drawn on a face of its own and keeps it',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const face = drawFace(row, rng);',
+      find: '  const face = drawFace(row, rng, shut);',
       replace: '  const face = 0;',
     },
   },

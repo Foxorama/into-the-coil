@@ -37,6 +37,7 @@ import type { Rng } from '../sim/rng.ts';
   somewhere neither of these two files can answer it — 0159 says where.
 */
 
+import { pilotOpen, type PilotRecord } from './golfers.ts';
 import type { ShipRow } from './ships.ts';
 import { SHOTS } from './shots.ts';
 import { SPECIALS, SPECIAL_KINDS, WARD_KINDS, type SpecialKind } from './specials.ts';
@@ -49,8 +50,8 @@ import { MISSILES, MISSILE_KINDS, type MissileKind } from './missiles.ts';
  * own, whatever gun the ship that takes it flies. Derived from the specials' table rather than listed,
  * so a gun special added there is a face here.
  */
-// 0593: and only a special every ship can carry (`shared`) — the War Dance waits for every ship's dance.
-export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun' && SPECIALS[k].shared);
+// 0594: every one of them, the War Dance with the rest — which a run offers is `facesShut`'s, below.
+export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'gun');
 
 /**
  * Every pickup in the game. Closed.
@@ -332,9 +333,39 @@ export function drawKind(rng: Rng): PickupKind {
   return DRAWN_KINDS[rng.int(0, DRAWN_KINDS.length - 1)]!;
 }
 
-/** Which of `row`'s faces a pickup is drawn on, with even odds — 0575. */
-export function drawFace(row: PickupRow, rng: Rng): number {
-  return rng.int(0, row.faces.length - 1);
+/** No face shut — what a run with nothing waiting on a pilot passes for every pickup. */
+export const NONE_SHUT: readonly boolean[] = [];
+
+/**
+ * Which of `row`'s faces a pickup is drawn on, with even odds — 0575 — over the faces `shut` leaves open
+ * (0594). One draw either way, so a run with nothing shut draws exactly what it drew before. A row with
+ * every face shut, which no content has, is drawn as if none were rather than not at all.
+ */
+export function drawFace(row: PickupRow, rng: Rng, shut: readonly boolean[] = NONE_SHUT): number {
+  let open = 0;
+  for (let face = 0; face < row.faces.length; face++) if (shut[face] !== true) open++;
+  if (open === 0 || open === row.faces.length) return rng.int(0, row.faces.length - 1);
+  let left = rng.int(0, open - 1);
+  for (let face = 0; face < row.faces.length; face++) {
+    if (shut[face] === true) continue;
+    if (left === 0) return face;
+    left--;
+  }
+  return 0;
+}
+
+/**
+ * Which of `kind`'s faces are shut to a player with `record` — 0594: a face that offers a special whose
+ * `opensWith` pilot is not open yet. *"Other ships can pick up the special once the hamster ball is
+ * unlocked."* Read off what each face offers, so a ward special waiting on a pilot would be shut on the
+ * shield pickup's faces too; a tube's face offers its tube and is never shut.
+ */
+export function facesShut(kind: PickupKind, record: PilotRecord): readonly boolean[] {
+  return PICKUPS[kind].faces.map((_sprite, face) => {
+    if (effectOf(kind, face, { tubes: [] }) !== 'special') return false;
+    const pilot = SPECIALS[specialOf(kind, face)].opensWith;
+    return pilot !== null && !pilotOpen(pilot, record);
+  });
 }
 
 /**
