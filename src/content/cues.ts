@@ -151,6 +151,10 @@ export const CUE_KINDS = [
   'warDance',
   // The Water Cannon opening up — 0595.
   'waterCannon',
+  // And heard for as long as it plays and wherever it lands, and the paint where it splats — 0599.
+  'spray',
+  'douse',
+  'splat',
   'shield',
   'death',
   'pickup',
@@ -242,6 +246,10 @@ export const TWIN_KINDS = [
   'dance-starts',
   /** A jet of water appears from the gun and starts sweeping the lane — `startJet`, 0595. */
   'jet-appears',
+  /** Drops fly off the jet as it sweeps the lane — `stepJet`, 0599. A thing appearing, struck on a cadence. */
+  'spray-appears',
+  /** A paintball bursts into a splat of its own colour where it landed — `splatPaint`, 0599. */
+  'splat-lands',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
   /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
@@ -2311,6 +2319,60 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, at: 0.02, seconds: 0.6, gain: 0.55, attack: 0.04, curve: 1.6, lowFrom: 3200, lowTo: 9000, highFrom: 600, highTo: 1400, q: 0.8, pan: -0.45, panTo: 0.45 },
       // The spray's hiss over it, finer and higher, settling as it runs.
       { wave: 'noise', from: 0, to: 0, at: 0.1, seconds: 0.5, gain: 0.25, attack: 0.06, curve: 2, lowFrom: 12000, highFrom: 4200, pan: 0.3, panTo: -0.3 },
+    ],
+  },
+  /*
+    ── THE WATER FOR AS LONG AS IT PLAYS, AND WHERE IT LANDS — `docs/decisions/0599-the-water-and-the-paint-are-heard.md`
+
+    ⚠️ **THE CANNON'S CUE WAS 0.6 SECONDS AND ITS JET IS TWO**, so for three quarters of the jet a column of water
+    swept the lane in silence, and what it landed on made no sound on any ship but the two whose guns log their
+    landings as blades. The Catherine wheel already answers both: `crackle` while it burns, `sizzle` where its
+    tether lands. These are the water's.
+  */
+  spray: {
+    // The jet's rush, struck again every `SPRAY_EVERY` steps while it plays, panned to where its end is.
+    // Drops appearing, struck on a cadence: so, as the cannon's own, it never ducks the bed (0308).
+    twin: 'spray-appears',
+    air: 0.2,
+    hold: 6,
+    // Over the guns', as every event is (0145) — the marker under it is 0.22 and the pulse 0.24.
+    gain: 0.26,
+    glue: 0.08,
+    layers: [
+      // The body of the water: broad noise held a little longer than the gap between strikes, so they join.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.48, gain: 0.5, attack: 0.05, curve: 1.4, lowFrom: 5200, lowTo: 4200, highFrom: 500, highTo: 700, q: 0.7 },
+      // Drops off the jet: three short bright ticks across the field.
+      { wave: 'noise', from: 0, to: 0, at: 0.06, seconds: 0.03, gain: 0.32, attack: 0.0005, curve: 5, lowFrom: 11000, highFrom: 3600, pan: -0.35 },
+      { wave: 'noise', from: 0, to: 0, at: 0.17, seconds: 0.03, gain: 0.28, attack: 0.0005, curve: 5, lowFrom: 11000, highFrom: 3800, pan: 0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.29, seconds: 0.025, gain: 0.24, attack: 0.0005, curve: 5, lowFrom: 11000, highFrom: 3400, pan: -0.05 },
+    ],
+  },
+  douse: {
+    // A body the jet lands on: the flash it gets, as `sizzle` is the tether's.
+    twin: 'impact-flash',
+    hold: 6,
+    // The tether's `sizzle`'s, over the guns' (0145).
+    gain: 0.26,
+    glue: 0.08,
+    layers: [
+      // The slap of water on a hull: a low dull knock under a short wet burst.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.55, attack: 0.002, curve: 2.8, lowFrom: 3600, lowTo: 1400, highFrom: 300, q: 1.1 },
+      { wave: 'sine', from: inKey(0), to: inKey(-7), seconds: 0.07, gain: 0.4, attack: 0.001, curve: 3.6, drive: 0.2 },
+    ],
+  },
+  splat: {
+    // A paintball bursting where it landed — dry, at the marker's own rate.
+    twin: 'splat-lands',
+    hold: 3,
+    // Over the guns' (0145) and under the `hit` (0.283) it lands beside, which is the body's.
+    gain: 0.26,
+    glue: 0.1,
+    figure: [1, 0.8, 0.9, 0.75],
+    layers: [
+      // The burst: a soft, fat, falling smack of noise.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.55, attack: 0.001, curve: 3.4, lowFrom: 2600, lowTo: 900, highFrom: 180, q: 1.3 },
+      // And its body: a short round drop in pitch, a fifth under the marker's knock.
+      { wave: 'sine', from: inKey(12), to: inKey(5), seconds: 0.06, gain: 0.35, attack: 0.001, curve: 4, drive: 0.1 },
     ],
   },
   candle: {

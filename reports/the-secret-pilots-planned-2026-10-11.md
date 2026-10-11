@@ -249,6 +249,10 @@ Also on the page, and not characters — each one PR, in any order after item 1:
   where it is drawn, ends at the wreck, and is the player's own water under the bullets; the paint leaves out each
   place's bullet colour; the crash hint says what is counted. On the way, the pad's guards stopped reading a
   slipped step as a look arriving.
+- **The sounds, asked after** — [0599](../docs/decisions/0599-the-water-and-the-paint-are-heard.md): the review
+  had not covered them. The Water Cannon was silent for 1.38 s of its 2, and its landings were heard on two ships
+  of seven; a splat had no sound. The jet sprays for its whole length and douses what it lands on, and a splat is
+  heard.
 
 ## Owed
 

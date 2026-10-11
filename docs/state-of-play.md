@@ -1171,7 +1171,9 @@ order, so this file does not.** Its *Answered* table holds the player's two answ
 MMXXVI and the Aqua Duck, is [0595](decisions/0595-the-aqua-duck-paints.md); item 4, the Yellow Submarine,
 is [0596](decisions/0596-the-yellow-submarine-hangs.md); item 5, the title track in the menu, is
 [0597](decisions/0597-the-title-track-plays-in-the-menu.md). The review of all of it is
-[0598](decisions/0598-the-secret-pilots-reviewed.md). Each owes a play, as the report's *Owed* and 0598's say.
+[0598](decisions/0598-the-secret-pilots-reviewed.md), and its sounds, which it missed,
+[0599](decisions/0599-the-water-and-the-paint-are-heard.md). Each owes a play and an ear, as the report's *Owed*
+and the decisions' say.
 
 ### ⚠️ THE CATHERINE WHEEL STAYS A BEAT LONGER — OWED A PLAY — 2026-10-10
 

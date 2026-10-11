@@ -745,6 +745,8 @@ function splatPaint(w: World, landed: Deaths): void {
   const paint = gun.paint;
   if (paint === null || gun.bursts === null) return;
   const row = SHOTS[gun.bursts];
+  // 0599: and heard where the first of them bursts — the splat's own, beside the `hit` the arrival already sounds.
+  if (landed.count > 0) w.onCue('splat', landed.across[0]!);
   for (let i = 0; i < landed.count; i++) {
     const blast = w.blasts.spawn();
     // A splat the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
@@ -2479,13 +2481,17 @@ export class GameFrame implements Frame {
     const wheelRow = WEAPONS[w.weapon.kind].wheel;
     if (wheelRow !== null) killedByShots += landTether(w, wheelRow, shootable, gunOpen, bladeGap, hull);
     // The Water Cannon's jet, along its line on its own clock — 0595: a special's, so the boss takes it as it takes a bomb.
+    const beforeJet = w.hits.count;
     killedByShots += landJet(w, shootable, open, hull);
+    // 0599: the jet's landings are its own cue (`douse`) and not the blade's `hit` — they counted as bites only
+    // on a ship whose gun logs as a blade, so the same jet was heard landing on two ships and silent on five.
+    const doused = w.hits.count - beforeJet;
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     // A ram's landings are its own cue and not the blade's `hit` — 0593: read off what the ram body lost.
     const rammed = ramLanded(w);
     settleRam(w, rammed);
-    let bites = bladeHits === null ? 0 : w.hits.count - rammed;
+    let bites = bladeHits === null ? 0 : w.hits.count - rammed - doused;
     if (shootable) {
       killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
       collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
@@ -4252,6 +4258,12 @@ const TETHER_BODY: Body = { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, r
   what 0375's gap is for; a press while it plays is refused, as a dance's is (`canThrow`).
 */
 
+/**
+ * Steps between the jet's sprays — 0599: `VOLLEY_CYCLE`, the crackle's own, and under the spray's length so each
+ * runs into the next: the cannon's cue covers the first 0.6 s, and four of these the rest of the two seconds.
+ */
+const SPRAY_EVERY = VOLLEY_CYCLE;
+
 /** The jet as a body in the bolt pool: a picture, in no pairing — it lands through `landJet`. */
 const JET_BODY: Body = { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 0, health: 1, damage: 0 };
 
@@ -4291,6 +4303,11 @@ function stepJet(w: World): void {
   w.jetLaidAt = w.jetAt;
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
+  /*
+    0599: and heard for as long as it plays — the cannon's own cue is its opening, and this is the water after it,
+    struck again every `SPRAY_EVERY` steps from where the jet's end is, so the field hears it sweep.
+  */
+  if (w.jetAt > 0 && w.jetAt % SPRAY_EVERY === 0) w.onCue('spray', rootAcross + Math.sin(angle) * jet.length);
   const link = w.bolts.spawn();
   if (link !== null) {
     const endAlong = rootAlong + Math.cos(angle) * jet.length;
@@ -4340,11 +4357,14 @@ function landJet(w: World, shootable: boolean, open: number, hull: Entity | null
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
   const endAlong = rootAlong + Math.cos(angle) * jet.length;
   const endAcross = rootAcross + Math.sin(angle) * jet.length;
+  const landedBefore = w.hits.count;
   let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor);
   if (shootable) {
     destroyed += tetherInto(w.bossPool, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, jet.landGap, hull, w.corridor);
     tetherInto(w.bossBody, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, null, w.hits, jet.landGap, hull, w.corridor);
   }
+  // 0599: heard where it landed, on every ship — as the tether's `sizzle` is, and never as the gun's `hit`.
+  if (w.hits.count > landedBefore) w.onCue('douse', w.hits.across[landedBefore]!);
   return destroyed;
 }
 
