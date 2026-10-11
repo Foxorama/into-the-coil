@@ -51,7 +51,8 @@ export const PROBES = [
     guard: 'sends every base layer of the music to the bake pool',
     edit: {
       path: 'src/main.ts',
-      find: '  useLayerBaker(makeBakePool());\n',
+      // Re-anchored by 0597, which hands the pool's layer baker and its title baker over separately.
+      find: '  useLayerBaker(pool?.layer ?? null);\n',
       replace: '',
     },
   },

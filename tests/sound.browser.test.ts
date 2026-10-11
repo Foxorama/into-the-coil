@@ -20,6 +20,13 @@ import { PAN_BUCKETS, velocitiesOf } from '../src/app/sound.ts';
 const BAKED_BUFFERS = CUE_KINDS.reduce((total, kind) => total + velocitiesOf(CUES[kind]).length, 0) + MUSIC_LAYERS.length;
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { back, openSettings } from './title.ts';
+import { TITLE_PARTS } from '../src/content/title-track.ts';
+
+/**
+ * The menu's title track: one buffer and one source per part, baked on a screen that is not part of a run while the
+ * sound is on — `docs/decisions/0597-the-title-track-plays-in-the-menu.md`.
+ */
+const TITLE = Object.keys(TITLE_PARTS).length;
 
 /**
  * SOUND, IN A REAL BROWSER, COUNTED AT THE PLATFORM.
@@ -196,9 +203,9 @@ const BAKED_TOTAL = BAKED_BUFFERS + MUSIC_LAYERS.length + ROOM_IMPULSE;
  * is not a slow machine, it is a page that never unlocked — the guard below says so in its own words,
  * and waiting the full minute for it would only make every such probe a minute slower.
  */
-const settled = async (page: Page): Promise<AudioTally> => {
+const settled = async (page: Page, total = BAKED_TOTAL): Promise<AudioTally> => {
   let now = await tally(page);
-  for (let i = 0; i < 240 && now.buffers < BAKED_TOTAL; i++) {
+  for (let i = 0; i < 240 && now.buffers < total; i++) {
     // Nothing at all after five seconds: the context never unlocked, which is a thing a guard here
     // asserts about. Hand back what there is and let it.
     if (i >= 20 && now.buffers <= 0) return now;
@@ -391,17 +398,32 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     // is about a bake TOTAL, so waiting for that total is waiting for the thing it measures.
     const page = await open();
     await openSettings(page);
+    /*
+      ⚠️ **THE MENU'S TITLE IS WAITED FOR BEFORE *OFF* IS PRESSED** — 0597. The press that opened Settings
+      unlocked the sound with it on, so Settings bakes the title track, and *Off* lets it go: whether its seven
+      buffers exist depends on which landed first, the bake or the click. Waiting for them makes it the same
+      sequence every time, on 0044's terms — a count that two orders can produce is a race, not a guard.
+    */
+    const menu = await settled(page, BAKED_TOTAL + TITLE);
+    expect(menu.buffers, 'the menu did not bake its place and its title track, each once').toBe(BAKED_TOTAL + TITLE);
+    // …and on the air: its seven sources are made the frame after it lands, which a read can come before.
+    let playing = menu;
+    for (let i = 0; i < 240 && (playing.voices - TITLE) % MUSIC_LAYERS.length !== 0; i++) {
+      await page.waitForTimeout(250);
+      playing = await tally(page);
+    }
+    expect((playing.voices - TITLE) % MUSIC_LAYERS.length, 'the menu’s title never took over').toBe(0);
     await page.click(soundOption('off'));
     await back(page, 'settings');
     await page.click(startButton);
-    const after = await settled(page);
+    const after = await settled(page, BAKED_TOTAL + TITLE);
     expect(
       after.buffers,
       'pressing a setting did not unlock the context, so silence proves nothing',
       // ⚠️ **The room's impulse is built with the context and not with the setting** — 0173. Silence
       // is a gain here, and material that only existed when sound was ON is material that has to be
       // synthesised on the press that turns it back on. That is the whole subject of this test.
-    ).toBe(BAKED_BUFFERS + MUSIC_LAYERS.length + 1);
+    ).toBe(BAKED_BUFFERS + MUSIC_LAYERS.length + 1 + TITLE);
     /*
       ── THIS ASSERTED `voices === 0`, AND THAT WAS THE WRONG QUANTITY — FOUND INTERMITTENT ON CI, 0340 ──
 
@@ -448,12 +470,20 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     );
     const heard = await tally(page);
     expect(heard.into, 'sound is off and the game played a cue anyway').toEqual([]);
+    // 0597: and the one pass of the menu's title that played before *Off*, which was waited for above.
     expect(
-      after.voices % MUSIC_LAYERS.length,
-      `sound is off and ${after.voices} sources exist, which is not a whole number of music sets — something else sounded`,
+      (after.voices - TITLE) % MUSIC_LAYERS.length,
+      `sound is off and ${after.voices} sources exist, which is not a whole number of music sets and one pass of ` +
+        'the menu’s title — something else sounded',
     ).toBe(0);
     await page.context().close();
-  });
+    /*
+      ⚠️ **ROOM FOR `settled`'S OWN SIXTY SECONDS, AND A PROBE FOUND WHY** — 0597. A menu that never bakes its
+      title leaves the wait above to run out its full ceiling before the count is asked, and the file's sixty-second
+      limit cut the test off first: a timeout, which reports the same failed title an assertion does and proves
+      nothing (0019). Measured whole, this test takes about 33 s when the title arrives.
+    */
+  }, 150_000);
 
   it('and turning it back on says so, because a setting with no feedback is a broken build', async () => {
     /*
@@ -494,11 +524,21 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.click(soundOption('off'));
     const quiet = await settled(page);
     await page.click(soundOption('on'));
-    const loud = await settled(page);
+    /*
+      ⚠️ **AND THE MENU'S TITLE COMES BACK WITH IT, BAKED AGAIN** — 0597: *Off* let it go, so *On* bakes it and it
+      takes over at a bar, seven sources. Waited for by its count, as everything in this file is: the chime and
+      the run's loops land on the press and the title a bake later, so a read on the press would see a total that
+      is still climbing.
+    */
+    let loud = await settled(page);
+    for (let i = 0; i < 240 && loud.voices - quiet.voices < 1 + MUSIC_LAYERS.length + TITLE; i++) {
+      await page.waitForTimeout(250);
+      loud = await tally(page);
+    }
     expect(
       loud.voices - quiet.voices,
-      'switching sound on made no sound, on the one press that is about sound',
-    ).toBe(1 + MUSIC_LAYERS.length);
+      'switching sound on made no sound, on the one press that is about sound — the chime, the loops and the menu’s title',
+    ).toBe(1 + MUSIC_LAYERS.length + TITLE);
     await page.context().close();
   });
 });

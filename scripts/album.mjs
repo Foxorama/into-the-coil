@@ -7,28 +7,27 @@
 // title track is the title screen's own instruments at the game's own level. Every level track is
 // `scripts/hear.mjs --level=<kind> --album`; this is the one piece that has no level to walk.
 //
-// ⚠️ EACH PART IS SET TO A LEVEL IN dBFS BEFORE THE SCORE SCALES IT (`TARGET_DB`), because the title's parts
+// ⚠️ EACH PART IS SET TO A LEVEL IN dBFS BEFORE THE SCORE SCALES IT (each part's `db`), because the title's parts
 // were never mixed against each other — three of them are new — and a level stated in the unit a listener
 // hears is the one that can be checked on the render.
+//
+// ⚠️ THE LOOPS AND THE SCORE'S LEVELS ARE THE GAME'S — 0597. The menu plays this piece round, so the parts are
+// `bakeTitlePart` and the levels `titleMoves`, both in `src/`; this script adds only what the menu has no use
+// for, which is the coda and the fade.
 
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { BAR_SECONDS, BEAT_SECONDS, MUSIC_DRIVE, MUSIC_GAIN } from '../src/content/music.ts';
 import { MUSIC_ROOT } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, sampleLayerInto, saturate } from '../src/app/sound.ts';
-import { addRoom, panGains } from '../src/app/music.ts';
+import { addRoom, bakeTitlePart, panGains } from '../src/app/music.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { TITLE_PARTS, TITLE_SCORE } from '../src/content/title-track.ts';
+import { TITLE_BARS, TITLE_PARTS, titleLevelAt, titleMoves } from '../src/content/title-track.ts';
 import { CODA_SECONDS, codaOn } from '../src/content/codas.ts';
 
 const args = new Map(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
 const out = resolve(args.get('out') ?? 'title.wav');
 const R = SAMPLE_RATE;
-
-/** Where each part sits at its own level of 1, in dBFS RMS on the bus before the shaper. */
-// The lead at −28.5, where it was −25: heard, *"into the coil title at 53 — wham, suddenly loud."* It arrived over one bar
-// six decibels over every other part, and the track rose four decibels in two seconds.
-const TARGET_DB = { drone: -31, pad: -31, bass: -26, heart: -34, arp: -31, lead: -28.5, flute: -25.5 };
 
 const render = (voices, seconds, wrap, rng) => {
   const buf = new Float32Array(Math.round(seconds * R));
@@ -57,39 +56,19 @@ if (!args.has('title')) {
   process.exit(1);
 }
 
-// The loops, each at its target level.
+// The loops, each at its own level — the menu's own bake (0597).
 const names = Object.keys(TITLE_PARTS);
 const loops = {};
-for (const name of names) {
-  const part = TITLE_PARTS[name];
-  const buf = render(part.voices, part.bars * BAR_SECONDS, true, makeRng('music').stream(`title-${name}`));
-  addRoom(buf, R, part.air);
-  const scale = 10 ** ((TARGET_DB[name] - rmsDb(buf)) / 20) / MUSIC_GAIN;
-  for (let i = 0; i < buf.length; i++) buf[i] *= scale;
-  loops[name] = buf;
-}
+for (const name of names) loops[name] = bakeTitlePart(name, R);
 
-// The score, as a level per part per sample, moving across each section's first bar.
-const scoreBars = TITLE_SCORE.reduce((n, s) => n + s.bars, 0);
-const codaAt = scoreBars * BAR_SECONDS;
+// The score, as a level per part per sample — one pass of it, from silence, and the coda after.
+const codaAt = TITLE_BARS * BAR_SECONDS;
 const total = Math.round((codaAt + CODA_SECONDS) * R);
+const moves = Object.fromEntries(names.map((n) => [n, titleMoves(n, false)]));
 const levelAt = (name, t) => {
-  let startBar = 0;
-  let before = 0;
-  for (const section of TITLE_SCORE) {
-    const start = startBar * BAR_SECONDS;
-    const end = (startBar + section.bars) * BAR_SECONDS;
-    const level = section.parts[name] ?? 0;
-    if (t < end) {
-      // A part falling away takes the section's glide; one arriving takes its rise, or a bar.
-      const into = (t - start) / (BAR_SECONDS * (level < before ? section.glide ?? 1 : section.rise ?? 1));
-      return into >= 1 ? level : before + (level - before) * into;
-    }
-    before = level;
-    startBar += section.bars;
-  }
+  const level = titleLevelAt(moves[name], t / BAR_SECONDS);
   // At the coda the loops let go over a third of a second.
-  return before * Math.max(0, 1 - (t - codaAt) / 0.35);
+  return t < codaAt ? level : level * Math.max(0, 1 - (t - codaAt) / 0.35);
 };
 
 // The coda, on the title's own instruments.
@@ -109,7 +88,7 @@ for (const part of codaOn({
   // The coda part at the same scale its loop was set to.
   const loopBuf = render(TITLE_PARTS[name].voices, TITLE_PARTS[name].bars * BAR_SECONDS, true, makeRng('music').stream(`title-${name}`));
   addRoom(loopBuf, R, TITLE_PARTS[name].air);
-  const scale = 10 ** ((TARGET_DB[name] - rmsDb(loopBuf)) / 20) / MUSIC_GAIN;
+  const scale = 10 ** ((TITLE_PARTS[name].db - rmsDb(loopBuf)) / 20) / MUSIC_GAIN;
   const p = panGains(TITLE_PARTS[name].pan);
   const start = Math.round(codaAt * R);
   for (let k = 0; k < buf.length && start + k < total; k++) {
