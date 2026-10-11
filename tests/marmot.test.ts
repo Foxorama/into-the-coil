@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind } from '../src/content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
-import { pilotWhy } from '../src/state/screens.ts';
+import { lockHint, pilotWhy } from '../src/state/screens.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { pilotRecord } from '../src/state/slices/hangar.ts';
 import { paintPortrait, paintRunner } from '../src/render/golfer-art.ts';
@@ -79,7 +79,9 @@ describe('0546 — the Marmot is locked behind the four', () => {
   it('the band says who still has to clear the game, and nothing once he is open', () => {
     expect(pilotWhy(pilotRecord(initialState.hangar))).toBe('Beat the jellyfish with Feather Fade, Huang-Woo Hook, Longshot Larry and Backspin Bo to fly The Marmot');
     expect(pilotWhy(pilotRecord(wonIn('caddie', 'fighter', 'estate').hangar))).toBe('Beat the jellyfish with Backspin Bo to fly The Marmot');
-    expect(pilotWhy(pilotRecord(wonIn(...SHIP_KINDS).hangar))).toBe(null);
+    // His hint is gone once he is open — 0593's Unity, shut on crashes and not wins, says theirs after him.
+    expect(lockHint(GOLFERS.marmot.opens, pilotRecord(wonIn(...SHIP_KINDS).hangar), GOLFERS.marmot.name)).toBe(null);
+    expect(pilotWhy(pilotRecord(wonIn(...SHIP_KINDS).hangar))).not.toContain('Marmot');
   });
 });
 

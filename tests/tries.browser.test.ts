@@ -93,8 +93,9 @@ describe.runIf(chromePath)('0561 — the cursor tries on, and only a press fits'
     // 0579: past the sub-tabs to the gun.
     await press(page, 'ArrowDown');
     await press(page, 'ArrowDown');
-    // Past every open gun to the Thunderbolt's, which is shut: the cursor stands on it.
-    await press(page, 'ArrowRight', SHIP_KINDS.length);
+    // Past every open gun to the Thunderbolt's, which is shut: the cursor stands on it. Counted from the
+    // Firebird's place to the Thunderbolt's — 0593 put a sixth ship after it, whose gun is shut on another rule.
+    await press(page, 'ArrowRight', SHIP_KINDS.indexOf('thunderbolt') - SHIP_KINDS.indexOf('firebird'));
     const tried = page.locator(`${guns} .${HANGAR}option-look`);
     expect(await tried.count(), 'the cursor could not stand on a shut gun').toBe(1);
     expect(await tried.getAttribute('aria-disabled'), 'the gun tried on is not the shut one').toBe('true');
