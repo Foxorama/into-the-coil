@@ -17,7 +17,8 @@ function inkOf(glow: string, core: string): BoltInk {
 
 /**
  * Every ink a bolt needs, from the palette's roles: the player's, the enemy's, the flame's — the
- * Catherine wheel's tether, 0545, the player's own fire and never the hostile `fire` — and the rim's dark.
+ * Catherine wheel's tether, 0545, the player's own fire and never the hostile `fire` — the water's — the
+ * Water Cannon's jet, 0595 — and the rim's dark.
  */
 export function boltInks(
   glow: string,
@@ -27,6 +28,8 @@ export function boltInks(
   hostileCore: string,
   flameGlow: string,
   flameCore: string,
+  waterGlow: string,
+  waterCore: string,
 ): BoltInks {
-  return { player: inkOf(glow, core), hostile: inkOf(hostileGlow, hostileCore), flame: inkOf(flameGlow, flameCore), dark };
+  return { player: inkOf(glow, core), hostile: inkOf(hostileGlow, hostileCore), flame: inkOf(flameGlow, flameCore), water: inkOf(waterGlow, waterCore), dark };
 }

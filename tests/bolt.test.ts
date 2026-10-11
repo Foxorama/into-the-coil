@@ -34,7 +34,7 @@ const HOSTILE = PALETTES.vivid.enemy;
 function canvas(): { surface: CanvasSurface; pen: ReturnType<typeof tracingPen>['pen']; inks: () => readonly Stroke[] } {
   const { pen, trace } = tracingPen();
   const surface = new CanvasSurface(pen as unknown as CanvasRenderingContext2D, { bitmaps: [], extents: [] } as unknown as Atlas);
-  surface.setBolt(boltInks(GLOW, CORE, DARK, HOSTILE, CORE, PALETTES.vivid.bullet, PALETTES.vivid.hazard));
+  surface.setBolt(boltInks(GLOW, CORE, DARK, HOSTILE, CORE, PALETTES.vivid.bullet, PALETTES.vivid.hazard, PALETTES.vivid.frost, CORE));
   return { surface, pen, inks: () => trace.inks };
 }
 
@@ -222,7 +222,7 @@ describe('0520 — the light is loud', () => {
           for (const [what, points, count] of [['flash', LINE, 3], ['dot', POINT, 1]] as const) {
             const { pen, trace } = tracingPen();
             const surface = new CanvasSurface(pen as unknown as CanvasRenderingContext2D, { bitmaps: [], extents: [] } as unknown as Atlas);
-            surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostileGlow, colours.impact, colours.bullet, colours.hazard));
+            surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostileGlow, colours.impact, colours.bullet, colours.hazard, colours.frost, colours.impact));
             surface.bolt(points, count, width, 1, tone);
             const glows = trace.inks.filter((s) => s.colour === glow);
             const narrowestGlow = Math.min(...glows.map((s) => s.width));

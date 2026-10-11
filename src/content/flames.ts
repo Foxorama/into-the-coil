@@ -17,28 +17,44 @@
  */
 
 import { priced } from './prices.ts';
+import type { ShipKind } from './ships.ts';
 
 /** Every flame. Closed — a new one is a row here. */
-export const FLAME_KINDS = ['standard', 'ion', 'nebula', 'plasma', 'afterburner'] as const;
+export const FLAME_KINDS = ['standard', 'ion', 'nebula', 'plasma', 'afterburner', 'bubbleJets'] as const;
 export type FlameKind = (typeof FLAME_KINDS)[number];
+
+/**
+ * How a flame is drawn — 0595. Closed, per 0016: each is a way of drawing in the bake.
+ *
+ *   **jet**      a tapered tongue of fire, two inks round a white core — every flame until the duck
+ *   **bubbles**  a stream of bubbles blown out behind, two inks for their rims round a clear middle
+ */
+export type FlameLook = 'jet' | 'bubbles';
 
 export interface FlameRow {
   /** What the band and the shop call it. */
   name: string;
   /** One line about it. */
   hint: string;
-  /** What it costs at Cosmo's, or `null` for the one every ship comes with. */
+  /** What it costs at Cosmo's, or `null` for one a ship comes with. */
   price: number | null;
   /**
    * Its two inks — the flame's body and its tongue; the white core is every flame's. `null` for the
    * palette's own, the shot's orange round the hazard's yellow, which is what the standard flame was.
    */
   inks: { readonly outer: string; readonly inner: string } | null;
+  /** How it is drawn — 0595. Every row says its own. */
+  look: FlameLook;
+  /**
+   * The ship it comes on, or `null` for one every ship may burn when it is owned — 0595, on the shells' and
+   * the rims' rule (0584, 0527): a ship's own flame always, on another ship once both are won in.
+   */
+  from: ShipKind | null;
 }
 
 export const FLAMES: Record<FlameKind, FlameRow> = {
-  standard: { name: 'Standard', hint: 'The orange the engines came with', price: null, inks: null },
-  ion: { name: 'Ion Thrusters', hint: 'Blue flame thrusters, for any ship', price: priced(400), inks: { outer: '#3a5cff', inner: '#9fb8ff' } },
+  standard: { name: 'Standard', hint: 'The orange the engines came with', price: null, inks: null, look: 'jet', from: null },
+  ion: { name: 'Ion Thrusters', hint: 'Blue flame thrusters, for any ship', price: priced(400), inks: { outer: '#3a5cff', inner: '#9fb8ff' }, look: 'jet', from: null },
   /*
     0589: *"we need more cosmetics of every shape and style"* — three more, each weighed against what it
     trails behind (0295): a deep violet well below the serpent's void (#e86bff) on lightness and bluer than
@@ -47,7 +63,14 @@ export const FLAMES: Record<FlameKind, FlameRow> = {
     `tests/flames.test.ts` refused it; and a white-hot afterburner, the one ink no hostile shot is. None is
     the enemy's red or the fire's vermilion, and each keeps the white core every flame has.
   */
-  nebula: { name: 'Nebula Burn', hint: 'Deep violet, like the gas between the stars', price: priced(450), inks: { outer: '#5a1fd6', inner: '#b496ff' } },
-  plasma: { name: 'Plasma Drive', hint: 'A green plasma jet', price: priced(450), inks: { outer: '#18c24a', inner: '#8dff9e' } },
-  afterburner: { name: 'Afterburner', hint: 'White-hot, edged in steel blue', price: priced(550), inks: { outer: '#7f9cc0', inner: '#f4f8ff' } },
+  nebula: { name: 'Nebula Burn', hint: 'Deep violet, like the gas between the stars', price: priced(450), inks: { outer: '#5a1fd6', inner: '#b496ff' }, look: 'jet', from: null },
+  plasma: { name: 'Plasma Drive', hint: 'A green plasma jet', price: priced(450), inks: { outer: '#18c24a', inner: '#8dff9e' }, look: 'jet', from: null },
+  afterburner: { name: 'Afterburner', hint: 'White-hot, edged in steel blue', price: priced(550), inks: { outer: '#7f9cc0', inner: '#f4f8ff' }, look: 'jet', from: null },
+  /*
+    0595: the Aqua Duck's own — the page's *"bubble jets"*. Bubbles blown out behind, their rims a soapy
+    periwinkle round a white glint, weighed as the ion was: twenty-five degrees and more off the frost shard's
+    cyan and the player's own, so a bubble is not a frost shard trailing the ship — and no hostile shot is a
+    hollow ring.
+  */
+  bubbleJets: { name: 'Bubble Jets', hint: 'A stream of bubbles, as the Aqua Duck blows', price: null, inks: { outer: '#a0bfff', inner: '#e8f0ff' }, look: 'bubbles', from: 'duck' },
 };

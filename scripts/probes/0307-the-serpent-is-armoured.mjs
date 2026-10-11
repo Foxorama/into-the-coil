@@ -49,9 +49,10 @@ export const PROBES = [
     guard: '0307 — and the body is armour',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0442, which puts the ray's own log in front of this choice.
-      find: 'rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, hull);',
-      replace: 'rayHits ?? bladeHits, bladeGap, hull);',
+      // ⚠️ Re-anchored by 0442, which puts the ray's own log in front of this choice, and by 0595, whose
+      // splats share it as `landings`.
+      find: 'landings ?? (armoured ? w.hits : bladeHits), bladeGap, hull);',
+      replace: 'landings ?? bladeHits, bladeGap, hull);',
     },
   },
   {

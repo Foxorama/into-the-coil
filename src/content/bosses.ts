@@ -4876,8 +4876,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
       0593: and the ram at 9, not its 8 — every jelly she eats is health back, and a ram that spends most
       of a fight broken feeds her between landings: at eight, 91.5 s, against 42–64 for the other guns.
       At 10 her first phase went in 7.1 s, 7.9 volleys where 0260 asks eight.
+
+      0595: and the paintball at 1.6, not its 1.1 — one ball a volley is the gun her jellies get in front of
+      most: at one she took 90.4 s from its best place, against 48–66 for the paintball on every other boss.
+      At 1.6, 48.7 s.
     */
-    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9 },
+    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9, paintball: 1.6 },
     damage: 3,
     /*
       ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you

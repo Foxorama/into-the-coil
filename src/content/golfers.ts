@@ -13,7 +13,7 @@
 import type { ShipKind } from './ships.ts';
 
 /** Every golfer, in the predecessor's roster order — the order the select screen offers them in. Closed. */
-export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo', 'marmot', 'unity'] as const;
+export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo', 'marmot', 'unity', 'mmxxvi'] as const;
 
 export type GolferKind = (typeof GOLFER_KINDS)[number];
 
@@ -47,10 +47,11 @@ export interface RunnerRow {
    * What body they are drawn with — 0546. Absent is a golfer; the Marmot is a marmot, in a riding suit
    * (`shirt`) and a full-face helmet (`cap`), his fur `skin` and `hair`. Unity is a least weasel (0593),
    * in a hi-vis shirt (`shirt`), navy overalls (`pants`) and a bush hat (`cap`), their cream front `skin`
-   * and their brown back `hair`. A row says its own, and the painter's fallback is the person every other
-   * runner is (0282).
+   * and their brown back `hair`. MMXXVI is a space duck (0595), in a white suit (`shirt`), a painter's apron
+   * (`pants`) and a beret (`cap`), their yellow down `skin` and its shade `hair`. A row says its own, and the
+   * painter's fallback is the person every other runner is (0282).
    */
-  figure?: 'marmot' | 'weasel';
+  figure?: 'marmot' | 'weasel' | 'duck';
 }
 
 export interface GolferRow extends RunnerRow {
@@ -378,6 +379,55 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
       'Nobody gets left behind. Not while I’m driving.',
       'You right? Good. Hang on, this bit gets bumpy.',
       'Took a few bumps getting here. Worth every one.',
+    ],
+  },
+  /**
+   * MMXXVI — 0595. The space duck who paints the ships on Paint & Parts (0550, 0555), flying: a little
+   * submarine shaped like a bath duck, the Aqua Duck, with a paintball marker on its back. The page: *"Aqua
+   * duck for Space duck → bubble jets / water guns? → x customisations to unlock? → paint ball gun weapon."*
+   *
+   * ⚠️ **LOCKED BEHIND FIVE THINGS BOUGHT, AND RESCUABLE BEFORE IT** — the Marmot's terms (0546), and the
+   * page's *x* is five (0592's `bought`, a play number). In the Viper's pool from the first run, and the
+   * band's hint counts the wares down.
+   *
+   * ⚠️ **THEIR LINES LAND FOR A PLAYER WHO NEVER MET THEM** — 0426's rule. A painter's, bright and quick;
+   * no pronouns are written for them anywhere, so they are *they* (`reports/the-secret-pilots-planned`).
+   */
+  mmxxvi: {
+    name: 'MMXXVI',
+    goesBy: 'MMXXVI',
+    ship: 'duck',
+    home: 'Paint & Parts',
+    pronouns: 'they/them',
+    // Their beret, the shop's violet; their white suit; their yellow down, and its warmer shade.
+    cap: '#d160e6',
+    shirt: '#ebeae9',
+    skin: '#ffdb6a',
+    hair: '#e8b04a',
+    cut: 'crop',
+    stubble: false,
+    // A duckling's height, between the Marmot and Unity.
+    build: 0.78,
+    // The painter's apron, the deep teal of their booth, over the suit (0555).
+    pants: '#3d7380',
+    figure: 'duck',
+    bio: 'Paints every ship that leaves the port and signs none of them; flies a bath duck with a paintball marker, and nothing it hits stays plain.',
+    // Squeaky and bright: the highest voice in the port, above the Marmot's whistle.
+    voice: 1.5,
+    opens: { after: [], crashes: 0, bought: 5 },
+    saved: [
+      'You came for me! Hold still, you’ve got a little paint on you. Perfect.',
+      'I was so bored in there. Not one wall worth painting. Thank you!',
+      'Out! Colours! Real colours! I missed them so much.',
+      'You found me? I’m painting your ship for free. Any colour you like.',
+      'That thing was all one dull grey inside. Thank you for getting me out.',
+    ],
+    saving: [
+      'Found you! Stick close, and mind the wet paint.',
+      'There you are. Let’s brighten up the trip home.',
+      'Nobody gets left behind. Not on my canvas.',
+      'Hop in the bath! We’re bubbling out of here.',
+      'I took the scenic route. It was gorgeous. Let’s go home.',
     ],
   },
 };

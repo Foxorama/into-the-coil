@@ -5,7 +5,8 @@ read into the game's terms, checked against what the code already does, and queu
 decides lives in its decision once it lands; this is the queue — the shape
 [`the-thunderbolt-planned`](the-thunderbolt-planned-2026-10-05.md) gave the Marmot.
 
-**Nothing here is built.** The two questions that changed what gets built are answered, in *Answered*.
+**What is built is in *Landed*, and it is the decisions'.** The two questions that changed what gets built are
+answered, in *Answered*.
 
 ## The ask
 
@@ -232,6 +233,11 @@ Also on the page, and not characters — each one PR, in any order after item 1:
   in poses of its own at every stage, and the War Dance on the bomb pickup and in How to play's key once Unity
   is open. Item 2 is done. The fighter's dance is its canards and not the roll planned above, and the decision
   says why.
+- **Item 3** — [0595](../docs/decisions/0595-the-aqua-duck-paints.md): MMXXVI, the Aqua Duck, the paintball
+  marker and its splats, the Water Cannon on the bomb pickup once MMXXVI is open, the duck's dance, and Bubble
+  Jets. Two readings above are replaced, and the decision says why: Bubble Jets are the duck's own and
+  borrowed on the shells' rule, not sold at Cosmo's; and the duck bobs by dabbling its head and kicking its
+  tail rather than bobbing whole. The paintball is weighed on bosses at 1.1, and 1.6 on the jellyfish.
 
 ## Owed
 

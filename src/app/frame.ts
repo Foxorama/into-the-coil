@@ -109,7 +109,7 @@ import {
 } from '../content/pickups.ts';
 import { TETHER_BOLT_KIND, WEAPONS, type CatherineWheel, type FlightKind, type Ram } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -632,6 +632,8 @@ export function canThrow(w: World, kind: SpecialKind): boolean {
   const row = SPECIALS[kind];
   // 0593: a dance is refused while the ship is still dancing, so a press during one costs nothing.
   if (row.dance !== null) return w.danceFor <= 0;
+  // 0595: and a jet while one is still playing.
+  if (row.jet !== null) return w.jetFor <= 0;
   return (row.shot === null && row.candle === null) || w.throwIn <= 0;
 }
 
@@ -665,6 +667,7 @@ const RAY_PAGES = [SPRITE.ray, SPRITE.rayRipple, SPRITE.raySwell] as const;
 
 /** Step a thrown bomb's explosion through its three pictures, and a ray's burst through its two. */
 function stepExplosions(w: World): void {
+  const paint = WEAPONS[w.weapon.kind].paint;
   for (let i = 0; i < w.blasts.size; i++) {
     const blast = w.blasts.at(i);
     let sprite: number;
@@ -673,6 +676,10 @@ function stepExplosions(w: World): void {
     else if (blast.kind === FIREWORK_KIND) {
       const pages = FIREWORK_PAGES[blast.face % FIREWORK_PAGES.length]!;
       sprite = blast.lifeFor > FIREWORK_STEPS - 6 ? pages[0] : blast.lifeFor > 14 ? pages[1] : pages[2];
+    } else if (blast.kind === SPLAT_KIND && paint !== null) {
+      // 0595: wet in its colour as it lands, and then dried flat — the colours of the gun that threw it.
+      const colour = paint.colours[blast.face % paint.colours.length]!;
+      sprite = blast.lifeFor > SPLAT_STEPS - SPLAT_WET ? colour.splat : colour.dry;
     } else continue;
     blast.sprite = sprite;
     blast.spriteBase = sprite;
@@ -710,6 +717,49 @@ function burstRays(w: World, landed: Deaths): void {
     reset(blast, landed.along[i]!, landed.across[i]!, row, RAY_BURST_KIND);
     // It holds station in the world, as a bomb's blast does.
     blast.lifeFor = RAY_BURST_STEPS;
+  }
+}
+
+/**
+ * How long a splat stays on screen — 0595: wet for a sixth of a second and then dried flat for half a
+ * second more, holding station in the world. The damage lands on the first step, as every blast's does.
+ */
+const SPLAT_STEPS = 40;
+const SPLAT_WET = 10;
+/** The kind a splat carries in the blast pool, beside an explosion, a rift, a ray's burst and a firework. */
+const SPLAT_KIND = 5;
+/**
+ * The kind a paintball carries in `playerShots`, plus its colour's place in the hopper — 0595. Every other
+ * player shot carries five or less, so the colour rides the kind into the landing log (`collideInto` writes
+ * the shot's kind there) and the splat is the ball's own colour.
+ */
+const PAINT_KIND = 6;
+
+/**
+ * Every paintball that landed this step splats where it did, in its own colour — 0595: *"each bursts into a
+ * splat on whatever it hits."* A blast in the blast pool, as a ring's burst is, landing through the same
+ * pairing on every body inside it, once.
+ */
+function splatPaint(w: World, landed: Deaths): void {
+  const gun = WEAPONS[w.weapon.kind];
+  const paint = gun.paint;
+  if (paint === null || gun.bursts === null) return;
+  const row = SHOTS[gun.bursts];
+  for (let i = 0; i < landed.count; i++) {
+    const blast = w.blasts.spawn();
+    // A splat the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
+    if (blast === null) return;
+    reset(blast, landed.along[i]!, landed.across[i]!, row, SPLAT_KIND);
+    const colour = landed.kind[i]! - PAINT_KIND;
+    blast.face = colour >= 0 && colour < paint.colours.length ? colour : 0;
+    // In its colour from the step it lands — `stepExplosions` has already run this step, and the row's own
+    // picture is the first colour's, so a yellow ball would splat pink for a frame (0036).
+    const wet = paint.colours[blast.face]!.splat;
+    blast.sprite = wet;
+    blast.spriteBase = wet;
+    blast.spriteHit = wet;
+    // It holds station in the world, as a ring's burst does.
+    blast.lifeFor = SPLAT_STEPS;
   }
 }
 
@@ -994,6 +1044,13 @@ export interface World {
   danceKind: SpecialKind | null;
   danceAlong: number;
   danceAcross: number;
+  /**
+   * Steps of Water Cannon left, which special it is, and how many steps it has played — 0595. While it lasts
+   * a jet of water plays from the gun's muzzle, sweeping across the lane, and lands on what it crosses.
+   */
+  jetFor: number;
+  jetKind: SpecialKind | null;
+  jetAt: number;
   enemies: Pool<Entity>;
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
@@ -1087,6 +1144,11 @@ export interface World {
    * every time it fired.
    */
   arcRng: Rng;
+  /**
+   * The paintball's own stream — 0595, on 0021's terms: where a ball scatters and what colour it is must not
+   * move where the arc's next link lands or what the next wave holds.
+   */
+  paintRng: Rng;
   /**
    * The storm's flicker — 0374, and its own stream on 0021's terms: where a cosmetic bolt goes must
    * not move where the arc's next link lands.
@@ -2229,6 +2291,8 @@ export class GameFrame implements Frame {
     stepEntities(w.bolts, w.cameraAlong);
     // The tether, after the ship and the wheel have both moved, so it runs between where they are — 0545.
     layTether(w);
+    // And the Water Cannon's jet, from where the muzzle is this step — 0595.
+    stepJet(w);
     // After the hull and the bolts have both moved, so a beam's root is on the hull this step — 0250.
     pinBeams(w);
     // Before the shots move, so a bent velocity is the one this step integrates — 0327.
@@ -2299,7 +2363,10 @@ export class GameFrame implements Frame {
     */
     w.landed.count = 0;
     const rayHits = w.weapon.flight === 'burst' ? w.landed : null;
-    const shotLog = bladeHits ?? rayHits;
+    // 0595: and a paintball's, which goes off where it lands as a ring does — in its own colour, read off the log.
+    const splatHits = w.weapon.flight === 'splat' ? w.landed : null;
+    const landings = rayHits ?? splatHits;
+    const shotLog = bladeHits ?? landings;
     /*
       ⚠️ **A TARGET TAKES THE GUN'S BLADES ONLY SO OFTEN — 0391**: the row's `landGap`, a clock on each
       enemy and one on the boss's hull that its body shares. Counted down here, once a step, before
@@ -2384,10 +2451,12 @@ export class GameFrame implements Frame {
     */
     const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
     // A ring on armour still goes off where it landed — the burst is the ring's, not the wound's.
-    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, hull);
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, landings ?? (armoured ? w.hits : bladeHits), bladeGap, hull);
     // The tether, on the same clocks and the same log as the wheel it holds — 0545.
     const wheelRow = WEAPONS[w.weapon.kind].wheel;
     if (wheelRow !== null) killedByShots += landTether(w, wheelRow, shootable, gunOpen, bladeGap, hull);
+    // The Water Cannon's jet, along its line on its own clock — 0595: a special's, so the boss takes it as it takes a bomb.
+    killedByShots += landJet(w, shootable, open, hull);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     // A ram's landings are its own cue and not the blade's `hit` — 0593: read off what the ram body lost.
@@ -2413,6 +2482,8 @@ export class GameFrame implements Frame {
     // Every ring that landed this step goes off where it did, so its burst lands on this step's
     // blast pairing below with everything else's — 0442.
     if (rayHits !== null) burstRays(w, rayHits);
+    // And every paintball that landed splats there, on the same terms — 0595.
+    if (splatHits !== null) splatPaint(w, splatHits);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     // Only what it can see — 0349: stone stops a blast.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths, w.corridor);
@@ -3524,6 +3595,8 @@ export function cueOfFlight(flight: FlightKind): CueKind {
     // A ram fires nothing; what the player hears of it is its landing — 0593.
     case 'ram':
       return 'ram';
+    case 'splat':
+      return 'paintball';
     default: {
       const unhandled: never = flight;
       return unhandled;
@@ -3570,6 +3643,10 @@ function fireVolley(w: World): void {
     // A ram fires nothing: the ship is the shot (`steerRam`). On the grid all the same — 0593, 0094.
     case 'ram':
       w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
+      return;
+    // A string of paint, one ball a volley, scattered and coloured — 0595.
+    case 'splat':
+      firePaint(w);
       return;
     default: {
       const unhandled: never = w.weapon.flight;
@@ -4139,6 +4216,91 @@ function layTether(w: World): void {
 /** The tether as a body in the bolt pool: a picture, in no pairing — it lands through `landTether`. */
 const TETHER_BODY: Body = { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 0, health: 1, damage: 0 };
 
+/*
+  ── THE WATER CANNON — 0595 ──────────────────────────────────────────────────────────────────────
+
+  The page's *"water guns?"*, read as *a jet of water swept across the lane for two seconds.* A line from
+  the gun's muzzle, `length` long, turned `sweep` either side of straight ahead and back once a `period`,
+  played for `steps`. It lands as the Catherine wheel's tether does — along its line, on the stone's terms,
+  on the blades' clock at the special's own `landGap` — and is drawn as the tether is, one bolt link laid
+  each step from the muzzle, in the water's inks (`JET_BOLT_KIND`).
+
+  ⚠️ **NOTHING IS THROWN, SO IT IS UNDER NO THROW GAP.** It is a line and not a filled flash, which is
+  what 0375's gap is for; a press while it plays is refused, as a dance's is (`canThrow`).
+*/
+
+/** The jet as a body in the bolt pool: a picture, in no pairing — it lands through `landJet`. */
+const JET_BODY: Body = { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 0, health: 1, damage: 0 };
+
+/** The jet playing now, or `null` — 0595. */
+function jetOf(w: World): Jet | null {
+  return w.jetKind === null || w.jetFor <= 0 ? null : SPECIALS[w.jetKind].jet;
+}
+
+/** Where the jet points now, in radians off straight ahead: a sine across `sweep` and back once a `period`. */
+function jetAngle(w: World, jet: Jet): number {
+  return jet.sweep * Math.sin((Math.PI * 2 * w.jetAt) / jet.period);
+}
+
+/** Start the Water Cannon — 0595. */
+function startJet(w: World, kind: SpecialKind, jet: Jet): void {
+  w.jetKind = kind;
+  w.jetFor = jet.steps;
+  w.jetAt = 0;
+}
+
+/** Count the jet down and lay its picture from the muzzle where it is this step — 0595. */
+function stepJet(w: World): void {
+  const jet = jetOf(w);
+  if (jet === null) return;
+  const angle = jetAngle(w, jet);
+  const rootAlong = w.ship.along + w.shipRow.muzzle.along;
+  const rootAcross = w.ship.across + w.shipRow.muzzle.across;
+  const link = w.bolts.spawn();
+  if (link !== null) {
+    const endAlong = rootAlong + Math.cos(angle) * jet.length;
+    const endAcross = rootAcross + Math.sin(angle) * jet.length;
+    reset(link, endAlong, endAcross, JET_BODY, JET_BOLT_KIND);
+    // As wide as it lands, which is what the painter draws it at — a beam's rule (0250).
+    link.radius = jet.width;
+    link.prevAlong = endAlong;
+    link.prevAcross = endAcross;
+    link.velAlong = 0;
+    link.fromAlong = rootAlong - endAlong;
+    link.fromAcross = rootAcross - endAcross;
+    link.prevFromAlong = link.fromAlong;
+    link.prevFromAcross = link.fromAcross;
+    // One step: drawn, and released by the next step's `stepEntities` just before the next is laid.
+    link.lifeFor = 1;
+    link.spin = w.steps;
+    // The steps it has left, which the painter fades its last few over.
+    link.holdFor = w.jetFor;
+  }
+  w.jetAt++;
+  if (--w.jetFor <= 0) w.jetKind = null;
+}
+
+/**
+ * The jet's landing — 0595: its line from the muzzle against every body, and the boss's hull and body on
+ * the hull's clock, gated by the special's own `landGap`. A special and not the gun, so the boss takes it at
+ * its window (`open`) and not at the gun's weight.
+ */
+function landJet(w: World, shootable: boolean, open: number, hull: Entity | null): number {
+  const jet = jetOf(w);
+  if (jet === null) return 0;
+  const angle = jetAngle(w, jet);
+  const rootAlong = w.ship.along + w.shipRow.muzzle.along;
+  const rootAcross = w.ship.across + w.shipRow.muzzle.across;
+  const endAlong = rootAlong + Math.cos(angle) * jet.length;
+  const endAcross = rootAcross + Math.sin(angle) * jet.length;
+  let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor);
+  if (shootable) {
+    destroyed += tetherInto(w.bossPool, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, jet.landGap, hull, w.corridor);
+    tetherInto(w.bossBody, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, null, w.hits, jet.landGap, hull, w.corridor);
+  }
+  return destroyed;
+}
+
 /**
  * Chain lightning — `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
  *
@@ -4419,6 +4581,36 @@ function firePulse(w: World): void {
       a guarantee that already had one. `src/content/pickups.ts` has what it left behind.
     */
   }
+}
+
+/**
+ * The paintball marker — 0595: one ball a volley from the gun's muzzle, a little off straight ahead and in
+ * a colour of its own, both drawn from the gun's own stream (`paintRng`, 0021) so a string is scattered and
+ * never the same twice, and moving nothing else that is drawn from a stream.
+ */
+function firePaint(w: World): void {
+  // On the grid, as every gun's reload is — 0094.
+  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
+  const gun = WEAPONS[w.weapon.kind];
+  const paint = gun.paint;
+  if (paint === null) return;
+  const row = SHOTS[gun.shot];
+  const shot = w.playerShots.spawn();
+  // A ball the pool has no room for is dropped rather than grown — `src/sim/pool.ts` has the argument.
+  if (shot === null) return;
+  w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);
+  const colour = w.paintRng.int(0, paint.colours.length - 1);
+  const angle = w.paintRng.range(-paint.scatter, paint.scatter);
+  const muzzle = w.shipRow.muzzle;
+  reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, PAINT_KIND + colour);
+  const ball = paint.colours[colour]!.ball;
+  shot.sprite = ball;
+  shot.spriteBase = ball;
+  shot.spriteHit = ball;
+  // In the camera's frame, like every speed (0023).
+  shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
+  shot.velAcross = Math.sin(angle) * row.speed;
+  shot.damage = w.weapon.damage;
 }
 
 /*
@@ -5120,6 +5312,12 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
   // A dance throws the ship itself — 0593.
   if (row.dance !== null) {
     startDance(w, kind, row.dance);
+    w.onCue(row.cue, w.ship.across);
+    return;
+  }
+  // A jet plays from the gun — 0595.
+  if (row.jet !== null) {
+    startJet(w, kind, row.jet);
     w.onCue(row.cue, w.ship.across);
     return;
   }
@@ -11577,6 +11775,10 @@ export function respawn(w: World): void {
   w.ramBrokenFor = 0;
   w.danceFor = 0;
   w.danceKind = null;
+  // And a jet went with the gun it played from — 0595.
+  w.jetFor = 0;
+  w.jetKind = null;
+  w.jetAt = 0;
   /*
     ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its
     hull and nothing else, so the marks would be released anyway — but as three bursts, at the place

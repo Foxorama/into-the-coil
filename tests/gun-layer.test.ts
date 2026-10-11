@@ -45,7 +45,8 @@ describe('a fitted ship', () => {
 
   it('with another’s, fires it from its hardpoint plus the gun’s own mount, in the ship’s view', () => {
     // Five ships with four guns each they do not carry, since 0545 and 0546 made both five; 0593's sixth lends nothing.
-    expect(BORROWED).toHaveLength(20);
+    // 0595's seventh lends its marker and borrows the rest: six ships with five each.
+    expect(BORROWED).toHaveLength(30);
     for (const [ship, gun] of BORROWED) {
       const row = fitted(SHIPS[ship], gun);
       const mount = WEAPONS[gun].mount[SHIPS[ship].view];

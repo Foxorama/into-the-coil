@@ -27,7 +27,7 @@ import type { DangleKind } from '../../content/dangles.ts';
 import { RIMS, type RimKind } from '../../content/rims.ts';
 import { ART, type ArtKind } from '../../content/art.ts';
 import { HUES, TONES, type Livery } from '../../content/livery.ts';
-import type { FlameKind } from '../../content/flames.ts';
+import { FLAMES, type FlameKind } from '../../content/flames.ts';
 import type { PilotRecord } from '../../content/golfers.ts';
 import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
 import { TUBE_WARES, TUBE_WARE_KINDS, tubesOf, type RackKind } from '../../content/racks.ts';
@@ -158,7 +158,8 @@ export const initialHangar: HangarState = {
   rim: perShip((kind) => SHIPS[kind].wheels?.rim ?? null),
   art: perShip((kind) => SHIPS[kind].arts[0]),
   livery: perShip(() => null),
-  flame: perShip(() => 'standard'),
+  // 0595: each ship's own, which is the standard but on the Aqua Duck.
+  flame: perShip((kind) => SHIPS[kind].flame),
   rack: perShip(() => 'bare'),
   shell: perShip((kind) => SHIPS[kind].shield.look),
   crashes: 0,
@@ -199,9 +200,13 @@ export function shellOpen(state: HangarState, ship: ShipKind, shell: ShellKind):
   return from === null ? state.owned[shell] : plateOpen(state, ship, from);
 }
 
-/** Whether a ship may burn `flame` — 0530: the standard flame always, one bought on any ship. */
-export function flameOpen(state: HangarState, flame: FlameKind): boolean {
-  return state.owned[flame];
+/**
+ * Whether `ship` may burn `flame` — 0530: the standard flame always, one bought on any ship. 0595: and one a
+ * ship comes with on the shells' rule — its own always, another ship's once both are won in.
+ */
+export function flameOpen(state: HangarState, ship: ShipKind, flame: FlameKind): boolean {
+  const from = FLAMES[flame].from;
+  return from === null ? state.owned[flame] : plateOpen(state, ship, from);
 }
 
 /**
@@ -351,7 +356,7 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     }
     // 0530: a flame the player has, on any ship.
     case 'flame':
-      if (state.flame[action.ship] === action.flame || !flameOpen(state, action.flame)) return state;
+      if (state.flame[action.ship] === action.flame || !flameOpen(state, action.ship, action.flame)) return state;
       return { ...state, flame: { ...state.flame, [action.ship]: action.flame } };
     // 0578: a rack the tubes owned are enough for, on any ship.
     case 'rack':

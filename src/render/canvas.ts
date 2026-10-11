@@ -11,7 +11,7 @@
  */
 
 import type { Atlas } from './bake.ts';
-import { BOLT_BEAM, BOLT_FLAME, BOLT_FLASH, BOLT_HOSTILE, BOLT_ROPE, type BoltLook, type BoltTone, type Surface } from './surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_FLASH, BOLT_HOSTILE, BOLT_ROPE, BOLT_WATER, type BoltLook, type BoltTone, type Surface } from './surface.ts';
 
 /**
  * The device-pixel-ratio ceiling, per 0022.
@@ -42,6 +42,8 @@ export class CanvasSurface implements Surface {
   private hostileInk = UNSET;
   // The Catherine wheel's tether — 0545: the player's own fire, amber and gold.
   private flameInk = UNSET;
+  // The Water Cannon's jet — 0595: water, the frost's aquamarine round a white heart.
+  private waterInk = UNSET;
   private boltDark = '#000000';
 
   constructor(private readonly ctx: CanvasRenderingContext2D, atlas: Atlas) {
@@ -89,6 +91,7 @@ export class CanvasSurface implements Surface {
     this.boltInk = inks.player;
     this.hostileInk = inks.hostile;
     this.flameInk = inks.flame;
+    this.waterInk = inks.water;
     this.boltDark = inks.dark;
   }
 
@@ -209,7 +212,7 @@ export class CanvasSurface implements Surface {
   bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, look: BoltLook = BOLT_FLASH): void {
     if (count < 1) return;
     const ctx = this.ctx;
-    const ink = tone === BOLT_HOSTILE ? this.hostileInk : tone === BOLT_FLAME ? this.flameInk : this.boltInk;
+    const ink = tone === BOLT_HOSTILE ? this.hostileInk : tone === BOLT_FLAME ? this.flameInk : tone === BOLT_WATER ? this.waterInk : this.boltInk;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -257,11 +260,12 @@ export interface BoltInk {
   readonly core: string;
 }
 
-/** The player's bolt, the enemy's, the flame's (0545), and the dark rim they share. */
+/** The player's bolt, the enemy's, the flame's (0545), the water's (0595), and the dark rim they share. */
 export interface BoltInks {
   readonly player: BoltInk;
   readonly hostile: BoltInk;
   readonly flame: BoltInk;
+  readonly water: BoltInk;
   readonly dark: string;
 }
 

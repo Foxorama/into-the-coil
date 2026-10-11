@@ -23,11 +23,12 @@
 import type { ShotKind } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
 import type { GunView, Mount } from './ships.ts';
+import { SPRITE } from './sprites.ts';
 
 /**
  * Every gun. Closed — and since 0441 the order means nothing: no pickup cycles over it.
  */
-export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray', 'catherine', 'ram'] as const;
+export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray', 'catherine', 'ram', 'paintball'] as const;
 
 /** Derived from the list, so a kind cannot exist in the union and be missing from the table. */
 export type WeaponKind = (typeof WEAPON_KINDS)[number];
@@ -55,8 +56,11 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *                 whatever crosses it. Past the leash it is towed after the ship. 0545, 0549
  *   **ram**       nothing leaves the ship: the ship is the shot. One body rides the hull, lands on what
  *                 the ship flies into as a blade does, and heats the ship each time it lands. 0593
+ *   **splat**     a ball of paint in flight, one a volley, spent by arriving: each leaves a little off
+ *                 straight ahead in a colour of its own, and goes off where it lands as the row's
+ *                 `bursts` in the same colour — a splat that lands on everything inside it. 0595
  */
-export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether' | 'ram';
+export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether' | 'ram' | 'splat';
 
 /**
  * A Catherine wheel on a tether — `docs/decisions/0545-the-catherine-wheel.md`. *"A spinning fire
@@ -125,6 +129,31 @@ export interface Ram {
 }
 
 /**
+ * A paintball marker's string — `docs/decisions/0595-the-aqua-duck-paints.md`. The page: *"paint ball gun
+ * weapon"*, read as *a hopper-fed marker that fires a quick string of paintballs in the paint shop's inks, a
+ * little scattered; each bursts into a splat on whatever it hits.*
+ */
+export interface Paint {
+  /**
+   * The most a ball leaves off straight ahead, in radians either side — drawn afresh for every ball from the
+   * gun's own stream (0021), so a string is a little scattered and never the same twice.
+   */
+  readonly scatter: number;
+  /** Its colours — each ball takes one, from the same stream, and its splat is that colour too. */
+  readonly colours: readonly PaintColour[];
+}
+
+/** One colour in the hopper — 0595: its ink for the bake, and the three pictures it is drawn in. */
+export interface PaintColour {
+  readonly ink: string;
+  /** The ball in flight. */
+  readonly ball: number;
+  /** The splat, wet as it lands and then dried flat. */
+  readonly splat: number;
+  readonly dry: number;
+}
+
+/**
  * The `kind` the Catherine wheel's tether carries in the bolt pool — 0545, beside the serpent's rain (1)
  * and a boss's beam (2) in `src/content/bosses.ts`. Here because the frame lays it and the painter
  * strokes it, and this layer is below both.
@@ -138,6 +167,12 @@ export interface WeaponRow {
   hint: string;
   /** The row in `SHOTS` this kind fires: its damage, its size and, for a body in flight, its speed. */
   shot: ShotKind;
+  /**
+   * The picture the hangar's gun band shows for it — 0595. It was the shot's own sprite, read through
+   * `shot`, which is the right picture for every gun whose shot is one picture; the paintball's is four, one
+   * for each colour, so the gun says its glyph and the shot says what flies. Every row says its own.
+   */
+  glyph: number;
   flight: FlightKind;
   /** Sim steps between volleys. */
   fireEvery: number;
@@ -230,6 +265,8 @@ export interface WeaponRow {
   wheel: CatherineWheel | null;
   /** The ram a `ram` gun is, or `null` for every other flight — 0593. */
   ram: Ram | null;
+  /** The string a `splat` gun fires, or `null` for every other flight — 0595. */
+  paint: Paint | null;
   /**
    * Whether another ship may fly this gun, and this ship another's — 0593. Answered of the Hamster Ball:
    * *"No weapon change for hamster ball."* A ram is the ship it is fitted to, so its ship flies nothing
@@ -257,6 +294,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     label: 'Pulse',
     hint: 'Four barrels of auto-fire',
     shot: 'pulse',
+    glyph: SPRITE.bullet,
     flight: 'straight',
     fireEvery: 4,
     barrels: 4,
@@ -275,6 +313,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     turn: 0,
     wheel: null,
     ram: null,
+    paint: null,
     lends: true,
     aim: 0,
   },
@@ -291,6 +330,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     label: 'Arc',
     hint: 'Lightning that chains between foes',
     shot: 'arc',
+    glyph: SPRITE.arcNode,
     flight: 'chain',
     fireEvery: 8,
     barrels: 1,
@@ -343,6 +383,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     turn: 0,
     wheel: null,
     ram: null,
+    paint: null,
     lends: true,
     aim: 0,
   },
@@ -361,6 +402,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     label: 'Shuriken',
     hint: 'Blades in a helix ahead',
     shot: 'shuriken',
+    glyph: SPRITE.shuriken,
     flight: 'coil',
     // An eighth of the beat: *"shurikens need to be on the beat to fit in with the music."*
     fireEvery: 12,
@@ -391,6 +433,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     turn: 0.21,
     wheel: null,
     ram: null,
+    paint: null,
     lends: true,
     aim: 0,
   },
@@ -411,6 +454,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     label: 'Ray',
     hint: 'Energy rings that burst where they land — aim them with the right stick',
     shot: 'ray',
+    glyph: SPRITE.ray,
     flight: 'burst',
     fireEvery: 8,
     // ⚠️ **No rest.** 0442 fired it in fours with a breath, and played it was *"bad and sounds worse,
@@ -431,6 +475,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     turn: 0,
     wheel: null,
     ram: null,
+    paint: null,
     lends: true,
     // 0588: *"in a 45 degree arc straight ahead"* — half of it, 22.5°, either side of the nose.
     aim: Math.PI / 8,
@@ -466,6 +511,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     label: 'Catherine wheel',
     hint: 'A fire wheel on a tether',
     shot: 'catherine',
+    glyph: SPRITE.catherine,
     flight: 'tether',
     /*
       Six beats since 0551, nine since 0549, ten before. Asked for: *"reduce both by 30% so that the
@@ -565,6 +611,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       tetherDamage: 1,
     },
     ram: null,
+    paint: null,
     lends: true,
     aim: 0,
   },
@@ -580,6 +627,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     label: 'Ram',
     hint: 'The ball itself, flown into things',
     shot: 'ram',
+    glyph: SPRITE.ram,
     flight: 'ram',
     // Nothing is fired, so nothing waits on this; on the beat grid all the same, as every gun's is (0094).
     fireEvery: 24,
@@ -613,7 +661,65 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       drain: 0.01,
       recharge: 180,
     },
+    paint: null,
     lends: false,
+    aim: 0,
+  },
+  /**
+   * MMXXVI's paintball marker on the Aqua Duck — 0595: a hopper on the duck's back feeding a short barrel, a
+   * ball every quarter of a beat, each a little off straight ahead and in a colour of its own, bursting into
+   * a splat of that colour on whatever it hits.
+   *
+   * ⚠️ **ONE BARREL AND A QUICK STRING, SO IT IS AIMED AND IT SPRAYS.** The pulse is a fan that covers its
+   * width every volley; a string is one ball at a time, and the scatter is what widens it — a little, so a
+   * body straight ahead takes most of the string and one off to the side takes a splat now and then.
+   *
+   * ⚠️ **THE COLOURS ARE PAINT, AND NOT A MEANING INK** — 0295's question, raised: a hostile bullet takes its
+   * place's colour, so a paintball in it could be read as fire. None is the enemy's red, and each place is
+   * looked at for it (owed, in the decision). A ball is round and quick and leaves the player's own gun; the
+   * splat is what no hostile shot does.
+   */
+  paintball: {
+    label: 'Paintball',
+    hint: 'A scattered string of paint that splats',
+    shot: 'paintball',
+    // The marker and its hopper, which the hangar shows; what flies is a ball of one of its colours.
+    glyph: SPRITE.paintball,
+    flight: 'splat',
+    // A quarter of the beat — 0094's grid.
+    fireEvery: 6,
+    barrels: 1,
+    links: 1,
+    weight: 1,
+    /*
+      ⚠️ **1.1, BECAUSE ONE BALL A VOLLEY IS SLOWER ON A BOSS THAN A FAN.** Flown at one from every held place
+      (`scripts/weigh-boss.mjs`, Savior), its best fights were 48–66 s on six end bosses where the pulse's are
+      40–54, and 90 s on the jellyfish; at 1.1 they are 45.4–62.6, over 0260's forty with room for a ship
+      that borrows it. The jellyfish weighs it on her own row.
+    */
+    bossWeight: 1.1,
+    // The Water Cannon — 0595, the page's *"water guns?"*.
+    special: 'waterCannon',
+    // 0595: the barrel's mouth, ahead of the hopper — lying along a nose from above, standing on a hood from the side.
+    mount: { top: { along: 1.5, across: 0 }, side: { along: 1.25, across: -0.7 } },
+    bursts: 'splat',
+    reach: 0,
+    falloff: 0,
+    coil: 0,
+    turn: 0,
+    wheel: null,
+    ram: null,
+    paint: {
+      scatter: 0.09,
+      // The paint shop's own: a bubblegum pink, a sunshine yellow, a sky blue and a grape — none the enemy's red.
+      colours: [
+        { ink: '#ff5fb4', ball: SPRITE.paintballPink, splat: SPRITE.splatPink, dry: SPRITE.splatPinkDry },
+        { ink: '#ffe14d', ball: SPRITE.paintballYellow, splat: SPRITE.splatYellow, dry: SPRITE.splatYellowDry },
+        { ink: '#4fc3ff', ball: SPRITE.paintballBlue, splat: SPRITE.splatBlue, dry: SPRITE.splatBlueDry },
+        { ink: '#a46bff', ball: SPRITE.paintballGrape, splat: SPRITE.splatGrape, dry: SPRITE.splatGrapeDry },
+      ],
+    },
+    lends: true,
     aim: 0,
   },
 };

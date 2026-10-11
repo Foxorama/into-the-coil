@@ -1599,6 +1599,8 @@ const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
   thunderbolt: null,
   // A ball looks the same from every side: the hangar sees it as the fight does — 0593.
   ball: null,
+  // Side-on in the fight already, as the cars are — 0595.
+  duck: null,
 };
 
 /** How far over each frame of the tilt leans — side-on, then a fifth of the way at a time; `blue` is all of it. */

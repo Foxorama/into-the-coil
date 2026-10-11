@@ -23,8 +23,9 @@ import { PLAYER_MARGIN, boxPastFor } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, BOLT_WATER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
 import { TETHER_BOLT_KIND } from '../content/weapons.ts';
+import { JET_BOLT_KIND } from '../content/specials.ts';
 
 /**
  * Draw one frame.
@@ -484,6 +485,19 @@ const TETHER_SPARK = 0.3;
 const TETHER_FADE_STEPS = 8;
 /** How many `bolt` calls one tether costs: its cord, two filaments and two sparks. */
 export const STROKES_PER_TETHER = 5;
+/**
+ * The Water Cannon's jet — 0595: how many waves run along it, how far it ripples off its line as a share of
+ * its width, how fast the ripple runs out from the muzzle, its spray of drops off the end, and the steps it
+ * fades over as it stops.
+ */
+const JET_WAVES = 4 * Math.PI * 2;
+const JET_RIPPLE = 0.35;
+const JET_RUN = 0.5;
+const JET_DROPS = 3;
+const JET_DROP = 0.9;
+const JET_FADE_STEPS = 10;
+/** How many `bolt` calls one jet costs: its body, its white heart, and its drops. */
+export const STROKES_PER_JET = 2 + JET_DROPS;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
 const BOLT_JAG = 0.16;
 /** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
@@ -674,6 +688,42 @@ export function paintBolts(
           DOT[1] = TETHER[at * 2 + 1]!;
           surface.bolt(DOT, 1, TETHER_SPARK * view.scale, held, BOLT_FLAME);
         }
+      }
+      continue;
+    }
+    /*
+      ⚠️ **THE WATER CANNON'S JET IS A HELD COLUMN OF WATER — 0595.** Laid every step from the muzzle out
+      along where it points, and drawn as a beam is (held, as wide as it lands — 0250's rule), in the
+      water's inks, rippling outward along its length as water from a hose does, a white heart down it and
+      a spray of drops off its end. It fades over its last few steps rather than vanishing.
+    */
+    if (e.kind === JET_BOLT_KIND) {
+      const held = e.holdFor >= JET_FADE_STEPS ? 1 : e.holdFor <= 0 ? 0 : e.holdFor / JET_FADE_STEPS;
+      const last = TETHER_VERTICES - 1;
+      const tAlong = -e.fromAcross / length;
+      const tAcross = e.fromAlong / length;
+      for (let pass = 0; pass < 2; pass++) {
+        for (let v = 0; v <= last; v++) {
+          const t = v / last;
+          // Pinned at the muzzle, rippling more toward its end, the waves running outward.
+          const off = t * e.radius * JET_RIPPLE * Math.sin(t * JET_WAVES - e.spin * JET_RUN);
+          const along = endAlong + e.fromAlong * (1 - t) + tAlong * off;
+          const across = endAcross + e.fromAcross * (1 - t) + tAcross * off;
+          TETHER[v * 2] = screenX(view, along - cameraAlong, across);
+          TETHER[v * 2 + 1] = screenY(view, along - cameraAlong, across);
+        }
+        if (pass === 0) surface.bolt(TETHER, TETHER_VERTICES, e.radius * BEAM_STROKE * view.scale, held, BOLT_WATER, BOLT_BEAM);
+        else surface.bolt(TETHER, TETHER_VERTICES, e.radius * BEAM_STROKE * 0.35 * view.scale, held * 0.8, BOLT_WATER);
+      }
+      // The spray off the end: drops thrown a little past it, either side, moving on with the step.
+      for (let d = 0; d < JET_DROPS; d++) {
+        const reach = 1 + 0.04 * (((e.spin + d * 3) % 5) + 1);
+        const side = (d - (JET_DROPS - 1) / 2) * e.radius * 0.8;
+        const along = endAlong + e.fromAlong * (1 - reach) + tAlong * side;
+        const across = endAcross + e.fromAcross * (1 - reach) + tAcross * side;
+        DOT[0] = screenX(view, along - cameraAlong, across);
+        DOT[1] = screenY(view, along - cameraAlong, across);
+        surface.bolt(DOT, 1, JET_DROP * view.scale, held * 0.85, BOLT_WATER);
       }
       continue;
     }
