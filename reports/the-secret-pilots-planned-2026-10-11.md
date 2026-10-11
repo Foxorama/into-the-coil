@@ -244,6 +244,11 @@ Also on the page, and not characters — each one PR, in any order after item 1:
   on every screen that is not part of a run, from the album's own parts; a run hands it back at a bar and lets it
   go. *Title → menu* is read as the title track carried on into the menu, and the decision says what the menu
   does not do that the album does — the coda. The page is done.
+- **The review** — [0598](../docs/decisions/0598-the-secret-pilots-reviewed.md): items 1–3 read again as a designer
+  and as a quality analyst. A dance now lands on its own terms and leaves the gun its own; the Water Cannon lands
+  where it is drawn, ends at the wreck, and is the player's own water under the bullets; the paint leaves out each
+  place's bullet colour; the crash hint says what is counted. On the way, the pad's guards stopped reading a
+  slipped step as a look arriving.
 
 ## Owed
 
