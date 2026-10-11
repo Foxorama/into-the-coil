@@ -28,6 +28,8 @@ import { JET_BOLT_KIND, SPECIALS } from '../src/content/specials.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { drawKind, withFlame } from '../src/render/bake.ts';
+import { STROKES_PER_JET, paintBolts } from '../src/render/scene.ts';
+import { BOLT_BEAM, BOLT_WATER, type BoltLook, type BoltTone, type Surface } from '../src/render/surface.ts';
 import { reset } from '../src/sim/entity.ts';
 import { STEPS_PER_SECOND, lockHint } from '../src/state/screens.ts';
 import { flameOpen, initialHangar, pilotRecord, waresBought } from '../src/state/slices/hangar.ts';
@@ -202,6 +204,28 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     expect(took, 'the jet never landed on a body it swept across').toBeGreaterThan(0);
     // No faster than its clock: one landing every `landGap`, a few owed at once (0391's bucket).
     expect(took / JET.damage, 'it landed faster than its own clock lets it').toBeLessThanOrEqual(JET.steps / JET.landGap + 4);
+  });
+
+  it('is painted as a held column of water as wide as it lands, with its drops, at its stated cost', () => {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    launchSpecial(world, 'waterCannon');
+    for (let i = 0; i < 20; i++) frame.step();
+    const calls: { count: number; width: number; tone: BoltTone; look: BoltLook | undefined }[] = [];
+    const surface: Surface = {
+      clear(): void {},
+      blit(): void {},
+      bolt(_points: Float32Array, count: number, width: number, _alpha: number, tone: BoltTone, look?: BoltLook): void {
+        calls.push({ count, width, tone, look });
+      },
+    };
+    paintBolts(surface, world.view, world.bolts, world.cameraAlong, 1);
+    expect(calls.length, 'the jet is not its stated number of strokes').toBe(STROKES_PER_JET);
+    for (const c of calls) expect(c.tone, 'a stroke of the jet is not in the water’s inks').toBe(BOLT_WATER);
+    const columns = calls.filter((c) => c.look === BOLT_BEAM);
+    expect(columns.length, 'the jet is not one held column').toBe(1);
+    // A beam's body is four times the width it is handed, which is the width it lands at — 0250.
+    expect(columns[0]!.width * 4).toBeCloseTo(2 * JET.width * world.view.scale, 6);
   });
 
   it('a life lost takes the jet with it', () => {

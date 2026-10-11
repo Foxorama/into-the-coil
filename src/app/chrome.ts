@@ -2599,8 +2599,16 @@ ${each('-band[hidden]')} { display: none; }
     rows under it run that width, and Cosmo's step ran off the screen. Narrow before it is short, so where
     the height still decides, from 812 wide up, nothing moves.
   */
-  .itc-hangar-option-face > canvas, .itc-parts-option-face > canvas, .itc-shop-option-face > canvas { width: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); height: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); }
-  .itc-hangar-plate .itc-hangar-options-faces, .itc-parts-plate .itc-parts-options-faces, .itc-shop-plate .itc-shop-options-faces { gap: 0.3em; }
+  /*
+    0595: and narrower again for the seventh, which put the column 14 px past the plate on a 667x375 once
+    more. Measured there, a face was 4.5 of the screen's width and its floor, 30 px, and each card a third of
+    an em of padding either side of it: a share of 4.2 down to the title's floor of 1.7rem, the cards closer
+    round their faces — the names under them are not drawn on a plate, so the padding only spaced a ring from
+    the next card, which the gap does — and that gap a step less. From 812 wide up the height still decides.
+  */
+  .itc-hangar-option-face > canvas, .itc-parts-option-face > canvas, .itc-shop-option-face > canvas { width: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); height: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); }
+  .itc-hangar-plate .itc-hangar-options-faces, .itc-parts-plate .itc-parts-options-faces, .itc-shop-plate .itc-shop-options-faces { gap: 0.2em; }
+  .itc-hangar-plate .itc-hangar-option.itc-hangar-option-face, .itc-parts-plate .itc-parts-option.itc-parts-option-face, .itc-shop-plate .itc-shop-option.itc-shop-option-face { padding-left: 0.1em; padding-right: 0.1em; }
   /*
     ── THE HANGAR ON A PHONE — 0521 ────────────────────────────────────────────────────────────────
 

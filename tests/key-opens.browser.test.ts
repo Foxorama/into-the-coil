@@ -12,6 +12,7 @@ import { SIDES, SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
 import { GOLFERS } from '../src/content/golfers.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
+import { OWNABLES, OWNABLE_KINDS } from '../src/content/wares.ts';
 
 /**
  * THE KEY OPENS, IN THE PAGE — `docs/decisions/0580-the-key-opens.md`.
@@ -37,9 +38,15 @@ afterAll(async () => {
 
 /**
  * A player who has opened Unity — 0594: ten crashes kept, so the War Dance's face is in the key with the
- * rest. A first-time player's key hides it (the last test below).
+ * rest. A first-time player's key hides it (the last test below). And MMXXVI since 0595: five things bought,
+ * so the Water Cannon's face is in it too.
  */
-const UNITY_OPEN = serialiseHangar({ ...initialHangar, crashes: GOLFERS.unity.opens.crashes });
+const BOUGHT = OWNABLE_KINDS.filter((kind) => OWNABLES[kind].price !== null).slice(0, GOLFERS.mmxxvi.opens.bought);
+const UNITY_OPEN = serialiseHangar({
+  ...initialHangar,
+  crashes: GOLFERS.unity.opens.crashes,
+  owned: { ...initialHangar.owned, ...Object.fromEntries(BOUGHT.map((kind) => [kind, true])) },
+});
 
 async function opened(width: number, height: number, hangar: string | null = UNITY_OPEN): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
@@ -126,7 +133,9 @@ describe.runIf(chromePath)('0580 — every face on How to play opens what it is'
     const fresh = await opened(1280, 720, null);
     const seen = await visible(fresh);
     expect(seen, 'a first-time player is shown the War Dance before Unity is open').not.toContain(dance);
-    expect(seen.length, 'more than the War Dance went missing from the key').toBe(FACES.length - 1);
+    // 0595: and the Water Cannon before MMXXVI is, on the same terms — the two faces that wait on a pilot.
+    expect(seen, 'a first-time player is shown the Water Cannon before MMXXVI is open').not.toContain(SPECIALS.waterCannon.label);
+    expect(seen.length, 'more than the two secret pilots’ specials went missing from the key').toBe(FACES.length - 2);
     // Every face the cursor walks onto, along each pickup's row: never the hidden one.
     for (let row = 0; row < PICKUP_KINDS.length; row++) {
       await fresh.keyboard.press('ArrowDown');
