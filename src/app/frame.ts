@@ -115,6 +115,7 @@ import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcros
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { STEP_MS, type Frame } from './loop.ts';
 import { multiplierFor } from '../content/score.ts';
+import type { DeathCause } from '../state/slices/run.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
 export const MUZZLE_ALONG = 3;
@@ -1929,8 +1930,15 @@ export interface World {
    * dispatch this callback makes, so for as long as the two were the same step the overlay went up
    * before the explosion had drawn a frame. Moving this to the end of the beat fixes both halves of
    * the report with one line, which is why 0079 is one decision and not two.
+   *
+   * ⚠️ **AND IT SAYS WHAT DID IT — 0592**: `killedBy` of the hit that emptied the hull.
    */
-  onDeath: () => void;
+  onDeath: (cause: DeathCause) => void;
+  /**
+   * What landed the last hit the ship took — 0592. Read when the life is reported spent, which is always
+   * after the hit that emptied the hull, so it is never asked of a ship that has not been hit.
+   */
+  killedBy: DeathCause;
   /**
    * A fixed step happened and the simulation did not take it.
    *
@@ -2453,6 +2461,8 @@ export class GameFrame implements Frame {
       const healthBefore = w.ship.health;
       collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
       strikeShip(w);
+      // Read between the fire and the bodies, so the hit that lands this step says which it was — 0592.
+      const afterFire = w.ship.health;
       // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be
       // the cheapest way to clear the screen.
       collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
@@ -2478,6 +2488,14 @@ export class GameFrame implements Frame {
       // And the stone, inside the same one-hit cap as everything above — 0349.
       stoneStrikesShip(w);
       if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
+      /*
+        ⚠️ **WHAT LANDED, READ OFF THE ORDER THE PAIRINGS RUN IN** — 0592. Only one hit lands in a step:
+        the first sets `invulnFor` and the rest skip the ship. The fire runs first, so a hull lower after
+        it than before it was hit by a shot or a bolt, and any other hit this step was a body or the stone.
+        Kept for `onDeath`, which is when the cause is reported; a hit the ship survives is overwritten by
+        the next one.
+      */
+      if (w.ship.health < healthBefore) w.killedBy = afterFire < healthBefore ? 'fire' : 'body';
       /*
         ⚠️ **A hit the ship SURVIVED, which is exactly the case that has a shield in it.** The hull is
         one hit and every shield is one more (`src/content/ships.ts`), so *lost health and still
@@ -8706,7 +8724,7 @@ function stepShipDeath(w: World): void {
     ⚠️ **`src/state/root.ts` raises the run-over screen off that dispatch**, so this line is also
     what puts the explosion in front of the continue screen. Both halves of the report, one place.
   */
-  if (w.dyingIn === 0) w.onDeath();
+  if (w.dyingIn === 0) w.onDeath(w.killedBy);
 }
 
 /**

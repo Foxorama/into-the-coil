@@ -61,7 +61,7 @@ describe('a win', () => {
 
   it('a run that ran out wins nothing', () => {
     let state = reduce(reduce(initialState, begin('caddie')), show('playing'));
-    for (let i = 0; i < 20 && state.run.lives > 0; i++) state = reduce(state, { slice: 'run', type: 'lifeLost' });
+    for (let i = 0; i < 20 && state.run.lives > 0; i++) state = reduce(state, { slice: 'run', type: 'lifeLost', cause: 'fire' });
     expect(state.hangar).toBe(initialState.hangar);
   });
 

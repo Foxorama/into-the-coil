@@ -38,6 +38,7 @@ import { makeDeaths } from '../src/sim/collide.ts';
 import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng, type Rng } from '../src/sim/rng.ts';import { SHIP_START_ALONG, corridorFor, firstVolleyIn, layRoom, respawn, type LevelScore, type World } from '../src/app/frame.ts';
+import type { DeathCause } from '../src/state/slices/run.ts';
 import { CAPACITY, CHAIN_TRAIL, NECK_SLOTS } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -176,6 +177,7 @@ export function inertLevel(): {
   restedBy: number;
   frozenFor: number;
   dyingIn: number;
+  killedBy: DeathCause;
   deathOffset: number;
   deathAcross: number;
   onWreck: () => void;
@@ -305,6 +307,7 @@ export function inertLevel(): {
     // Nothing is dying in a fixture that has not been driven yet — 0079.
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
+    killedBy: 'fire',
     deathAcross: ACROSS_SPAN / 2,
     // A fixture carries no arsenal, so there is nothing for a wreck to light. `tests/death.test.ts`
     // is what drives the shell's real answer.
@@ -646,6 +649,7 @@ export function playableWorld(
     frozenFor: 0,
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,
+    killedBy: 'fire',
     deathAcross: ACROSS_SPAN / 2,
     // Counted rather than acted on, exactly as `onDeath` is — the two are `DEATH_STEPS` apart and a
     // fixture that wants to know a death was DRAWN asks this one. 0079.

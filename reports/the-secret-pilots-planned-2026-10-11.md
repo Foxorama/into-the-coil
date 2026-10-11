@@ -194,6 +194,12 @@ Also on the page, and not characters — each one PR, in any order after item 1:
    in place of its two-bar loop. Read for exactly what *title → menu* means before it is built; the album
    decisions own the mix.
 
+## Landed
+
+- **Item 1** — [0592](../docs/decisions/0592-the-crashes-are-counted.md). The page's *non-bullet* is read
+  as *a body or the stone*: a wall is not a bullet. The lock replaced `opensAfter` with `opens`, three
+  parts every row states.
+
 ## Owed
 
 A play of each pilot on its branch preview; the ear on every new cue; the ball's heat and recharge and the

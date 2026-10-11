@@ -40,7 +40,7 @@ const BEGIN: Action = { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICU
 /** Lives the tier BEGIN picks starts with. Read from the table, never written down here. */
 const STARTING_LIVES_OF_THE_TIER = livesFor(DEFAULT_DIFFICULTY);
 const PLAY: Action = { slice: 'screen', type: 'show', screen: 'playing' };
-const DIE: Action = { slice: 'run', type: 'lifeLost' };
+const DIE: Action = { slice: 'run', type: 'lifeLost', cause: 'fire' };
 
 /**
  * A run in progress with something to lose — in BOTH of the places a death empties.

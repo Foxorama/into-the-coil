@@ -28,6 +28,7 @@ import { RIMS, type RimKind } from '../../content/rims.ts';
 import { ART, type ArtKind } from '../../content/art.ts';
 import { HUES, TONES, type Livery } from '../../content/livery.ts';
 import type { FlameKind } from '../../content/flames.ts';
+import type { PilotRecord } from '../../content/golfers.ts';
 import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
 import { TUBE_WARES, TUBE_WARE_KINDS, tubesOf, type RackKind } from '../../content/racks.ts';
 import { MISSILE_KINDS } from '../../content/missiles.ts';
@@ -106,6 +107,12 @@ export interface HangarState {
    * at Cosmo's on any ship from the moment it is bought, as the wheels are (0527).
    */
   shell: Readonly<Record<ShipKind, ShellKind>>;
+  /**
+   * Lives lost to something the ship flew into rather than to enemy fire — 0592: an enemy, a boss, a
+   * serpent's flank or the stone. Across every run, pilot and tier, and never taken back. A pilot's
+   * lock may name a count of them (`src/content/golfers.ts`).
+   */
+  crashes: number;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -127,7 +134,9 @@ export type HangarAction =
   // 0578: the tubes that ship carries into a run.
   | { slice: 'hangar'; type: 'rack'; ship: ShipKind; rack: RackKind }
   // 0584: the shell its shields wear.
-  | { slice: 'hangar'; type: 'shell'; ship: ShipKind; shell: ShellKind };
+  | { slice: 'hangar'; type: 'shell'; ship: ShipKind; shell: ShellKind }
+  // 0592: a life lost to a body.
+  | { slice: 'hangar'; type: 'crashed' };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -151,7 +160,21 @@ export const initialHangar: HangarState = {
   flame: perShip(() => 'standard'),
   rack: perShip(() => 'bare'),
   shell: perShip((kind) => SHIPS[kind].shield.look),
+  crashes: 0,
 };
+
+/**
+ * How many things the player has bought — 0592: every ware with a price that they own, of any shelf. The
+ * free ones were never bought, so they do not count. Read off `owned`, so nothing new is saved for it.
+ */
+export function waresBought(state: HangarState): number {
+  return OWNABLE_KINDS.filter((kind) => OWNABLES[kind].price !== null && state.owned[kind]).length;
+}
+
+/** What a pilot's lock is read against — 0592: the hangar's wins and crashes, and what has been bought. */
+export function pilotRecord(state: HangarState): PilotRecord {
+  return { won: state.won, crashes: state.crashes, bought: waresBought(state) };
+}
 
 /**
  * Whether a ship may carry `rack` — 0578: the tubes owned are enough of each kind for it. Any rack on any
@@ -331,6 +354,9 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'shell':
       if (state.shell[action.ship] === action.shell || !shellOpen(state, action.ship, action.shell)) return state;
       return { ...state, shell: { ...state.shell, [action.ship]: action.shell } };
+    // 0592: one more, and only ever more.
+    case 'crashed':
+      return { ...state, crashes: state.crashes + 1 };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

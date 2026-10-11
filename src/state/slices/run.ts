@@ -196,6 +196,13 @@ export function bankedBonus(run: RunState): number {
   return sum;
 }
 
+/**
+ * What emptied the hull — 0592: `fire` is an enemy shot or a bolt, and `body` is anything the ship flew
+ * into, an enemy, a boss, a serpent's flank or the stone. A death to a body is what the plan of
+ * 2026-10-11 calls a non-bullet death. The frame reads it off the hit (`src/app/frame.ts`).
+ */
+export type DeathCause = 'fire' | 'body';
+
 export type RunAction =
   /*
     ⚠️ **A RUN BEGINS IN A SHIP — 0441.** The pilot is a setting, chosen before the run, and the shell
@@ -211,7 +218,8 @@ export type RunAction =
   // 0577: and on the tubes the ship carries in, or — absent — none, which a pickup fills.
   | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind; special?: SpecialKind; gun?: WeaponKind; tubes?: readonly MissileKind[] }
   | { slice: 'run'; type: 'continued' }
-  | { slice: 'run'; type: 'lifeLost' }
+  // 0592: and what did it, so a life lost to a body can be counted for a pilot's lock (`src/state/root.ts`).
+  | { slice: 'run'; type: 'lifeLost'; cause: DeathCause }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
   | { slice: 'run'; type: 'spent'; side: Side }
   /*

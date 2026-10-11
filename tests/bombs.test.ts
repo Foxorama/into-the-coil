@@ -310,7 +310,7 @@ describe('what a run may spend', () => {
       chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)),
     );
 
-    const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
+    const dead = reduce(state, { slice: 'run', type: 'lifeLost', cause: 'fire' });
     expect(dead.run.arsenal, 'a death spent the charges the player had banked').toEqual(banked);
 
     const resumed = reduce(dead, { slice: 'run', type: 'continued' });
@@ -328,7 +328,7 @@ describe('what a run may spend', () => {
     const charges = state.run.arsenal.gun.length;
     for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent', side: 'gun' });
     expect(chargesIn(state.run.arsenal), 'the fixture still has a charge, so a top-up would be invisible').toBe(0);
-    const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
+    const dead = reduce(state, { slice: 'run', type: 'lifeLost', cause: 'fire' });
     expect(chargesIn(dead.run.arsenal), 'a death handed back charges the player had already spent').toBe(0);
   });
 

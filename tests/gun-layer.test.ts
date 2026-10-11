@@ -152,7 +152,7 @@ describe('the run', () => {
     let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'fighter', credits: 'free', gun: 'arc' });
     expect(state.run.gun).toBe('arc');
     const actions: readonly Action[] = [
-      { slice: 'run', type: 'lifeLost' },
+      { slice: 'run', type: 'lifeLost', cause: 'fire' },
       { slice: 'run', type: 'took', special: 'bomb' },
       { slice: 'run', type: 'spent', side: 'gun' },
       { slice: 'run', type: 'upgraded', kind: 'straight' },

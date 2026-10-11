@@ -20,7 +20,7 @@ import { serialiseSettings, settingsFrom, SETTINGS_VERSION } from '../src/save/s
 
 const begin = (credits: CreditKind): Action => ({ slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: initialRun.ship, credits });
 const PLAY: Action = { slice: 'screen', type: 'show', screen: 'playing' };
-const DIE: Action = { slice: 'run', type: 'lifeLost' };
+const DIE: Action = { slice: 'run', type: 'lifeLost', cause: 'fire' };
 
 /** A run begun on `credits` and flown until it has no lives left. */
 function runOut(credits: CreditKind): State {

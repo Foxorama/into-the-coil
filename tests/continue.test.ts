@@ -40,7 +40,7 @@ const TIER = DIFFICULTY_KINDS[0]!;
  */
 const SHIP: ShipKind = SHIP_KINDS.find((kind) => kind !== initialRun.ship)!;
 
-const DIE: Action = { slice: 'run', type: 'lifeLost' };
+const DIE: Action = { slice: 'run', type: 'lifeLost', cause: 'fire' };
 
 /**
  * The shell, minus the canvas: a world, the real reducer, and the real lifecycle over both.

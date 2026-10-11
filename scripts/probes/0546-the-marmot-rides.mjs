@@ -16,14 +16,20 @@ export const PROBES = [
     suite: 'tests/marmot.test.ts',
     broke: 'the Marmot open from the first run',
     guard: 'every one of the four flies from the first run, and he does not',
-    edit: { path: 'src/content/golfers.ts', find: "    opensAfter: ['feather', 'woo', 'larry', 'bo'],", replace: '    opensAfter: [],' },
+    // Re-anchored by 0592, which made the lock a row of three parts.
+    edit: { path: 'src/content/golfers.ts', find: "    opens: { after: ['feather', 'woo', 'larry', 'bo'], crashes: 0, bought: 0 },", replace: '    opens: { after: [], crashes: 0, bought: 0 },' },
   },
   {
     decision: '0546',
     suite: 'tests/marmot.test.ts',
     broke: 'the Marmot open after any one of the four',
     guard: 'he is shut until the last of the four has won',
-    edit: { path: 'src/content/golfers.ts', find: '  return GOLFERS[golfer].opensAfter.every((k) => won[GOLFERS[k].ship]);', replace: '  return GOLFERS[golfer].opensAfter.length === 0 || GOLFERS[golfer].opensAfter.some((k) => won[GOLFERS[k].ship]);' },
+    // Re-anchored by 0592: who is left to clear is `lockLeft`'s now.
+    edit: {
+      path: 'src/content/golfers.ts',
+      find: '    after: lock.after.filter((k) => !record.won[GOLFERS[k].ship]),',
+      replace: '    after: lock.after.some((k) => record.won[GOLFERS[k].ship]) ? [] : [...lock.after],',
+    },
   },
   {
     decision: '0546',
@@ -32,8 +38,8 @@ export const PROBES = [
     guard: 'a win in his own ship counts for nothing toward him',
     edit: {
       path: 'src/content/golfers.ts',
-      find: '  return GOLFERS[golfer].opensAfter.every((k) => won[GOLFERS[k].ship]);',
-      replace: '  return Object.values(won).filter(Boolean).length >= GOLFERS[golfer].opensAfter.length;',
+      find: '    after: lock.after.filter((k) => !record.won[GOLFERS[k].ship]),',
+      replace: '    after: Object.values(record.won).filter(Boolean).length >= lock.after.length ? [] : [...lock.after],',
     },
   },
   {
@@ -41,7 +47,8 @@ export const PROBES = [
     suite: 'tests/marmot.test.ts',
     broke: 'the band naming the four whoever has won',
     guard: 'the band says who still has to clear the game',
-    edit: { path: 'src/state/screens.ts', find: '    const left = GOLFERS[kind].opensAfter.filter((k) => !won[GOLFERS[k].ship]);', replace: '    const left = GOLFERS[kind].opensAfter;' },
+    // Re-anchored by 0592: the band reads what `lockLeft` says is left, and this break reads the whole lock.
+    edit: { path: 'src/state/screens.ts', find: '  const left = lockLeft(lock, record);', replace: '  const left = lockLeft(lock, { won: {} as typeof record.won, crashes: 0, bought: 0 });' },
   },
   {
     decision: '0546',
