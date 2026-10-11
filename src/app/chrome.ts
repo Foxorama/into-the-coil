@@ -3527,7 +3527,7 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
 */
 .itc-playing-hud-hang-strand { height: 1.25em; transform: rotate(5deg); }
 .itc-playing-hud-tree, .itc-playing-hud-frame, .itc-playing-hud-ball,
-.itc-playing-hud-duck, .itc-playing-hud-shoe, .itc-playing-hud-mirror, .itc-playing-hud-bobble {
+.itc-playing-hud-duck, .itc-playing-hud-shoe, .itc-playing-hud-mirror, .itc-playing-hud-bobble, .itc-playing-hud-sub {
   position: absolute;
   top: 100%;
   left: 50%;
@@ -3630,6 +3630,26 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
     radial-gradient(ellipse 0.58em 0.5em at 50% 34%, var(--itc-alien) 0 92%, transparent 100%),
     radial-gradient(ellipse 0.06em 0.2em at 50% 78%, var(--itc-alien) 0 90%, transparent 100%),
     radial-gradient(ellipse 0.28em 0.2em at 50% 96%, var(--itc-alien) 0 90%, transparent 100%);
+}
+/*
+  0596: the yellow submarine — a capsule of a hull in the hazard's yellow, its conning tower on top with
+  the periscope standing out of it and turned to look ahead, three portholes down its side lit in the light
+  ink and rimmed in the void, and a brass propeller at its stern. Hung from the periscope's foot, so it
+  swings level.
+*/
+.itc-playing-hud-sub {
+  width: 1.75em;
+  height: 1.2em;
+  margin-left: -0.875em;
+  background:
+    radial-gradient(circle at 36% 70%, var(--itc-lit) 0 0.06em, var(--itc-void) 0.065em 0.1em, transparent 0.115em),
+    radial-gradient(circle at 54% 70%, var(--itc-lit) 0 0.06em, var(--itc-void) 0.065em 0.1em, transparent 0.115em),
+    radial-gradient(circle at 72% 70%, var(--itc-lit) 0 0.06em, var(--itc-void) 0.065em 0.1em, transparent 0.115em),
+    radial-gradient(ellipse 0.07em 0.21em at 5% 70%, var(--itc-gilt) 0 90%, transparent 100%),
+    radial-gradient(ellipse 0.8em 0.36em at 54% 70%, var(--itc-sub) 0 92%, transparent 100%),
+    linear-gradient(var(--itc-sub), var(--itc-sub)) 50% 36% / 0.42em 0.34em no-repeat,
+    linear-gradient(var(--itc-sub-dark), var(--itc-sub-dark)) 52% 0 / 0.07em 0.42em no-repeat,
+    linear-gradient(var(--itc-sub-dark), var(--itc-sub-dark)) 60% 0 / 0.2em 0.07em no-repeat;
 }
 .itc-playing-hud-dice-strand {
   position: absolute;
@@ -6573,6 +6593,9 @@ export function makeChrome(
   dice.style.setProperty('--itc-duck', mix(colours.hazard, colours.impact, 0.15));
   dice.style.setProperty('--itc-bill', colours.bullet);
   dice.style.setProperty('--itc-mirror', mix(colours.impact, colours.sky, 0.3));
+  // 0596: the submarine the hazard's yellow, and its periscope that yellow in deep shade.
+  dice.style.setProperty('--itc-sub', colours.hazard);
+  dice.style.setProperty('--itc-sub-dark', shade(colours.hazard, -0.55));
   const swing = document.createElement('div');
   swing.className = 'itc-playing-hud-dice-swing';
   /*
@@ -6610,6 +6633,7 @@ export function makeChrome(
     horseshoe: 'shoe',
     mirrorball: 'mirror',
     bobblehead: 'bobble',
+    submarine: 'sub',
   };
   for (const kind of DANGLE_KINDS) {
     if (kind === 'dice') continue;
@@ -6649,7 +6673,7 @@ export function makeChrome(
     const dangle = DANGLE_KINDS.find((kind) => kind === ware);
     if (dangle !== undefined) {
       holder.className = 'itc-shop-art-dangle itc-playing-hud-hanging itc-playing-hud-hangs-' + dangle;
-      for (const name of ['--itc-fur', '--itc-leaf', '--itc-gilt', '--itc-alien', '--itc-ball-shade', '--itc-duck', '--itc-bill', '--itc-mirror']) holder.style.setProperty(name, dice.style.getPropertyValue(name));
+      for (const name of ['--itc-fur', '--itc-leaf', '--itc-gilt', '--itc-alien', '--itc-ball-shade', '--itc-duck', '--itc-bill', '--itc-mirror', '--itc-sub', '--itc-sub-dark']) holder.style.setProperty(name, dice.style.getPropertyValue(name));
       holder.style.setProperty('--itc-lit', colours.impact);
       holder.style.setProperty('--itc-ally', colours.ally);
       holder.appendChild(dice.cloneNode(true));
