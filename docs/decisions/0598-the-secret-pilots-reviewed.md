@@ -31,13 +31,20 @@ neighbour's terms with it.**
 - **The War Dance's face in `acid`**, a hostile ink. A pickup's face is not fire, and the bomb pickup's faces
   already wear meaning inks (the candle is `hazard`). 0081 is about what the player fires.
 
-## Found, and not this review's to fix
+## Found on the way: the pad's guards read a step slipped as a look arriving
 
-**0541's pad guards are sensitive to load.** On #608's CI, and again locally, a probe of 0541 went red on the right
-test in the whole-suite run after its filtered run stayed green. Run alone with the break, the guard reads 0 change
-against 0 noise, four times out of four. Only inside `npm run prove`, with three trees driving Chromium at once,
-does `samePhase` read the stand as changed when nothing reached it. The guard is measuring load as well as the pad,
-which is 0044's case. **It is owed a fix in `tests/stand.ts`**, not a rerun.
+0541's probes went green under their breaks on #608 and twice on #609, and red every time alone: 0044's case, an
+intermittent guard measuring the wrong thing. **Measured:** the saucer's rim bulbs, on the bob's clock (0586),
+moved 80 to 110 pixels of the band between two reads of a stand nobody touched, because a bob of Playwright's
+taken clock — a frame every 16 ms — is 104 or 105 of the game's steps (16⅔ ms, from a carried remainder). Under
+the load of `npm run prove` the slip landed between the reads either side of a press. And *still* was 0.0005 of
+the band, over twice the 0.0002 the flame is held to; and the visor, with its dome left plain, still moves 0.0003
+to 0.0005 with its other marks.
+
+**Fixed in `tests/stand.ts` and `tests/pad.browser.test.ts`, and landed with #609, which it was blocking:** every
+read is taken three times a frame apart and a later read compared with the nearest, *still* is 0.00008, and the
+dome's claim is held to 0.002 (the whole look moves 0.0075 to 0.0081). Proven: 0541 three of three, twice running,
+and every decision whose probes read the stand — 0527, 0528, 0529, 0540, 0542, 0582.
 
 ## Rollback
 
@@ -55,4 +62,3 @@ defect put back.
 
 - **A play**, of the War Dance on a boss from a ship that is not the ball, which now lands at the window's weight.
 - **A look** at `water` on every place's backdrop, at the shipped camera.
-- **0541's guard** under load, above.
