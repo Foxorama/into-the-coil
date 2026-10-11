@@ -2594,8 +2594,8 @@ ${each('-band[hidden]')} { display: none; }
   ${faced((p) => `.${p}option-face > canvas`)} { width: clamp(1.9rem, 9cqh, 2.6rem); height: clamp(1.9rem, 9cqh, 2.6rem); }
   /*
     0593: and on the plates, as narrow as the screen asks too. The faces' column is as wide as the roster
-    (\`max-content\`, so none is cut), and the sixth pilot put it 18 px past the plate on a 667x375 — the
-    rows under it run that width, and Cosmo's \`›\` ran off the screen. Narrow before it is short, so where
+    (max-content, so none is cut), and the sixth pilot put it 18 px past the plate on a 667x375 — the
+    rows under it run that width, and Cosmo's step ran off the screen. Narrow before it is short, so where
     the height still decides, from 812 wide up, nothing moves.
   */
   .itc-hangar-option-face > canvas, .itc-parts-option-face > canvas, .itc-shop-option-face > canvas { width: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); height: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); }
