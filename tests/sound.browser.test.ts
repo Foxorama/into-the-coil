@@ -540,5 +540,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       'switching sound on made no sound, on the one press that is about sound — the chime, the loops and the menu’s title',
     ).toBe(1 + MUSIC_LAYERS.length + TITLE);
     await page.context().close();
-  });
+    // ⚠️ Room for the wait above to run out, as the *Off* test has — 0597: 0119's probe leaves the loops unstarted,
+    // so the count never arrives, and the file's sixty seconds cut the test off before it said so.
+  }, 150_000);
 });
