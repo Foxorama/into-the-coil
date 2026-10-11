@@ -978,7 +978,8 @@ describe('a boss fight can reach all of its phases', () => {
             world.ship.prevAcross = world.ship.across;
             world.ship.across = boss.across;
             world.ship.prevAlong = world.ship.along;
-            world.ship.along = boss.along - boss.radius - 45;
+            // The ram reaches nothing it is not touching, so it is flown against the hull — 0593.
+            world.ship.along = boss.along - boss.radius - (world.weapon.flight === 'ram' ? 0 : 45);
           }
           frame.step();
           steps++;

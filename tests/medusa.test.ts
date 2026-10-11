@@ -37,7 +37,7 @@ import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { skyFor } from '../src/app/mount.ts';
-import { WEAPON_KINDS } from '../src/content/weapons.ts';
+import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { flyFight } from '../scripts/weigh-boss.mjs';
 
 /** The jellyfish alone, a short way in, with no mid-boss in front of it. */
@@ -542,7 +542,8 @@ describe('0476 — the jellyfish can be finished, and opens', () => {
 
   it('THE REPORTED ONE, at Savior: every gun finishes the fight from the bell’s lane, and fights the open bell', () => {
     for (const gun of WEAPON_KINDS) {
-      for (const short of [60, 45]) {
+      // The ram reaches nothing it is not touching, so it is held against the bell — 0593.
+      for (const short of WEAPONS[gun].flight === 'ram' ? [0] : [60, 45]) {
         const fight = flyFight('medusa', gun, { lane: 'boss', short, cap: CAP, difficulty: 'savior' });
         expect(fight.seconds, `the ${gun} from ${short} short never finished the jellyfish in ${CAP} s`).not.toBeNull();
         expect(

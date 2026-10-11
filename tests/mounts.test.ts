@@ -103,6 +103,11 @@ describe('0448 — each ship fires from its own guns', () => {
         const fromAlong = link.prevAlong + link.fromAlong;
         const fromAcross = link.prevAcross + link.fromAcross;
         expect(Math.hypot(fromAlong - (w.ship.prevAlong + muzzle.along), fromAcross - (w.ship.prevAcross + muzzle.across)), `${ship}: the lightning left elsewhere than its rod`).toBeLessThan(NEAR * 4);
+      } else if (w.weapon.flight === 'ram') {
+        // The ram fires nothing: its body is the ball, on the ship wherever it is — 0593.
+        expect(w.playerShots.size, `${ship}: the ram has no body`).toBe(1);
+        const ram = w.playerShots.at(0);
+        expect(Math.hypot(ram.along - w.ship.along, ram.across - w.ship.across), `${ship}: the ram is off the ball`).toBeLessThan(NEAR);
       } else {
         expect(w.playerShots.size, `${ship}: the gun did not fire`).toBeGreaterThan(0);
         for (let i = 0; i < w.playerShots.size; i++) {

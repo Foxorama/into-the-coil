@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
-import { WEAPON_KINDS } from '../src/content/weapons.ts';
+import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { expectBossFloor, expectSerpentFloor } from './boss-floor.ts';
 
 /**
@@ -20,10 +20,12 @@ import { expectBossFloor, expectSerpentFloor } from './boss-floor.ts';
  */
 
 describe('0526 — a borrowed gun meets the boss floor its own ship meets', () => {
-  for (const gun of WEAPON_KINDS) {
+  // Only a gun that lends, into a ship whose own gun lends — 0593: the ram is the Hamster Ball itself, and
+  // the ball flies nothing else, so neither is a pairing the hangar opens (`gunOpen`).
+  for (const gun of WEAPON_KINDS.filter((kind) => WEAPONS[kind].lends)) {
     it(`every won ship that can borrow the ${gun}, against every boss`, () => {
       for (const ship of SHIP_KINDS) {
-        if (SHIPS[ship].weapon === gun) continue;
+        if (SHIPS[ship].weapon === gun || !WEAPONS[SHIPS[ship].weapon].lends) continue;
         for (const level of LEVEL_KINDS) {
           const kind = LEVELS[level].boss;
           if (BOSSES[kind].chain === null) expectBossFloor(kind, gun, ship);

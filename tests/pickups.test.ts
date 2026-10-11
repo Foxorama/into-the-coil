@@ -181,6 +181,8 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
           how long one lasts and not a rate of fire the missiles could be slower than.
         */
         if (WEAPONS[SHIPS[ship].weapon].flight === 'tether') continue;
+        // Nor of the ram, since 0593: the ball is flown into things and fires nothing at all.
+        if (WEAPONS[SHIPS[ship].weapon].flight === 'ram') continue;
         expect(weapon.missileEvery, `${ship}: at tier ${tier} the second weapon fires as often as the first`).toBeGreaterThan(
           weapon.fireEvery,
         );

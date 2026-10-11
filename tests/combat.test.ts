@@ -1201,8 +1201,11 @@ describe('damage is legible on the body that took it', () => {
 
       ⚠️ **AND THE CATHERINE WHEEL, SINCE 0545, ON THE SAME TERMS.** It lands on what it touches as a
       blade does, ended by its clock and never by an arrival, and nothing shoots it.
+
+      ⚠️ **AND THE RAM, SINCE 0593, ON THE SAME TERMS AGAIN.** Its body rides the ball's hull and lands on
+      what the ball flies into as a blade does; nothing shoots it, and its picture is the ball's heat.
     */
-    const blades = new Set(WEAPON_KINDS.filter((k) => WEAPONS[k].flight === 'coil' || WEAPONS[k].flight === 'tether').map((k) => WEAPONS[k].shot));
+    const blades = new Set(WEAPON_KINDS.filter((k) => WEAPONS[k].flight === 'coil' || WEAPONS[k].flight === 'tether' || WEAPONS[k].flight === 'ram').map((k) => WEAPONS[k].shot));
     for (const kind of SHOT_KINDS) {
       if (blades.has(kind)) {
         expect(SHOTS[kind].health, `${kind} is a blade with nothing to survive an arrival on`).toBeGreaterThan(1);

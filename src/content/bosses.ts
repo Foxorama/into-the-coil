@@ -3622,8 +3622,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
       well forward of the saucer's rim, and the serpent's first phase went in 7.0 s: 7.8 volleys where
       0260 asks eight. Every other borrowed pairing met every floor, so this is the serpent's answer and
       not the ray's. The saucer's own ray takes the whole fight in about 50 s, far over the floor anyway.
+
+      0593: and the ram at 7, not its 8 — held against the skull at eight it took the serpent in 27.5 s,
+      under the twenty-eight.
     */
-    gunWeights: { arc: 1, ray: 0.93 },
+    gunWeights: { arc: 1, ray: 0.93, ram: 7 },
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
       boss out of the player's half at the NEAR end of its swing, measured at `station − drift − rear
@@ -4869,8 +4872,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0551: 0.5 — thrown 60% of the screen and faster, 36.5 s at 0.57. At 0.5, 44.6 s; at 0.53 it was 40.9,
       too near the floor for a ship that borrows the gun.
+
+      0593: and the ram at 9, not its 8 — every jelly she eats is health back, and a ram that spends most
+      of a fight broken feeds her between landings: at eight, 91.5 s, against 42–64 for the other guns.
+      At 10 her first phase went in 7.1 s, 7.9 volleys where 0260 asks eight.
     */
-    gunWeights: { arc: 1.4, catherine: 0.5 },
+    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9 },
     damage: 3,
     /*
       ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you

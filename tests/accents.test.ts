@@ -100,6 +100,11 @@ const HULLLESS: readonly SpriteKind[] = [
   // A surge's aura is a halo round the ship, not a body of its own — 0373.
   'auraHunt',
   'auraOverdrive',
+  // And the ram's heat, a glow inside the Hamster Ball's own outline — 0593.
+  'ramHeat0',
+  'ramHeat1',
+  'ramHeat2',
+  'ramHeat3',
   /*
     A plate of the deflector shell is energy round the ship, not a body — 0430. It was a sealed ring
     and was measured here as one; a honeycomb of light with an outline in the void's ink would be
@@ -204,6 +209,19 @@ const HULLLESS: readonly SpriteKind[] = [
   'shieldDisco240a',
   'shieldDisco240b',
   'shieldDisco240c',
+  // The Hamster Ball's sunflower seeds — 0593, light on the same terms.
+  'shieldSeed0a',
+  'shieldSeed0b',
+  'shieldSeed0c',
+  'shieldSeed120a',
+  'shieldSeed120b',
+  'shieldSeed120c',
+  'shieldSeed180a',
+  'shieldSeed180b',
+  'shieldSeed180c',
+  'shieldSeed240a',
+  'shieldSeed240b',
+  'shieldSeed240c',
   // A ship's lights — 0586: a lamp and its glow, light added to the hull, never a body of their own.
   'navStrobe',
   'navDark',

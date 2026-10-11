@@ -107,9 +107,9 @@ import {
   type PickupRow,
   type Weapon,
 } from '../content/pickups.ts';
-import { TETHER_BOLT_KIND, WEAPONS, type CatherineWheel, type FlightKind } from '../content/weapons.ts';
+import { TETHER_BOLT_KIND, WEAPONS, type CatherineWheel, type FlightKind, type Ram } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -630,6 +630,8 @@ export const THROW_GAP_STEPS = 20;
  */
 export function canThrow(w: World, kind: SpecialKind): boolean {
   const row = SPECIALS[kind];
+  // 0593: a dance is refused while the ship is still dancing, so a press during one costs nothing.
+  if (row.dance !== null) return w.danceFor <= 0;
   return (row.shot === null && row.candle === null) || w.throwIn <= 0;
 }
 
@@ -974,6 +976,24 @@ export interface World {
   /** Steps of surge left, and which special it is; `surgeKind` is `null` when none has been thrown. */
   surgeFor: number;
   surgeKind: SpecialKind | null;
+  /**
+   * How hot a ram is, from cool at 0 to breaking at 1 — 0593. Raised by every landing and every step
+   * against the stone, and drained once the ram has touched nothing for its row's `cool`.
+   */
+  ramHeat: number;
+  /** Steps before a hot ram starts to cool — 0593. */
+  ramCoolIn: number;
+  /** Steps left of a broken ram, or `0` when it is whole — 0593. While broken it rams nothing and bodies hurt. */
+  ramBrokenFor: number;
+  /**
+   * Steps of War Dance left, and which special it is — 0593. While it lasts the ship flies itself, bouncing
+   * round its box at `danceAlong`/`danceAcross` in the camera's frame, rams everything it crosses and
+   * cannot be hurt.
+   */
+  danceFor: number;
+  danceKind: SpecialKind | null;
+  danceAlong: number;
+  danceAcross: number;
   enemies: Pool<Entity>;
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
@@ -2103,7 +2123,9 @@ export class GameFrame implements Frame {
     pulseChill(w);
     // The cold scales the stick's ask before the ship flies on it — 0253.
     if (flying) chillShip(w);
-    if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep, w.view.alongSpan);
+    // A dancing ship flies itself — 0593.
+    if (flying && w.danceFor > 0) danceShip(w);
+    else if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep, w.view.alongSpan);
     /*
       ⚠️ **THE WALL IS DRAWN WHILE IT IS MET — 0359.** The clamp above is the rule; this is when its
       picture is on the screen. Within `BOUND_NEAR` of the wall the hold is refilled every step, and
@@ -2129,6 +2151,8 @@ export class GameFrame implements Frame {
     steerBlades(w);
     // And a wheel to where it hangs, and its embers off it — 0545.
     steerWheels(w);
+    // And the ram onto the ship, to move with it — 0593.
+    steerRam(w);
     // And a ring's ripple — 0442.
     stepRays(w);
     steerEnemies(w);
@@ -2259,7 +2283,9 @@ export class GameFrame implements Frame {
       does not gain sparks it never had.
     */
     // A wheel is not spent by arriving either, and its tether lands by hand — 0545: both into the log.
-    const bladeHits = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? w.hits : null;
+    // Nor is a ram, or a dance — 0593: a landing sparks where it was.
+    const ramming = w.weapon.flight === 'ram' || w.danceFor > 0;
+    const bladeHits = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' || ramming ? w.hits : null;
     /*
       ⚠️ **AND THE RAY'S, IN A LOG OF ITS OWN — 0442.** A ring is spent by arriving like a pulse, so
       nothing tells anyone where; it goes off where it landed, so it needs the place. Its own log rather
@@ -2275,7 +2301,10 @@ export class GameFrame implements Frame {
       anything lands; nothing allocates.
     */
     // The wheel and its tether share it — 0545: one clock on a body for everything the gun lands slowly.
-    const bladeGap = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
+    // And a ram's or a dance's, on the same clock — 0593.
+    const dancing = w.danceKind === null || w.danceFor <= 0 ? null : SPECIALS[w.danceKind].dance;
+    const bladeGap =
+      dancing !== null ? dancing.landGap : w.weapon.flight === 'coil' || w.weapon.flight === 'tether' || w.weapon.flight === 'ram' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
     for (let i = 0; i < w.enemies.size; i++) {
       const e = w.enemies.at(i);
       if (e.bladeIn > 0) e.bladeIn--;
@@ -2356,7 +2385,10 @@ export class GameFrame implements Frame {
     if (wheelRow !== null) killedByShots += landTether(w, wheelRow, shootable, gunOpen, bladeGap, hull);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
-    let bites = bladeHits === null ? 0 : w.hits.count;
+    // A ram's landings are its own cue and not the blade's `hit` — 0593: read off what the ram body lost.
+    const rammed = ramLanded(w);
+    settleRam(w, rammed);
+    let bites = bladeHits === null ? 0 : w.hits.count - rammed;
     if (shootable) {
       killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
       collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
@@ -2459,23 +2491,32 @@ export class GameFrame implements Frame {
     */
     if (flying) {
       const healthBefore = w.ship.health;
-      collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
-      strikeShip(w);
+      /*
+        ⚠️ **A DANCING SHIP CANNOT BE HURT, AND A WHOLE BALL CANNOT BE HURT BY WHAT IT RAMS — 0593.** A ship
+        flying itself is one the player cannot dodge with, so nothing lands on it; and a ball whole round
+        its pilot turns every body into something to ram, so only fire reaches it. `shelled` is that ball.
+      */
+      const untouchable = w.danceFor > 0;
+      const shelled = untouchable || (w.weapon.flight === 'ram' && w.ramBrokenFor === 0);
+      if (!untouchable) {
+        collideIntoOne(w.enemyShots, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, true);
+        strikeShip(w);
+      }
       // Read between the fire and the bodies, so the hit that lands this step says which it was — 0592.
       const afterFire = w.ship.health;
       // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be
       // the cheapest way to clear the screen.
-      collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      if (!shelled) collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       /*
         ⚠️ **NOT ONCE IT IS BEATEN.** The only boss still in the pool after its death is the gyre's
         wreck — 0337 — and `layWreck` promises it does nothing back. Played: *"the 4th floor boss will
         kill you with its corpse."* It fell onto the edge of the box and killed on contact, and then
         slid back through the box when the room opened.
       */
-      if (!w.bossBeaten) collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      if (!w.bossBeaten && !shelled) collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       // Flying into a serpent's flank is flying into the serpent — 0283. Not consumed, as the hull
       // is not: a body the player rammed is still there afterwards.
-      collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      if (!shelled) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       /*
         ⚠️ **THE PLAYER'S OWN BLASTS ARE NOT IN THIS LIST, AND THEY WERE — 0574.** 0053 paired them
         with the ship: *"and the blast hurts the player, which is the skill in it."* By 2026-10-07 two
@@ -2486,7 +2527,7 @@ export class GameFrame implements Frame {
       */
       // The player's own blasts are not paired with the ship — 0574.
       // And the stone, inside the same one-hit cap as everything above — 0349.
-      stoneStrikesShip(w);
+      stoneStrikesShip(w, shelled);
       if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
       /*
         ⚠️ **WHAT LANDED, READ OFF THE ORDER THE PAIRINGS RUN IN** — 0592. Only one hit lands in a step:
@@ -3069,7 +3110,7 @@ function breakInStone(w: World, corridor: Corridor, pool: Pool<Entity>): void {
  * until now: at `solid` the wall only pushes. The cost is `wound`'s, so a shield takes it first and
  * the window after it is every other hit's.
  */
-function stoneStrikesShip(w: World): void {
+function stoneStrikesShip(w: World, shelled: boolean): void {
   const corridor = w.corridor;
   if (corridor === null) return;
   const ship = w.ship;
@@ -3078,6 +3119,12 @@ function stoneStrikesShip(w: World): void {
   if (side === 0) return;
   ship.across = outOfStone(corridor, ship.along, ship.across, reach, side);
   if (side * ship.velAcross > 0) ship.velAcross = 0;
+  // 0593: a dance bounces off the stone as off its box's edge, and a whole ball is scraped hot rather than hurt.
+  if (w.danceFor > 0 && side * w.danceAcross > 0) w.danceAcross = -w.danceAcross;
+  if (shelled) {
+    scrapeRam(w);
+    return;
+  }
   if (ship.invulnFor > 0 || w.tuning.terrainDamage <= 0) return;
   wound(ship, w.tuning.terrainDamage, INVULN_STEPS, IMPACT_FLASH_STEPS);
 }
@@ -3469,6 +3516,9 @@ export function cueOfFlight(flight: FlightKind): CueKind {
       return 'ray';
     case 'tether':
       return 'wheel';
+    // A ram fires nothing; what the player hears of it is its landing — 0593.
+    case 'ram':
+      return 'ram';
     default: {
       const unhandled: never = flight;
       return unhandled;
@@ -3511,6 +3561,10 @@ function fireVolley(w: World): void {
     // A wheel thrown to hang on its tether — 0545.
     case 'tether':
       throwWheel(w);
+      return;
+    // A ram fires nothing: the ship is the shot (`steerRam`). On the grid all the same — 0593, 0094.
+    case 'ram':
+      w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
       return;
     default: {
       const unhandled: never = w.weapon.flight;
@@ -3667,6 +3721,175 @@ function steerBlades(w: World): void {
       b.spriteHit = turned;
     }
   }
+}
+
+/*
+  ── THE RAM AND THE WAR DANCE — `docs/decisions/0593-the-hamster-ball-rolls.md` ───────────────────
+
+  *"Hamster ball — flies into things to kill them — how to die? / challenge — "overheat" → need to let
+  shields recharge. Hamster ball break + recharge."* The ship is the shot: one body in the pulse's pool,
+  pinned to the hull every step, reaching to the ball's edge and landing as a blade does — so the boss's
+  hull, its body and every enemy are rammed through the pairings that already exist. A landing heats the
+  ball; a full gauge breaks it, and it comes back whole and cool after its row's `recharge`. A dance is the
+  same body on any ship, heating nothing, for as long as the ship bounces round its box on its own.
+
+  ⚠️ **THE BODY IS DRAWN AS THE HEAT.** It is under the ship (`playerShots` is below `shipPool`), inside the
+  ball's outline, and its picture is the gauge's stage — so the heat is seen where it is, through the clear
+  plastic, and covers nothing the ball does not. 0036: an event the model resolves, the picture mentions.
+*/
+
+/** The `kind` the ram carries in `playerShots` — beside a pulse's 0, a blade's 1, a ring's 2, a wheel's 3 and an ember's 4. */
+export const RAM_KIND = 5;
+
+// @setup: the gauge's four pictures, coolest first.
+const RAM_HEAT = [SPRITE.ramHeat0, SPRITE.ramHeat1, SPRITE.ramHeat2, SPRITE.ramHeat3] as const;
+
+/** The dance the ship is in, or `null`. */
+function danceOf(w: World): Dance | null {
+  return w.danceKind === null || w.danceFor <= 0 ? null : SPECIALS[w.danceKind].dance;
+}
+
+/** Whether the ship rams this step: its gun is a ram and the ball is whole, or it dances — 0593. */
+function rams(w: World): boolean {
+  return w.shipPool.size > 0 && ((w.weapon.flight === 'ram' && w.ramBrokenFor === 0) || w.danceFor > 0);
+}
+
+/**
+ * Put the ram on the ship, to move with it this step — 0593. Spawned the step the ship starts to ram and
+ * released the step it stops; between, it is laid where the ship is and given the ship's velocity, so
+ * `stepEntities` carries the two together and the swept collision sees the whole of the ship's step. Its
+ * health is put back to the row's every step, and what it has lost after the pairings is how many times it
+ * landed (`ramLanded`).
+ */
+function steerRam(w: World): void {
+  let found = -1;
+  for (let i = 0; i < w.playerShots.size; i++) {
+    if (w.playerShots.at(i).kind === RAM_KIND) {
+      found = i;
+      break;
+    }
+  }
+  if (!rams(w)) {
+    if (found >= 0) w.playerShots.releaseAt(found);
+    return;
+  }
+  const row = SHOTS.ram;
+  const body = found >= 0 ? w.playerShots.at(found) : w.playerShots.spawn();
+  if (body === null) return;
+  if (found < 0) reset(body, w.ship.along, w.ship.across, row, RAM_KIND);
+  const dance = danceOf(w);
+  const ram = WEAPONS[w.weapon.kind].ram;
+  body.along = w.ship.along;
+  body.across = w.ship.across;
+  body.prevAlong = w.ship.along;
+  body.prevAcross = w.ship.across;
+  body.velAlong = w.ship.velAlong;
+  body.velAcross = w.ship.velAcross;
+  body.radius = dance !== null ? dance.reach : ram !== null ? ram.reach : row.radius;
+  body.damage = dance !== null ? dance.damage : w.weapon.damage;
+  body.health = row.health;
+  // The gauge, as its picture: cool to the edge of breaking, and cool for as long as a dance lasts.
+  const heat = dance !== null ? 0 : w.ramHeat;
+  const stage = heat >= 0.75 ? 3 : heat >= 0.5 ? 2 : heat >= 0.25 ? 1 : 0;
+  // `sprite` itself is derived from these by `stepEntities`, which runs after this.
+  body.spriteBase = RAM_HEAT[stage];
+  body.spriteHit = RAM_HEAT[stage];
+}
+
+/** How many times the ram landed this step: what its body lost, one health an arrival (`collideInto`). */
+function ramLanded(w: World): number {
+  for (let i = 0; i < w.playerShots.size; i++) {
+    const b = w.playerShots.at(i);
+    if (b.kind === RAM_KIND) return SHOTS.ram.health - b.health;
+  }
+  return 0;
+}
+
+/**
+ * The ram after the pairings — 0593: heard if it landed; heated by what it landed unless the ship dances;
+ * cooled once it has touched nothing for its row's `cool`; broken at a full gauge; and mended when its
+ * recharge runs out. And the dance's clock.
+ */
+function settleRam(w: World, landed: number): void {
+  if (landed > 0) w.onCue('ram', w.ship.across);
+  if (w.danceFor > 0 && --w.danceFor === 0) w.danceKind = null;
+  const ram = WEAPONS[w.weapon.kind].ram;
+  if (ram === null || w.shipPool.size === 0) return;
+  if (w.ramBrokenFor > 0) {
+    if (--w.ramBrokenFor === 0) mendBall(w);
+    return;
+  }
+  if (w.danceFor > 0) return;
+  if (landed > 0) {
+    w.ramHeat += landed * ram.heat;
+    w.ramCoolIn = ram.cool;
+  } else if (w.ramCoolIn > 0) w.ramCoolIn--;
+  else if (w.ramHeat > 0) w.ramHeat = Math.max(0, w.ramHeat - ram.drain);
+  if (w.ramHeat >= 1) breakBall(w, ram);
+}
+
+/** A step of a whole ball against the stone — 0593: it is scraped hot, as a landing heats it, slower. */
+function scrapeRam(w: World): void {
+  const ram = WEAPONS[w.weapon.kind].ram;
+  if (ram === null || w.danceFor > 0 || w.ramBrokenFor > 0) return;
+  w.ramHeat += ram.scrape;
+  w.ramCoolIn = ram.cool;
+  if (w.ramHeat >= 1) breakBall(w, ram);
+}
+
+/**
+ * The ball breaks — 0593: its shell bursts off in pieces, the ship is drawn without it, and for its row's
+ * `recharge` it rams nothing and what it flies into hurts it — after the window any hit gives.
+ */
+function breakBall(w: World, ram: Ram): void {
+  w.ramBrokenFor = ram.recharge;
+  w.ramHeat = 1;
+  /*
+    ⚠️ **AND THE WINDOW A HIT GIVES — a ball breaks inside what it was ramming.** Without it the body the
+    ball was pressed into lands on the step the ball goes, which is a death the player had no step to see
+    coming. The ship blinks through it, as it does after any hit, so the picture says so (0036).
+  */
+  w.ship.invulnFor = INVULN_STEPS;
+  burst(w, w.ship.along, w.ship.across, BURST.dying);
+  w.onCue('ballBreak', w.ship.across);
+  wearHull(w);
+}
+
+/** The ball comes back whole round its pilot, cool — 0593. */
+function mendBall(w: World): void {
+  w.ramHeat = 0;
+  w.ramCoolIn = 0;
+  w.onCue('ballMend', w.ship.across);
+  wearHull(w);
+}
+
+/**
+ * The War Dance thrown — 0593: the ship starts bouncing at the row's speed, heading up the lane and across
+ * towards the wider side of the lane, so it is seen to leave the place it was thrown from.
+ */
+function startDance(w: World, kind: SpecialKind, dance: Dance): void {
+  w.danceKind = kind;
+  w.danceFor = dance.steps;
+  const toward = w.ship.across < ACROSS_SPAN / 2 ? 1 : -1;
+  w.danceAlong = dance.speed * Math.SQRT1_2;
+  w.danceAcross = toward * dance.speed * Math.SQRT1_2;
+}
+
+/**
+ * A dancing ship flies itself — 0593: at its dance's velocity in the camera's frame, turned back off every
+ * edge of the box the player flies in (`flyShip`'s edges), so it bounces round the box. The velocity is set
+ * and `stepEntities` integrates it, as `flyShip`'s is.
+ */
+function danceShip(w: World): void {
+  const ship = w.ship;
+  const minAlong = w.cameraAlong + PLAYER_ALONG_MARGIN;
+  const maxAlong = w.cameraAlong + leadFor(w.view.alongSpan);
+  const nextAlong = ship.along + w.scrollPerStep + w.danceAlong;
+  if ((nextAlong < minAlong && w.danceAlong < 0) || (nextAlong > maxAlong && w.danceAlong > 0)) w.danceAlong = -w.danceAlong;
+  const nextAcross = ship.across + w.danceAcross;
+  if ((nextAcross < PLAYER_MARGIN && w.danceAcross < 0) || (nextAcross > ACROSS_SPAN - PLAYER_MARGIN && w.danceAcross > 0)) w.danceAcross = -w.danceAcross;
+  ship.velAlong = w.scrollPerStep + w.danceAlong;
+  ship.velAcross = w.danceAcross;
 }
 
 /*
@@ -4878,6 +5101,12 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
   if (row.nova !== null) {
     openNova(w, kind, row.nova);
     w.onCue(row.cue, w.novaAcross);
+    return;
+  }
+  // A dance throws the ship itself — 0593.
+  if (row.dance !== null) {
+    startDance(w, kind, row.dance);
+    w.onCue(row.cue, w.ship.across);
     return;
   }
   // A candle lights and fires its first star now, and the rest on its own clock — 0537.
@@ -11264,7 +11493,8 @@ function spawnBoss(w: World): void {
 export function wearHull(w: World): void {
   // The ship and the tubes it carries — 0441. The gun is the ship's and has no tiers, so the tubes are
   // what changes the picture.
-  const hull = hullFor(w.shipRow, w.weapon.launchers);
+  // 0593: and a broken ram's ship without what it wears — Unity on their own while the ball is broken.
+  const hull = hullFor(w.shipRow, w.weapon.launchers, w.ramBrokenFor > 0);
   w.ship.spriteBase = hull.base;
   w.ship.spriteHit = hull.hit;
   // `sprite` is derived by `stepEntities`, but the frame between now and the next step draws from it.
@@ -11316,6 +11546,12 @@ export function respawn(w: World): void {
   // A surge went with the ship that wore it — 0373. `stepSurge` ends it at the wreck; this is sure.
   w.surgeFor = 0;
   w.aura.clear();
+  // And a ram comes back whole and cool, and a dance went with the ship that danced — 0593.
+  w.ramHeat = 0;
+  w.ramCoolIn = 0;
+  w.ramBrokenFor = 0;
+  w.danceFor = 0;
+  w.danceKind = null;
   /*
     ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its
     hull and nothing else, so the marks would be released anyway — but as three bursts, at the place

@@ -34,7 +34,7 @@
 import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
-import { DISTANCES, LANES, flyFight } from './weigh-boss.mjs';
+import { LANES, flyFight, heldShorts } from './weigh-boss.mjs';
 
 /** Flown again until no band moves by more than this. */
 const SETTLED = 0.01;
@@ -44,7 +44,7 @@ const ROUNDS = 10;
 function phaseSeconds(kind, gun) {
   let best = null;
   for (const lane of LANES) {
-    for (const short of DISTANCES) {
+    for (const short of heldShorts(gun)) {
       const fight = flyFight(kind, gun, { lane, short });
       if (fight.seconds !== null && (best === null || fight.killed < best.killed)) best = fight;
     }

@@ -100,6 +100,8 @@ describe('the ship fires it without being asked', () => {
       // Not a wheel on a tether — 0545: thrown once and burning nine beats in ten, it has no rate of
       // fire to be slower than, as `tests/pickups.test.ts`'s counter-beat says of it too.
       if (WEAPONS[SHIPS[ship].weapon].flight === 'tether') continue;
+      // Nor the ram — 0593: it fires nothing, so it has no rate for anything to be slower than.
+      if (WEAPONS[SHIPS[ship].weapon].flight === 'ram') continue;
       const base = weaponFor(SHIPS[ship], []);
       expect(base.missileEvery, `${ship}: the second weapon fires as fast as the first`).toBeGreaterThan(base.fireEvery);
     }

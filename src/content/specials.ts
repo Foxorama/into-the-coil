@@ -31,7 +31,7 @@ import { SPRITE } from './sprites.ts';
  * The ray's nova came after them (0447), and the roman candle after that (0537) — the special of a gun
  * that has not landed yet, so it is thrown from every bomb pickup before any ship opens on it.
  */
-export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova', 'candle'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova', 'candle', 'warDance'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -302,6 +302,14 @@ export interface SpecialRow {
   nova: Nova | null;
   /** The stars it fires from the ship, one after another, or `null` — 0537. */
   candle: Candle | null;
+  /** The dance it throws the ship into, or `null` — 0593. */
+  dance: Dance | null;
+  /**
+   * Whether a ship other than the one whose gun brings it may ever carry it — from a pickup or fitted in
+   * the hangar — 0593. False for the War Dance until every ship has a dance of its own drawn: the plan's
+   * item 3 (`reports/the-secret-pilots-planned-2026-10-11.md`). Every row says its own.
+   */
+  shared: boolean;
   /*
     ── `charges` WAS HERE, AND IT WAS ONE ON EVERY ROW BUT THE BOMB'S — 0441 ─────────────────────
 
@@ -373,6 +381,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     nova: null,
     candle: null,
+    dance: null,
+    shared: true,
     // The bomb pickup's face — the H-bomb in its bubble, since 0441; it was the bare `bomb` before.
     face: SPRITE.pickupBomb,
     cue: 'bomb',
@@ -400,6 +410,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     nova: null,
     candle: null,
+    dance: null,
+    shared: true,
     face: SPRITE.pickupSeeker,
     cue: 'hunt',
     lands: null,
@@ -425,6 +437,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     nova: null,
     candle: null,
+    dance: null,
+    shared: true,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
     cue: 'overdrive',
@@ -456,6 +470,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     nova: null,
     candle: null,
+    dance: null,
+    shared: true,
     face: SPRITE.pickupArc,
     cue: 'stormThrow',
     lands: 'storm',
@@ -493,6 +509,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     nova: null,
     candle: null,
+    dance: null,
+    shared: true,
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',
     lands: null,
@@ -523,6 +541,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: { radius: 36, steps: 150, bossShare: 0.1 },
     nova: null,
     candle: null,
+    dance: null,
+    shared: true,
     // Its own face since 0447 — the swirl in its bubble. It wore the shield's while a shield was the
     // only way to earn one.
     face: SPRITE.pickupVoid,
@@ -576,6 +596,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       ],
     },
     candle: null,
+    dance: null,
+    shared: true,
     face: SPRITE.pickupNova,
     cue: 'nova',
     lands: null,
@@ -619,12 +641,59 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     nova: null,
     candle: { stars: 8, every: 12, fan: 0.55, reaches: [72, 112, 92, 128], star: 'candleStar', burst: 'firework', bossShare: 0.01 },
+    dance: null,
+    shared: true,
     face: SPRITE.pickupCandle,
     cue: 'candle',
     lands: 'firework',
     hushes: false,
   },
+  /**
+   * The War Dance — 0593: the ram's special, on the gun trigger. Thrown from the ship, as the whirlpool and
+   * the nova are, so it has no shot and nothing goes off: what lands is the ship, and a landing is heard as
+   * the ram's own (`ram`), so `lands` is nobody's.
+   */
+  warDance: {
+    label: 'War Dance',
+    hint: 'The ship bounces round on its own, ramming',
+    side: 'gun',
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: null,
+    storm: null,
+    whirl: null,
+    rift: null,
+    nova: null,
+    candle: null,
+    dance: { steps: 180, speed: 2.2, reach: 3, damage: 3, landGap: 6 },
+    shared: false,
+    face: SPRITE.pickupDance,
+    cue: 'warDance',
+    lands: null,
+    hushes: false,
+  },
 };
+
+/**
+ * The War Dance — `docs/decisions/0593-the-hamster-ball-rolls.md`, named for the frenzied hopping a weasel
+ * is known for. For `steps` the ship flies itself: it bounces round the player's box at `speed` in the
+ * camera's frame, off every edge, ramming everything it crosses as a ram does and heating nothing, and
+ * nothing can hurt it while it dances — a ship the player cannot steer is one they cannot dodge with.
+ */
+export interface Dance {
+  /** How long it dances, in steps. */
+  readonly steps: number;
+  /** How fast it bounces, in world units a step, in the camera's frame. */
+  readonly speed: number;
+  /** How far from the ship's centre it rams, in world units. */
+  readonly reach: number;
+  /** What a landing takes off a body. */
+  readonly damage: number;
+  /** Steps between one landing on a body and the next there — 0391's clock, as the ram's `landGap`. */
+  readonly landGap: number;
+}
 
 /**
  * The specials the ward's trigger throws, in the shield pickup's cycle order after the shield itself

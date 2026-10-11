@@ -199,6 +199,10 @@ Also on the page, and not characters — each one PR, in any order after item 1:
 - **Item 1** — [0592](../docs/decisions/0592-the-crashes-are-counted.md). The page's *non-bullet* is read
   as *a body or the stone*: a wall is not a bullet. The lock replaced `opensAfter` with `opens`, three
   parts every row states.
+- **Item 2, the first half** — [0593](../docs/decisions/0593-the-hamster-ball-rolls.md): Unity, the ball,
+  the ram and its heat, break and recharge, the War Dance on the ball alone, the hints on every shut card.
+  The ram is weighed on bosses at eight, and the floors fly it against the hull. **Still owed of item 2**:
+  the dance drawn on every ship, and the War Dance on the bomb pickup and in the hangar once Unity is open.
 
 ## Owed
 

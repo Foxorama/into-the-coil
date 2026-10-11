@@ -33,6 +33,8 @@ import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.t
 import { TUBE_WARES, TUBE_WARE_KINDS, tubesOf, type RackKind } from '../../content/racks.ts';
 import { MISSILE_KINDS } from '../../content/missiles.ts';
 import { SHELLS, type ShellKind } from '../../content/shells.ts';
+import { WEAPONS } from '../../content/weapons.ts';
+import { SPECIALS } from '../../content/specials.ts';
 
 export interface HangarState {
   /**
@@ -275,11 +277,18 @@ export function plateOpen(state: HangarState, ship: ShipKind, plate: ShipKind): 
  * than a second spelling of it: a ship's own slot, open with its win, offering what won ships bring.
  */
 export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {
+  // 0593: a special no other ship has a picture for yet stays with the ship that brings it (`shared`).
+  if (from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) return false;
   return plateOpen(state, ship, from);
 }
 
-/** Whether `ship` may fly `from`'s gun — 0526, on the dash's rule, as the special is. */
+/**
+ * Whether `ship` may fly `from`'s gun — 0526, on the dash's rule, as the special is. And since 0593 only
+ * between two guns that lend: a ram is the ship it is fitted to (`WEAPONS.ram.lends`), so its ship flies no
+ * other gun and no other ship flies it.
+ */
 export function gunOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {
+  if (from !== ship && !(WEAPONS[SHIPS[from].weapon].lends && WEAPONS[SHIPS[ship].weapon].lends)) return false;
   return plateOpen(state, ship, from);
 }
 

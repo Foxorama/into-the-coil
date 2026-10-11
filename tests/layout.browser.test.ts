@@ -297,14 +297,23 @@ function boxesOf(page: Page, screen: Screen): Promise<Box[]> {
         container whose overflow this guard exists to catch. ⚠️ **Never a control**: a button a clip
         hides is a button the player cannot press, which is this guard's subject, so it is measured
         whole wherever it is.
+
+        ⚠️ **BUT A BAND'S TRACK SCROLLS, AND WHAT IT SCROLLS TO IS PRESSED — 0593.** A track that scrolls
+        across (`overflow-x` auto or scroll) is stepped to the option chosen (`chrome.ts`'s
+        `scrollLeft`), so an option past its edge is one the player reaches. Measured whole, every
+        option a strip held counted against the display, and the ninth shell put the last one off a
+        1024x768 while the track itself stood well inside it: a count of options, not a place the player
+        cannot press. A control is measured as what such a track shows of it, and the track — a box like
+        any other — is still held to the display. Any other clip still hides nothing of a control.
       */
       let left = r.left;
       let top = r.top;
       let right = r.right;
       let bottom = r.bottom;
-      const clips = !(el instanceof HTMLButtonElement);
-      for (let up = el.parentElement; clips && up !== null && up !== panel; up = up.parentElement) {
-        const overflow = getComputedStyle(up).overflow;
+      const control = el instanceof HTMLButtonElement;
+      for (let up = el.parentElement; up !== null && up !== panel; up = up.parentElement) {
+        const style = getComputedStyle(up);
+        const overflow = control ? (style.overflowX === 'auto' || style.overflowX === 'scroll' ? 'scroll' : 'visible') : style.overflow;
         if (overflow === 'visible') continue;
         const clip = up.getBoundingClientRect();
         left = Math.max(left, clip.left);

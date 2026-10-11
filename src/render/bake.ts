@@ -33,7 +33,7 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { LEAN_KINDS, THRUST, THRUST_KINDS, THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING, SHIELD_ANGLES, SHIELD_LAYOUT, SHIELD_ORBIT, SHIPS, ownFit, shellOrbit, shellSpan, type Fit, type GunView } from '../content/ships.ts';
+import { BALL_CRADLE, BALL_RADIUS, CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING, SHIELD_ANGLES, SHIELD_LAYOUT, SHIELD_ORBIT, SHIPS, ownFit, shellOrbit, shellSpan, type Fit, type GunView } from '../content/ships.ts';
 import { SHELLS, shieldPlateOf, type ShellKind, type ShieldLook } from '../content/shells.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
@@ -713,6 +713,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupShuriken: 'blade',
   // The roman candle's — 0537: the gold of its stars, which no other face of the bomb pickup wears.
   pickupCandle: 'hazard',
+  // 0593: the War Dance — in the acid's green, which no face of the bomb pickup wears.
+  pickupDance: 'acid',
   pickupShield: 'pickup',
   /*
     The ward's faces — 0447. The void wears its own lavender; the nova wears the white of the heart it
@@ -885,6 +887,18 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shieldDisco240a: 'player',
   shieldDisco240b: 'player',
   shieldDisco240c: 'player',
+  shieldSeed0a: 'player',
+  shieldSeed0b: 'player',
+  shieldSeed0c: 'player',
+  shieldSeed120a: 'player',
+  shieldSeed120b: 'player',
+  shieldSeed120c: 'player',
+  shieldSeed180a: 'player',
+  shieldSeed180b: 'player',
+  shieldSeed180c: 'player',
+  shieldSeed240a: 'player',
+  shieldSeed240b: 'player',
+  shieldSeed240c: 'player',
   // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
   // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
   auraHunt: 'ally',
@@ -970,6 +984,25 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   thunderboltTubeHit: 'hazard',
   thunderboltTubes: 'player',
   thunderboltTubesHit: 'hazard',
+  // 0593: the Hamster Ball, whole and broken, the player's as every ship is, and flashing as every ship does.
+  ball: 'player',
+  ballHit: 'hazard',
+  ballTube: 'player',
+  ballTubeHit: 'hazard',
+  ballTubes: 'player',
+  ballTubesHit: 'hazard',
+  ballBare: 'player',
+  ballBareHit: 'hazard',
+  ballBareTube: 'player',
+  ballBareTubeHit: 'hazard',
+  ballBareTubes: 'player',
+  ballBareTubesHit: 'hazard',
+  // The ram's glyph and its heat — the player's, as everything the ship is.
+  ram: 'player',
+  ramHeat0: 'player',
+  ramHeat1: 'player',
+  ramHeat2: 'player',
+  ramHeat3: 'player',
   // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
   spinnerWheel: 'player',
   spinnerWheelHit: 'hazard',
@@ -2283,7 +2316,7 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, po
 */
 
 /** Every flyable ship's art, by kind — what `drawKind` and the port both draw. */
-type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt';
+type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball';
 
 /*
   ── THE FIGHTER'S TUBES WERE HERE — ON ITS CHIN AND ITS WING ROOTS — AND 0581 HUNG THEM UNDER ITS WINGS ──
@@ -3419,6 +3452,10 @@ export function drawPlayerShip(
     case 'thunderbolt':
       drawThunderbolt(ctx, f, palette, stage, own, rim, art, livery);
       break;
+    // Unity in their ball, which flies nothing but itself — 0593.
+    case 'ball':
+      drawBall(ctx, f, palette, stage, false, art, livery);
+      break;
     default: {
       const unhandled: never = ship;
       return unhandled;
@@ -3567,6 +3604,187 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   disc(ctx, f, shade(glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, art === 'pilot' ? 0.3 : 0.7);
   seam(ctx, f, shade(visor ? palette.hazard : palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
   disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);
+}
+
+/*
+  ── THE HAMSTER BALL — `docs/decisions/0593-the-hamster-ball-rolls.md` ──────────────────────────────
+
+  Unity in a clear plastic ball, from above, running nose-first up the lane, with a thruster pack strapped
+  behind and, for each tube it carries, a cradle on a stub of axle out of the ball's side. Broken, the ball
+  is gone and the axle, the cradles and the pack are left on Unity's harness (`bare` on its row).
+
+  ⚠️ **THE PLASTIC IS TRANSLUCENT AND ITS RIM IS NOT.** The ball is filled at a low alpha so Unity and the
+  heat under it (`ramHeat0`–`3`, laid by the frame under the ship) show through; what makes it read as a
+  ball at the fight's camera is the rim, a band of the plastic's own ink, and its lit arc and glint.
+*/
+
+/** The ball's radius in the box's frame — `BALL_RADIUS` world units over the bake's box radius (`BOX_R`, below). */
+const BALL_R = BALL_RADIUS / (SHIP_BOX * 0.42);
+/** Its cradles', out on the axle — `BALL_CRADLE` over the same. */
+const BALL_CRADLE_R = BALL_CRADLE / (SHIP_BOX * 0.42);
+/** Unity's harness, broken out of the ball: round a weasel's length and breadth, with the axle and the pack still on it. */
+const BALL_HARNESS_R = 0.74;
+const BALL_HARNESS_ACROSS = 0.4;
+/** How far behind the centre the thruster pack ends, in the box's frame — where the row's nozzle is. */
+const BALL_PACK_R = (BALL_RADIUS + 0.55) / (SHIP_BOX * 0.42);
+
+/**
+ * The outline of an ellipse `rx` along and `ry` across, with stubs out of it — the ball's pack behind it,
+ * and a stub of axle out to each cradle the stage carries (the near one, up the screen, at one tube, and
+ * both at two). One loop that never crosses itself: each stub takes the place of the arc it stands on,
+ * so no fill finds a hole where the two meet. Walked from the nose, which no stub stands on.
+ */
+function ballHull(stage: number, rx: number, ry: number): Pt[] {
+  const axle = 0.13;
+  const cradle = BALL_CRADLE_R + 0.09;
+  const pack = 0.27;
+  const steps = 48;
+  // Where each stub leaves the ellipse, and the half-angle of the arc it covers.
+  const axleOn = ry * Math.sqrt(1 - (axle / rx) ** 2);
+  const packOn = rx * Math.sqrt(1 - (pack / ry) ** 2);
+  const axleArc = Math.asin(axle / rx);
+  const packArc = Math.asin(pack / ry);
+  const cuts: { from: number; to: number; corners: Pt[] }[] = [
+    // Down the screen: x runs from + to − across it.
+    ...(stage >= 2 ? [{ from: Math.PI / 2 - axleArc, to: Math.PI / 2 + axleArc, corners: [[axle, axleOn], [axle, cradle], [-axle, cradle], [-axle, axleOn]] as Pt[] }] : []),
+    // Behind: y runs from + to −.
+    { from: Math.PI - packArc, to: Math.PI + packArc, corners: [[-packOn, pack], [-BALL_PACK_R, pack], [-BALL_PACK_R, -pack], [-packOn, -pack]] },
+    // Up the screen: x runs from − to +.
+    ...(stage >= 1 ? [{ from: (3 * Math.PI) / 2 - axleArc, to: (3 * Math.PI) / 2 + axleArc, corners: [[-axle, -axleOn], [-axle, -cradle], [axle, -cradle], [axle, -axleOn]] as Pt[] }] : []),
+  ];
+  const out: Pt[] = [];
+  let next = 0;
+  for (let k = 0; k < steps; k++) {
+    const a = (k / steps) * Math.PI * 2;
+    while (next < cuts.length && cuts[next]!.from <= a) out.push(...cuts[next++]!.corners);
+    if (cuts.some((cut) => a > cut.from && a < cut.to)) continue;
+    out.push([Math.cos(a) * rx, Math.sin(a) * ry]);
+  }
+  while (next < cuts.length) out.push(...cuts[next++]!.corners);
+  return out;
+}
+
+/**
+ * Unity from above, running up the lane — 0593: a least weasel, long and low, the brown back and the
+ * hi-vis shirt across it, four legs out mid-stride, the short tail behind and the bush hat over the head
+ * with an ear either side of its brim. Every mark at least 0.12 of the box across, over 0106's floor.
+ */
+function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number): void {
+  const k = scale;
+  const fur = shade(palette.bullet, -0.42);
+  const furDark = shade(palette.bullet, -0.6);
+  const felt = shade(mix(palette.bullet, palette.blade, 0.25), -0.55);
+  // The legs first, so the body lies over their roots: forelegs reaching, hind legs pushing off.
+  for (const [x, y] of [
+    [0.22, -0.2],
+    [0.12, 0.21],
+    [-0.28, 0.19],
+    [-0.2, -0.21],
+  ] as const) {
+    disc(ctx, f, furDark, x * k, y * k, 0.075 * k);
+  }
+  // The tail, short and brown, a least weasel's.
+  seam(ctx, f, fur, 0.12 * k, [
+    [-0.36 * k, 0],
+    [-0.52 * k, 0.05 * k],
+    [-0.6 * k, 0.02 * k],
+  ], 1, true);
+  // The body: long and thin, lit along the spine.
+  shaded(ctx, f, [0, -0.2 * k], [0, 0.2 * k], shade(fur, 0.2), furDark, roundel(-0.04 * k, 0, 0.36 * k, 24, 0, Math.PI * 2).map(([x, y]) => [x, y * 0.55] as const));
+  // The hi-vis shirt across the shoulders, with its silver tape.
+  poly(ctx, f, palette.bullet, [
+    [0.12 * k, -0.19 * k],
+    [0.26 * k, -0.15 * k],
+    [0.26 * k, 0.15 * k],
+    [0.12 * k, 0.19 * k],
+    [-0.04 * k, 0.19 * k],
+    [-0.04 * k, -0.19 * k],
+  ]);
+  poly(ctx, f, shade(palette.trim, 0.7), [
+    [0.02 * k, -0.19 * k],
+    [0.13 * k, -0.19 * k],
+    [0.13 * k, 0.19 * k],
+    [0.02 * k, 0.19 * k],
+  ], 0.9);
+  // The head: ears either side, the bush hat over it, and the nose out past its brim.
+  for (const side of [-1, 1] as const) disc(ctx, f, fur, 0.36 * k, side * 0.14 * k, 0.07 * k);
+  disc(ctx, f, fur, 0.5 * k, 0, 0.08 * k);
+  disc(ctx, f, palette.space, 0.56 * k, 0, 0.06 * k);
+  disc(ctx, f, felt, 0.38 * k, 0, 0.16 * k);
+  disc(ctx, f, shade(felt, -0.3), 0.38 * k, 0, 0.09 * k);
+  seam(ctx, f, shade(felt, 0.35), 0.03 * k, roundel(0.38 * k, 0, 0.14 * k, 10, Math.PI * 1.1, Math.PI * 1.7), 0.7, true);
+}
+
+/**
+ * The Hamster Ball at a stage — 0593. `bare` is it broken: Unity alone on their harness, the axle, the
+ * cradles and the pack, and no ball. `art` is the plastic's look and `livery` its tint.
+ */
+function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boolean, art: ArtKind = 'clearBall', livery: string | null = null): void {
+  const amber = art === 'amberTint';
+  const plastic = livery ?? (amber ? palette.hazard : palette.player);
+  const slate = palette.trim;
+  if (bare) {
+    // Unity on their own: the outline is the harness, the pack and the cradles, round a weasel's length.
+    // A shadow on the field rather than a body: Unity is what is there.
+    ctx.fillStyle = rgba(shade(slate, -0.5), 0.3);
+    trace(ctx, f, ballHull(stage, BALL_HARNESS_R, BALL_HARNESS_ACROSS));
+    seal(ctx);
+    if (stage >= 1) seam(ctx, f, shade(slate, 0.2), 0.12, [[0, -BALL_HARNESS_ACROSS], [0, -BALL_CRADLE_R]], 1);
+    if (stage >= 2) seam(ctx, f, shade(slate, 0.2), 0.12, [[0, BALL_HARNESS_ACROSS], [0, BALL_CRADLE_R]], 1);
+  } else {
+    ctx.fillStyle = rgba(plastic, 0.32);
+    trace(ctx, f, ballHull(stage, BALL_R, BALL_R));
+    seal(ctx);
+  }
+  // The thruster pack behind, slate with its nozzle's dark mouth.
+  shaded(ctx, f, [-0.95, -0.25], [-0.95, 0.25], shade(slate, 0.25), shade(slate, -0.4), [
+    [bare ? -0.45 : -BALL_R + 0.05, -0.24],
+    [-BALL_PACK_R + 0.02, -0.24],
+    [-BALL_PACK_R + 0.02, 0.24],
+    [bare ? -0.45 : -BALL_R + 0.05, 0.24],
+  ]);
+  disc(ctx, f, shade(slate, -0.65), -BALL_PACK_R + 0.12, 0, 0.12);
+  // A cradle on each axle stub that carries a tube; the tube itself is the frame's (`stepLoaded`).
+  for (const place of SHIPS.ball.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
+    paintPylon(ctx, f, palette, [(place.along - SHIPS.ball.tubeLength / 2) / BOX_R, place.across / BOX_R]);
+  }
+  paintUnityAbove(ctx, f, palette, 1);
+  if (bare) return;
+  // The plastic over them: its tint, the look on it, and the rim and its light — what says *ball*.
+  disc(ctx, f, plastic, 0, 0, BALL_R * 0.98, amber ? 0.22 : 0.12);
+  if (art === 'speedStripes') {
+    for (const y of [-0.38, 0.31]) {
+      shaded(ctx, f, [0, y - 0.07], [0, y + 0.07], palette.bullet, shade(palette.bullet, -0.25), [
+        [-Math.sqrt(BALL_R * BALL_R - y * y) * 0.95, y - 0.07],
+        [Math.sqrt(BALL_R * BALL_R - y * y) * 0.95, y - 0.07],
+        [Math.sqrt(BALL_R * BALL_R - (y + 0.07) * (y + 0.07)) * 0.95, y + 0.07],
+        [-Math.sqrt(BALL_R * BALL_R - (y + 0.07) * (y + 0.07)) * 0.95, y + 0.07],
+      ], 0.85);
+    }
+  }
+  if (art === 'sunflower') {
+    // A sticker on the crown, behind Unity's head: gold petals round a dark seed face.
+    for (let n = 0; n < 8; n++) {
+      const a = (n * Math.PI) / 4;
+      disc(ctx, f, palette.hazard, -0.3 + Math.cos(a) * 0.13, 0.3 + Math.sin(a) * 0.13, 0.07);
+    }
+    disc(ctx, f, shade(palette.bullet, -0.6), -0.3, 0.3, 0.1);
+  }
+  band(ctx, f, shade(plastic, 0.15), 0, 0, BALL_R * 0.99, BALL_R * 0.86, 0.85);
+  seam(ctx, f, shade(plastic, 0.6), 0.05, roundel(0, 0, BALL_R * 0.8, 14, Math.PI * 1.05, Math.PI * 1.6), 0.8, true);
+  disc(ctx, f, palette.impact, -BALL_R * 0.45, -BALL_R * 0.48, 0.07, 0.85);
+}
+
+/**
+ * The ram's heat, as the frame lays it under the ball — 0593: nothing at its coolest but a faint sheen of
+ * the plastic's own ink, then amber, orange and a red-hot core at the edge of breaking. Inside the ball's
+ * outline at every stage, so it covers nothing the ball does not.
+ */
+function drawRamHeat(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+  const inks = [palette.player, palette.hazard, palette.bullet, palette.fire] as const;
+  const ink = inks[stage] ?? palette.fire;
+  glow(ctx, f, ink, 0, 0, BALL_R * 0.95, [0.15, 0.35, 0.55, 0.8][stage] ?? 0.8);
+  if (stage >= 3) disc(ctx, f, shade(palette.fire, 0.4), 0, 0, BALL_R * 0.35, 0.6);
 }
 
 /**
@@ -4527,6 +4745,14 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       poly(ctx, f, palette.trim, [p(-0.055, 0), p(0.055, 0), p(m[0] + 0.03, m[1]), p(m[0] - 0.03, m[1])]);
       pinwheelAt(ctx, f, palette, p(m[0], m[1]), 0.14);
     },
+  },
+  /*
+    0593: the ram is never mounted — no other ship flies it (`WEAPONS.ram.lends`). A rubber bumper all the
+    same, so the table holds every gun and a reader handed it draws something that says *ram*.
+  */
+  ram: {
+    top: (ctx, f, palette, p) => disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13),
+    side: (ctx, f, palette, p) => disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13),
   },
 };
 
@@ -14320,6 +14546,63 @@ function drawRunesPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette
 }
 
 /**
+ * Sunflower seeds — 0593, the Hamster Ball's own: five seeds laid along the arc end to end, each a dark
+ * teardrop with two cream stripes down it, on a faint rail of the plastic's blue. In each `shimmer` a
+ * different seed catches the light — a glint on its round end — so the three frames turn the hoard.
+ */
+function drawSeedPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const husk = shade(palette.trim, -0.62);
+  const stripe = mix(palette.impact, palette.hazard, 0.15);
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.8, palette.player, edge * 1.4, 0.08, 'butt');
+  const seeds = 5;
+  const step = (PLATE_SWEEP * 1.6) / seeds;
+  const first = angle - (step * (seeds - 1)) / 2;
+  for (let i = 0; i < seeds; i++) {
+    const a = first + i * step;
+    const fade = plateFade(at, a);
+    const [x, y] = platePoint(at, a, radius);
+    // Along the arc: the seed's long axis is the tangent.
+    const tx = -Math.sin(a);
+    const ty = Math.cos(a);
+    const long = edge * 1.25;
+    const wide = edge * 0.62;
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = husk;
+    ctx.beginPath();
+    for (let k = 0; k <= 16; k++) {
+      const t = (k / 16) * Math.PI * 2;
+      // A teardrop: fuller at the leading end than the trailing one.
+      const w = wide * (1 + 0.25 * Math.cos(t));
+      const px = x + tx * long * Math.cos(t) - ty * w * Math.sin(t);
+      const py = y + ty * long * Math.cos(t) + tx * w * Math.sin(t);
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.fill();
+    ctx.strokeStyle = stripe;
+    ctx.lineWidth = Math.max(1, 0.06 * unit);
+    ctx.lineCap = 'round';
+    for (const off of [-0.3, 0.3]) {
+      const nx = -ty * wide * off;
+      const ny = tx * wide * off;
+      ctx.beginPath();
+      ctx.moveTo(x + nx - tx * long * 0.7, y + ny - ty * long * 0.7);
+      ctx.lineTo(x + nx + tx * long * 0.7, y + ny + ty * long * 0.7);
+      ctx.stroke();
+    }
+    if (i % 3 === shimmer) {
+      ctx.globalAlpha = 0.85 * fade;
+      ctx.fillStyle = palette.impact;
+      ctx.beginPath();
+      ctx.arc(x + tx * long * 0.45, y + ty * long * 0.45, wide * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
  * The disco ball — 0584. Two rows of mirror tiles along the arc, each a silver outline nearly clear,
  * and coloured glints flashing off a few of them — the player's cyan, the ray's lavender, the hazard's gold
  * and the mint — on different tiles in each `shimmer`, so the three frames throw the light about.
@@ -14417,6 +14700,9 @@ function drawPlate(ctx: Pen, at: PlateAt, look: ShieldLook, shimmer: number, pal
       return;
     case 'disco':
       drawDiscoPlate(ctx, at, shimmer, palette);
+      return;
+    case 'seeds':
+      drawSeedPlate(ctx, at, shimmer, palette);
       return;
     default: {
       const never: never = look;
@@ -14636,6 +14922,48 @@ export function drawKind(
     case 'thunderboltTubes':
     case 'thunderboltTubesHit':
       drawPlayerShip(ctx, f, palette, 'thunderbolt', 2);
+      return;
+    // 0593: Unity's ball at each stage, and broken.
+    case 'ball':
+    case 'ballHit':
+      drawPlayerShip(ctx, f, palette, 'ball', 0);
+      return;
+    case 'ballTube':
+    case 'ballTubeHit':
+      drawPlayerShip(ctx, f, palette, 'ball', 1);
+      return;
+    case 'ballTubes':
+    case 'ballTubesHit':
+      drawPlayerShip(ctx, f, palette, 'ball', 2);
+      return;
+    case 'ballBare':
+    case 'ballBareHit':
+      drawBall(ctx, f, palette, 0, true);
+      return;
+    case 'ballBareTube':
+    case 'ballBareTubeHit':
+      drawBall(ctx, f, palette, 1, true);
+      return;
+    case 'ballBareTubes':
+    case 'ballBareTubesHit':
+      drawBall(ctx, f, palette, 2, true);
+      return;
+    // The ram's heat, from cool to breaking, laid under the ball.
+    case 'ramHeat0':
+    case 'ramHeat1':
+    case 'ramHeat2':
+    case 'ramHeat3':
+      drawRamHeat(ctx, f, palette, Number(kind.slice(-1)));
+      return;
+    // The ram's glyph — a ball, lit, with three speed lines behind it.
+    case 'ram':
+      ctx.fillStyle = rgba(palette.player, 0.45);
+      ctx.beginPath();
+      ring(ctx, f, 0.2, 0, 0.62);
+      seal(ctx);
+      band(ctx, f, shade(palette.player, 0.2), 0.2, 0, 0.62, 0.5);
+      disc(ctx, f, palette.impact, -0.05, -0.25, 0.1, 0.9);
+      for (const y of [-0.35, 0, 0.35]) seam(ctx, f, palette.player, 0.12, [[-0.55, y], [-0.95, y]], 0.85);
       return;
     /*
       0527: the Mothership's spinner at its own radius of one, unturned; the frame turns the blit. A body
@@ -16601,6 +16929,29 @@ export function drawKind(
       }
       return;
     }
+    case 'pickupDance': {
+      /*
+        THE WAR DANCE — 0593: a ball at the top right that has bounced there, its last three hops drawn
+        behind it as arcs off the floor. Told from the bomb by the hops, from the bolt by being round.
+        Glyph at three quarters of the box and a bubble round it, on the arc face's terms — 0236.
+      */
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      ring(ctx, fg, 0.42, -0.36, 0.34);
+      seal(ctx);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
+      // Its lit side and glint, so it is a ball and not a dot.
+      seam(ctx, fg, shade(palette.acid, 0.5), 0.07, roundel(0.42, -0.36, 0.24, 8, Math.PI * 1.05, Math.PI * 1.6), 0.9, true);
+      // The hops it came by: three arcs climbing to it from the bottom left.
+      for (const [from, to, high] of [
+        [-0.9, -0.42, 0.55],
+        [-0.42, 0.0, 0.32],
+        [0.0, 0.3, 0.12],
+      ] as const) {
+        const mid = (from + to) / 2;
+        seam(ctx, fg, palette.acid, 0.08, [[from, 0.62], [mid, 0.62 - high], [to, 0.62]], 0.8, true);
+      }
+      return;
+    }
     case 'pickupCandle': {
       /*
         A ROMAN CANDLE THROWING A STAR — the bomb pickup's fourth face, 0537. A tube laid on the
@@ -17706,7 +18057,19 @@ export function drawKind(
     case 'shieldDisco180c':
     case 'shieldDisco240a':
     case 'shieldDisco240b':
-    case 'shieldDisco240c': {
+    case 'shieldDisco240c':
+    case 'shieldSeed0a':
+    case 'shieldSeed0b':
+    case 'shieldSeed0c':
+    case 'shieldSeed120a':
+    case 'shieldSeed120b':
+    case 'shieldSeed120c':
+    case 'shieldSeed180a':
+    case 'shieldSeed180b':
+    case 'shieldSeed180c':
+    case 'shieldSeed240a':
+    case 'shieldSeed240b':
+    case 'shieldSeed240c': {
       const plate = shieldPlateOf(SPRITE[kind]);
       if (plate === null) throw new Error(`${kind} stands at no place on any ship's shell`);
       const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!, shellOrbit(plate.shell));

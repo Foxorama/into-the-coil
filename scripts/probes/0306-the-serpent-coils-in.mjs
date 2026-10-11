@@ -94,9 +94,10 @@ export const PROBES = [
     guard: 'and nothing it throws, and nothing that hits it, until the fight begins',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
+      // Re-anchored by 0593, which skips the body for a ship a whole ball shells.
+      find: '      if (!shelled) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
       replace:
-        '      if (w.bossEntering < 0) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
+        '      if (!shelled && w.bossEntering < 0) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
     },
   },
   {

@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'the estate’s lightning on the fighter, once both are won',
     edit: {
       path: 'src/state/slices/hangar.ts',
-      find: 'export function gunOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {\n  return plateOpen(state, ship, from);',
-      replace: 'export function gunOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {\n  return true;',
+      // Re-anchored by 0593, which lends a gun only between two guns that lend.
+      find: '  if (from !== ship && !(WEAPONS[SHIPS[from].weapon].lends && WEAPONS[SHIPS[ship].weapon].lends)) return false;\n  return plateOpen(state, ship, from);',
+      replace: '  if (from !== ship && !(WEAPONS[SHIPS[from].weapon].lends && WEAPONS[SHIPS[ship].weapon].lends)) return false;\n  return true;',
     },
   },
   {
@@ -58,8 +59,8 @@ export const PROBES = [
     guard: 'every won ship that can borrow the ray, against every boss',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    gunWeights: { arc: 1, ray: 0.93 },',
-      replace: '    gunWeights: { arc: 1 },',
+      find: '    gunWeights: { arc: 1, ray: 0.93, ram: 7 },',
+      replace: '    gunWeights: { arc: 1, ram: 7 },',
     },
   },
   {

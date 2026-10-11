@@ -36,6 +36,8 @@ export type ShotKind =
   // The Catherine wheel and the embers it throws — 0545, a `cinder` because `ember` is the fish's sprite.
   | 'catherine'
   | 'cinder'
+  // The ram — 0593: the body that rides the Hamster Ball's hull. Nothing is fired.
+  | 'ram'
   // The ray gun's rings and what they go off as where they land — 0442.
   | 'ray'
   | 'rayBurst'
@@ -385,6 +387,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'shuriken',
   'catherine',
   'cinder',
+  'ram',
   'ray',
   'rayBurst',
   'spit',
@@ -552,6 +555,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * is, and short-lived: the wheel's row says how long. A streak with a white-hot head, turned along its
    * flight, never a round dot — a round dot of fire is what a hostile bullet looks like in the volcano.
    */
+  /**
+   * The ram — 0593: the body the frame pins to the Hamster Ball each step, reaching to the ball's edge (the
+   * gun row's `ram.reach` is its radius). Not spent by arriving, as the wheel is not, and landing as a blade
+   * does. Drawn as the ball's heat: the frame turns its picture to the gauge (`ramHeat0`–`3`), and its own
+   * sprite is the gun's glyph, which only the hangar shows.
+   */
+  ram: { sprite: SPRITE.ram, spriteHit: SPRITE.ram, radius: 3, health: WHEEL_EDGE, damage: 3, speed: 0, fission: SPENT_BY_ARRIVING },
   cinder: { sprite: SPRITE.cinder, spriteHit: SPRITE.cinder, radius: 1.15, health: 1, damage: 1, speed: 1.5, fission: SPENT_BY_ARRIVING },
   /**
    * The ray gun's rings — 0442: four concentric rings about one centre, one body, spent by arriving.
