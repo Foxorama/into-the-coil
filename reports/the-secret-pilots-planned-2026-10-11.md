@@ -5,7 +5,7 @@ read into the game's terms, checked against what the code already does, and queu
 decides lives in its decision once it lands; this is the queue — the shape
 [`the-thunderbolt-planned`](the-thunderbolt-planned-2026-10-05.md) gave the Marmot.
 
-**Nothing here is built.** Two questions below change what gets built, and are marked as such.
+**Nothing here is built.** The two questions that changed what gets built are answered, in *Answered*.
 
 ## The ask
 
@@ -124,8 +124,11 @@ are what separate them — the Catherine wheel's embers settled it that way — 
 - **The ball carries tubes**, in a cradle on its axle. The missile pickup has to be worth taking on every
   ship (`docs/game.md`, *Upgrades*).
 - **Its special is the War Dance** — named for the frenzied hopping weasels are known for: for a few
-  seconds the ball bounces round the screen on its own, ramming everything it crosses, with no heat. It
-  joins the bomb pickup's pool, as every special does.
+  seconds the ball bounces round the screen on its own, ramming everything it crosses, with no heat.
+  **Every ship can pick it up once the weasel is unlocked** (answered, below), so every ship has a War
+  Dance of its own: the same bounce and the same ram for its length, drawn as that ship — the fighter
+  tumbling, the saucer skipping like a stone, the cars and the Thunderbolt bouncing on their wheels, the
+  Aqua Duck bobbing — with the ram's impact on whatever it crosses.
 - **A non-bullet death** is a life lost to a body — an enemy, a boss, a serpent's flank — or to stone.
   A death to an enemy shot or a bolt is a bullet death. Counted across every run, every pilot and every
   tier, and never taken back.
@@ -138,20 +141,35 @@ are what separate them — the Catherine wheel's embers settled it that way — 
   two seconds.
 - **The duck opens after five wares bought at Cosmo's**, of any kind. Five is a play number, the *x* on the
   page.
-- **Both are secret in the Marmot's way**: a dark silhouette on the pilot band with a line saying what is
-  left (*"Crash 7 more times"*, *"Buy 3 more things at Cosmo's"*), and both in the Viper's rescue pool with
-  their own lines from the first run, as 0546 did.
+- **Both are secret in the Marmot's way** (answered, below): a dark silhouette on the pilot band with a
+  hint saying what is left (*"Crash 7 more times"*, *"Buy 3 more things at Cosmo's"*), and both in the
+  Viper's rescue pool with their own lines from the first run, as 0546 did.
 - **Their voices**: Unity's blip low and quick with the Aussie in the lines; MMXXVI's a squeaky, bright
   blip, higher than the Marmot's.
 
-## Answered — needed before item 2 and item 3
-
-These change what gets built, and are the player's.
+## Answered — 2026-10-11
 
 | asked | why it matters | answered |
 |---|---|---|
-| **Can the ram be fitted to other ships, and the ball fly other guns?** Since [0525](../docs/decisions/0525-the-gun-is-a-layer.md) any ship flies any gun it has won. A fighter that rams, or a ball with a pulse gun, each loses what makes it itself. The default above is **neither**: the ram is the ball's hull, not a gun, and the ball's gun slot is shut | it decides whether the ram is a `WeaponKind` in every grid or a property of one ship's row | — |
-| **Does a secret pilot say how to open it?** The Marmot's card names who is left to clear. *Secret* could mean that, or a card that says nothing until it opens, or no card at all | it decides the band's line and whether the teaser in the rescue pool stays | — |
+| **Can the ram be fitted to other ships, and the ball fly other guns?** Since [0525](../docs/decisions/0525-the-gun-is-a-layer.md) any ship flies any gun it has won. A fighter that rams, or a ball with a pulse gun, each loses what makes it itself. The default above was **neither** | it decides whether the ram is a `WeaponKind` in every grid or a property of one ship's row | ***"No weapon change for hamster ball, other ships can pick up the special once the hamster ball is unlocked tho so we'll need animations for all ships for that special"*** |
+| **Does a secret pilot say how to open it?** The Marmot's card names who is left to clear. *Secret* could mean that, or a card that says nothing until it opens, or no card at all | it decides the band's line and whether the teaser in the rescue pool stays | ***"hints for unlocks is good"*** |
+
+**What the first answer builds.** The ram is the ball's row and no other ship's, and the ball's gun slot
+is shut — it flies nothing but the ram, and no ship flies the ram. The War Dance is a special like any
+other, so it reaches other ships, and each needs its own animation. Two things in it are new:
+
+- **A special that waits for an unlock.** The bomb pickup draws its face from every gun special today,
+  unconditionally (`drawFace` in `src/content/pickups.ts`). *"Once the hamster ball is unlocked"* makes
+  the War Dance's face depend on the hangar, so the draw takes the unlocked set as an argument. Leaving
+  a face out changes how many faces there are, which changes what a seeded run draws. That is expected,
+  and the pickup's guards are re-read against it rather than raised to fit.
+- **A ram on every ship, for the length of the dance.** The ram's damage, its per-target gate and the
+  bodies-do-not-wound rule live on the special while it runs, not on the ball's row. On the ball they
+  are the same thing with the heat switched off.
+
+Read without asking, and can be vetoed: in the hangar, fitting the War Dance as another ship's opening
+special follows 0524's rule like every other special — open once the ball has won — because the answer
+was about picking it up in a run.
 
 ## The queue
 
@@ -161,9 +179,10 @@ These change what gets built, and are the player's.
    counted before the weasel arrives. **Rollback note owed**: an older build rewriting `itc_hangar` drops
    the count.
 2. **Unity and the Hamster Ball** — the pilot, runner and portrait, lines both ways; the ball and its
-   ram, heat, break and recharge; its tubes; the War Dance and its face on the bomb pickup; cues for the
-   ram, the overheat, the break and the recharge; the boss floor flown in the ball; the ram's numbers set
-   on the instruments; the hangar's grids at six.
+   ram, heat, break and recharge; its tubes; its gun slot shut; the War Dance, its face on the bomb
+   pickup once the weasel is unlocked, and its animation on every ship; the unlock hint on the shut card;
+   cues for the ram, the overheat, the break and the recharge; the boss floor flown in the ball; the
+   ram's numbers set on the instruments; the hangar's grids at six.
 3. **MMXXVI and the Aqua Duck** — the pilot, runner and portrait, lines both ways; the sub, the paintball
    gun and the Water Cannon; Bubble Jets; drawn with every gun; the boss floor; the grids at seven and the
    pilot band on the smallest phone.
