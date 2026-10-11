@@ -14,8 +14,9 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/hangar.ts',
       // The signature with it, since 0526's gun slot says the same line under its own.
-      find: 'export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {\n  return plateOpen(state, ship, from);',
-      replace: 'export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {\n  return true;',
+      // Re-anchored by 0593, which keeps a special no other ship can draw with its own.
+      find: '  if (from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) return false;\n  return plateOpen(state, ship, from);',
+      replace: '  if (from !== ship && !SPECIALS[WEAPONS[SHIPS[from].weapon].special].shared) return false;\n  return true;',
     },
   },
   {

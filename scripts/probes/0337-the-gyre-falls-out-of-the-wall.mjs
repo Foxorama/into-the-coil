@@ -127,8 +127,9 @@ export const PROBES = [
     guard: 'and a wreck does nothing back: flying into the corpse costs nothing',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      if (!w.bossBeaten) collideIntoOne(w.bossPool, w.ship,',
-      replace: '      collideIntoOne(w.bossPool, w.ship,',
+      // Re-anchored by 0593, which skips the hull for a ship a whole ball shells.
+      find: '      if (!w.bossBeaten && !shelled) collideIntoOne(w.bossPool, w.ship,',
+      replace: '      if (!shelled) collideIntoOne(w.bossPool, w.ship,',
     },
   },
 ];
