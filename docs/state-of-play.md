@@ -1161,12 +1161,14 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ TWO SECRET PILOTS ARE PLANNED AND ANSWERED, AND THE COUNTS THEY OPEN ON ARE BUILT — 2026-10-11
+### ⚠️ TWO SECRET PILOTS ARE PLANNED, AND THE FIRST ONE'S BALL ROLLS — ITS DANCE ON EVERY SHIP IS NEXT — 2026-10-11
 
 [`the-secret-pilots-planned`](../reports/the-secret-pilots-planned-2026-10-11.md) is a handwritten page
 read into the game — a least weasel in a hamster ball and a space duck in the Aqua Duck — and **holds the
 order, so this file does not.** Its *Answered* table holds the player's two answers. Item 1 is
-[0592](decisions/0592-the-crashes-are-counted.md); item 2, Unity and the Hamster Ball, is next.
+[0592](decisions/0592-the-crashes-are-counted.md); item 2's first half, Unity and the Hamster Ball, is
+[0593](decisions/0593-the-hamster-ball-rolls.md). Next is its second half — the War Dance on every ship,
+opened to them once Unity is — because item 2 is not done until it lands.
 
 ### ⚠️ THE CATHERINE WHEEL STAYS A BEAT LONGER — OWED A PLAY — 2026-10-10
 

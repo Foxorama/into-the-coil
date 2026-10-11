@@ -34,7 +34,7 @@ down. The ram goes on no other ship and the ball flies no other gun. No other sh
 | **the heat, drawn** | the ram body's picture is the gauge's stage (`ramHeat0`–`3`), under the ball inside its outline. Broken, the ship wears `bare` and the body is gone. 0036 |
 | **what hurts it** | whole, the ship skips the body pairings and the stone only scrapes it hot; fire lands as on every ship. Broken, everything lands, after the window a hit gives — a ball breaks inside what it was ramming |
 | **the War Dance** | `warDance` on `src/content/specials.ts`, `dance` on its row; `danceShip` flies the ship off the box's edges and the stone, `untouchable` skips every pairing, and the ram body rides any ship while it dances. A press while it dances is refused |
-| **not yet shared** | `shared` on every special, `false` on the War Dance: it is no face on the bomb pickup (`BOMB_KINDS`) and no other ship may open with it (`specialOpen`) until every ship has a dance drawn — the plan's item 3 |
+| **not yet shared** | `shared` on every special, `false` on the War Dance: it is no face on the bomb pickup (`BOMB_KINDS`) and no other ship may open with it (`specialOpen`) until every ship has a dance drawn — the second half of the plan's item 2 |
 | **the hangar** | `gunOpen` asks both guns lend; `gunWhy` and `optionWhy` say why not. The ship grids are as many a row as there are ships. Each shut pilot card says its own hint (`lockHint`, through the band's `whys`) |
 | **sounds** | `ram` (a rubber ball's thump), `ballBreak`, `ballMend`, `warDance`, each with its picture twin. `ram` is the gun's stream in Unity's run, so it is dry and at a gun's level (0145) |
 | **on a boss** | `bossWeight: 8` on the row, and 7 on the serpent's own, 9 on the jellyfish's. Flown from against the hull (`heldShorts` in `scripts/weigh-boss.mjs`), the floors' one way of placing a gun |
@@ -106,4 +106,6 @@ drops them the next time it writes.
 - **The ear** on the four cues.
 - **The serpent's ball for Unity** — a dodge or a dance, never a kill before it arrives. Whether that is the
   round it should be is a play's to say.
-- **Item 3**: a dance drawn for every ship, and the War Dance shared once Unity is open.
+- **The second half of item 2**, which this does not land: a dance drawn for every ship, the War Dance a
+  face on the bomb pickup once Unity is open, and any other ship opening with it then. Item 2 is not done
+  until it lands.
