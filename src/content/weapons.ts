@@ -586,7 +586,14 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     barrels: 1,
     links: 1,
     weight: 1,
-    bossWeight: 1,
+    /*
+      ⚠️ **EIGHT, BECAUSE A HELD RAM SPENDS MOST OF A FIGHT BROKEN.** Pressed against a boss it lands
+      every `landGap`, heats a sixth and more each time and breaks inside a second, then rams nothing
+      for three: at one it took 233 to 390 s to finish what the other guns finish in 35 to 64, from
+      the hull (`scripts/weigh-boss.mjs`, Savior). Under 0260's forty-second floor at nine, so eight;
+      the serpent and the jellyfish weigh it on their own rows.
+    */
+    bossWeight: 8,
     landGap: 6,
     special: 'warDance',
     // Never drawn: no other ship flies it (`lends`). The ball's own front, from either view, so a reader

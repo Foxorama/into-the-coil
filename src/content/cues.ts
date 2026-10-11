@@ -1033,7 +1033,9 @@ export const CUES: Record<CueKind, CueRow> = {
   ram: {
     twin: 'ball-rams',
     hold: 6,
-    gain: 0.3,
+    // A gun's level — 0145: on contact it lands as often as `landGap` lets it, so it is the sound that
+    // never stops in Unity's run, under every outcome.
+    gain: 0.24,
     glue: 0.08,
     layers: [
       { wave: 'sine', from: inKey(7), to: inKey(3), seconds: 0.12, gain: 0.8, attack: 0.001, curve: 3.2, drive: 0.3 },
@@ -1065,7 +1067,8 @@ export const CUES: Record<CueKind, CueRow> = {
     twin: 'ball-mends',
     air: 0.2,
     hold: 30,
-    gain: 0.24,
+    // Over every gun's 0.24 — 0145: the ball coming back is an outcome the player waits on.
+    gain: 0.28,
     glue: 0.1,
     layers: [
       { wave: 'sine', from: inKey(7), to: inKey(14), seconds: 0.16, gain: 0.7, attack: 0.004, curve: 2 },
@@ -2254,9 +2257,10 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.3,
     glue: 0.08,
     layers: [
-      { wave: 'sine', from: inKey(4), to: inKey(9), seconds: 0.08, gain: 0.7, attack: 0.002, curve: 2.6 },
-      { wave: 'sine', from: inKey(7), to: inKey(12), at: 0.1, seconds: 0.08, gain: 0.7, attack: 0.002, curve: 2.6 },
-      { wave: 'sine', from: inKey(11), to: inKey(16), at: 0.2, seconds: 0.1, gain: 0.75, attack: 0.002, curve: 2.6 },
+      // Climbing, and falling away as it climbs, so the cue decays rather than ending on its loudest step.
+      { wave: 'sine', from: inKey(4), to: inKey(9), seconds: 0.08, gain: 0.85, attack: 0.002, curve: 2.6 },
+      { wave: 'sine', from: inKey(7), to: inKey(12), at: 0.1, seconds: 0.08, gain: 0.55, attack: 0.002, curve: 2.6 },
+      { wave: 'sine', from: inKey(11), to: inKey(16), at: 0.2, seconds: 0.08, gain: 0.32, attack: 0.002, curve: 3.2 },
       { wave: 'noise', from: 0, to: 0, at: 0.08, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: -0.3 },
       { wave: 'noise', from: 0, to: 0, at: 0.18, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: 0.3 },
     ],

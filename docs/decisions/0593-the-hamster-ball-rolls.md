@@ -36,7 +36,8 @@ down. The ram goes on no other ship and the ball flies no other gun. No other sh
 | **the War Dance** | `warDance` on `src/content/specials.ts`, `dance` on its row; `danceShip` flies the ship off the box's edges and the stone, `untouchable` skips every pairing, and the ram body rides any ship while it dances. A press while it dances is refused |
 | **not yet shared** | `shared` on every special, `false` on the War Dance: it is no face on the bomb pickup (`BOMB_KINDS`) and no other ship may open with it (`specialOpen`) until every ship has a dance drawn — the plan's item 3 |
 | **the hangar** | `gunOpen` asks both guns lend; `gunWhy` and `optionWhy` say why not. The ship grids are as many a row as there are ships. Each shut pilot card says its own hint (`lockHint`, through the band's `whys`) |
-| **sounds** | `ram` (a rubber ball's thump), `ballBreak`, `ballMend`, `warDance`, each with its picture twin |
+| **sounds** | `ram` (a rubber ball's thump), `ballBreak`, `ballMend`, `warDance`, each with its picture twin. `ram` is the gun's stream in Unity's run, so it is dry and at a gun's level (0145) |
+| **on a boss** | `bossWeight: 8` on the row, and 7 on the serpent's own, 9 on the jellyfish's. Flown from against the hull (`heldShorts` in `scripts/weigh-boss.mjs`), the floors' one way of placing a gun |
 
 ## Why it is built the way it is
 
@@ -67,6 +68,24 @@ and the body landed on the same step — a death with no step to see it coming.
 finish a boss from forty-five units short, and the pairings drawn for every borrowed gun, read `lends` and
 the flight; a gun that reaches nothing is held where it can reach, against the hull.
 
+**And the floor had to be taught that, or it would have passed the ram unmeasured.** 0455 reads a fight
+that outlasts the cap from every held place as over the floor. From forty-five units short the ram never
+lands, so every one of its fights was past the cap, and 0260's forty seconds would have passed a gun no
+floor had flown. `heldShorts` holds it against the hull in the floor, the weighing script and the
+phase-band solver alike.
+
+**A boss weight of eight, because a held ram spends most of a fight broken.** Pressed on a hull it lands
+every `landGap`, breaks inside a second and rams nothing for three. At one it took 233 to 390 s, or never,
+to finish what every other opening gun finishes in 35 to 64 (Savior, from the hull). At nine three bosses
+sat at 41 s on the forty, and the serpent at 24 under its twenty-eight. At eight: the serpent 27.5 — so 7 on
+its row, 31.1 — five bosses 45 to 58 s, and the jellyfish 91.5, who eats between landings — so 9 on hers,
+whose first phase went in 7.9 volleys at 10.
+
+**The serpent's ball is a dodge for Unity.** 0322 asks every opening gun to clear a lobbed ball before it
+reaches the ship. The ram reaches nothing that is not touching the ship, and enemy fire lands on a whole
+ball, so the ball reaches Unity by construction: for this pilot that round is dodged, or danced through.
+`tests/serpent.test.ts` passes over the ram there and says so. A play decides if that is right.
+
 ## Rollback
 
 ⚠️ **None owed** — [0001](0001-revertability-not-risk-rating.md). `itc_hangar` reads per ship and per pilot, and
@@ -85,4 +104,6 @@ drops them the next time it writes.
 - **The art at the shipped camera**, photographed on the sheet once: the ball reads, Unity reads as a small
   animal; the hat from above is a dark disc.
 - **The ear** on the four cues.
+- **The serpent's ball for Unity** — a dodge or a dance, never a kill before it arrives. Whether that is the
+  round it should be is a play's to say.
 - **Item 3**: a dance drawn for every ship, and the War Dance shared once Unity is open.

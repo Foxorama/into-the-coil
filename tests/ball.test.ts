@@ -98,6 +98,14 @@ describe('0593 — the ram lands on what the ball flies into', () => {
     }
     expect(killed, 'the ball sat on a body for half a second and it did not die').toBe(true);
     expect(world.ship.health, 'the body the ball rammed hurt the ship').toBe(health);
+    // And one that will not die, pressed on it with no window a hit gives, for as long as the ball is whole:
+    // the one above dies on its first landing, before it could have landed on the ship at all.
+    bodyOn(world, 100000);
+    for (let i = 0; i < 30 && world.ramBrokenFor === 0; i++) {
+      world.ship.invulnFor = 0;
+      frame.step();
+      expect(world.ship.health, `a body hurt the whole ball ${i + 1} steps in`).toBe(health);
+    }
   });
 
   it('every landing heats the ball, and a full gauge breaks it', () => {

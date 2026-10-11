@@ -9,7 +9,7 @@
  */
 
 import { expect } from 'vitest';
-import { DISTANCES, LANES, flyFight } from '../scripts/weigh-boss.mjs';
+import { LANES, flyFight, heldShorts } from '../scripts/weigh-boss.mjs';
 import { BOSSES, type BossKind } from '../src/content/bosses.ts';
 import { DIFFICULTIES, fireGapFor } from '../src/content/difficulty.ts';
 import type { ShipKind } from '../src/content/ships.ts';
@@ -29,7 +29,8 @@ const TUNED = DIFFICULTIES.savior;
 export function quickestFight(kind: BossKind, gun: WeaponKind, ship?: ShipKind): ReturnType<typeof flyFight> | null {
   let quickest: ReturnType<typeof flyFight> | null = null;
   for (const lane of [...LANES, 'boss' as const]) {
-    for (const short of DISTANCES) {
+    // Where the gun reaches from: the ram from against the hull — 0593.
+    for (const short of heldShorts(gun)) {
       const fight = flyFight(kind, gun, { lane, short, cap: 240, ...(ship === undefined ? {} : { ship }) });
       if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
     }

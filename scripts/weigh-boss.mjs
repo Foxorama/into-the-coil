@@ -46,7 +46,7 @@ import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS, laneAcross } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, fitted, shipCarrying } from '../src/content/ships.ts';
-import { WEAPON_KINDS } from '../src/content/weapons.ts';
+import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from '../tests/world.ts';
@@ -67,6 +67,18 @@ export const LANES = [20, 35, 50, 65, 80].map(laneAcross);
 const MIDDLE = laneAcross(50);
 /** At rest, then held this many units short of the hull's near edge. */
 export const DISTANCES = [null, 60, 45];
+
+/**
+ * Where `gun` is held short of the hull — `DISTANCES`, or against it for a ram (0593), which reaches
+ * nothing it is not touching: flown from forty-five units short it never lands, and a fight that never
+ * ends reads as over every floor, so the floor would pass a gun it had never measured.
+ *
+ * @param {import('../src/content/weapons.ts').WeaponKind} gun
+ * @returns {(number | null)[]}
+ */
+export function heldShorts(gun) {
+  return WEAPONS[gun].ram === null ? DISTANCES : [0];
+}
 
 /** The boss alone at the end of a short level in its own place, with nothing in front of it. */
 function arena(kind) {
@@ -180,18 +192,18 @@ if (isMain) {
       const held = [];
       let best = null;
       for (const lane of LANES) {
-        for (const short of DISTANCES) {
+        for (const short of heldShorts(gun)) {
           const fight = flyFight(kind, gun, { difficulty, lane, short });
           held.push(fight.seconds ?? Number.POSITIVE_INFINITY);
           if (fight.seconds !== null && (best === null || fight.seconds < best.seconds)) best = fight;
         }
       }
-      const onLane = DISTANCES.map((short) => secs(flyFight(kind, gun, { difficulty, lane: 'boss', short }).seconds));
+      const onLane = heldShorts(gun).map((short) => secs(flyFight(kind, gun, { difficulty, lane: 'boss', short }).seconds));
       const finite = (s) => (Number.isFinite(s) ? s : null);
       const phases = best === null ? '' : `   phases begin at ${best.phaseAt.map((p) => `${p.at.toFixed(0)}s`).join(', ')}`;
       console.log(
         `  ${gun.padEnd(9)} held lanes: median ${secs(finite(median(held))).padStart(5)}  best ${secs(finite(Math.min(...held))).padStart(5)}  ` +
-          `worst ${secs(finite(Math.max(...held))).padStart(5)}   on its lane at rest/60/45: ${onLane.join(' / ')}${phases}`,
+          `worst ${secs(finite(Math.max(...held))).padStart(5)}   on its lane at ${heldShorts(gun).map((short) => (short === null ? 'rest' : short)).join('/')}: ${onLane.join(' / ')}${phases}`,
       );
       fought++;
     }

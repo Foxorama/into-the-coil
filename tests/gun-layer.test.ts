@@ -30,9 +30,12 @@ const NEAR = 0.05;
 /** A sprite's frame for tracing: 200 pixels square. */
 const F = { half: 100, r: 84 };
 
-/** Every ship with every gun it does not carry. */
-const BORROWED: readonly (readonly [ShipKind, WeaponKind])[] = SHIP_KINDS.flatMap((ship) =>
-  WEAPON_KINDS.filter((gun) => gun !== SHIPS[ship].weapon).map((gun) => [ship, gun] as const),
+/**
+ * Every ship with every gun it does not carry — of the guns that lend, on ships whose own gun lends: 0593's
+ * ram is the ball itself, so the ball flies no other gun and no other ship flies it (`lends`).
+ */
+const BORROWED: readonly (readonly [ShipKind, WeaponKind])[] = SHIP_KINDS.filter((ship) => WEAPONS[SHIPS[ship].weapon].lends).flatMap((ship) =>
+  WEAPON_KINDS.filter((gun) => gun !== SHIPS[ship].weapon && WEAPONS[gun].lends).map((gun) => [ship, gun] as const),
 );
 
 describe('a fitted ship', () => {
@@ -41,7 +44,7 @@ describe('a fitted ship', () => {
   });
 
   it('with another’s, fires it from its hardpoint plus the gun’s own mount, in the ship’s view', () => {
-    // Five ships with four guns each they do not carry, since 0545 and 0546 made both five.
+    // Five ships with four guns each they do not carry, since 0545 and 0546 made both five; 0593's sixth lends nothing.
     expect(BORROWED).toHaveLength(20);
     for (const [ship, gun] of BORROWED) {
       const row = fitted(SHIPS[ship], gun);

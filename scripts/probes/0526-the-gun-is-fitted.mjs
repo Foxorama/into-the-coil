@@ -59,8 +59,8 @@ export const PROBES = [
     guard: 'every won ship that can borrow the ray, against every boss',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    gunWeights: { arc: 1, ray: 0.93 },',
-      replace: '    gunWeights: { arc: 1 },',
+      find: '    gunWeights: { arc: 1, ray: 0.93, ram: 7 },',
+      replace: '    gunWeights: { arc: 1, ram: 7 },',
     },
   },
   {

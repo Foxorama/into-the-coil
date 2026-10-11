@@ -3623,38 +3623,44 @@ const BALL_R = BALL_RADIUS / (SHIP_BOX * 0.42);
 /** Its cradles', out on the axle — `BALL_CRADLE` over the same. */
 const BALL_CRADLE_R = BALL_CRADLE / (SHIP_BOX * 0.42);
 /** Unity's harness, broken out of the ball: round a weasel's length and breadth, with the axle and the pack still on it. */
-const BALL_HARNESS_R = 0.72;
-const BALL_HARNESS_ACROSS = 0.36;
+const BALL_HARNESS_R = 0.74;
+const BALL_HARNESS_ACROSS = 0.4;
 /** How far behind the centre the thruster pack ends, in the box's frame — where the row's nozzle is. */
 const BALL_PACK_R = (BALL_RADIUS + 0.55) / (SHIP_BOX * 0.42);
 
 /**
  * The outline of an ellipse `rx` along and `ry` across, with stubs out of it — the ball's pack behind it,
  * and a stub of axle out to each cradle the stage carries (the near one, up the screen, at one tube, and
- * both at two). One loop: each stub is walked into the ellipse's own outline where it leaves it, so no
- * `evenodd` fill cuts a hole where the two meet.
+ * both at two). One loop that never crosses itself: each stub takes the place of the arc it stands on,
+ * so no fill finds a hole where the two meet. Walked from the nose, which no stub stands on.
  */
 function ballHull(stage: number, rx: number, ry: number): Pt[] {
   const axle = 0.13;
   const cradle = BALL_CRADLE_R + 0.09;
   const pack = 0.27;
   const steps = 48;
-  const out: Pt[] = [];
-  // Where an axle stub leaves the ellipse, and where the pack does.
+  // Where each stub leaves the ellipse, and the half-angle of the arc it covers.
   const axleOn = ry * Math.sqrt(1 - (axle / rx) ** 2);
   const packOn = rx * Math.sqrt(1 - (pack / ry) ** 2);
+  const axleArc = Math.asin(axle / rx);
+  const packArc = Math.asin(pack / ry);
+  const cuts: { from: number; to: number; corners: Pt[] }[] = [
+    // Down the screen: x runs from + to − across it.
+    ...(stage >= 2 ? [{ from: Math.PI / 2 - axleArc, to: Math.PI / 2 + axleArc, corners: [[axle, axleOn], [axle, cradle], [-axle, cradle], [-axle, axleOn]] as Pt[] }] : []),
+    // Behind: y runs from + to −.
+    { from: Math.PI - packArc, to: Math.PI + packArc, corners: [[-packOn, pack], [-BALL_PACK_R, pack], [-BALL_PACK_R, -pack], [-packOn, -pack]] },
+    // Up the screen: x runs from − to +.
+    ...(stage >= 1 ? [{ from: (3 * Math.PI) / 2 - axleArc, to: (3 * Math.PI) / 2 + axleArc, corners: [[-axle, -axleOn], [-axle, -cradle], [axle, -cradle], [axle, -axleOn]] as Pt[] }] : []),
+  ];
+  const out: Pt[] = [];
+  let next = 0;
   for (let k = 0; k < steps; k++) {
-    const a = -Math.PI + ((k + 0.5) / steps) * Math.PI * 2;
+    const a = (k / steps) * Math.PI * 2;
+    while (next < cuts.length && cuts[next]!.from <= a) out.push(...cuts[next++]!.corners);
+    if (cuts.some((cut) => a > cut.from && a < cut.to)) continue;
     out.push([Math.cos(a) * rx, Math.sin(a) * ry]);
-    const next = -Math.PI + ((k + 1.5) / steps) * Math.PI * 2;
-    const crosses = (at: number): boolean => at > a && at <= next;
-    // Up the screen: x runs from − to + here.
-    if (crosses(-Math.PI / 2) && stage >= 1) out.push([-axle, -axleOn], [-axle, -cradle], [axle, -cradle], [axle, -axleOn]);
-    // Down the screen: x runs from + to −.
-    if (crosses(Math.PI / 2) && stage >= 2) out.push([axle, axleOn], [axle, cradle], [-axle, cradle], [-axle, axleOn]);
-    // Behind, at the end of the walk: y runs from + to − across it.
-    if (crosses(Math.PI)) out.push([-packOn, pack], [-BALL_PACK_R, pack], [-BALL_PACK_R, -pack], [-packOn, -pack]);
   }
+  while (next < cuts.length) out.push(...cuts[next++]!.corners);
   return out;
 }
 
@@ -3681,7 +3687,7 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number): v
   seam(ctx, f, fur, 0.12 * k, [
     [-0.36 * k, 0],
     [-0.52 * k, 0.05 * k],
-    [-0.64 * k, 0.02 * k],
+    [-0.6 * k, 0.02 * k],
   ], 1, true);
   // The body: long and thin, lit along the spine.
   shaded(ctx, f, [0, -0.2 * k], [0, 0.2 * k], shade(fur, 0.2), furDark, roundel(-0.04 * k, 0, 0.36 * k, 24, 0, Math.PI * 2).map(([x, y]) => [x, y * 0.55] as const));
@@ -3695,15 +3701,15 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number): v
     [-0.04 * k, -0.19 * k],
   ]);
   poly(ctx, f, shade(palette.trim, 0.7), [
-    [0.05 * k, -0.19 * k],
-    [0.1 * k, -0.19 * k],
-    [0.1 * k, 0.19 * k],
-    [0.05 * k, 0.19 * k],
+    [0.02 * k, -0.19 * k],
+    [0.13 * k, -0.19 * k],
+    [0.13 * k, 0.19 * k],
+    [0.02 * k, 0.19 * k],
   ], 0.9);
   // The head: ears either side, the bush hat over it, and the nose out past its brim.
   for (const side of [-1, 1] as const) disc(ctx, f, fur, 0.36 * k, side * 0.14 * k, 0.07 * k);
-  disc(ctx, f, fur, 0.52 * k, 0, 0.08 * k);
-  disc(ctx, f, palette.space, 0.6 * k, 0, 0.04 * k);
+  disc(ctx, f, fur, 0.5 * k, 0, 0.08 * k);
+  disc(ctx, f, palette.space, 0.56 * k, 0, 0.06 * k);
   disc(ctx, f, felt, 0.38 * k, 0, 0.16 * k);
   disc(ctx, f, shade(felt, -0.3), 0.38 * k, 0, 0.09 * k);
   seam(ctx, f, shade(felt, 0.35), 0.03 * k, roundel(0.38 * k, 0, 0.14 * k, 10, Math.PI * 1.1, Math.PI * 1.7), 0.7, true);
@@ -3732,10 +3738,10 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boo
   }
   // The thruster pack behind, slate with its nozzle's dark mouth.
   shaded(ctx, f, [-0.95, -0.25], [-0.95, 0.25], shade(slate, 0.25), shade(slate, -0.4), [
-    [bare ? -BALL_HARNESS_R + 0.05 : -BALL_R + 0.05, -0.27],
-    [-BALL_PACK_R + 0.02, -0.27],
-    [-BALL_PACK_R + 0.02, 0.27],
-    [bare ? -BALL_HARNESS_R + 0.05 : -BALL_R + 0.05, 0.27],
+    [bare ? -0.45 : -BALL_R + 0.05, -0.24],
+    [-BALL_PACK_R + 0.02, -0.24],
+    [-BALL_PACK_R + 0.02, 0.24],
+    [bare ? -0.45 : -BALL_R + 0.05, 0.24],
   ]);
   disc(ctx, f, shade(slate, -0.65), -BALL_PACK_R + 0.12, 0, 0.12);
   // A cradle on each axle stub that carries a tube; the tube itself is the frame's (`stepLoaded`).

@@ -3791,7 +3791,7 @@ function steerRam(w: World): void {
   // The gauge, as its picture: cool to the edge of breaking, and cool for as long as a dance lasts.
   const heat = dance !== null ? 0 : w.ramHeat;
   const stage = heat >= 0.75 ? 3 : heat >= 0.5 ? 2 : heat >= 0.25 ? 1 : 0;
-  body.sprite = RAM_HEAT[stage];
+  // `sprite` itself is derived from these by `stepEntities`, which runs after this.
   body.spriteBase = RAM_HEAT[stage];
   body.spriteHit = RAM_HEAT[stage];
 }

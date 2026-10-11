@@ -136,7 +136,8 @@ describe('a gun on a boss is weighed by its own row', () => {
     row.bossWeight = weight;
     boss.gunWeights = undefined;
     try {
-      const { seconds } = flyFight(PLAIN, gun, { lane: 'boss', short: 45, cap: 200 });
+      // The ram reaches nothing it is not touching, so it is held against the hull — 0593.
+      const { seconds } = flyFight(PLAIN, gun, { lane: 'boss', short: WEAPONS[gun].flight === 'ram' ? 0 : 45, cap: 200 });
       if (seconds === null) throw new Error(`${gun} never killed the ${PLAIN}`);
       return seconds;
     } finally {
@@ -152,8 +153,11 @@ describe('a gun on a boss is weighed by its own row', () => {
   */
   for (const gun of WEAPON_KINDS) {
     it(`${gun}: doubling the row’s bossWeight shortens the fight`, () => {
-      const one = fightAt(gun, 1);
-      const two = fightAt(gun, 2);
+      // From the row's own weight — 0593: at one the ram, which spends most of a fight broken, never
+      // finishes inside the cap, and a fight that never ends cannot be shortened.
+      const own = WEAPONS[gun].bossWeight;
+      const one = fightAt(gun, own);
+      const two = fightAt(gun, own * 2);
       expect(two, `${gun}'s bossWeight is not reaching the boss`).toBeLessThan(one * 0.75);
     });
   }

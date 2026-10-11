@@ -36,7 +36,7 @@ import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
-import { WEAPON_KINDS } from '../src/content/weapons.ts';
+import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { expectSerpentFloor } from './boss-floor.ts';
 
 /** The serpent alone, a short way in, with no mid-boss in front of it. */
@@ -2797,7 +2797,13 @@ describe('0322 — the ball is worth shooting', () => {
       ⚠️ **EVERY SHIP'S OPENING GUN SINCE 0441.** Each pilot opens on their own gun and keeps it, so
       *every player who has not upgraded* is four players, and the ball is met by each of them.
     */
+    /*
+      ⚠️ **NOT THE HAMSTER BALL — 0593.** Its ram reaches nothing it is not touching, so a ball lobbed
+      down its lane reaches it by construction, and enemy fire always lands on it. For Unity this round is
+      the dodge, or a War Dance through it; the decision names it as owed to a play.
+    */
     for (const kind of SHIP_KINDS) for (const tier of DIFFICULTY_KINDS) {
+      if (WEAPONS[SHIPS[kind].weapon].flight === 'ram') continue;
       const made = serpentAt(0.2, tier);
       const { world, frame } = made;
       world.shipRow = SHIPS[kind];
