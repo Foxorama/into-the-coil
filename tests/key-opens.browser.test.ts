@@ -116,8 +116,13 @@ describe.runIf(chromePath)('0580 — every face on How to play opens what it is'
 
   it('0594 — keeps the War Dance out of a first-time player’s key, and out of the walk, and shows it once Unity is open', async () => {
     const dance = SPECIALS.warDance.label;
+    // Drawn, not merely marked: a face's own display beat the attribute once, and CI's phone found it.
     const visible = async (page: Page): Promise<string[]> =>
-      (await page.locator(`${shown('guide')} .${GUIDE}key-face:not([hidden])`).evaluateAll((faces) => faces.map((face) => face.getAttribute('title') ?? ''))).filter((t) => t !== '');
+      (
+        await page
+          .locator(`${shown('guide')} .${GUIDE}key-face`)
+          .evaluateAll((faces) => faces.filter((face) => face.checkVisibility()).map((face) => face.getAttribute('title') ?? ''))
+      ).filter((t) => t !== '');
     const fresh = await opened(1280, 720, null);
     const seen = await visible(fresh);
     expect(seen, 'a first-time player is shown the War Dance before Unity is open').not.toContain(dance);

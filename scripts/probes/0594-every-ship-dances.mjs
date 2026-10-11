@@ -107,4 +107,11 @@ export const PROBES = [
     guard: 'keeps the War Dance out of a first-time player’s key',
     edit: { path: 'src/app/chrome.ts', find: '    const shown = key.filter((face) => !face.hidden);', replace: '    const shown = [...key];' },
   },
+  {
+    decision: '0594',
+    suite: 'tests/key-opens.browser.test.ts',
+    broke: 'a shut face marked hidden and drawn anyway, its own display beating the attribute',
+    guard: 'keeps the War Dance out of a first-time player’s key',
+    edit: { path: 'src/app/chrome.ts', find: '.itc-guide-key-face[hidden], .itc-guide-key-line[hidden] { display: none; }\n', replace: '' },
+  },
 ];

@@ -1024,6 +1024,8 @@ ${each('-action-cursor')} {
 /* 0580: each face a button that opens what it is — no plate of its own, a ring under a pointer and the cursor. */
 .itc-guide-key-face { display: block; padding: 0; margin: 0; border: 0; border-radius: 0.35em; background: none; color: inherit; font: inherit; line-height: 0; cursor: pointer; }
 .itc-guide-key-face:hover { background: color-mix(in srgb, var(--itc-ink) 14%, transparent); }
+/* 0594: a face this player may not be offered yet, and its line, are not drawn — the face's own display wins over the attribute otherwise. */
+.itc-guide-key-face[hidden], .itc-guide-key-line[hidden] { display: none; }
 .itc-guide-key-name { font-weight: 600; }
 .itc-guide-key-about { display: flex; flex-direction: column; min-width: 0; }
 /* A line a face: its name and what it gives — 0575. */
@@ -2963,7 +2965,8 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-guide-key-hint { flex-direction: row; flex-wrap: wrap; column-gap: 0.5em; }
   .itc-guide-key-gives { display: none; }
-  .itc-guide-key-line:not(:last-child)::after { content: ' ·'; }
+  /* 0594: a dot only where a line that is drawn follows, so a hidden last face leaves none dangling. */
+  .itc-guide-key-line:has(~ .itc-guide-key-line:not([hidden]))::after { content: ' ·'; }
   /*
     ⚠️ **AND ON A PHONE, THE TWO SECTION HEADINGS GO.** At 480x320 How to play scrolled by nine
     pixels on CI's fonts and fitted on this machine's. The headings are the one line on it that says
