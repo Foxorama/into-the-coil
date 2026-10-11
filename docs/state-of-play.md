@@ -1161,6 +1161,12 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ TWO SECRET PILOTS ARE PLANNED AND ANSWERED, AND NONE OF IT IS BUILT — 2026-10-11
+
+[`the-secret-pilots-planned`](../reports/the-secret-pilots-planned-2026-10-11.md) is a handwritten page
+read into the game — a least weasel in a hamster ball and a space duck in the Aqua Duck — and **holds the
+order, so this file does not.** Its *Answered* table holds the player's two answers; item 1 is next.
+
 ### ⚠️ THE CATHERINE WHEEL STAYS A BEAT LONGER — OWED A PLAY — 2026-10-10
 
 [0591](decisions/0591-the-wheel-stays-a-beat-longer.md): thrown every 2.4 s, on screen 2.67 s — the half
