@@ -624,7 +624,12 @@ export function lockHint(lock: PilotLock, record: PilotRecord, name: string): st
   const left = lockLeft(lock, record);
   const owed: string[] = [];
   if (left.after.length > 0) owed.push('beat the jellyfish with ' + listed(left.after.map((k) => GOLFERS[k].name)));
-  if (left.crashes > 0) owed.push('crash into something ' + left.crashes + ' more ' + (left.crashes === 1 ? 'time' : 'times'));
+  /*
+    ⚠️ **A LIFE LOST TO A CRASH, WHICH IS WHAT IS COUNTED** — the review of 0592. It said *crash into something*, and
+    a crash a shield takes is not counted: a player on three shields who rammed five things and lived watched the
+    count not move and read the hint as broken.
+  */
+  if (left.crashes > 0) owed.push('lose ' + left.crashes + ' more ' + (left.crashes === 1 ? 'life' : 'lives') + ' to a crash');
   if (left.bought > 0) owed.push('buy ' + left.bought + ' more ' + (left.bought === 1 ? 'thing' : 'things') + ' at Cosmo’s');
   if (owed.length === 0) return null;
   const said = listed(owed);

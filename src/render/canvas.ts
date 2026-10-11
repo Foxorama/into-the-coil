@@ -42,7 +42,7 @@ export class CanvasSurface implements Surface {
   private hostileInk = UNSET;
   // The Catherine wheel's tether — 0545: the player's own fire, amber and gold.
   private flameInk = UNSET;
-  // The Water Cannon's jet — 0595: water, the frost's aquamarine round a white heart.
+  // The Water Cannon's jet — 0595: the player's water round a white heart.
   private waterInk = UNSET;
   private boltDark = '#000000';
 

@@ -727,7 +727,7 @@ function burstRays(w: World, landed: Deaths): void {
 const SPLAT_STEPS = 40;
 const SPLAT_WET = 10;
 /** The kind a splat carries in the blast pool, beside an explosion, a rift, a ray's burst and a firework. */
-const SPLAT_KIND = 5;
+export const SPLAT_KIND = 5;
 /**
  * The kind a paintball carries in `playerShots`, plus its colour's place in the hopper — 0595. Every other
  * player shot carries five or less, so the colour rides the kind into the landing log (`collideInto` writes
@@ -1051,6 +1051,12 @@ export interface World {
   jetFor: number;
   jetKind: SpecialKind | null;
   jetAt: number;
+  /**
+   * The jet laid this step, and the step of its sweep it was laid at — what `landJet` lands, so the line it
+   * lands along is the line the picture was laid on (0036), the last step's included. `null` once landed.
+   */
+  jetLaid: SpecialKind | null;
+  jetLaidAt: number;
   enemies: Pool<Entity>;
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
@@ -2352,9 +2358,8 @@ export class GameFrame implements Frame {
       does not gain sparks it never had.
     */
     // A wheel is not spent by arriving either, and its tether lands by hand — 0545: both into the log.
-    // Nor is a ram, or a dance — 0593: a landing sparks where it was.
-    const ramming = w.weapon.flight === 'ram' || w.danceFor > 0;
-    const bladeHits = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' || ramming ? w.hits : null;
+    // The ram, or a dance, logs its own in its own pass below — 0593, and the review of 0595.
+    const bladeHits = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? w.hits : null;
     /*
       ⚠️ **AND THE RAY'S, IN A LOG OF ITS OWN — 0442.** A ring is spent by arriving like a pulse, so
       nothing tells anyone where; it goes off where it landed, so it needs the place. Its own log rather
@@ -2373,10 +2378,16 @@ export class GameFrame implements Frame {
       anything lands; nothing allocates.
     */
     // The wheel and its tether share it — 0545: one clock on a body for everything the gun lands slowly.
-    // And a ram's or a dance's, on the same clock — 0593.
+    const bladeGap = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
+    /*
+      ⚠️ **AND THE RAM'S OWN, IN ITS OWN PASS — the review of 0595.** The ram is a body in the gun's pool, and it
+      was landed in the gun's pass: so while any ship danced, the whole pool took the dance's log and its gap.
+      A ray's rings landed into the blades' log and never burst, a paintball never splatted, and a shuriken's
+      ceiling fell to a third. The ram lands on the same clocks (0391's bucket on each body) at its own gap — the
+      dance's while the ship dances, the ball's own otherwise — and the gun's shots at the gun's.
+    */
     const dancing = w.danceKind === null || w.danceFor <= 0 ? null : SPECIALS[w.danceKind].dance;
-    const bladeGap =
-      dancing !== null ? dancing.landGap : w.weapon.flight === 'coil' || w.weapon.flight === 'tether' || w.weapon.flight === 'ram' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
+    const ramGap = dancing !== null ? dancing.landGap : (WEAPONS[w.weapon.kind].landGap ?? 0);
     for (let i = 0; i < w.enemies.size; i++) {
       const e = w.enemies.at(i);
       if (e.bladeIn > 0) e.bladeIn--;
@@ -2386,7 +2397,9 @@ export class GameFrame implements Frame {
     // A surge whose pods pierce: a blade's arrival on a missile, so it is told by the log — 0375, 0379.
     const surging = surgeOf(w);
     const tubesPierce = surging !== null && surging.pods.pierce > 1;
-    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, shotLog, bladeGap);
+    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, shotLog, bladeGap, null, -1, RAM_KIND);
+    // The ram, in its own pass: a landing sparks where it was — 0593.
+    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, ramGap, null, RAM_KIND);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
@@ -2426,7 +2439,16 @@ export class GameFrame implements Frame {
       kill: it bursts where it is and the room opens at once. `bossTargetable` is the one answer.
     */
     const shootable = bossTargetable(w);
-    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, shotLog, bladeGap, hull);
+    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, shotLog, bladeGap, hull, -1, RAM_KIND);
+    /*
+      ⚠️ **THE RAM AT THE BALL'S WEIGHT, AND A DANCE ON ANY OTHER SHIP AT THE WINDOW'S — the review of 0595.** On the
+      ball the ram is the gun, and lands at the gun's weight on the boss (0593 solved it against the hull). On any
+      other ship it is the War Dance, a special, and took the gun's weight because it rode the gun's pass: the same
+      dance was 13 times as heavy on a boss for the ball as for the Catherine wheel, which nobody chose. A special
+      lands at the window, as the jet and a bomb do.
+    */
+    const ramOpen = w.weapon.flight === 'ram' ? gunOpen : open;
+    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, ramOpen, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, ramGap, hull, RAM_KIND);
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
       because a void blast is in front of the animal that threw it and a pulse meets it first; and
@@ -2451,7 +2473,8 @@ export class GameFrame implements Frame {
     */
     const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
     // A ring on armour still goes off where it landed — the burst is the ring's, not the wound's.
-    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, landings ?? (armoured ? w.hits : bladeHits), bladeGap, hull);
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, landings ?? (armoured ? w.hits : bladeHits), bladeGap, hull, -1, RAM_KIND);
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, ramOpen, IMPACT_FLASH_STEPS, null, w.hits, ramGap, hull, RAM_KIND);
     // The tether, on the same clocks and the same log as the wheel it holds — 0545.
     const wheelRow = WEAPONS[w.weapon.kind].wheel;
     if (wheelRow !== null) killedByShots += landTether(w, wheelRow, shootable, gunOpen, bladeGap, hull);
@@ -2983,10 +3006,10 @@ export class GameFrame implements Frame {
       HEART_AT[1] = seat.prevAcross + (seat.across - seat.prevAcross) * alpha;
       heart = HEART_AT;
     }
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart, w.layers.indexOf(w.bossBody), w.bolts);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart, w.layers.indexOf(w.bossBody), w.bolts, w.layers.indexOf(w.enemyShots));
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them. A boss's beams are not
-    // among them: they were stroked under the animal, above — 0459.
+    // among them: they were stroked under the animal, above — 0459. Nor is a jet: under the bullets.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha, false);
     // And the storm on a boss's body, over the body it runs along — 0487.
     paintBodyBolts(w.surface, w.view, w.bodyBolts, w.bossBody, camera, alpha, w.steps);
@@ -4237,9 +4260,9 @@ function jetOf(w: World): Jet | null {
   return w.jetKind === null || w.jetFor <= 0 ? null : SPECIALS[w.jetKind].jet;
 }
 
-/** Where the jet points now, in radians off straight ahead: a sine across `sweep` and back once a `period`. */
-function jetAngle(w: World, jet: Jet): number {
-  return jet.sweep * Math.sin((Math.PI * 2 * w.jetAt) / jet.period);
+/** Where the jet points `at` steps into its sweep, in radians off straight ahead: a sine across `sweep` and back once a `period`. */
+function jetAngle(at: number, jet: Jet): number {
+  return jet.sweep * Math.sin((Math.PI * 2 * at) / jet.period);
 }
 
 /** Start the Water Cannon — 0595. */
@@ -4251,9 +4274,21 @@ function startJet(w: World, kind: SpecialKind, jet: Jet): void {
 
 /** Count the jet down and lay its picture from the muzzle where it is this step — 0595. */
 function stepJet(w: World): void {
+  /*
+    ⚠️ **A WRECK PLAYS NO JET** — the review of 0595. The ship is released at the wreck and the jet played on from
+    the last place it was, landing for the whole of the death beat; the surge ends with the ship (`stepSurge`),
+    and so does this.
+  */
+  if (w.dyingIn > 0) {
+    w.jetFor = 0;
+    w.jetKind = null;
+  }
   const jet = jetOf(w);
   if (jet === null) return;
-  const angle = jetAngle(w, jet);
+  const angle = jetAngle(w.jetAt, jet);
+  // What `landJet` lands, later this step: this angle, not the next one.
+  w.jetLaid = w.jetKind;
+  w.jetLaidAt = w.jetAt;
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
   const link = w.bolts.spawn();
@@ -4263,8 +4298,13 @@ function stepJet(w: World): void {
     reset(link, endAlong, endAcross, JET_BODY, JET_BOLT_KIND);
     // As wide as it lands, which is what the painter draws it at — a beam's rule (0250).
     link.radius = jet.width;
-    link.prevAlong = endAlong;
-    link.prevAcross = endAcross;
+    /*
+      ⚠️ **AND WHERE IT WAS THE STEP BEFORE IS WHERE THE SHIP WAS** — the review of 0595, on 0551's terms for the
+      tether. The painter draws between the two, so a jet whose last place was its own would be drawn a step ahead
+      of the muzzle it plays from at any display rate above the step's.
+    */
+    link.prevAlong = w.ship.prevAlong + w.shipRow.muzzle.along + Math.cos(angle) * jet.length;
+    link.prevAcross = w.ship.prevAcross + w.shipRow.muzzle.across + Math.sin(angle) * jet.length;
     link.velAlong = 0;
     link.fromAlong = rootAlong - endAlong;
     link.fromAcross = rootAcross - endAcross;
@@ -4286,9 +4326,16 @@ function stepJet(w: World): void {
  * its window (`open`) and not at the gun's weight.
  */
 function landJet(w: World, shootable: boolean, open: number, hull: Entity | null): number {
-  const jet = jetOf(w);
+  /*
+    ⚠️ **THE LINE THE PICTURE WAS LAID ON, AND IT WAS A STEP AHEAD OF IT** — the review of 0595. `stepJet` moved the
+    sweep on after laying the picture, so this landed one step further round — about four units at the tip,
+    against a half-width of 2.2 — and on the last step, with the jet already over, landed nothing it had drawn.
+  */
+  if (w.jetLaid === null) return 0;
+  const jet = SPECIALS[w.jetLaid].jet;
+  w.jetLaid = null;
   if (jet === null) return 0;
-  const angle = jetAngle(w, jet);
+  const angle = jetAngle(w.jetLaidAt, jet);
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
   const endAlong = rootAlong + Math.cos(angle) * jet.length;
@@ -4599,7 +4646,22 @@ function firePaint(w: World): void {
   // A ball the pool has no room for is dropped rather than grown — `src/sim/pool.ts` has the argument.
   if (shot === null) return;
   w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);
-  const colour = w.paintRng.int(0, paint.colours.length - 1);
+  /*
+    ⚠️ **OUT OF WHAT THIS PLACE'S HOPPER HOLDS** — the review of 0595: a colour whose row names this place is the
+    hue of its bullets, and is left out (`not`). One draw either way, so the stream moves as it always has.
+  */
+  const theme = w.level.theme;
+  let held = 0;
+  for (let i = 0; i < paint.colours.length; i++) if (!paint.colours[i]!.not.includes(theme)) held++;
+  let nth = w.paintRng.int(0, Math.max(1, held) - 1);
+  let colour = 0;
+  for (let i = 0; i < paint.colours.length; i++) {
+    if (held > 0 && paint.colours[i]!.not.includes(theme)) continue;
+    if (nth-- === 0) {
+      colour = i;
+      break;
+    }
+  }
   const angle = w.paintRng.range(-paint.scatter, paint.scatter);
   const muzzle = w.shipRow.muzzle;
   reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, PAINT_KIND + colour);
@@ -11779,6 +11841,7 @@ export function respawn(w: World): void {
   w.jetFor = 0;
   w.jetKind = null;
   w.jetAt = 0;
+  w.jetLaid = null;
   /*
     ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its
     hull and nothing else, so the marks would be released anyway — but as three bursts, at the place

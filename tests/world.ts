@@ -190,6 +190,8 @@ export function inertLevel(): {
   jetFor: number;
   jetKind: SpecialKind | null;
   jetAt: number;
+  jetLaid: SpecialKind | null;
+  jetLaidAt: number;
   deathOffset: number;
   deathAcross: number;
   onWreck: () => void;
@@ -331,6 +333,8 @@ export function inertLevel(): {
     jetFor: 0,
     jetKind: null,
     jetAt: 0,
+    jetLaid: null,
+    jetLaidAt: 0,
     deathAcross: ACROSS_SPAN / 2,
     // A fixture carries no arsenal, so there is nothing for a wreck to light. `tests/death.test.ts`
     // is what drives the shell's real answer.
@@ -517,6 +521,8 @@ export function playableWorld(
     jetFor: 0,
     jetKind: null,
     jetAt: 0,
+    jetLaid: null,
+    jetLaidAt: 0,
     whirl,
     whirlKind: null,
     whirlAge: 0,

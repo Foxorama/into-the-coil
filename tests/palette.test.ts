@@ -44,6 +44,8 @@ const INKS: readonly Ink[] = [
   'fire',
   // The frost ship's shard — 0253.
   'frost',
+  // The player's water — the review of 0595: the Water Cannon was in `frost`, the other side's ink.
+  'water',
   'impact',
   'blade',
   'glass',

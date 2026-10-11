@@ -189,6 +189,13 @@ export function collideInto(
   bladeGap = 0,
   /** Whose clock that is: the target's own when `null`, or one entity for all of `targets` — a boss's hull for its body. */
   gate: Entity | null = null,
+  /**
+   * Only shots of this `kind`, or all of them when -1; and every shot but this `kind`, or none left out when -1. The
+   * ram rides the gun's pool and lands on its own terms — the review of 0595: a dance landed through the gun's pass
+   * took the gun's log and clock with it, so a dancing ship's paintballs stopped splatting.
+   */
+  only = -1,
+  except = -1,
 ): number {
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
@@ -197,6 +204,7 @@ export function collideInto(
     const clock = gate ?? target;
     for (let s = shots.size - 1; s >= 0; s--) {
       const shot = shots.at(s);
+      if ((only >= 0 && shot.kind !== only) || shot.kind === except) continue;
       /*
         ⚠️ **A SHOT THAT SURVIVES ITS ARRIVALS LANDS ONCE PER IMPACT FLASH, AND THE FLASH IT COUNTS IS
         ITS OWN** — `docs/decisions/0234-a-blade-circles-the-ship.md`, as

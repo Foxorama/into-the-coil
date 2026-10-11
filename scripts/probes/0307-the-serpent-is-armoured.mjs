@@ -51,8 +51,9 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0442, which puts the ray's own log in front of this choice, and by 0595, whose
       // splats share it as `landings`.
-      find: 'landings ?? (armoured ? w.hits : bladeHits), bladeGap, hull);',
-      replace: 'landings ?? bladeHits, bladeGap, hull);',
+      // And by 0598, which leaves the ram out of the gun's pass.
+      find: 'landings ?? (armoured ? w.hits : bladeHits), bladeGap, hull, -1, RAM_KIND);',
+      replace: 'landings ?? bladeHits, bladeGap, hull, -1, RAM_KIND);',
     },
   },
   {

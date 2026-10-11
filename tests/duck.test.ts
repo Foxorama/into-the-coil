@@ -25,12 +25,16 @@ import { BOMB_KINDS, facesShut, weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, SHIP_KINDS, fitted, ownFit } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { JET_BOLT_KIND, SPECIALS } from '../src/content/specials.ts';
+import { THEME_KINDS } from '../src/content/themes.ts';
 import { SPRITE_KINDS } from '../src/content/sprites.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
-import { drawKind, withFlame } from '../src/render/bake.ts';
+import { INK_OF, drawKind, withFlame } from '../src/render/bake.ts';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { STROKES_PER_JET, paintBolts } from '../src/render/scene.ts';
 import { BOLT_BEAM, BOLT_WATER, type BoltLook, type BoltTone, type Surface } from '../src/render/surface.ts';
-import { reset } from '../src/sim/entity.ts';
+import { reset, type Entity } from '../src/sim/entity.ts';
 import { STEPS_PER_SECOND, lockHint } from '../src/state/screens.ts';
 import { flameOpen, initialHangar, pilotRecord, waresBought } from '../src/state/slices/hangar.ts';
 import { OWNABLE_KINDS, OWNABLES } from '../src/content/wares.ts';
@@ -114,7 +118,34 @@ describe('0595 — the paintball marker fires a scattered string of paint', () =
     // The scatter in degrees, as the player sees it: a little, never more than the row's.
     expect((widest * 180) / Math.PI, 'a ball left further off straight ahead than the scatter').toBeLessThanOrEqual((PAINT.scatter * 180) / Math.PI + 0.01);
     expect((widest * 180) / Math.PI, 'the scatter is too slight to see').toBeGreaterThan(2);
-    for (const colour of PAINT.colours) expect(pictures.has(colour.ball), `no ball came out ${colour.ink}`).toBe(true);
+    const place = world.level.theme;
+    for (const colour of PAINT.colours) {
+      expect(pictures.has(colour.ball), `${place}: ${colour.not.includes(place) ? 'a ball came out' : 'no ball came out'} ${colour.ink}`).toBe(!colour.not.includes(place));
+    }
+  });
+
+  /*
+    ⚠️ **IN EVERY PLACE, THE HOPPER HOLDS WHAT ITS ROW SAYS AND NOTHING ITS BULLETS WEAR** — the review of 0595. Which
+    hues are a place's bullet's is argued on each colour's row (`not`); what is asked here is that the gun obeys it,
+    and that no place is left with a hopper of one colour.
+  */
+  it('in every place, every colour its hopper holds and none it leaves out for the place’s own bullets', () => {
+    for (const place of THEME_KINDS) {
+      const { world, frame } = inTheDuck({ ...NO_LEVEL, theme: place });
+      const pictures = new Set<number>();
+      for (let step = 0; step < 6 * STEPS_PER_SECOND; step++) {
+        const before = world.playerShots.size;
+        frame.step();
+        for (let i = before; i < world.playerShots.size; i++) pictures.add(world.playerShots.at(i).sprite);
+      }
+      const held = PAINT.colours.filter((colour) => !colour.not.includes(place));
+      expect(held.length, `${place}'s hopper holds ${held.length} colour`).toBeGreaterThan(1);
+      for (const colour of PAINT.colours) {
+        expect(pictures.has(colour.ball), `${place}: ${colour.ink} ${colour.not.includes(place) ? 'came out where its bullets wear it' : 'never came out'}`).toBe(
+          !colour.not.includes(place),
+        );
+      }
+    }
   });
 
   it('a ball that lands splats there, in its own colour, and the splat lands on a body beside the one it hit', () => {
@@ -206,6 +237,87 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     expect(took / JET.damage, 'it landed faster than its own clock lets it').toBeLessThanOrEqual(JET.steps / JET.landGap + 4);
   });
 
+  /*
+    ⚠️ **IN THE PLAYER'S UNITS: WHERE IT LANDS AGAINST WHERE IT IS DRAWN** — the review of 0595, on 0027 and 0036.
+    The test above asks only that a landing happened; the sweep was moved on between laying the picture and
+    landing it, so the jet landed one step further round than it was drawn — about four units at the tip, nearly
+    twice its half-width. A body on the nose near the tip is where the sweep is quickest, so it is where the two
+    come furthest apart.
+  */
+  it('lands only where it is drawn, every step of it, the last included', () => {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    bodyAt(world, JET.length * 0.9, 0, 1e6);
+    const enemy = world.enemies.at(0);
+    launchSpecial(world, 'waterCannon');
+    let landed = 0;
+    for (let step = 0; step < JET.steps; step++) {
+      const before = enemy.health;
+      frame.step();
+      if (before - enemy.health <= 0) continue;
+      landed++;
+      let link: Entity | null = null;
+      for (let i = 0; i < world.bolts.size; i++) if (world.bolts.at(i).kind === JET_BOLT_KIND) link = world.bolts.at(i);
+      expect(link, `step ${step}: the jet landed with nothing drawn`).not.toBeNull();
+      // The drawn column: from the muzzle (`along + from`) to its end (`along`).
+      const ax = link!.along + link!.fromAlong;
+      const ay = link!.across + link!.fromAcross;
+      const dx = link!.along - ax;
+      const dy = link!.across - ay;
+      const t = Math.max(0, Math.min(1, ((enemy.along - ax) * dx + (enemy.across - ay) * dy) / (dx * dx + dy * dy)));
+      const off = Math.hypot(enemy.along - (ax + t * dx), enemy.across - (ay + t * dy));
+      expect(off, `step ${step}: it landed on a body ${off.toFixed(2)} units from the column drawn that step`).toBeLessThanOrEqual(
+        JET.width + enemy.radius + 1e-6,
+      );
+    }
+    expect(landed, 'the jet never landed on the body it swept across').toBeGreaterThan(0);
+
+    // And on its last step: a body that arrives on the line the jet ends on is landed on.
+    const { world: last, frame: lastFrame } = inTheDuck();
+    last.fireIn = Number.MAX_SAFE_INTEGER;
+    launchSpecial(last, 'waterCannon');
+    for (let step = 0; step < JET.steps - 1; step++) lastFrame.step();
+    const final = JET.sweep * Math.sin((Math.PI * 2 * (JET.steps - 1)) / JET.period);
+    bodyAt(last, Math.cos(final) * JET.length * 0.6 + last.shipRow.muzzle.along, Math.sin(final) * JET.length * 0.6 + last.shipRow.muzzle.across, 1e6);
+    const late = last.enemies.at(last.enemies.size - 1);
+    const health = late.health;
+    lastFrame.step();
+    expect(last.jetFor).toBe(0);
+    expect(health - late.health, 'the jet’s last step was drawn and landed nothing').toBeGreaterThan(0);
+  });
+
+  it('between steps, its root is drawn on the muzzle where the ship is drawn', () => {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    // Flying across the lane, so the ship's last place and this one are apart.
+    world.ship.velAcross = 0.8;
+    launchSpecial(world, 'waterCannon');
+    for (let i = 0; i < 6; i++) frame.step();
+    let link: Entity | null = null;
+    for (let i = 0; i < world.bolts.size; i++) if (world.bolts.at(i).kind === JET_BOLT_KIND) link = world.bolts.at(i);
+    expect(link, 'no jet was drawn').not.toBeNull();
+    expect(Math.abs(world.ship.across - world.ship.prevAcross), 'the ship did not move, so this asks nothing').toBeGreaterThan(0.1);
+    // The painter's own interpolation, at the start of the step: the jet's root against the ship's muzzle there.
+    const rootAcross = link!.prevAcross + link!.prevFromAcross;
+    const muzzleAcross = world.ship.prevAcross + world.shipRow.muzzle.across;
+    expect(rootAcross, 'the jet’s root is drawn a step ahead of the muzzle it plays from').toBeCloseTo(muzzleAcross, 6);
+  });
+
+  it('ends with the ship that played it, at the wreck and not when the beat is over', () => {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    launchSpecial(world, 'waterCannon');
+    frame.step();
+    expect(world.jetFor).toBeGreaterThan(0);
+    // The death beat, as the frame counts it: the ship is a wreck for these steps.
+    world.dyingIn = 30;
+    frame.step();
+    expect(world.jetFor, 'the jet played on through the wreck').toBe(0);
+    let laid = 0;
+    for (let i = 0; i < world.bolts.size; i++) if (world.bolts.at(i).kind === JET_BOLT_KIND) laid++;
+    expect(laid, 'a jet was drawn from the wreck').toBe(0);
+  });
+
   it('is painted as a held column of water as wide as it lands, with its drops, at its stated cost', () => {
     const { world, frame } = inTheDuck();
     world.fireIn = Number.MAX_SAFE_INTEGER;
@@ -226,6 +338,38 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     expect(columns.length, 'the jet is not one held column').toBe(1);
     // A beam's body is four times the width it is handed, which is the width it lands at — 0250.
     expect(columns[0]!.width * 4).toBeCloseTo(2 * JET.width * world.view.scale, 6);
+  });
+
+  it('is drawn under every hostile shot, in the player’s water and never the other side’s frost', () => {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    launchSpecial(world, 'waterCannon');
+    for (let i = 0; i < 5; i++) frame.step();
+    // A hostile shot on the field, where the jet is playing.
+    const shot = world.enemyShots.spawn()!;
+    reset(shot, world.ship.along + 30, world.ship.across, SHOTS.spit);
+    const order: string[] = [];
+    world.surface = {
+      clear(): void {},
+      blit(sprite: number): void {
+        order.push(sprite === shot.sprite ? 'bullet' : 'other');
+      },
+      bolt(_points: Float32Array, _count: number, _width: number, _alpha: number, tone: BoltTone): void {
+        order.push(tone === BOLT_WATER ? 'water' : 'bolt');
+      },
+    };
+    frame.draw(1);
+    const firstBullet = order.indexOf('bullet');
+    const lastWater = order.lastIndexOf('water');
+    expect(firstBullet, 'the hostile shot was not drawn, so this measures nothing').toBeGreaterThanOrEqual(0);
+    expect(lastWater, 'the jet was not drawn, so this measures nothing').toBeGreaterThanOrEqual(0);
+    expect(lastWater, 'a stroke of the jet was drawn over a hostile shot').toBeLessThan(firstBullet);
+    // 0081: the player's fire is never in the ink of what is trying to kill them.
+    expect(INK_OF.pickupWater, 'the Water Cannon’s face is in the other side’s ink').toBe('water');
+    const mount = readFileSync(resolve(fileURLToPath(new URL('..', import.meta.url)), 'src/app/mount.ts'), 'utf8');
+    const calls = mount.match(/boltInks\([^;]*\);/g) ?? [];
+    expect(calls.length, 'no call that hands the bolts their inks was found').toBeGreaterThan(0);
+    for (const call of calls) expect(call, 'the jet is handed an ink other than the player’s water').toContain('colours.water, colours.impact));');
   });
 
   it('a life lost takes the jet with it', () => {

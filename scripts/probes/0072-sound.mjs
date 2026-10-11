@@ -109,8 +109,9 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0372, which weighs the gun on a boss by its row: `open` became `gunOpen`.
       // ⚠️ Re-anchored by 0442, which hands the pairing the ray's log beside the blade's: `shotLog`.
-      find: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, shotLog, bladeGap, hull);',
-      replace: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.deaths, shotLog, bladeGap, hull);',
+      // ⚠️ Re-anchored by 0598, which leaves the ram out of the gun's pass: `-1, RAM_KIND`.
+      find: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, shotLog, bladeGap, hull, -1, RAM_KIND);',
+      replace: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.deaths, shotLog, bladeGap, hull, -1, RAM_KIND);',
     },
   },
   {

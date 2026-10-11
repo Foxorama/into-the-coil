@@ -23,7 +23,8 @@ export const PROBES = [
     suite: 'tests/duck.test.ts',
     broke: 'every ball the first colour in the hopper',
     guard: 'one ball a volley, a little off straight ahead and never all the same way, in every colour in the hopper',
-    edit: { path: 'src/app/frame.ts', find: '  const colour = w.paintRng.int(0, paint.colours.length - 1);', replace: '  const colour = 0;' },
+    // Re-anchored by 0598, which draws out of what the place's hopper holds: the draw is never taken.
+    edit: { path: 'src/app/frame.ts', find: '    if (nth-- === 0) {\n      colour = i;\n      break;\n    }\n', replace: '' },
   },
   {
     decision: '0595',
@@ -53,7 +54,8 @@ export const PROBES = [
     suite: 'tests/duck.test.ts',
     broke: 'a jet held straight ahead, sweeping nothing',
     guard: 'plays for two seconds from the gun, swinging both ways across the nose, and stops',
-    edit: { path: 'src/app/frame.ts', find: '  return jet.sweep * Math.sin((Math.PI * 2 * w.jetAt) / jet.period);', replace: '  return 0 * jet.sweep;' },
+    // Re-anchored by 0598, which asks the sweep at the step the jet was laid at.
+    edit: { path: 'src/app/frame.ts', find: '  return jet.sweep * Math.sin((Math.PI * 2 * at) / jet.period);', replace: '  return 0 * jet.sweep * at;' },
   },
   {
     decision: '0595',

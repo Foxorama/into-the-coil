@@ -264,6 +264,7 @@ export function paintScene(
   heart: Float64Array | null = null,
   beamsBefore = -1,
   bolts: Pool<Entity> | null = null,
+  jetsBefore = -1,
 ): void {
   /*
     ⚠️ **`beat` IS HOW HARD THE HEART THE PLAYER HEARS IS BEATING THIS FRAME — 0401**, from nothing to
@@ -316,6 +317,14 @@ export function paintScene(
       before the boss's body layers, the barrel, the beak and the head stand over the root.
     */
     if (layer === beamsBefore && bolts !== null) paintBolts(surface, view, bolts, cameraAlong, alpha, true);
+    /*
+      ⚠️ **THE WATER CANNON'S JET GOES UNDER EVERYTHING THAT CAN KILL THE PLAYER** — the review of 0595, on 0295
+      and 0373. A column four units wide and seventy-two long, swept across the lane for two seconds and stroked
+      after the whole scene, lay over every hostile shot it crossed; the surge's aura came out from over the
+      bullets for the same reason. Stroked before the enemy shots, it is over the bodies it is landing on and
+      under every bullet, and the ship stands over its root.
+    */
+    if (layer === jetsBefore && bolts !== null) paintBolts(surface, view, bolts, cameraAlong, alpha, 'jets');
     const entities = layers[layer]!;
     const count = entities.size;
     /*
@@ -604,12 +613,13 @@ export function paintBolts(
   bolts: Pool<Entity>,
   cameraAlong: number,
   alpha: number,
-  beams: boolean | null = null,
+  beams: boolean | 'jets' | null = null,
 ): void {
   const count = bolts.size;
   for (let i = 0; i < count; i++) {
     const e = bolts.at(i);
-    if (beams !== null && (e.kind === BEAM_BOLT_KIND) !== beams) continue;
+    // `true` is a boss's beams, `'jets'` the Water Cannon's, `false` every other bolt and `null` all of them.
+    if (beams !== null && (e.kind === BEAM_BOLT_KIND ? true : e.kind === JET_BOLT_KIND ? 'jets' : false) !== beams) continue;
     const endAlong = e.prevAlong + (e.along - e.prevAlong) * alpha;
     const endAcross = e.prevAcross + (e.across - e.prevAcross) * alpha;
     const length = Math.sqrt(e.fromAlong * e.fromAlong + e.fromAcross * e.fromAcross);

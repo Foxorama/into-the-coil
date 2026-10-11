@@ -1059,8 +1059,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // the player's weapon; the core is the brightest ink there is, because lightning is.
   // And the serpent's lightning in the enemy's ink with the same white core — 0248.
   // Solved once per palette by `boltInks`, which gives each a hot heart — 0520.
-  // 0595: and the Water Cannon's jet in the frost's aquamarine round the same white.
-  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.frost, colours.impact));
+  // 0595: and the Water Cannon's jet in the player's water round the same white — `water`, and never `frost`, the
+  // other side's ink (the review of 0595).
+  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.water, colours.impact));
 
   /*
     Whether the canvas is shown mirrored, left for right — 0590, played left-handed. Held so `applyMirror`
@@ -1156,6 +1157,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     jetFor: 0,
     jetKind: null,
     jetAt: 0,
+    jetLaid: null,
+    jetLaidAt: 0,
     whirl,
     whirlKind: null,
     whirlAge: 0,
@@ -3094,7 +3097,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surface.setSpace(want);
     // A hostile bolt in the place's own glow where it authors one, the enemy's ink elsewhere — 0459.
     const hostile = place === null ? null : THEMES[place].bolt;
-    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.frost, colours.impact));
+    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.water, colours.impact));
     /*
       ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
 
