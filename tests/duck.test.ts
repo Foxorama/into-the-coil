@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, canThrow, launchSpecial, wearHull, type World } from '../src/app/frame.ts';
+import { GameFrame, canThrow, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { FLAMES } from '../src/content/flames.ts';
 import { GOLFERS, pilotOpen } from '../src/content/golfers.ts';
@@ -230,13 +230,17 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
 
   it('a life lost takes the jet with it', () => {
     const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
     launchSpecial(world, 'waterCannon');
     frame.step();
     expect(world.jetFor).toBeGreaterThan(0);
-    world.ship.invulnFor = 0;
-    world.ship.health = 0;
-    for (let i = 0; i < 300 && world.jetFor > 0; i++) frame.step();
+    // The shell's half of a lost life, on the step the next ship comes in — long before the jet would end.
+    respawn(world);
     expect(world.jetFor, 'the jet outlived the ship that played it').toBe(0);
+    frame.step();
+    let laid = 0;
+    for (let i = 0; i < world.bolts.size; i++) if (world.bolts.at(i).kind === JET_BOLT_KIND) laid++;
+    expect(laid, 'the new ship came in still playing the last one’s jet').toBe(0);
   });
 
   it('is on the bomb pickup only once MMXXVI is open', () => {
