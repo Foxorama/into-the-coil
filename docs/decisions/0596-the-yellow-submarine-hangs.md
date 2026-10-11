@@ -36,6 +36,12 @@ next time it writes — so **a player who bought it on this build and is rolled 
 `tests/submarine.test.ts`, and `tests/cosmo.browser.test.ts`, which tries every dangle on the dash. Probes in
 `scripts/probes/0596-the-yellow-submarine-hangs.mjs`.
 
+## Looked at
+
+At 1280×720, on Cosmo's shelf and hung from the readout's dash while it is tried: it reads as a yellow submarine —
+the capsule hull, the tower, three lit portholes and the propeller. The periscope is the faintest part, dark on the
+dark plate, and is a detail rather than the thing that says *submarine*.
+
 ## Owed
 
-- **A look** at it on the dash at the shipped camera, swinging.
+- **The swing**, which a still picture cannot show — a play of the branch preview.
