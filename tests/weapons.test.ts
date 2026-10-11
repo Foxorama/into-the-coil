@@ -167,6 +167,9 @@ describe('0233 — a weapon is a kind', () => {
     for (const gun of WEAPON_KINDS) {
       // A ward special is the shield pickup's face rather than the bomb's — 0447; `tests/surge.test.ts`.
       if (SPECIALS[WEAPONS[gun].special].side === 'ward') continue;
+      // Nor one no other ship has a picture for yet — 0593's War Dance, until every ship can dance
+      // (`shared`); `tests/ball.test.ts` holds that it is NOT a face until then.
+      if (!SPECIALS[WEAPONS[gun].special].shared) continue;
       expect(BOMB_KINDS, `the ${gun}'s own special is not a face of the bomb pickup`).toContain(WEAPONS[gun].special);
     }
     expect(PICKUPS.missile.faces, 'the missile pickup does not offer the tubes in their table order').toEqual(

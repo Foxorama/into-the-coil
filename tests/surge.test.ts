@@ -88,6 +88,9 @@ describe('0373 — a full ladder buys the face’s own special', () => {
         expect(specialOf('shield', face), `a shield pickup showing the ${gun}'s special bought somebody else's`).toBe(WEAPONS[gun].special);
         continue;
       }
+      // Not yet the War Dance — 0593: no other ship has a dance drawn, so it is on no face until every ship
+      // can dance (`shared`), which `tests/ball.test.ts` holds.
+      if (!SPECIALS[WEAPONS[gun].special].shared) continue;
       const face = BOMB_KINDS.indexOf(WEAPONS[gun].special);
       expect(face, `the ${gun}'s ${WEAPONS[gun].special} is on no face of the bomb pickup`).toBeGreaterThanOrEqual(0);
       expect(effectOf('bomb', face, { tubes: [] }), `a bomb pickup showing the ${gun}'s special is not a special`).toBe('special');
