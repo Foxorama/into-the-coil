@@ -64,9 +64,9 @@ bakes nothing.
 - **Re-baking only what depends on the place.** Compared pixel for pixel across all seven places,
   **248 of 743 bitmaps differ in the vivid palette and 63 in high contrast** — and the hydra's pieces,
   the worst single frames above, are not among them. Keeping the rest from the atlas already on screen
-  would cut the work by about two thirds. It needs a declared list and a browser guard that bakes every
-  listed kind in two places and compares them; it is the next step if the phone is still heard to
-  stutter, and is owed rather than built.
+  would cut the work by about two thirds. It needs a declared list and a browser guard, and was asked
+  for straight after this landed on its branch: **built in
+  [0605](0605-a-place-rebakes-only-what-it-changes.md).**
 
 ## The map was under the readout, and its route ahead was not there
 
@@ -131,7 +131,6 @@ bench: swap and landing on the same step, the floor intact when the bake is alre
 ## What this leaves owed
 
 **Played on a phone.** The throttle is the browser's estimate of a slow CPU, not a phone, and nothing
-here was measured on one. If the break or the burn is still heard to stutter there, the place-free
-bitmaps above are the next lever.
+here was measured on one. The place-free bitmaps above were the next lever, and 0605 pulled it.
 
 **The chart has been photographed and not played**, as 0341's plate was.

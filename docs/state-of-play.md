@@ -1167,8 +1167,9 @@ ONE MESSAGE.**
 
 Reported: *"the level transitions are a bit chuggy on mobile and probably some desktops, and the map
 display looks pretty dodgy."* Answered in [0604](decisions/0604-the-place-is-baked-on-the-way.md),
-which has the measurements. Owed: a crossing played on a real phone, and a look at the chart in play.
-If the phone still stutters, the decision names the next lever.
+which has the measurements, and [0605](decisions/0605-a-place-rebakes-only-what-it-changes.md), which
+re-bakes only what a place changes. Owed: a crossing played on a real phone, and a look at the chart in
+play.
 
 ### ⚠️ THE ENEMY ART IS BEING REDRAWN — OWED A PLAY — 2026-10-12
 

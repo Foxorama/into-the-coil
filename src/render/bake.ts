@@ -22349,15 +22349,28 @@ export function bakeAtlas(
  * The note above says why a loop that pushes is refused: a skipped push slides every sprite after it
  * down by one. A write to `bitmaps[i]` for every `i` cannot slide, and a slot left empty is refused
  * at the end rather than blitted as nothing.
+ *
+ * ⚠️ **`keep` IS THE ATLAS ON SCREEN, AND A PLACE CHANGE BORROWS FROM IT — 0605.** Every slot no place
+ * changes (`keptAcrossPlaces`) is taken from it as it is, and only the rest are baked, so a step is
+ * spent only where there is something to draw. It must be the same palette's: an atlas does not
+ * record which palette it was baked in, and the one caller has only one.
  */
 export function* bakeAtlasStepwise(
   palette: Palette,
   view: SpriteView,
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
+  keep: Atlas | null = null,
 ): Generator<void, Atlas, void> {
   const bitmaps = new Array<CanvasImageSource>(SPRITE_KINDS.length);
+  // `keep` lends its bitmaps only when it is the same picture at the same size — 0605.
+  const lends = keep !== null && keep.view === view && keep.pixelsPerUnit === pixelsPerUnit;
+  const kept = lends ? keptAcrossPlaces() : null;
   for (let i = 0; i < SPRITE_KINDS.length; i++) {
+    if (kept !== null && kept[i] === true) {
+      bitmaps[i] = keep!.bitmaps[i]!;
+      continue;
+    }
     bitmaps[i] = bakeOne(SPRITE_KINDS[i]!, palette, view, pixelsPerUnit, theme);
     yield;
   }
@@ -22365,6 +22378,90 @@ export function* bakeAtlasStepwise(
   for (let i = 0; i < bitmaps.length; i++) {
     if (bitmaps[i] === undefined) throw new Error(`bakeAtlas: ${SPRITE_KINDS[i]!} was left unbaked`);
   }
+  return finishAtlas(view, theme, bitmaps, pixelsPerUnit);
+}
+
+/*
+  ── WHAT A PLACE CHANGES — `docs/decisions/0605-a-place-rebakes-only-what-it-changes.md` ─────────
+
+  ⚠️ **THE KINDS WHOSE DRAWING READS THE PLACE, AS MEASURED, AND EVERY OTHER ONE IS CARRIED OVER.**
+  Each of these was baked in all seven places, in both palettes, in both views and at two resolutions,
+  and differed somewhere; every kind NOT here came out pixel for pixel the same in all of them. So a
+  place change re-bakes these and lends the rest from the atlas already on screen — about a third of
+  the work, and none of the hydra's pieces, which were the worst single frames 0604 measured.
+
+  ⚠️ **A LIST, BECAUSE THE PLACE IS READ IN HUNDREDS OF PAINTERS** — a foe's skin, a lord's, a shot's
+  tint, a sky — and no one line of `drawKind` says whether a kind reads it. What makes a list safe is
+  which way it fails. A kind on it that has stopped reading the place is merely re-baked for nothing.
+  A kind that starts reading the place and is NOT on it would carry the last place's picture into the
+  next, and `tests/place-drawn.browser.test.ts` bakes every kind off this list in every place and
+  palette and goes red naming it. **The answer to that red is to add the kind here**, never to make
+  its drawing the same everywhere.
+*/
+export const PLACE_DRAWN: ReadonlySet<SpriteKind> = new Set<SpriteKind>([
+  'drifter', 'drifterHit', 'lancer', 'lancerHit', 'weaver', 'weaverHit', 'turret', 'turretHit',
+  'charger', 'chargerHit', 'warden', 'wardenHit', 'spinner', 'spinnerHit', 'sower', 'sowerHit',
+  'picket', 'picketHit', 'moth', 'mothHit', 'raptor', 'raptorHit', 'kite', 'kiteHit', 'swift',
+  'swiftHit', 'minnow', 'minnowHit', 'sentry', 'sentryHit', 'shard', 'shardHit', 'spore', 'sporeHit',
+  'gaze', 'gazeHit', 'drifterB', 'drifterBHit', 'drifterC', 'drifterCHit', 'lancerB', 'lancerBHit',
+  'lancerC', 'lancerCHit', 'weaverB', 'weaverBHit', 'weaverC', 'weaverCHit', 'turretB', 'turretBHit',
+  'turretC', 'turretCHit', 'chargerB', 'chargerBHit', 'chargerC', 'chargerCHit', 'wardenB',
+  'wardenBHit', 'wardenC', 'wardenCHit', 'spinnerB', 'spinnerBHit', 'spinnerC', 'spinnerCHit',
+  'sowerB', 'sowerBHit', 'sowerC', 'sowerCHit', 'picketB', 'picketBHit', 'picketC', 'picketCHit',
+  'mothB', 'mothBHit', 'mothC', 'mothCHit', 'raptorB', 'raptorBHit', 'raptorC', 'raptorCHit', 'kiteB',
+  'kiteBHit', 'kiteC', 'kiteCHit', 'swiftB', 'swiftBHit', 'swiftC', 'swiftCHit', 'minnowB',
+  'minnowBHit', 'minnowC', 'minnowCHit', 'sentryB', 'sentryBHit', 'sentryC', 'sentryCHit', 'shardB',
+  'shardBHit', 'shardC', 'shardCHit', 'sporeB', 'sporeBHit', 'sporeC', 'sporeCHit', 'gazeB',
+  'gazeBHit', 'gazeC', 'gazeCHit', 'boss', 'bossHit', 'boss2', 'boss2Hit', 'boss3', 'boss3Hit',
+  'boss4', 'boss4Hit', 'boss5', 'boss5Hit', 'boss6', 'boss6Hit', 'boss7', 'boss7Hit', 'boss8',
+  'boss8Hit', 'boss8Up', 'boss8Down', 'boss8Gape', 'boss8GapeHit', 'boss8Shut', 'boss8ShutHit',
+  'serpentBody', 'serpentBodyHit', 'boss8Horn2', 'boss8Horn2Hit', 'boss8Horn2Up', 'boss8Horn2Down',
+  'boss8Horn2Gape', 'boss8Horn2GapeHit', 'boss8Horn2Shut', 'boss8Horn2ShutHit', 'boss8Horn3',
+  'boss8Horn3Hit', 'boss8Horn3Up', 'boss8Horn3Down', 'boss8Horn3Gape', 'boss8Horn3GapeHit',
+  'boss8Horn3Shut', 'boss8Horn3ShutHit', 'boss9', 'boss9Hit', 'boss9Up', 'boss9Down', 'boss9Gape',
+  'boss9GapeHit', 'boss9Shut', 'boss9ShutHit', 'boss9Barbed', 'boss9BarbedHit', 'boss9BarbedUp',
+  'boss9BarbedDown', 'boss9BarbedGape', 'boss9BarbedGapeHit', 'boss9BarbedShut', 'boss9BarbedShutHit',
+  'volansTail', 'volansTailHit', 'volansTailBarbed', 'volansTailBarbedHit', 'boss10', 'boss10Hit',
+  'boss10Up', 'boss10Down', 'boss10Gape', 'boss10GapeHit', 'boss10Charged', 'boss10ChargedHit',
+  'boss10GapeCharged', 'boss10GapeChargedHit', 'quetzalWing0', 'quetzalWing1', 'quetzalWing2',
+  'quetzalWing3', 'quetzalWing4', 'quetzalWing5', 'quetzalWing6', 'quetzalWing7', 'quetzalWing8',
+  'quetzalWing9', 'quetzalWing10', 'quetzalWing11', 'quetzalWing0Hit', 'quetzalWing1Hit',
+  'quetzalWing2Hit', 'quetzalWing3Hit', 'quetzalWing4Hit', 'quetzalWing5Hit', 'quetzalWing6Hit',
+  'quetzalWing7Hit', 'quetzalWing8Hit', 'quetzalWing9Hit', 'quetzalWing10Hit', 'quetzalWing11Hit',
+  'boss11', 'boss11Hit', 'boss11Chipped', 'boss11ChippedHit', 'boss11Broken', 'boss11BrokenHit',
+  'boss11Burnt', 'boss11BurntHit', 'boss11Wreck', 'boss11WreckHit', 'shedScale', 'shedEmber',
+  'shedFeather', 'shedTooth', 'shedIce', 'shedFlesh', 'shedGlass', 'boss12', 'boss12Hit', 'boss13',
+  'boss13Hit', 'hydraTail', 'hydraTailHit', 'tendril', 'tendrilHit', 'tendrilLit', 'oralArm', 'spit',
+  'lance', 'flak', 'spine', 'quill', 'ripple', 'curl', 'cog', 'clot', 'tooth', 'skyFar', 'skyNear',
+  'skyRush', 'skyNebula', 'skyGround', 'skyRange', 'landmark', 'landmarkB', 'landmarkC',
+]);
+
+/**
+ * Which slots a place change may lend from the atlas on screen, by blit index — 0605. Built once.
+ *
+ * ⚠️ **NOT ONLY WHAT `PLACE_DRAWN` LEAVES, BECAUSE SOME SLOTS ARE WRITTEN AGAIN AFTER THE BAKE.** The
+ * place's own sky (`bakeNebula`, `bakeGround`, `bakeLandmark`), the fitted ship (`bakeShipFit`) and
+ * its flame (`bakeFlame`) overwrite their slots in the atlas they are handed, so the atlas on screen
+ * holds those slots as the LAST place, or the last fit, left them — not as a bake would. They are
+ * re-baked every time, and a new writer into an atlas joins this list.
+ */
+let keptSlots: readonly boolean[] | null = null;
+function keptAcrossPlaces(): readonly boolean[] {
+  if (keptSlots !== null) return keptSlots;
+  const kept = SPRITE_KINDS.map((kind) => !PLACE_DRAWN.has(kind));
+  const rebaked: number[] = [SPRITE.skyNebula, SPRITE.skyVeins, SPRITE.artery, SPRITE.skyGround, SPRITE.skyRange, ...LANDMARK_SLOTS];
+  for (const kind of ['mireBank', ...MIRE_BANK_CAPS, ...MIRE_BED, ...MIRE_ACID_CAPS] as const) rebaked.push(SPRITE[kind]);
+  for (const ship of SHIP_KINDS) {
+    for (const hull of SHIPS[ship].hulls) rebaked.push(hull.base, hull.hit);
+    for (const cycle of SHIPS[ship].dance) rebaked.push(...cycle.frames);
+  }
+  for (const thrust of THRUST_KINDS) for (const lean of LEAN_KINDS) rebaked.push(...THRUST[thrust].frames[lean]);
+  for (const index of rebaked) kept[index] = false;
+  keptSlots = kept;
+  return kept;
+}
+
+function finishAtlas(view: SpriteView, theme: ThemeKind, bitmaps: CanvasImageSource[], pixelsPerUnit: number): Atlas {
   return {
     view,
     theme,

@@ -3125,7 +3125,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     const early = takePlaceAhead(place);
     if (early !== null || atlasIsStale(atlas, atlas.view, view.scale * dpr, backdrop)) {
-      atlas = early ?? bakeAtlas(colours, atlas.view, view.scale * dpr, backdrop);
+      // 0605: lending what no place changes from the atlas it replaces, as the ahead bake does.
+      atlas = early ?? drain(bakeAtlasStepwise(colours, atlas.view, view.scale * dpr, backdrop, atlas));
       // Not over the port's own atlas while the intro is drawing from it — 0411 — or the stand (0540).
       if (world.intro === null && world.stand === null) surface.setAtlas(atlas);
       else showPort();
@@ -3275,8 +3276,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * slice, and it bakes nothing.
    *
    * ⚠️ **A SLICE IS AT LEAST ONE BITMAP, AND A FEW TAKE LONGER THAN A FRAME.** The hydra's neck and
-   * collar pieces are 40–60 ms each on the bench; nothing short of a smaller drawing makes one of those
-   * cheaper, and fifteen bitmaps of 743 are over 15 ms. They are spread across the break with the rest.
+   * collar pieces were 40–60 ms each on the bench; since 0605 they are lent from the atlas on screen,
+   * since no place draws them differently, and what is left over 15 ms is a handful of sky tiles,
+   * which every place draws its own. They are spread across the break with the rest.
    */
   const AHEAD_SLICE_MS = 6;
   /** Wall clock before which no slice is spent — `AHEAD_SLICE_MS` has why it is clock and not steps. */
@@ -3291,8 +3293,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   } | null = null;
 
   /** The atlas for `place` and its own sky, baked whole — the stepwise twin of `applyPlace`'s bake. */
-  function* bakePictureAhead(place: ThemeKind, sheet: Atlas['view'], resolution: number): Generator<void, Atlas, void> {
-    const next = yield* bakeAtlasStepwise(colours, sheet, resolution, place);
+  // 0605: lending what no place changes from `from`, the atlas on screen when the bake began.
+  function* bakePictureAhead(place: ThemeKind, sheet: Atlas['view'], resolution: number, from: Atlas): Generator<void, Atlas, void> {
+    const next = yield* bakeAtlasStepwise(colours, sheet, resolution, place, from);
     yield* bakePlaceSky(next, place);
     return next;
   }
@@ -3307,7 +3310,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const resolution = view.scale * dpr;
     // A resize mid-bake is an atlas at the wrong resolution: begin again rather than install it.
     if (pictureAhead === null || pictureAhead.place !== coming || pictureAhead.view !== atlas.view || pictureAhead.resolution !== resolution) {
-      pictureAhead = { place: coming, view: atlas.view, resolution, steps: bakePictureAhead(coming, atlas.view, resolution), atlas: null };
+      pictureAhead = { place: coming, view: atlas.view, resolution, steps: bakePictureAhead(coming, atlas.view, resolution, atlas), atlas: null };
     }
     if (pictureAhead.atlas !== null) return;
     const now = performance.now();
