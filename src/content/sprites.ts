@@ -1143,7 +1143,7 @@ export const SPRITE_KINDS = [
   'pickupCandle',
   // The War Dance — 0593: a little ball hopping, three hops drawn behind it. The ball's special's face.
   'pickupDance',
-  // The Water Cannon — 0595: a brass nozzle throwing a curling jet of water. The paintball's special's face.
+  // The Water Cannon — 0595, redrawn by 0606: one drop of water, point up. The paintball's special's face.
   'pickupWater',
   /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
