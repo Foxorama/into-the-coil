@@ -1163,6 +1163,13 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE ENEMY ART IS BEING REDRAWN — OWED A PLAY — 2026-10-12
+
+Asked for: *"more level specific enemy sprites per each level and make them look better."* Taken in
+the order [0601](decisions/0601-the-signatures-are-their-places-own.md) names under *Owed*: first the
+seven signatures, which were the plainest thing each place sent — landed in 0601 — then the swift,
+then The Approach's eight shared bodies. Each owes a play in its place, at speed.
+
 ### ⚠️ THE LABYRINTH FORKS — OWED A PLAY — 2026-10-12
 
 [0600](decisions/0600-the-corridor-forks.md), the last step of

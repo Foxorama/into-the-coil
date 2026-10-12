@@ -13918,62 +13918,134 @@ function paintBoss7(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   painted by the same hand.
 */
 
-/** The Approach's picket: a Y, one blade down the lane and two swept back. */
-const PICKET_HULL: readonly Pt[] = [
-  [-1, -0.16],
-  [-0.3, -0.12],
-  [0.45, -0.98],
-  [0.72, -0.82],
-  [0.18, 0],
-  [0.72, 0.82],
-  [0.45, 0.98],
-  [-0.3, 0.12],
-  [-1, 0.16],
-];
+/*
+  ── THE SIGNATURES ARE DRAWN AS THEIR PLACES' OWN — 0601 ──────────────────────────────────────────
+
+  ⚠️ **THE ONE ENEMY A PLACE OWNS WAS THE PLAINEST THING IT SENT.** 0446 gave the eight shared kinds a
+  creature or a machine per place, and the seven signatures stayed the primitives 0232 chose them as:
+  the Saurian raptor a bent bar beside an ammonite and a crocodile's skull, the Labyrinth sentry a box
+  with dots. Each is redrawn here as a thing native to its place, inside the silhouette class 0232
+  gave it — a Y, wide wings, a crescent of jaws, a block with a slot, a long crystal, a sac, a lens —
+  because that class is what says what the body DOES.
+*/
+
+/** A body symmetric about the lane: its upper half from nose to tail, closed through its mirror. */
+function bilateral(upper: readonly Pt[]): Pt[] {
+  const lower = upper.filter(([, y]) => y !== 0).map(([x, y]): Pt => [x, -y]).reverse();
+  return [...upper, ...lower];
+}
+
+/**
+ * The Approach's picket: a raider gunship — 0601. Still a Y: one barrel down the lane, and two wings
+ * swept back to a gun pod each, which are the two shots of its spread.
+ */
+const PICKET_HULL: readonly Pt[] = bilateral([
+  [-1, -0.1],
+  [-0.62, -0.1],
+  [-0.58, -0.17],
+  [-0.44, -0.17],
+  [-0.3, -0.27],
+  [-0.06, -0.3],
+  [0.02, -0.34],
+  [0.36, -0.76],
+  [0.38, -0.88],
+  [0.48, -0.97],
+  [0.7, -0.99],
+  [0.84, -0.9],
+  [0.82, -0.76],
+  [0.7, -0.68],
+  [0.5, -0.36],
+  [0.6, -0.24],
+  [0.62, -0.08],
+  [0.5, 0],
+]);
 
 /** The Y's two back blades scissor — closed in and back, then open — and its one blade down the lane holds. */
 const PICKET_POSES: readonly Pose[] = [REST, aftSwings(0.05, 0.8, 0.14), aftSwings(0.05, 1.08, -0.08)];
 
 function paintPicket(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = PICKET_POSES[n]!;
-  plate(ctx, f, skin, bent([
-    [-0.3, 0.02],
-    [0.16, 0.02],
-    [0.62, 0.8],
-    [0.48, 0.88],
+  // Lit from above: the upper wing and the top of the pod catch it, the lower wing and the keel do not.
+  shaded(ctx, f, [0, -0.3], [0, 0.3], rgba(skin.lit, 0.22), rgba(skin.plate, 0.45), bent([
+    [-0.42, -0.12],
+    [0.3, -0.22],
+    [0.3, 0.22],
+    [-0.42, 0.12],
   ], pose));
+  plate(ctx, f, skin, bent([
+    [0.06, 0.32],
+    [0.4, 0.76],
+    [0.76, 0.84],
+    [0.68, 0.72],
+    [0.48, 0.34],
+  ], pose));
+  plate(ctx, f, skin, bent([
+    [-0.42, 0.06],
+    [0.34, 0.06],
+    [0.34, 0.2],
+    [-0.04, 0.26],
+    [-0.28, 0.2],
+  ], pose));
+  // The leading edge of the upper wing, lit.
   lit(ctx, f, skin, bent([
-    [-0.94, -0.1],
-    [-0.3, -0.06],
-    [-0.3, 0.06],
-    [-0.94, 0.1],
+    [0.05, -0.33],
+    [0.37, -0.74],
+    [0.5, -0.69],
+    [0.24, -0.33],
   ], pose));
   motif(ctx, f, skin, theme, [
-    [-0.2, -0.08],
-    [0.14, -0.02],
-    [0.14, 0.02],
-    [-0.2, 0.08],
+    [-0.12, -0.22],
+    [0.3, -0.24],
+    [0.3, 0.04],
+    [-0.12, 0.04],
   ], 'picket', pose);
-  const [ex, ey] = pose([-0.1, 0]);
+  // A gun pod at each wingtip — the two shots — its muzzle dark and its lamp in the ink that hurts.
+  for (const side of [-1, 1]) {
+    const [mx, my] = pose([0.55, 0.86 * side]);
+    disc(ctx, f, shade(skin.plate, -0.5), mx, my, 0.095);
+    disc(ctx, f, skin.eye, mx, my, 0.075);
+  }
+  // The cockpit.
+  const [ex, ey] = pose([-0.28, 0]);
   eye(ctx, f, skin, ex, ey, 0.14);
 }
 
-/** Ember Nebula's moth: a thin body with two wide wings. */
-const MOTH_HULL: readonly Pt[] = [
-  [-1, 0],
-  [-0.4, -0.18],
-  [-0.1, -0.5],
-  [0.3, -1],
-  [0.8, -0.86],
-  [0.4, -0.3],
-  [0.9, -0.08],
-  [0.9, 0.08],
-  [0.4, 0.3],
-  [0.8, 0.86],
-  [0.3, 1],
-  [-0.1, 0.5],
-  [-0.4, 0.18],
-];
+/**
+ * Ember Nebula's moth: a fire moth — 0601. Still two wide wings on a body: a rounded forewing and a
+ * hindwing a side, the forewing's trailing edge ragged like a flame, two antennae ahead and a striped
+ * abdomen behind.
+ */
+/*
+  ⚠️ **A MOTH IS MOSTLY WING.** The first two drafts ran the body the whole length of the drawing, as
+  long as the span, and both photographed as a fish with fins. The body is short now and the forewings
+  are what the outline is.
+*/
+const MOTH_HULL: readonly Pt[] = bilateral([
+  [-0.52, -0.05],
+  [-0.6, -0.14],
+  [-0.78, -0.36],
+  [-0.72, -0.44],
+  [-0.5, -0.22],
+  [-0.38, -0.15],
+  [-0.36, -0.34],
+  [-0.3, -0.58],
+  [-0.2, -0.82],
+  [-0.06, -0.98],
+  [0.1, -1],
+  [0.2, -0.92],
+  [0.16, -0.82],
+  [0.26, -0.76],
+  [0.2, -0.66],
+  [0.3, -0.6],
+  [0.26, -0.5],
+  [0.42, -0.6],
+  [0.58, -0.58],
+  [0.66, -0.44],
+  [0.58, -0.28],
+  [0.46, -0.13],
+  [0.66, -0.08],
+  [0.74, 0],
+]);
 
 /**
  * A moth's wings beat, and seen from above a beat is a wing narrowing as it lifts and spreading as it
@@ -13988,31 +14060,62 @@ const MOTH_POSES: readonly Pose[] = [REST, wingsBeat(0.76, 0.08), wingsBeat(1.07
 
 function paintMoth(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = MOTH_POSES[n]!;
-  // The lower wing in shadow, an eyespot on each wing, and the body lit down its spine.
-  plate(ctx, f, skin, bent([
-    [-0.06, 0.5],
-    [0.32, 0.92],
-    [0.72, 0.82],
-    [0.4, 0.34],
-  ], pose));
-  lit(ctx, f, skin, bent([
-    [-0.92, -0.02],
-    [-0.36, -0.1],
-    [0.6, -0.06],
-    [0.6, 0.06],
-    [-0.36, 0.1],
-    [-0.92, 0.02],
-  ], pose));
-  motif(ctx, f, skin, theme, [
-    [0.02, -0.5],
-    [0.36, -0.86],
-    [0.66, -0.78],
-    [0.42, -0.36],
-  ], 'moth', pose);
+  // Each wing hot at the body and cooling to slag at its edge: the furnace is in the moth.
   for (const side of [-1, 1]) {
-    const [ex, ey] = pose([0.44, 0.66 * side]);
-    eye(ctx, f, skin, ex, ey, 0.12);
+    shaded(ctx, f, [0, 0], [0, side], rgba(skin.lit, 0.4), rgba(skin.plate, 0.75), bent([
+      [-0.32, 0.13 * side],
+      [-0.3, 0.34 * side],
+      [-0.26, 0.57 * side],
+      [-0.17, 0.8 * side],
+      [-0.05, 0.93 * side],
+      [0.08, 0.95 * side],
+      [0.15, 0.9 * side],
+      [0.12, 0.82 * side],
+      [0.21, 0.76 * side],
+      [0.15, 0.66 * side],
+      [0.25, 0.6 * side],
+      [0.22, 0.47 * side],
+      [0.4, 0.54 * side],
+      [0.55, 0.54 * side],
+      [0.62, 0.44 * side],
+      [0.55, 0.3 * side],
+      [0.44, 0.12 * side],
+    ], pose));
   }
+  // The forewing's leading edge white-hot.
+  for (const side of [-1, 1]) {
+    lit(ctx, f, skin, bent([
+      [-0.33, 0.34 * side],
+      [-0.27, 0.57 * side],
+      [-0.17, 0.8 * side],
+      [-0.05, 0.93 * side],
+      [-0.06, 0.8 * side],
+      [-0.14, 0.64 * side],
+      [-0.21, 0.44 * side],
+      [-0.25, 0.3 * side],
+    ], pose));
+  }
+  // The hindwings' embers, in the place's own motif.
+  for (const side of [-1, 1]) {
+    motif(ctx, f, skin, theme, [
+      [0.3, 0.3 * side],
+      [0.54, 0.3 * side],
+      [0.6, 0.5 * side],
+      [0.42, 0.56 * side],
+    ], `moth${side}`, pose);
+  }
+  // An eyespot on each forewing: a dark ring, a hot one, and an eye.
+  for (const side of [-1, 1]) {
+    const [sx, sy] = pose([-0.02, 0.52 * side]);
+    disc(ctx, f, shade(skin.plate, -0.35), sx, sy, 0.2);
+    disc(ctx, f, skin.lit, sx, sy, 0.14);
+    eye(ctx, f, skin, sx, sy, 0.1);
+  }
+  // The body down the middle, lit along its spine, and the abdomen ringed.
+  seam(ctx, f, rgba(skin.lit, 0.85), 0.11, posed([[-0.3, 0], [0.64, 0]], pose));
+  for (const x of [0.48, 0.57]) seam(ctx, f, skin.plate, 0.12, posed([[x, -0.03], [x, 0.03]], pose));
+  const [ex, ey] = pose([-0.37, 0]);
+  eye(ctx, f, skin, ex, ey, 0.12);
 }
 
 /** Saurian Belt's raptor: a crescent, horns down the lane. */
@@ -14436,66 +14539,97 @@ function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin, n = 0): void {
   eye(ctx, f, skin, -0.68, -0.04, 0.165);
 }
 
-const RAPTOR_HULL: readonly Pt[] = [
-  [-1, -0.62],
-  [-0.62, -0.92],
-  [0.2, -1],
-  [0.8, -0.7],
-  [1, -0.1],
-  [0.86, 0.5],
-  [0.4, 0.9],
-  [-0.2, 0.96],
-  [-0.9, 0.7],
-  [-0.4, 0.5],
-  [0.2, 0.3],
-  [0.42, -0.1],
-  [0.2, -0.46],
-  [-0.4, -0.5],
-];
+/**
+ * Saurian Belt's raptor: a crescent of jaws — 0601. The outer curve is its back, with four spines
+ * along it; the inner curve is its mouth, toothed on both jaws back to the gullet; the horns 0232 put
+ * down the lane are the two jaw tips, the upper one the longer.
+ */
+const RAPTOR_SPINES = [-62, -30, 2, 34] as const;
+/*
+  Where a tooth points in from, by angle round the mouth, on both jaws. Four a jaw and not seven: a
+  tooth is painted bone-white, and a painted mark has to be 2.5 CSS pixels across to be drawn at all
+  (0106) — at seven a jaw the paint came out at two.
+*/
+const RAPTOR_TEETH: readonly number[] = [70, 90, 110, 130];
+const RAPTOR_HULL: readonly Pt[] = (() => {
+  const deg = Math.PI / 180;
+  // The snout's tip. At (−1, −0.46) the upper jaw ran out to a needle and photographed as a swordfish.
+  const out: Pt[] = [[-0.92, -0.5]];
+  // The back, from the upper jaw round to the lower, with a spine wherever one stands.
+  for (let a = -148; a <= 148; a += 4) {
+    const spine = Math.max(0, ...RAPTOR_SPINES.map((s) => 1 - Math.abs(a - s) / 8));
+    const rad = 0.86 + 0.13 * spine;
+    out.push([Math.cos(a * deg) * rad, Math.sin(a * deg) * rad]);
+  }
+  out.push([-0.84, 0.52]);
+  // The mouth, from the lower jaw's tip back round to the upper's: teeth near the front, a gullet behind.
+  for (let a = 130; a >= -130; a -= 10) {
+    const tip = RAPTOR_TEETH.includes(Math.abs(a));
+    const rad = tip ? 0.33 : 0.5;
+    out.push([0.14 + Math.cos(a * deg) * rad, Math.sin(a * deg) * rad]);
+  }
+  return out;
+})();
 
 /** The crescent's horns are its jaws, and they work: snapped in and forward, then thrown wide. */
-const RAPTOR_POSES: readonly Pose[] = [REST, foreSwings(0.1, 0.82, 0.05), foreSwings(0.1, 1.08, -0.03)];
+// Wider than 0232's crescent needed (0.82 and 1.08): the toothed jaws are shorter than its horns were,
+// and at those numbers they moved 1.9 px — under 0410's floor for a picture that has changed.
+const RAPTOR_POSES: readonly Pose[] = [REST, foreSwings(0.1, 0.74, 0.07), foreSwings(0.1, 1.12, -0.04)];
 
 function paintRaptor(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = RAPTOR_POSES[n]!;
-  plate(ctx, f, skin, bent([
-    [0.44, 0.02],
-    [0.9, 0.02],
-    [0.78, 0.5],
-    [0.36, 0.84],
-    [-0.14, 0.88],
-    [-0.28, 0.6],
-    [0.2, 0.36],
-  ], pose));
-  lit(ctx, f, skin, bent([
-    [-0.92, -0.64],
-    [-0.6, -0.84],
-    [0.16, -0.9],
-    [0.14, -0.74],
-    [-0.5, -0.66],
-    [-0.8, -0.61],
-  ], pose));
+  const deg = Math.PI / 180;
+  const ring = (a: number, rad: number, cx = 0): Pt => [cx + Math.cos(a * deg) * rad, Math.sin(a * deg) * rad];
+  // The lower jaw and the belly of the back in shadow, the upper jaw in the light.
+  const under: Pt[] = [];
+  for (let a = 142; a >= 14; a -= 6) under.push(ring(a, 0.82));
+  for (let a = 14; a <= 124; a += 8) under.push(ring(a, 0.56, 0.14));
+  shaded(ctx, f, [0, 0.2], [0, 0.85], rgba(skin.plate, 0.35), rgba(skin.plate, 0.95), posed(under, pose));
+  const ridge: Pt[] = [];
+  for (let a = -144; a <= -40; a += 8) ridge.push(ring(a, 0.8));
+  for (let a = -40; a >= -144; a -= 8) ridge.push(ring(a, 0.68));
+  lit(ctx, f, skin, posed(ridge, pose));
   motif(ctx, f, skin, theme, [
-    [0.5, -0.5],
-    [0.9, -0.5],
-    [0.9, 0.3],
-    [0.5, 0.3],
+    [0.6, -0.42],
+    [0.84, -0.3],
+    [0.84, 0.3],
+    [0.6, 0.42],
   ], 'raptor', pose);
-  const [ex, ey] = pose([0.0, -0.72]);
-  eye(ctx, f, skin, ex, ey, 0.14);
+  // Every tooth bone-white: the triangle between its two gums and its point.
+  const bone = mix(skin.lit, '#ffffff', 0.55);
+  for (const tooth of RAPTOR_TEETH) {
+    for (const a of [tooth, -tooth]) {
+      poly(ctx, f, bone, posed([ring(a + 9, 0.51, 0.14), ring(a, 0.355, 0.14), ring(a - 9, 0.51, 0.14)], pose));
+    }
+  }
+  // The eye on the upper jaw, looking down the lane.
+  const [ex, ey] = pose(ring(-128, 0.68));
+  eye(ctx, f, skin, ex, ey, 0.13);
 }
 
-/** The Labyrinth's sentry: a block with a slot in its face. */
-const SENTRY_HULL: readonly Pt[] = [
-  [-0.95, -0.95],
-  [0.95, -0.95],
-  [0.95, 0.95],
-  [-0.95, 0.95],
-  [-0.95, 0.24],
-  [-0.5, 0.24],
-  [-0.5, -0.24],
-  [-0.95, -0.24],
-];
+/**
+ * The Labyrinth's sentry: an armoured bunker — 0601. Still a block with a slot in its face: chamfered,
+ * a barrel either side of the slot — the two slabs it fires abreast — and a comb of heat-sink fins
+ * down its back.
+ */
+const SENTRY_HULL: readonly Pt[] = bilateral([
+  [-0.82, -0.2],
+  [-0.82, -0.38],
+  [-1, -0.38],
+  [-1, -0.62],
+  [-0.82, -0.62],
+  [-0.82, -0.8],
+  [-0.68, -0.95],
+  [0.62, -0.95],
+  [0.8, -0.78],
+  [0.8, -0.62],
+  [0.98, -0.62],
+  [0.98, -0.44],
+  [0.8, -0.44],
+  [0.8, -0.2],
+  [0.98, -0.2],
+  [0.98, 0],
+]).concat([[-0.46, 0.2], [-0.46, -0.2]]);
 
 /**
  * The sentry's slot is its mouth, and it works: narrowed nearly shut, then gaping. Only the front of
@@ -14505,44 +14639,91 @@ const SENTRY_HULL: readonly Pt[] = [
 const slotOpens = (by: number): Pose => ([x, y]) => {
   const front = ramp(-x, 0.1, 0.4);
   const a = Math.abs(y);
-  // Inside the slot every point opens by `by`; beyond it the opening fades out by 0.62, where the eye is.
-  const reach = a <= 0.24 ? a * by : a + 0.24 * (by - 1) * (1 - ramp(a, 0.24, 0.62));
+  // Inside the slot every point opens by `by`; beyond it the opening fades out by 0.36, short of the
+  // barrels — 0601: reaching into them, it squeezed each muzzle to under two pixels as it fired.
+  const reach = a <= 0.24 ? a * by : a + 0.24 * (by - 1) * (1 - ramp(a, 0.24, 0.36));
   return [x, Math.sign(y) * (a + (reach - a) * front)];
 };
-const SENTRY_POSES: readonly Pose[] = [REST, slotOpens(0.5), slotOpens(1.35)];
+/**
+ * The two barrels kick back into the block as it gapes, which is when it fires — each slid whole past
+ * the face, so its muzzle keeps its width; tapered along its length, the muzzle squashed to a pixel.
+ * The face itself holds, or the lamp above the slot is left standing over the void.
+ */
+const recoils = (by: number): Pose => ([x, y]) => {
+  const barrel = ramp(-x, 0.825, 0.845) * (1 - ramp(Math.abs(Math.abs(y) - 0.5), 0.14, 0.2));
+  return [x + by * barrel, y];
+};
+const SENTRY_POSES: readonly Pose[] = [REST, slotOpens(0.3), andThen(slotOpens(1.6), recoils(0.12))];
 
 function paintSentry(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = SENTRY_POSES[n]!;
+  // The armour's lower third in shadow and its top bevel in the light.
   plate(ctx, f, skin, bent([
-    [-0.88, 0.32],
-    [0.88, 0.32],
-    [0.88, 0.88],
-    [-0.88, 0.88],
+    [-0.6, 0.42],
+    [0.76, 0.42],
+    [0.76, 0.74],
+    [0.6, 0.9],
+    [-0.64, 0.9],
+    [-0.78, 0.76],
+    [-0.78, 0.7],
+    [-0.6, 0.7],
   ], pose));
   lit(ctx, f, skin, bent([
-    [-0.44, -0.2],
-    [-0.2, -0.2],
-    [-0.2, 0.2],
-    [-0.44, 0.2],
+    [-0.64, -0.92],
+    [0.6, -0.92],
+    [0.72, -0.76],
+    [-0.78, -0.76],
   ], pose));
+  // The plates the armour is bolted from, and a fin's edge each, darker.
+  const join = shade(skin.hull, -0.3);
+  seam(ctx, f, join, 0.15, posed([[0.08, -0.7], [0.08, 0.34]], pose));
+  for (const y of [-0.53, 0, 0.53]) poly(ctx, f, join, bent([[0.82, y - 0.075], [0.97, y - 0.075], [0.97, y + 0.075], [0.82, y + 0.075]], pose));
   motif(ctx, f, skin, theme, [
-    [-0.1, -0.86],
-    [0.86, -0.86],
-    [0.86, 0.24],
-    [-0.1, 0.24],
+    [0.2, -0.7],
+    [0.72, -0.7],
+    [0.72, 0.34],
+    [0.2, 0.34],
   ], 'sentry', pose);
-  const [ex, ey] = pose([-0.62, -0.6]);
-  eye(ctx, f, skin, ex, ey, 0.14);
+  // Each barrel's muzzle, dark.
+  for (const side of [-1, 1]) {
+    poly(ctx, f, shade(skin.plate, -0.5), bent([[-0.995, 0.42 * side], [-0.85, 0.42 * side], [-0.85, 0.58 * side], [-0.995, 0.58 * side]], pose));
+  }
+  // The visor at the back of the slot, in the eye's ink, and its light spilling into the slot.
+  const [vx, vy] = pose([-0.4, 0]);
+  glow(ctx, f, skin.eye, vx, vy, 0.3, 0.5);
+  poly(ctx, f, skin.eye, bent([
+    [-0.45, -0.19],
+    [-0.3, -0.19],
+    [-0.3, 0.19],
+    [-0.45, 0.19],
+  ], pose));
+  // A sensor lamp above the slot, watching.
+  const [ex, ey] = pose([-0.6, -0.55]);
+  eye(ctx, f, skin, ex, ey, 0.13);
 }
 
-/** Rime Shelf's shard: a long hexagon, pointed both ways. */
+/**
+ * Rime Shelf's shard: a cluster of ice — 0601. Still long and pointed both ways: a bipyramid down the
+ * lane, with a smaller crystal grown off it aft above and fore below, turned half a turn from each
+ * other, because the thing turns and throws a turning spiral.
+ */
 const SHARD_HULL: readonly Pt[] = [
   [-1, 0],
-  [-0.4, -0.5],
-  [0.4, -0.5],
+  [-0.56, -0.3],
+  [0.2, -0.36],
+  [0.38, -0.74],
+  [0.56, -0.92],
+  [0.62, -0.66],
+  [0.52, -0.34],
+  [0.6, -0.3],
   [1, 0],
-  [0.4, 0.5],
-  [-0.4, 0.5],
+  [0.56, 0.3],
+  [-0.2, 0.36],
+  [-0.38, 0.74],
+  [-0.56, 0.92],
+  [-0.62, 0.66],
+  [-0.52, 0.34],
+  [-0.6, 0.3],
 ];
 
 /**
@@ -14555,43 +14736,87 @@ const SHARD_POSES: readonly Pose[] = [REST, rolls(0.36), rolls(-0.36)];
 
 function paintShard(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = SHARD_POSES[n]!;
+  const frost = shade(skin.hull, 0.3);
+  // The main crystal's upper face catching the light and its lower face in shadow, with the fore
+  // facet of the upper face lit white.
+  poly(ctx, f, frost, bent([
+    [-0.92, -0.02],
+    [-0.55, -0.27],
+    [0.56, -0.27],
+    [0.92, -0.02],
+  ], pose));
   plate(ctx, f, skin, bent([
-    [-0.9, 0.04],
-    [0.9, 0.04],
-    [0.36, 0.44],
-    [-0.36, 0.44],
+    [-0.92, 0.02],
+    [-0.55, 0.27],
+    [0.56, 0.27],
+    [0.92, 0.02],
   ], pose));
   lit(ctx, f, skin, bent([
-    [-0.92, -0.02],
-    [-0.4, -0.44],
-    [-0.2, -0.44],
-    [-0.7, -0.02],
+    [-0.92, -0.03],
+    [-0.55, -0.27],
+    [-0.24, -0.27],
+    [-0.56, -0.03],
+  ], pose));
+  // Each spur cut in two faces, one to the light: the aft one above, the fore one below.
+  poly(ctx, f, frost, bent([
+    [0.25, -0.37],
+    [0.4, -0.72],
+    [0.53, -0.85],
+    [0.47, -0.37],
+  ], pose));
+  plate(ctx, f, skin, bent([
+    [-0.25, 0.37],
+    [-0.4, 0.72],
+    [-0.53, 0.85],
+    [-0.47, 0.37],
   ], pose));
   motif(ctx, f, skin, theme, [
-    [-0.3, -0.4],
-    [0.3, -0.4],
-    [0.3, -0.06],
-    [-0.3, -0.06],
+    [-0.45, 0.04],
+    [0.45, 0.04],
+    [0.45, 0.28],
+    [-0.45, 0.28],
   ], 'shard', pose);
-  eye(ctx, f, skin, -0.42, 0, 0.13);
+  // The cold heart it hunts by, in the ink that hurts, lit through the ice.
+  const [cx, cy] = pose([0.04, 0]);
+  glow(ctx, f, skin.eye, cx, cy, 0.34, 0.6);
+  disc(ctx, f, mix(skin.eye, '#ffffff', 0.3), cx, cy, 0.11);
 }
 
-/** The Toxic Mire's spore: a lumpy sac. */
-const SPORE_HULL: readonly Pt[] = [
-  [-1, -0.1],
-  [-0.86, -0.56],
-  [-0.5, -0.86],
-  [-0.06, -1],
-  [0.4, -0.9],
-  [0.82, -0.56],
-  [1, -0.06],
-  [0.9, 0.44],
-  [0.56, 0.84],
-  [0.1, 1],
-  [-0.4, 0.9],
-  [-0.8, 0.6],
-  [-0.96, 0.24],
-];
+/**
+ * The Toxic Mire's spore: a puffball mine — 0601. Still a lumpy sac, now standing on seven short stalks
+ * each ending in a bulb, the way a sea mine stands on its horns: it never fires, and what it says is
+ * *do not touch*.
+ */
+const SPORE_STALKS = [-1.75, -0.95, -0.2, 0.62, 1.4, 2.2, 3.1] as const;
+/** Where a stalk's bulb sits, out from the sac's centre. */
+const SPORE_BULB = 0.84;
+const SPORE_HULL: readonly Pt[] = (() => {
+  const sac = (a: number): number => 0.68 + 0.05 * Math.sin(3 * a + 0.6);
+  const at = (a: number, rad: number): Pt => [Math.cos(a) * rad, Math.sin(a) * rad];
+  /*
+    ⚠️ **A STALK THICK ENOUGH TO OUTLIVE ITS OUTLINE.** Drawn at 0.075 either side, the stalks vanished
+    under the hull's own stroke and the bulbs photographed as seven yellow dots floating round a ball —
+    which at play size is a ring of bullets or pickups, the two things a body must never be mistaken for.
+  */
+  const neck = 0.13;
+  const out: Pt[] = [];
+  SPORE_STALKS.forEach((s, k) => {
+    const next = SPORE_STALKS[(k + 1) % SPORE_STALKS.length]! + (k === SPORE_STALKS.length - 1 ? 2 * Math.PI : 0);
+    // Up the stalk, round the far side of its bulb, and down again.
+    out.push(at(s - neck, sac(s - neck)));
+    out.push(at(s - neck * 0.8, SPORE_BULB - 0.1));
+    for (let j = 0; j <= 6; j++) {
+      const local = s - 1.9 + (3.8 * j) / 6;
+      const [bx, by] = at(s, SPORE_BULB);
+      out.push([bx + Math.cos(local) * 0.13, by + Math.sin(local) * 0.13]);
+    }
+    out.push(at(s + neck * 0.8, SPORE_BULB - 0.1));
+    out.push(at(s + neck, sac(s + neck)));
+    // The sac's own lumpy skin to the next stalk.
+    for (let a = s + neck + 0.12; a < next - neck - 0.06; a += 0.14) out.push(at(a, sac(a)));
+  });
+  return out;
+})();
 
 /**
  * The sac heaves: three lumps bulge round its rim and travel, so it is something alive inside a skin
@@ -14599,52 +14824,63 @@ const SPORE_HULL: readonly Pt[] = [
  */
 const heaves = (phase: number): Pose => ([x, y]) => {
   const rho = Math.hypot(x, y);
-  const swell = 1 + 0.1 * rho * rho * Math.sin(3 * Math.atan2(y, x) + phase);
+  const swell = 1 + 0.13 * rho * rho * Math.sin(3 * Math.atan2(y, x) + phase);
   return [x * swell, y * swell];
 };
 const SPORE_POSES: readonly Pose[] = [REST, heaves(0), heaves(Math.PI)];
 
 function paintSpore(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = SPORE_POSES[n]!;
-  plate(ctx, f, skin, bent([
-    [-0.86, 0.3],
-    [0.84, 0.3],
-    [0.5, 0.76],
-    [0.1, 0.9],
-    [-0.4, 0.8],
-    [-0.74, 0.56],
+  const round = (rad: number): Pt[] => Array.from({ length: 28 }, (_, k): Pt => [Math.cos((k * Math.PI) / 14) * rad, Math.sin((k * Math.PI) / 14) * rad]);
+  // The sac lit from above and fore, sagging into shadow aft and below.
+  shaded(ctx, f, [-0.5, -0.5], [0.5, 0.55], shade(skin.hull, 0.15), skin.plate, posed(round(0.6), pose));
+  // A highlight on its skin, wet.
+  lit(ctx, f, skin, posed([
+    [-0.5, -0.24],
+    [-0.38, -0.44],
+    [-0.16, -0.54],
+    [-0.18, -0.42],
+    [-0.36, -0.32],
   ], pose));
-  lit(ctx, f, skin, bent([
-    [-0.84, -0.5],
-    [-0.5, -0.76],
-    [-0.1, -0.88],
-    [-0.14, -0.7],
-    [-0.46, -0.6],
-    [-0.7, -0.36],
-  ], pose));
+  // The mottle kept aft and low, where a spot cannot sit beside the eye and read as a second one.
   motif(ctx, f, skin, theme, [
-    [-0.6, -0.4],
-    [0.6, -0.4],
-    [0.6, 0.2],
-    [-0.6, 0.2],
+    [0.1, 0.02],
+    [0.52, 0.02],
+    [0.52, 0.44],
+    [0.1, 0.44],
   ], 'spore', pose);
-  const [ex, ey] = pose([-0.5, 0]);
-  eye(ctx, f, skin, ex, ey, 0.16);
+  // Every stalk's bulb charged with the poison it carries, its cap in the body's own skin.
+  for (const s of SPORE_STALKS) {
+    const [bx, by] = pose([Math.cos(s) * SPORE_BULB, Math.sin(s) * SPORE_BULB]);
+    disc(ctx, f, skin.lit, bx, by, 0.07);
+  }
+  const [ex, ey] = pose([-0.34, 0.04]);
+  eye(ctx, f, skin, ex, ey, 0.15);
 }
 
-/** The Black Heart's gaze: a lens, pointed across the lane, with a pupil. */
-const GAZE_HULL: readonly Pt[] = [
-  [0, -1],
-  [-0.5, -0.66],
-  [-0.78, -0.24],
-  [-0.78, 0.24],
-  [-0.5, 0.66],
-  [0, 1],
-  [0.5, 0.66],
-  [0.78, 0.24],
-  [0.78, -0.24],
-  [0.5, -0.66],
-];
+/** A lens pointed across the lane, `wide` at its middle: x at height y, either side. */
+const lensAt = (wide: number, tall: number, y: number): number => wide * (1 - (y / tall) ** 2);
+
+/**
+ * The Black Heart's gaze: an eye torn out of the heart — 0601. Still a lens pointed across the lane,
+ * with a pupil: lids of flesh, a pale veined white, an iris and a pupil, and the optic nerve it trails
+ * behind it as it hunts.
+ */
+const GAZE_HULL: readonly Pt[] = (() => {
+  const out: Pt[] = [];
+  for (let k = 0; k <= 16; k++) {
+    const y = -1 + k / 8;
+    out.push([-lensAt(0.76, 1, y), y]);
+  }
+  for (let k = 15; k >= 1; k--) {
+    const y = -1 + k / 8;
+    if (Math.abs(y) < 0.2) continue;
+    out.push([lensAt(0.76, 1, y), y]);
+    // The nerve leaves the back of the eye at its middle.
+    if (y > 0.2 && y - 1 / 8 < 0.2) out.push([0.72, 0.17], [0.88, 0.1], [1, 0.07], [1, -0.07], [0.88, -0.1], [0.72, -0.17]);
+  }
+  return out;
+})();
 
 /**
  * The gaze is an eye, so it blinks and it glances. Its second frame is the lids half down — the lens
@@ -14657,31 +14893,42 @@ const GAZE_SOCKET: readonly number[] = [0.34, 0.24, 0.32];
 
 function paintGaze(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = GAZE_POSES[n]!;
-  plate(ctx, f, skin, bent([
-    [0.06, 0.06],
-    [0.7, 0.24],
-    [0.46, 0.62],
-    [0.02, 0.9],
+  // The nerve, in shadow, and the lower lid under it.
+  plate(ctx, f, skin, posed([
+    [0.6, -0.12],
+    [0.86, -0.06],
+    [0.96, -0.04],
+    [0.96, 0.04],
+    [0.86, 0.06],
+    [0.6, 0.12],
   ], pose));
-  lit(ctx, f, skin, bent([
-    [-0.7, -0.24],
-    [-0.46, -0.6],
-    [-0.02, -0.9],
-    [-0.06, -0.66],
-    [-0.36, -0.44],
-    [-0.56, -0.16],
-  ], pose));
-  motif(ctx, f, skin, theme, [
-    [-0.4, 0.3],
-    [0.4, 0.3],
-    [0.3, 0.6],
-    [-0.3, 0.6],
-  ], 'gaze', pose);
-  // The pupil: a big socket and the eye colour in it, looking down the lane — or away, or half-lidded.
-  const socket = GAZE_SOCKET[n]!;
+  // The white: a smaller lens inside the lids, shadowed under the upper lid and pale below.
+  const white: Pt[] = [];
+  for (let k = 0; k <= 12; k++) {
+    const y = -0.78 + (k * 1.56) / 12;
+    white.push([-lensAt(0.56, 0.78, y), y]);
+  }
+  for (let k = 11; k >= 1; k--) {
+    const y = -0.78 + (k * 1.56) / 12;
+    white.push([lensAt(0.56, 0.78, y), y]);
+  }
+  shaded(ctx, f, [0, -0.78], [0, 0.5], mix(skin.hull, '#ffffff', 0.55), mix(skin.hull, '#ffffff', 0.85), posed(white, pose));
+  // The veins, running in from the corners.
+  const vein = shade(skin.hull, -0.1);
+  seam(ctx, f, vein, 0.1, posed([[0.02, -0.66], [0.1, -0.54], [0.06, -0.42]], pose), 0.8);
+  seam(ctx, f, vein, 0.1, posed([[-0.04, 0.66], [0.06, 0.52], [0.0, 0.42]], pose), 0.8);
+  seam(ctx, f, vein, 0.1, posed([[0.44, -0.12], [0.34, -0.2]], pose), 0.8);
+  // The upper lid's crease, in shadow, where it folds over the white.
+  seam(ctx, f, shade(skin.hull, -0.35), 0.1, posed([[-0.3, -0.66], [-0.14, -0.8], [0.06, -0.84], [0.24, -0.72]], pose), 0.9, true);
+  // The iris in the eye's ink, the pupil in it, and the wet light on it — looking down the lane, or
+  // away, or half-lidded.
+  const iris = GAZE_SOCKET[n]!;
   const [px, py] = GAZE_PUPIL[n]!;
-  disc(ctx, f, shade(skin.plate, -0.5), 0, py * 0.5, socket);
-  disc(ctx, f, skin.eye, px, py, socket * 0.59);
+  disc(ctx, f, shade(skin.eye, -0.35), px, py, iris);
+  disc(ctx, f, skin.eye, px, py, iris * 0.78);
+  disc(ctx, f, shade(skin.plate, -0.6), px, py, iris * 0.44);
+  disc(ctx, f, '#ffffff', px - iris * 0.35, py - iris * 0.35, 0.07, 0.9);
+  void theme;
 }
 
 function drawPicket(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
