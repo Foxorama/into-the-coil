@@ -71,6 +71,11 @@ export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
    */
   title: string;
   /**
+   * The title in a word, where a column has room for no more — 0607, the high-score table's tier. Each
+   * tier's own word, and the one the player already says for it.
+   */
+  short: string;
+  /**
    * The one line under it, and it exists because the titles do not sort themselves.
    *
    * ⚠️ **Disambiguation is not the over-explaining the voice rule bans.** *Let the Galaxy Burn* is
@@ -454,6 +459,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   legendary: {
     title: 'Legendary Pilot',
+    short: 'Legend',
     // The button's voice, in the player's words — 0370.
     hint: 'Is that plot armour?',
     // *"Reduce starting/total lives to 3 instead of 5"* — 0573. Its full shell is still the life in hand.
@@ -481,6 +487,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   savior: {
     title: 'Savior of the Galaxy',
+    short: 'Savior',
     hint: 'Be the hero you want to be',
     lives: 3,
     // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
@@ -515,6 +522,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   burn: {
     title: 'Let the Galaxy Burn',
+    short: 'Burn',
     hint: 'Best of luck mate',
     lives: 2,
     /*
@@ -552,6 +560,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
  */
 export const AUTHORED: DifficultyRow = {
   title: 'As authored',
+  // Read by nothing either: a score is only kept for a run, and this row never begins one.
+  short: 'Authored',
   hint: 'The content, multiplied by nothing',
   // Read by nothing: a fixture has no run, and this row never begins one.
   lives: 5,
