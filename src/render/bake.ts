@@ -8047,11 +8047,28 @@ const beat = (back: number, spread: number): Pose => ([x, y]) => {
   return [x + back * t * t, y * (1 + (spread - 1) * t)];
 };
 
+/*
+  ── THE APPROACH'S EIGHT, BUILT — 0603 ────────────────────────────────────────────────────────────
+
+  ⚠️ **LEVEL ONE TEACHES THE SHAPES, SO EVERY SHAPE IS KEPT.** The diamond, the arrowhead, the bar
+  across the lane, the flat face and dome, the needle, the ring, the four arms and the chevron are the
+  vocabulary 0081 chose; what they were drawn as was the primitive itself. Each is now a raider's
+  machine inside its own primitive — nacelles, pods, barrels, fins, lugs — with a form-shade for volume
+  and its engines lit, because a raider is a ship and a ship has a drive.
+*/
+
+/** The drifter: a recon drone — the diamond with its sides drawn in and its tail forked over a drive. */
 const DRIFTER_HULL: readonly Pt[] = [
   [-1, 0],
+  [-0.44, -0.44],
   [0, -1],
-  [1, 0],
+  [0.46, -0.52],
+  [1, -0.16],
+  [0.72, 0],
+  [1, 0.16],
+  [0.46, 0.52],
   [0, 1],
+  [-0.44, 0.44],
 ];
 
 /** The drifter holds station and never fires, so it swims in place: a ray's beat, and it looks about. */
@@ -8060,13 +8077,19 @@ const DRIFTER_GAZE: readonly number[] = [0, -1, 1];
 
 function paintDrifter(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = DRIFTER_POSES[n]!;
+  // Its drive, lit in the fork of its tail.
+  const [dx, dy] = pose([0.84, 0]);
+  glow(ctx, f, skin.lit, dx, dy, 0.32, 0.6);
   plate(ctx, f, skin, bent([
-    [-0.9, 0.06],
-    [0.9, 0.06],
-    [0, 0.94],
+    [-0.88, 0.06],
+    [0.66, 0.06],
+    [0.42, 0.46],
+    [0, 0.9],
+    [-0.4, 0.42],
   ], pose));
   lit(ctx, f, skin, bent([
     [-0.86, -0.04],
+    [-0.42, -0.4],
     [-0.06, -0.84],
     [0.06, -0.72],
     [-0.66, -0.02],
@@ -8082,11 +8105,17 @@ const LANCER_BELLY: Belly = [
   [0.58, 0.72],
 ];
 
-const LANCER_HULL: readonly Pt[] = [
+/** The lancer: a raider fighter — the arrowhead with a nacelle at each back corner and an engine bay between. */
+const LANCER_HULL: readonly Pt[] = bilateral([
   [-1, 0],
-  [0.7, -0.95],
-  [0.7, 0.95],
-];
+  [0.56, -0.88],
+  [0.64, -0.98],
+  [0.92, -0.98],
+  [0.92, -0.66],
+  [0.74, -0.62],
+  [0.74, -0.24],
+  [0.6, -0.18],
+]);
 
 /** The lancer's back corners are its wings, and it beats them: folded in and back, then flared. */
 /*
@@ -8098,27 +8127,64 @@ const LANCER_POSES: readonly Pose[] = [REST, aftSwings(-0.3, 0.84, 0.16), aftSwi
 
 function paintLancer(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = LANCER_POSES[n]!;
+  // A drive in each nacelle.
+  for (const side of [-1, 1]) {
+    // 0.2 round and inboard of the nozzle: at 0.26 on it, the light ran past the bitmap's edge — and
+    // the wingbeat sweeps the nacelles 0.16 further aft, so it sits there in every pose.
+    const [dx, dy] = pose([0.76, 0.82 * side]);
+    glow(ctx, f, skin.lit, dx, dy, 0.2, 0.6);
+  }
   plate(ctx, f, skin, bent([
     [-0.86, 0.06],
-    [0.62, 0.06],
-    [0.62, 0.88],
+    [0.58, 0.06],
+    [0.58, 0.82],
   ], pose));
   lit(ctx, f, skin, bent([
     [-0.9, -0.03],
-    [0.6, -0.86],
-    [0.62, -0.7],
+    [0.54, -0.84],
+    [0.58, -0.7],
     [-0.66, -0.03],
   ], pose));
+  for (const side of [-1, 1]) {
+    // Its nozzle, dark under the drive's light.
+    poly(ctx, f, shade(skin.plate, -0.4), bent([
+      [0.68, 0.7 * side],
+      [0.88, 0.7 * side],
+      [0.88, 0.94 * side],
+      [0.68, 0.94 * side],
+    ], pose));
+  }
   motif(ctx, f, skin, theme, LANCER_BELLY, 'lancer', pose);
   const [ex, ey] = pose([-0.4, 0]);
   eye(ctx, f, skin, ex, ey, 0.16);
 }
 
+/** The weaver: a twin-pod glider — the bar across the lane, a pod at each end and a hub in the middle. */
 const WEAVER_HULL: readonly Pt[] = [
-  [-0.22, -1],
-  [0.22, -1],
-  [0.22, 1],
-  [-0.22, 1],
+  [-0.2, -1],
+  [0.2, -1],
+  [0.3, -0.92],
+  [0.3, -0.7],
+  [0.18, -0.62],
+  [0.18, -0.3],
+  [0.32, -0.22],
+  [0.32, 0.22],
+  [0.18, 0.3],
+  [0.18, 0.62],
+  [0.3, 0.7],
+  [0.3, 0.92],
+  [0.2, 1],
+  [-0.2, 1],
+  [-0.3, 0.92],
+  [-0.3, 0.7],
+  [-0.18, 0.62],
+  [-0.18, 0.3],
+  [-0.32, 0.22],
+  [-0.32, -0.22],
+  [-0.18, -0.3],
+  [-0.18, -0.62],
+  [-0.3, -0.7],
+  [-0.3, -0.92],
 ];
 
 /**
@@ -8140,24 +8206,32 @@ const WEAVER_PIECES = 24;
 
 function paintWeaver(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = WEAVER_POSES[n]!;
+  // The aft half in shadow, following the pods and the hub.
   plate(ctx, f, skin, bent([
-    [0.005, -0.92],
-    [0.21, -0.92],
-    [0.21, 0.92],
-    [0.005, 0.92],
+    [0.01, -0.94],
+    [0.18, -0.94],
+    [0.26, -0.88],
+    [0.26, -0.72],
+    [0.14, -0.64],
+    [0.14, -0.3],
+    [0.28, -0.22],
+    [0.28, 0.22],
+    [0.14, 0.3],
+    [0.14, 0.64],
+    [0.26, 0.72],
+    [0.26, 0.88],
+    [0.18, 0.94],
+    [0.01, 0.94],
   ], pose, WEAVER_PIECES));
-  lit(ctx, f, skin, bent([
-    [-0.21, -0.9],
-    [-0.005, -0.9],
-    [-0.005, -0.4],
-    [-0.21, -0.4],
-  ], pose, WEAVER_PIECES));
-  lit(ctx, f, skin, bent([
-    [-0.21, 0.4],
-    [-0.005, 0.4],
-    [-0.005, 0.9],
-    [-0.21, 0.9],
-  ], pose, WEAVER_PIECES));
+  // Each pod's nose lit.
+  for (const side of [-1, 1]) {
+    lit(ctx, f, skin, bent([
+      [-0.26, 0.7 * side],
+      [-0.03, 0.7 * side],
+      [-0.03, 0.92 * side],
+      [-0.26, 0.92 * side],
+    ], pose, WEAVER_PIECES));
+  }
   motif(ctx, f, skin, theme, [
     [-0.16, -0.7],
     [0.16, -0.7],
@@ -8175,15 +8249,26 @@ const TURRET_BELLY: Belly = [
   [-0.4, 0.5],
 ];
 
-/** The turret's half-disc: a flat face at −x and the dome behind it, sampled so a pose can bend both. */
+/** Where the turret's three barrels stand on its face, across the lane — one per shot of its spray. */
+const TURRET_BARRELS = [-0.5, 0, 0.5] as const;
+
+/**
+ * The turret's half-disc: a flat face at −x and the dome behind it, sampled so a pose can bend both —
+ * and since 0603 a gun emplacement, a barrel standing out of the face for each of its three shots.
+ */
 const TURRET_HULL: readonly Pt[] = (() => {
   const out: Pt[] = [];
-  for (let k = 0; k <= 8; k++) out.push([-0.55, -1 + k / 4]);
-  for (let k = 1; k < 16; k++) {
-    const a = Math.PI / 2 - (Math.PI * k) / 16;
+  // The dome, from the top of the face round the back to its foot.
+  for (let k = 0; k <= 16; k++) {
+    const a = -Math.PI / 2 + (Math.PI * k) / 16;
     out.push([-0.55 + Math.cos(a), Math.sin(a)]);
   }
-  return out.reverse();
+  // The face, from its foot back up to the top, with each barrel standing out of it.
+  for (const c of [...TURRET_BARRELS].reverse()) {
+    // 0.2 across: at 0.15 the sheet showed three prongs rather than three guns.
+    out.push([-0.55, c + 0.1], [-0.84, c + 0.1], [-0.84, c - 0.1], [-0.55, c - 0.1]);
+  }
+  return out;
 })();
 
 /**
@@ -8208,31 +8293,72 @@ function paintTurret(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0)
     [-0.33, 0.9],
     [-0.5, 0.9],
   ], pose));
+  // The dome's armour, ribbed back from the gun-sight.
+  for (const a of [-0.9, 0.9]) {
+    seam(ctx, f, shade(skin.hull, -0.3), 0.12, posed([
+      [-0.55 + Math.cos(a) * 0.6, Math.sin(a) * 0.6],
+      [-0.55 + Math.cos(a) * 0.9, Math.sin(a) * 0.9],
+    ], pose));
+  }
   motif(ctx, f, skin, theme, TURRET_BELLY, 'turret', pose);
+  // Each barrel's muzzle, dark.
+  for (const c of TURRET_BARRELS) {
+    poly(ctx, f, shade(skin.plate, -0.5), bent([
+      [-0.83, c - 0.07],
+      [-0.7, c - 0.07],
+      [-0.7, c + 0.07],
+      [-0.83, c + 0.07],
+    ], pose));
+  }
   const [ex, ey] = pose([-0.18, 0]);
   eye(ctx, f, skin, ex, ey, 0.2);
 }
 
-const CHARGER_HULL: readonly Pt[] = [
+/**
+ * The charger: a ram — the needle with canards at its nose and an engine block aft.
+ *
+ * ⚠️ **NOT A TORPEDO.** The first draft put swept fins at its tail and came out 1.07 px from the
+ * Labyrinth's missile, which `tests/faces.test.ts` read as the same model in two places. A missile's
+ * fins are aft; a ram's are forward, where it steers.
+ */
+const CHARGER_HULL: readonly Pt[] = bilateral([
   [-1, 0],
-  [0.9, -0.22],
-  [0.9, 0.22],
-];
+  [-0.56, -0.08],
+  [-0.44, -0.32],
+  [-0.3, -0.32],
+  [-0.3, -0.12],
+  [0.56, -0.2],
+  [0.6, -0.3],
+  [0.94, -0.3],
+  [0.94, -0.1],
+]);
 
 /** The needle's tail flicks one way and the other, the nose held on the ship. */
 const CHARGER_POSES: readonly Pose[] = [REST, wags(-0.2, 0.16), wags(-0.2, -0.16)];
 
 function paintCharger(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = CHARGER_POSES[n]!;
+  const [dx, dy] = pose([0.86, 0]);
+  glow(ctx, f, skin.lit, dx, dy, 0.24, 0.6);
   plate(ctx, f, skin, bent([
-    [-0.8, 0.02],
-    [0.84, 0.02],
-    [0.84, 0.19],
+    [-0.28, 0],
+    [0.54, 0],
+    [0.54, 0.18],
+    [-0.28, 0.1],
+  ], pose));
+  // The engine block's lower half in shadow. The canards carry no paint: at 0.14 across they are
+  // under a pixel's worth of mark on a six-unit body, and are outline only.
+  plate(ctx, f, skin, bent([
+    [0.62, 0.02],
+    [0.92, 0.02],
+    [0.92, 0.27],
+    [0.62, 0.27],
   ], pose));
   lit(ctx, f, skin, bent([
-    [-0.8, -0.02],
-    [0.84, -0.19],
-    [0.84, -0.04],
+    [-0.28, -0.1],
+    [0.54, -0.18],
+    [0.54, 0],
+    [-0.28, 0],
   ], pose));
   motif(ctx, f, skin, theme, [
     [0.1, -0.1],
@@ -8265,33 +8391,64 @@ export function sector(r0: number, r1: number, a0: number, a1: number, steps = 1
 const WARDEN_BORE: readonly number[] = [0.45, 0.34, 0.54];
 const WARDEN_GAZE: readonly number[] = [0, 1, -1];
 
+/** Where the warden's three eyes look out of its ring, by angle — each on an armoured lug since 0603. */
+const WARDEN_LUGS = [Math.PI, (Math.PI * 2) / 3, -(Math.PI * 2) / 3] as const;
+
+/** The warden's rim: a ring station's hull, 0.9 round, standing out to the full radius at each lug. */
+const WARDEN_RIM: readonly Pt[] = Array.from({ length: 96 }, (_, k): Pt => {
+  const a = (2 * Math.PI * k) / 96;
+  const near = Math.min(...WARDEN_LUGS.map((l) => Math.abs(Math.atan2(Math.sin(a - l), Math.cos(a - l)))));
+  // Squarer and prouder than first drawn: lugs that swelled gently off a 0.9 ring came out 1.92 px from
+  // the Toxic Mire's ring of frogspawn, which is lumps round a ring too.
+  const rad = 0.84 + 0.16 * (1 - ramp(near, 0.2, 0.24));
+  return [Math.cos(a) * rad, Math.sin(a) * rad];
+});
+
 function paintWarden(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const bore = WARDEN_BORE[n]!;
   const gaze = WARDEN_GAZE[n]!;
   // The lower half of the ring in shadow, the upper-front quarter lit — each from the bore outward.
-  plate(ctx, f, skin, sector(bore + 0.05, 0.94, 0.05, Math.PI - 0.05));
+  plate(ctx, f, skin, sector(bore + 0.05, 0.8, 0.05, Math.PI - 0.05));
   lit(ctx, f, skin, sector(bore + 0.05, bore + 0.21, Math.PI + 0.15, Math.PI * 1.5 - 0.1));
-  motif(ctx, f, skin, theme, sector(bore + 0.11, 0.9, Math.PI * 1.05, Math.PI * 1.95, 16), 'warden');
+  motif(ctx, f, skin, theme, sector(bore + 0.11, 0.8, Math.PI * 1.05, Math.PI * 1.95, 16), 'warden');
+  // The ring's plating, jointed between the lugs.
+  for (const a of [0, Math.PI / 3, -Math.PI / 3]) {
+    seam(ctx, f, shade(skin.hull, -0.3), 0.11, [
+      [Math.cos(a) * (bore + 0.1), Math.sin(a) * (bore + 0.1)],
+      [Math.cos(a) * 0.76, Math.sin(a) * 0.76],
+    ]);
+  }
   // Three eyes on the front of the ring, so the aperture looks back — and looks about as it breathes.
   eye(ctx, f, skin, -0.72, 0, 0.13, gaze);
   eye(ctx, f, skin, -0.36, -0.62, 0.11, gaze);
   eye(ctx, f, skin, -0.36, 0.62, 0.11, gaze);
 }
 
-const SPINNER_HULL: readonly Pt[] = [
-  [-0.3, -1],
-  [0.3, -1],
-  [0.3, -0.3],
-  [1, -0.3],
-  [1, 0.3],
-  [0.3, 0.3],
-  [0.3, 1],
-  [-0.3, 1],
-  [-0.3, 0.3],
-  [-1, 0.3],
-  [-1, -0.3],
-  [-0.3, -0.3],
-];
+/**
+ * The spinner: a rotor drone — 0603. Still four arms off a hub; each arm's tip is a blade hooked the
+ * same way round, so even standing still it says which way it turns.
+ */
+const SPINNER_HULL: readonly Pt[] = (() => {
+  // One arm, up the screen, from the hub corner on its left to just short of the hub corner on its right.
+  const arm: readonly Pt[] = [
+    [-0.3, -0.3],
+    [-0.3, -0.84],
+    [-0.18, -1],
+    [0.3, -1],
+    [0.52, -0.88],
+    [0.3, -0.74],
+  ];
+  const out: Pt[] = [];
+  // Each next arm is the last turned a quarter clockwise on the screen, which carries its hook round with it.
+  for (let q = 0; q < 4; q++) {
+    for (const p of arm) {
+      let [x, y] = p;
+      for (let t = 0; t < q; t++) [x, y] = [-y, x];
+      out.push([x, y]);
+    }
+  }
+  return out;
+})();
 
 /**
  * The spinner is a rotor, so its arms trail: curled one way and back the other, the hub holding. A
@@ -8301,21 +8458,32 @@ const SPINNER_POSES: readonly Pose[] = [REST, curls(0.3), curls(-0.3)];
 
 function paintSpinner(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
   const pose = SPINNER_POSES[n]!;
+  // Inside each arm's chamfered tip — 0603's blades cut the corner these used to fill.
   plate(ctx, f, skin, bent([
-    [-0.26, 0.32],
-    [0.26, 0.32],
-    [0.26, 0.94],
-    [-0.26, 0.94],
+    [-0.22, 0.32],
+    [0.22, 0.32],
+    [0.22, 0.9],
+    [-0.22, 0.9],
   ], pose));
   plate(ctx, f, skin, bent([
-    [0.32, -0.26],
-    [0.94, -0.26],
-    [0.94, 0.26],
-    [0.32, 0.26],
+    [0.32, -0.22],
+    [0.9, -0.22],
+    [0.9, 0.22],
+    [0.32, 0.22],
   ], pose));
+  // Each hooked blade in shadow, so the hook reads as the leading edge of a turn.
+  for (let q = 0; q < 4; q++) {
+    let blade: Pt[] = [
+      [0.3, -0.98],
+      [0.5, -0.88],
+      [0.3, -0.76],
+    ];
+    for (let t = 0; t < q; t++) blade = blade.map(([x, y]): Pt => [-y, x]);
+    poly(ctx, f, shade(skin.plate, -0.3), bent(blade, pose));
+  }
   for (const [x0, y0, x1, y1] of [
-    [-0.94, -0.24, -0.76, 0.24],
-    [-0.24, -0.94, 0.24, -0.76],
+    [-0.94, -0.2, -0.76, 0.2],
+    [-0.2, -0.94, 0.2, -0.76],
   ] as const) {
     lit(ctx, f, skin, bent([
       [x0, y0],
@@ -8328,14 +8496,17 @@ function paintSpinner(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0
   eye(ctx, f, skin, 0, 0, 0.2);
 }
 
-const SOWER_HULL: readonly Pt[] = [
+/** The sower: a V-bomber — the chevron with an emitter pod at each arm's tip, which are its two shots. */
+const SOWER_HULL: readonly Pt[] = bilateral([
   [-1, 0],
-  [0.55, -0.9],
-  [1, -0.55],
+  [0.5, -0.86],
+  [0.62, -0.98],
+  [0.86, -0.98],
+  [1, -0.82],
+  [1, -0.6],
+  [0.86, -0.5],
   [-0.15, 0],
-  [1, 0.55],
-  [0.55, 0.9],
-];
+]);
 
 /** The chevron's two arms are wings, and they beat: drawn in and back, then flared. */
 const SOWER_POSES: readonly Pose[] = [REST, aftSwings(-0.2, 0.8, 0.09), aftSwings(-0.2, 1.08, -0.05)];
@@ -8362,6 +8533,12 @@ function paintSower(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0):
     [0.58, -0.36],
     [0.1, -0.44],
   ], 'sower', pose);
+  // An emitter in each pod: a dark mouth and its lamp, in the ink of what it throws.
+  for (const side of [-1, 1]) {
+    const [px, py] = pose([0.82, 0.76 * side]);
+    disc(ctx, f, shade(skin.plate, -0.5), px, py, 0.14);
+    disc(ctx, f, skin.eye, px, py, 0.08);
+  }
 }
 
 /**
@@ -8397,7 +8574,7 @@ export const APPROACH_BODIES: Record<SharedKind, FoeBody> = {
     */
     outline: (ctx, f, n) => {
       const bore = WARDEN_BORE[n]!;
-      ctx.arc(f.half, f.half, f.r, 0, Math.PI * 2);
+      trace(ctx, f, WARDEN_RIM);
       ctx.moveTo(f.half + f.r * bore, f.half);
       ctx.arc(f.half, f.half, f.r * bore, 0, Math.PI * 2);
     },
