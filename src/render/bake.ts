@@ -18392,60 +18392,36 @@ export function drawKind(
     }
     case 'pickupWater': {
       /*
-        THE WATER CANNON — 0595: a brass nozzle at the bottom left throwing a jet of water up and across
-        the bubble, curling over at its top and falling in drops. Told from the bomb and the dance by being
-        a line and not a ball, from the bolt by its curl, and from the candle by the nozzle's flare.
+        THE WATER CANNON — 0595, redrawn by 0606: one drop of water, point up. It was a brass nozzle
+        throwing a curling jet, which read in review as a squiggle rather than as water. A drop is the
+        one teardrop among the faces: told from the bomb, the dance and the nova by its point, and from
+        the bolt and the candle by being one round body.
         Glyph at three quarters of the box and a bubble round it, on the arc face's terms — 0236.
       */
       const fg: Frame = { half, r: r * PICKUP_GLYPH };
       /*
-        The jet's line, up out of the mouth and curling over to the right — sampled off one curve, so the
-        outline and the light down it are the same line.
+        The outline off one curve — x = a·sin t·sin(t/2), y = −b·cos t — whose only corner is the point
+        at t = 0, so the round of the drop and its tip are the same line.
       */
-      const jet: Pt[] = [];
-      for (let i = 0; i <= 12; i++) {
-        const t = i / 12;
-        // A quadratic from the mouth over the top to where it starts to fall.
-        const x = (1 - t) * (1 - t) * -0.2 + 2 * (1 - t) * t * 0.24 + t * t * 0.74;
-        const y = (1 - t) * (1 - t) * 0.2 + 2 * (1 - t) * t * -0.86 + t * t * -0.22;
-        jet.push([x, y]);
-      }
-      const side = (by: number): Pt[] =>
-        jet.map(([x, y], i) => {
-          const [nx, ny] = jet[Math.min(i + 1, jet.length - 1)]!;
-          const [px, py] = jet[Math.max(i - 1, 0)]!;
-          const dx = nx - px;
-          const dy = ny - py;
-          const d = Math.hypot(dx, dy) || 1;
-          return [x - (dy / d) * by, y + (dx / d) * by];
-        });
-      // The hull: the nozzle running on into the jet as one outline — two overlapping would be a hole under
-      // `evenodd` — and the three drops falling off its end.
-      trace(ctx, fg, [[-0.86, 0.62], [-0.62, 0.86], [-0.12, 0.26], ...side(0.09), ...side(-0.09).reverse(), [-0.26, 0.12]]);
-      for (const [x, y] of [
-        [0.76, 0.02],
-        [0.72, 0.26],
-        [0.8, 0.48],
-      ] as const) {
-        ring(ctx, fg, x, y, 0.09);
-      }
+      const drop = (t: number, by: number): Pt => [0.62 * by * Math.sin(t) * Math.sin(t / 2), 0.05 - 0.88 * by * Math.cos(t)];
+      const outline: Pt[] = [];
+      for (let i = 0; i < 40; i++) outline.push(drop((i / 40) * Math.PI * 2, 1));
+      trace(ctx, fg, outline);
       seal(ctx);
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
-      poly(ctx, fg, shade(palette.hazard, -0.2), [
-        [-0.8, 0.62],
-        [-0.62, 0.8],
-        [-0.16, 0.24],
-        [-0.24, 0.16],
-      ]);
-      // The water's light down the middle of the jet, and a glint on each drop.
-      seam(ctx, fg, shade(palette.frost, 0.6), 0.06, jet.slice(1, -1), 0.85);
-      for (const [x, y] of [
-        [0.74, 0],
-        [0.7, 0.24],
-        [0.78, 0.46],
-      ] as const) {
-        disc(ctx, fg, shade(palette.frost, 0.6), x, y, 0.04, 0.85);
+      // The ground side: a crescent down the right and round the bottom, between the outline drawn in and
+      // the same arc drawn smaller and pushed left.
+      const ground: Pt[] = [];
+      for (let i = 0; i <= 8; i++) ground.push(drop(Math.PI * (0.45 + (i / 8) * 0.6), 0.84));
+      const inner: Pt[] = [];
+      for (let i = 8; i >= 0; i--) {
+        const [x, y] = drop(Math.PI * (0.45 + (i / 8) * 0.6), 0.6);
+        inner.push([x - 0.1, y + 0.08]);
       }
+      poly(ctx, fg, shade(palette.water, -0.3), [...ground, ...inner], 0.8);
+      // The light: a streak down the lit side and a glint above it.
+      seam(ctx, fg, shade(palette.water, 0.7), 0.1, [[-0.3, 0.6], [-0.36, 0.42], [-0.32, 0.22]], 0.9, true);
+      disc(ctx, fg, shade(palette.water, 0.8), -0.18, 0.02, 0.1, 0.9);
       return;
     }
     case 'pickupDance': {
