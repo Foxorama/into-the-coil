@@ -11,11 +11,11 @@
  */
 
 import { BEAM_BOLT_KIND, BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, RAIN_BOLT_KIND, type RoomPiece } from '../content/bosses.ts';
-import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, SPRITE, SPRITE_EXTENT, UNSEEN } from '../content/sprites.ts';
+import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, ISLE_NOSES, SPRITE, SPRITE_EXTENT, UNSEEN } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
 import { arteryAt, trunkAt, type Veins } from '../content/veins.ts';
-import { knotOf, opened, type Corridor } from '../sim/corridor.ts';
+import { ISLE_CARVE, knotOf, opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
@@ -1141,7 +1141,59 @@ function paintCorridor(surface: Surface, view: View, corridor: Corridor | null, 
         surface.blit(corridor.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
       }
     }
+    if (corridor.isles.length > 0) paintIsle(surface, view, corridor, k, start, inView, steepest);
   }
+}
+
+/*
+  ⚠️ **AN ISLAND IS A WALL SEEN FROM BOTH SIDES, AND IS DRAWN AS TWO — 0600.** Its low face is a far
+  wall's (stone above it, the cap as it is baked) and its high face a near wall's (the cap turned over),
+  with the room's masonry between them. Laid down tiles first, so each cap's coping is over the masonry
+  beside it.
+
+  ⚠️ **AND ITS POINT IS BAKED, BECAUSE A CAP IS HALF A TILE OF STONE.** A cap's stone reaches six units
+  past its face; on an island less than a tile wide that is past its other face, into the way beyond.
+  The two tiles at each end are `ISLE_NOSES` instead, turned over at the island's far end.
+
+  ⚠️ **AND A TILE IS SQUARE, SO IT IS PUT WHERE A SQUARE FITS.** Between two caps of an island at least
+  two tiles wide, a tile a tile in from the low face and on up, and a last one a tile in from the high
+  face; thinner than that, one tile on the island's middle, which an island a tile wide at both ends of
+  the column holds whole.
+*/
+function paintIsle(surface: Surface, view: View, corridor: Corridor, k: number, start: number, inView: number, steepest: number): void {
+  const isles = corridor.isles;
+  if ((k + 1) * 2 + 1 >= isles.length) return;
+  const la = isles[k * 2]!;
+  const ha = isles[k * 2 + 1]!;
+  const lb = isles[(k + 1) * 2]!;
+  const hb = isles[(k + 1) * 2 + 1]!;
+  if (Number.isNaN(la) || Number.isNaN(lb)) return;
+  const extent = corridor.extent;
+  if (opened(corridor.passages, start, start + extent, ISLE_CARVE)) return;
+  const wa = ha - la;
+  const wb = hb - lb;
+  if (wa <= 0 && wb <= 0) return;
+  const narrow = Math.min(wa, wb);
+  if (narrow < extent) {
+    const middle = (la + ha + lb + hb) / 4;
+    surface.blit(ISLE_NOSES[narrow <= 0 ? 0 : 1], screenX(view, inView, middle), screenY(view, inView, middle), view.scale, wa < wb ? 0 : Math.PI);
+    return;
+  }
+  const low = (la + lb) / 2;
+  const high = (ha + hb) / 2;
+  if (high - low < extent * 2) {
+    const middle = (low + high) / 2;
+    surface.blit(corridor.sprite, screenX(view, inView, middle), screenY(view, inView, middle), view.scale);
+  } else {
+    for (let across = low + extent; across + extent / 2 <= high - extent / 2; across += extent) {
+      surface.blit(corridor.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
+    }
+    surface.blit(corridor.sprite, screenX(view, inView, high - extent), screenY(view, inView, high - extent), view.scale);
+  }
+  const lowRise = Math.max(-steepest, Math.min(steepest, lb - la));
+  const highRise = Math.max(-steepest, Math.min(steepest, hb - ha));
+  surface.blit(corridor.caps[lowRise + steepest]!, screenX(view, inView, low), screenY(view, inView, low), view.scale, 0);
+  surface.blit(corridor.caps[highRise + steepest]!, screenX(view, inView, high), screenY(view, inView, high), view.scale, Math.PI);
 }
 
 function paintBound(surface: Surface, view: View, bound: Bound | null): void {

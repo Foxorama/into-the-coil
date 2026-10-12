@@ -74,7 +74,8 @@ export const PROBES = [
     guard: 'A TURN IS NOT A MASSACRE',
     edit: {
       path: 'src/app/frame.ts',
-      find: ' * e.velAlong * squeezeAt(w.corridor, e.along, e.radius);',
+      // ⚠️ Re-anchored by 0600, which tells the squeeze where the body is, for the way it is in.
+      find: ' * e.velAlong * squeezeAt(w.corridor, e.along, e.radius, e.across);',
       replace: ' * e.velAlong;',
     },
   },
@@ -99,9 +100,9 @@ export const PROBES = [
     guard: 'A COLUMN ARRIVES AS A COLUMN',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0364, which reads the lane as a share of it.
-      find: '    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);',
-      replace: '    const target = inCorridor(w, along, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);',
+      // ⚠️ Re-anchored by 0364, which reads the lane as a share of it, and by 0600, which passes a way.
+      find: '    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius, way);',
+      replace: '    const target = inCorridor(w, along, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius, way);',
     },
   },
   {
@@ -124,9 +125,9 @@ export const PROBES = [
     guard: 'A TURN IS NOT A MASSACRE',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0364, which reads the lane as a share of it.
-      find: '    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);',
-      replace: '    const target = laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap);',
+      // ⚠️ Re-anchored by 0364, which reads the lane as a share of it, and by 0600, which passes a way.
+      find: '    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius, way);',
+      replace: '    const target = laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap) + 0 * way;',
     },
   },
   {

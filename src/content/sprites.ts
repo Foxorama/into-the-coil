@@ -778,6 +778,17 @@ export const SPRITE_KINDS = [
   'wallRise11',
   'wallRise12',
   /*
+    ── AND THE POINT OF AN ISLAND WHERE THE CORRIDOR FORKS — 0600 ─────────────────────────────────────
+
+    An island is drawn with the caps above wherever it is a tile wide, a cap on each face and masonry
+    between. Where it is thinner — the two tiles at each end, where it comes to a point — a cap's stone
+    would reach past the island's other face into the way beyond it, so those two tiles are baked
+    whole: `isleNose0` from the point to `2 × ISLE_NOSE_RISE` across, `isleNose1` from there to twice
+    that. Turned over, each is the same tile at the island's other end.
+  */
+  'isleNose0',
+  'isleNose1',
+  /*
     ── THE MIRE'S GROUND, WHICH IS A WALL NOW — 0383 ────────────────────────────────────────────────
 
     The Labyrinth's scheme with the Mire's material: a cap per whole rise of the shore across a tile
@@ -1733,6 +1744,18 @@ export const WALL_RISES = [
 ] as const;
 
 /**
+ * How far each face of an island moves across one tile where it comes to a point — 0600, in lane units.
+ *
+ * ⚠️ **THE SAME ON EVERY TIER, SO IT IS UNDER THE GENTLEST TIER'S SLOPE.** `legendary` lets a wall run
+ * at 0.25, three units across a twelve-unit tile, and an island is the player's *thirty a way, every
+ * tier* — so its point is one shape, and the two tiles of it are baked once (`ISLE_NOSES`).
+ */
+export const ISLE_NOSE_RISE = 3;
+
+/** The two tiles of an island's point, from the point outward — `isleNose0` first. */
+export const ISLE_NOSES = [SPRITE.isleNose0, SPRITE.isleNose1] as const;
+
+/**
  * The Mire's bank caps, steepest fall to steepest climb — 0383: `bankRise3` is level, a rise of `i − 3`
  * lane units across one tile. Named once, here, so the level that lays the bank (`src/content/levels.ts`)
  * and the baker that paints it (`src/render/bake.ts`) read one list and cannot disagree about what a
@@ -2452,6 +2475,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   wallRise10: 12,
   wallRise11: 12,
   wallRise12: 12,
+  // An island's point is the wall's own tile, so it meets the caps beside it edge to edge — 0600.
+  isleNose0: 12,
+  isleNose1: 12,
   // The Mire's bank on the Labyrinth's tile, so its knots and its caps are the same arithmetic — 0383.
   mireBank: 12,
   bankRise0: 12,

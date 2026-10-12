@@ -337,6 +337,9 @@ const HULLLESS: readonly SpriteKind[] = [
   'wallRise10',
   'wallRise11',
   'wallRise12',
+  // And an island's point where the corridor forks, on the same terms — 0600.
+  'isleNose0',
+  'isleNose1',
   // The Mire's bank, its caps and the bed it lies in — 0383, on the Labyrinth's wall's own terms: a
   // surface that tiles into the next, and the bed's halves are transparent but for the pools.
   'mireBank',

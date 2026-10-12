@@ -27,7 +27,7 @@ import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, LIGHT_KINDS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
 import { HYDRA_SKULL, NECK_KNOTS, hydraKnuckleOf, neckSpine } from '../content/necks.ts';
-import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, FIGHTER_HULL, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_BEAT, QUETZAL_DOWNSTROKE, QUETZAL_WING_HEAD, SHIP_BOX, VOLANS_FIRE_HEAD, WALL_RISE_MAX, strokeAt } from '../content/sprites.ts';
+import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, FIGHTER_HULL, ISLE_NOSE_RISE, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_BEAT, QUETZAL_DOWNSTROKE, QUETZAL_WING_HEAD, SHIP_BOX, VOLANS_FIRE_HEAD, WALL_RISE_MAX, strokeAt } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -567,6 +567,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   wallRise10: 'sky',
   wallRise11: 'sky',
   wallRise12: 'sky',
+  isleNose0: 'sky',
+  isleNose1: 'sky',
   // The Mire's bank and its bed are the place, on the wall's own terms — 0383. `bakeGround` repaints
   // them in the place's land colours; this is only what the atlas bakes before a place has any.
   mireBank: 'sky',
@@ -6374,6 +6376,50 @@ function paintWallCap(ctx: Pen, f: Frame, stone: string, edge: number, rise: num
   }
   // The coping: the face itself, lit.
   under(0, 0.07, shade(stone, 0.5));
+}
+
+/**
+ * One tile of an island's point — 0600: stone between two faces that open from `from` either side of
+ * the middle at the tile's near edge to `to` at its far one, in lane units, each with the cap's coping.
+ *
+ * ⚠️ **THE CAP'S OWN STONE, COURSES AND COPING, ON BOTH FACES AT ONCE.** A cap is stone on one side of a
+ * face; an island's point is stone between two, too thin for two caps (`ISLE_NOSES` in
+ * `src/content/sprites.ts`). So each half is one course of the cap's, lit along its face and shaded
+ * where it meets the other at the middle — the joint a mason would leave there.
+ */
+function paintIsleNose(ctx: Pen, f: Frame, stone: string, edge: number, from: number, to: number): void {
+  // Lane units to frame units: a tile is twelve lane units across `2 × edge`.
+  const unit = edge / 6;
+  const out = (x: number): number => (from + ((x + edge) / (edge * 2)) * (to - from)) * unit;
+  const mortar = shade(stone, -0.55);
+  const strip = (inner: number, outer: number, colour: string, alpha = 1): void => {
+    // Between `inner` and `outer` shares of the way from the middle to each face, both halves.
+    for (const s of [-1, 1]) {
+      poly(ctx, f, colour, [
+        [-edge, s * out(-edge) * inner],
+        [edge, s * out(edge) * inner],
+        [edge, s * out(edge) * outer],
+        [-edge, s * out(-edge) * outer],
+      ], alpha);
+    }
+  };
+  strip(0, 1, stone);
+  // Each half's course, falling into shadow towards the middle, where the two meet in a joint.
+  strip(0, 0.35, shade(stone, -0.28), 0.7);
+  poly(ctx, f, mortar, [[-edge, -0.03], [edge, -0.03], [edge, 0.03], [-edge, 0.03]]);
+  // Head joints, staggered half to half, standing square to the lane.
+  for (const [x, s] of [[-edge / 2, -1], [edge / 2, 1], [0, 1]] as const) {
+    poly(ctx, f, mortar, [[x - 0.035, 0], [x + 0.035, 0], [x + 0.035, s * out(x)], [x - 0.035, s * out(x)]]);
+  }
+  // The copings: each face itself, lit, as a cap's is.
+  for (const s of [-1, 1]) {
+    poly(ctx, f, shade(stone, 0.5), [
+      [-edge, s * out(-edge)],
+      [edge, s * out(edge)],
+      [edge, s * Math.max(0, out(edge) - 0.07)],
+      [-edge, s * Math.max(0, out(-edge) - 0.07)],
+    ]);
+  }
 }
 
 /**
@@ -16576,6 +16622,13 @@ export function drawKind(
     case 'wallRise12':
       paintWallCap(ctx, f, palette.sky, half / r, Number(kind.slice('wallRise'.length)) - WALL_RISE_MAX);
       return;
+    case 'isleNose0':
+    case 'isleNose1': {
+      // The point's two tiles — 0600: from the point to one rise a side, and from there to two.
+      const tile = kind === 'isleNose0' ? 0 : 1;
+      paintIsleNose(ctx, f, palette.sky, half / r, tile * ISLE_NOSE_RISE, (tile + 1) * ISLE_NOSE_RISE);
+      return;
+    }
     case 'boss11Seat':
       /*
         THE HOUSING THE GYRE IS SET INTO — 0332. A ring with four lugs and a bore through it. It has
