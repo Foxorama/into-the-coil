@@ -731,9 +731,14 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
       runs in node. It holds the pairing, which is the thing that was missing; the drawing itself is
       a taste and 0204 says why it is not guarded.
     */
+    /*
+      ⚠️ **`target` AND NOT `atlas` SINCE 0604**, which moved the place's own sky into `bakePlaceSky`,
+      a function that paints the atlas it is handed — so the place baked ahead of the burn and the
+      place baked at the boundary are painted by the same two lines. The pairing is unchanged.
+    */
     const mount = readFileSync(resolve(root, 'src/app/mount.ts'), 'utf8');
-    const nebula = mount.indexOf('bakeNebula(atlas');
-    const landmark = mount.indexOf('bakeLandmark(atlas');
+    const nebula = mount.indexOf('bakeNebula(target');
+    const landmark = mount.indexOf('bakeLandmark(target');
     expect(nebula, 'mount no longer re-bakes the weather at the boundary').toBeGreaterThan(-1);
     expect(
       landmark,

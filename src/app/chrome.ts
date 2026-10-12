@@ -597,7 +597,15 @@ ${each('-choices')} {
   second at full burn is a full-screen effect per frame to soften a caption. The backing is a colour.
 */
 .itc-travel-panel {
-  margin-top: min(1.25rem, 4cqh);
+  /*
+    ⚠️ **UNDER THE READOUT, AND IT WAS UNDER IT IN THE OTHER SENSE — 0604.** This was a rem and a
+    quarter from the top, and the readout's strip is three and a half of its own em tall, so the plate
+    was drawn BEHIND the lives and the score: the leg's kicker and the top of the chart were hidden at
+    every size it was photographed at, and the readout cannot go (0063 — the player can still spend a
+    charge during the burn). The strip's own height, from the strip's own numbers, as hudBar states it
+    for the desktop's bar.
+  */
+  margin-top: calc(clamp(${STRIP.fontFloorRem}rem, ${STRIP.fontCqh}cqh, ${STRIP.fontCapRem}rem) * ${STRIP.padEm + STRIP.plateEm + STRIP.padEm});
   margin-bottom: auto;
   --itc-cut: 0.9em;
   --itc-edge: color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 72%, transparent);
@@ -630,8 +638,13 @@ ${each('-choices')} {
     is over a dim, where padding costs nothing. Measured in a browser, the first version of this banner
     reached 34.8 percent of the way down the screen and the ship rests at fifty: its own guard holds it
     to the top third, and what gave was the banner rather than the line.
+
+    ⚠️ **AND TIGHTER AGAIN SINCE 0604, FOR THE SAME REASON.** Moved down under the readout, the plate
+    reached 34.1 percent at 1280×720; on the desktop the chart is what sets its height, so it is the
+    padding above and below the chart that gave, not the chart. On a landscape phone the plate ends
+    lower than a third, under a readout that is already over the field there — the decision has it.
   */
-  padding: min(1rem, 2.5cqh) min(1.6rem, 3cqw);
+  padding: min(0.7rem, 1.6cqh) min(1.6rem, 3cqw);
   text-align: left;
   animation: itc-travel-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   transition: opacity 1.1s ease-in, transform 1.1s ease-in;
@@ -5142,10 +5155,20 @@ const SEEK_STEP = 0.05;
  *
  * ⚠️ **ITS OWN FIXED SIZE, ON `ICON_PIXELS_PER_UNIT`'s TERMS**: it is shown at roughly a fifth of the
  * screen's height — about 150 CSS pixels on the 720-tall screen every play-test here was given on —
- * so 320 is a little over twice that, which is what a 2× display wants and what keeps a 0.8%-of-tile
+ * so 320 was a little over twice that, which is what a 2× display wants and what keeps a 0.8%-of-tile
  * route line from being a single smeared pixel.
+ *
+ * ⚠️ **480 SINCE 0604, BECAUSE THE CAP IS 9 rem AND A PHONE IS 3×.** 144 CSS pixels at three device
+ * pixels each is 432, and a graticule of hairlines is the first thing a chart scaled up shows as mush.
+ * It is drawn once per crossing, so the cost is a bigger canvas and nothing per frame.
  */
-const CHART_PIXELS = 320;
+const CHART_PIXELS = 480;
+
+/**
+ * How far towards white the palette's sky ink is taken for the chart's route ahead — 0604. With
+ * `CHART_AHEAD_ALPHA` in `src/render/bake.ts`, held to 3:1 on the plate by `tests/travel.test.ts`.
+ */
+export const CHART_AHEAD_LIFT = 0.6;
 
 /**
  * How finely the ship's leg is sampled into the path its marker flies — 0341. The bake strokes a leg
@@ -5210,7 +5233,9 @@ function buildCrossing(prefix: string): CrossingParts {
   const marker = document.createElementNS(SVG, 'path');
   marker.setAttribute('class', prefix + 'crossing-marker');
   // A dart, nose along +x, which is the way `rotate="auto"` points it down the path.
-  marker.setAttribute('d', 'M 4.2 0 L -3 2.6 L -1.4 0 L -3 -2.6 Z');
+  // Half as big again since 0604: at the size the chart is shown on a phone the first dart was four
+  // pixels long, which is a dot that points nowhere.
+  marker.setAttribute('d', 'M 6.3 0 L -4.5 3.9 L -2.1 0 L -4.5 -3.9 Z');
   const motion = document.createElementNS(SVG, 'animateMotion') as SVGAnimationElement;
   motion.setAttribute('begin', 'indefinite');
   motion.setAttribute('fill', 'freeze');
@@ -8298,8 +8323,12 @@ export function makeChrome(
       if (ctx === null) return;
       parts.drawnFlown = crossing.flown;
       ctx.clearRect(0, 0, parts.chart.width, parts.chart.height);
-      // The palette's own sky ink for a leg not yet flown: the one colour here that means *scenery*.
-      drawChart(ctx, parts.chart.width, crossing.palette, crossing.flown, colours.sky);
+      /*
+        The palette's own sky ink for a leg not yet flown: the one colour here that means *scenery*.
+        ⚠️ **LIFTED TOWARDS WHITE — 0604.** Raw, it is chosen to be nowhere near anything the player
+        looks for, and on this plate it was 1.0 to 1.14 to 1: the route ahead was not there.
+      */
+      drawChart(ctx, parts.chart.width, crossing.palette, crossing.flown, mix(colours.sky, '#ffffff', CHART_AHEAD_LIFT));
       /*
         ── AND THE SHIP FLIES THE LEG IT IS ON, ALONG THE CURVE THE BAKE STROKED — 0341 ──────────────
 

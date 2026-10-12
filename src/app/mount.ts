@@ -17,7 +17,7 @@ import { animate, type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeAtlasStepwise, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
 import { fitStand, standMarksInto, standViewInto } from '../render/port.ts';
@@ -93,6 +93,7 @@ import {
   levelOfPlace,
   musicLevelFor,
   musicPlaceFor,
+  pictureComingFor,
   picturePlaceFor,
   placeFor,
   titleWanted,
@@ -165,7 +166,7 @@ import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
 import { attachPad } from './pad.ts';
 import { attachTouch } from './touch.ts';
-import { runLoop } from './loop.ts';
+import { STEP_MS, runLoop } from './loop.ts';
 
 /**
  * The entity ceiling, per pool.
@@ -3115,14 +3116,41 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // ⚠️ `approach` for *nowhere*, which is the base composition's own place and is what the title
     // screen has always drawn — 0212 changed which question is asked, not this answer.
     const backdrop: ThemeKind = place ?? 'approach';
-    if (atlasIsStale(atlas, atlas.view, view.scale * dpr, backdrop)) {
-      atlas = bakeAtlas(colours, atlas.view, view.scale * dpr, backdrop);
+    /*
+      ⚠️ **AND A PLACE THAT WAS BAKED ON THE WAY IS ONLY INSTALLED** — 0604. The whole atlas and the
+      place's own sky below were the 769 ms the burn froze for at full speed, measured on the bench;
+      `stepPlaceAhead` spreads them over the break and the build instead, and this is where they land.
+      Whatever is left of an ahead bake that has not finished is finished here, which is this line's
+      old cost and never more than it.
+    */
+    const early = takePlaceAhead(place);
+    if (early !== null || atlasIsStale(atlas, atlas.view, view.scale * dpr, backdrop)) {
+      atlas = early ?? bakeAtlas(colours, atlas.view, view.scale * dpr, backdrop);
       // Not over the port's own atlas while the intro is drawing from it — 0411 — or the stand (0540).
       if (world.intro === null && world.stand === null) surface.setAtlas(atlas);
       else showPort();
       // 0526: a full bake is every ship on its own gun, so the fitted one is laid on again.
       atlasRebaked();
     }
+    if (early === null) drain(bakePlaceSky(atlas, place));
+    // ⚠️ **AND THE SKY ITSELF CHANGES SHAPE, not just its colours**: a planet has no star fields.
+    // Routed through `applySky` so every caller takes the sky from one answer.
+    applySky();
+    // The intro flies this sky, from references to the bitmaps just baked — 0416. Nothing outside it.
+    showPort();
+  };
+
+  /**
+   * A place's own sky — its gas, its landmark and its land — baked into `target`, a step at a time.
+   *
+   * ⚠️ **SPLIT OUT OF `applyPlace` BY 0604 AND NOTHING IN IT MOVED.** It was the second half of that
+   * function, written against the atlas on screen; it takes the atlas as an argument now so the same
+   * lines can paint one that is not on screen yet. `applyPlace` drains it in one go, as it always ran;
+   * `stepPlaceAhead` takes it a piece per slice.
+   */
+  function* bakePlaceSky(target: Atlas, place: ThemeKind | null): Generator<void, void, void> {
+    const want = place === null ? PALETTES[palette].space : THEMES[place].space[palette];
+    const backdrop: ThemeKind = place ?? 'approach';
     const clouds = place === null ? PALETTES[palette].sky : THEMES[place].nebula[palette];
     /*
       ⚠️ **WHAT A DARK STRUCTURE MARK IS DRAWN IN, AND IT USED TO BE THE PALETTE'S VOID** — 0221.
@@ -3159,7 +3187,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const accent = place === null ? PALETTES[palette].sky : THEMES[place].glow[palette];
     // The place's further gases in this palette's own version of them — 0345. None for six of seven.
     const gases = place === null ? [] : (THEMES[place].gases?.[palette] ?? []);
-    bakeNebula(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop, gases);
+    bakeNebula(target, clouds, accent, silhouette, view.scale * dpr, backdrop, gases);
+    yield;
     /*
       The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
       pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
@@ -3180,7 +3209,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       ...LEVEL_KINDS.filter((kind) => LEVELS[kind].theme === backdrop).flatMap((kind) => LEVELS[kind].landmarks.map((e) => e.scale ?? 1)),
     );
     const plain = colours.glass === colours.space && colours.trim === colours.space;
-    bakeLandmark(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop, plain, sharpest);
+    bakeLandmark(target, clouds, accent, silhouette, view.scale * dpr, backdrop, plain, sharpest);
+    yield;
     /*
       ⚠️ **THE LAND IS LIT BY ITS OWN SKY, WHICH IS 0204's RULE WITH THE SECOND COLOUR CHANGED** —
       0221. A landmark is punched out of the GAS because it stands in gas; ground is a silhouette
@@ -3196,12 +3226,126 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // of — so a pool and the air over it are lit by one thing rather than by two.
     // And the colours it is lit in, for a place that states them — 0347.
     const lit = place === null ? undefined : THEMES[place].land?.[palette];
-    if (land !== null) bakeGround(atlas, land[palette], want, clouds, view.scale * dpr, backdrop, lit);
-    // ⚠️ **AND THE SKY ITSELF CHANGES SHAPE, not just its colours**: a planet has no star fields.
-    // Routed through `applySky` so every caller takes the sky from one answer.
-    applySky();
-    // The intro flies this sky, from references to the bitmaps just baked — 0416. Nothing outside it.
-    showPort();
+    if (land !== null) bakeGround(target, land[palette], want, clouds, view.scale * dpr, backdrop, lit);
+  }
+
+  /** Run a stepwise bake to its end, now. */
+  function drain<T>(steps: Generator<void, T, void>): T {
+    for (;;) {
+      const step = steps.next();
+      if (step.done === true) return step.value;
+    }
+  }
+
+  /*
+    ── THE PLACE IS BAKED ON THE WAY — `docs/decisions/0604-the-place-is-baked-on-the-way.md` ─────
+
+    ⚠️ **REPORTED AS *"THE LEVEL TRANSITIONS ARE A BIT CHUGGY ON MOBILE AND PROBABLY SOME DESKTOPS"*,
+    AND IT WAS ONE FROZEN FRAME.** The burn swaps the place at full speed (0340), and the swap re-baked
+    the whole atlas — 743 bitmaps now, where 0340 counted fifty-eight — and the place's own sky, on the
+    main thread, inside one fixed step. Measured on the bench at 1280×720: **769 ms with nothing
+    drawn**, at the one moment the game is showing the player its fastest motion. Four times slower,
+    which is what the browser's own throttle makes a phone of, is three seconds.
+
+    ⚠️ **SO THE SAME WORK IS DONE IN SLICES, FROM THE MOMENT THE DESTINATION IS KNOWN.** The boss's
+    death moves the run's level, so from the break onwards the place the burn will swap to is a fact —
+    `pictureComingFor` says which, as `picturePlaceFor`'s own answer asked early. Each step spends at
+    most `AHEAD_SLICE_MS` baking it into an atlas nobody is drawing from, and `applyPlace` installs it.
+
+    ⚠️ **NOT A WORKER, AND THAT WAS WEIGHED.** Off the thread is zero frames lost, and it is a second
+    copy of a 22,000-line painter inlined into the page (0003) behind an `OffscreenCanvas` the bake has
+    never been drawn on. Slicing moves the same calls to different frames and changes nothing they
+    draw; the most it can still cost is one sprite's bake in one frame, which is the hydra's neck at
+    about 60 ms on this machine.
+
+    Locals and not a slice, on `travelSteps`'s terms: gone the moment the place arrives.
+  */
+  /**
+   * How long one slice may spend baking the next place, in milliseconds — and there is at most one
+   * slice in any `STEP_MS` of wall clock.
+   *
+   * ⚠️ **A SHARE OF A 60 Hz FRAME, AND THE REST IS THE FRAME'S.** 16.7 ms is the whole frame; the burn
+   * recorded its draw in under a millisecond at the median on the bench. Six leaves the frame more
+   * than half of itself.
+   *
+   * ⚠️ **PER STRETCH OF WALL CLOCK AND NOT PER STEP, AND THE FIRST VERSION WAS PER STEP.** A frame
+   * that falls behind runs up to five steps (`MAX_STEPS`), and five slices made it thirty milliseconds
+   * long, so the next one fell behind too — measured on the bench as a burn of 32–37 ms frames, end to
+   * end. A step that arrives before the gap is up is a catch-up step in a frame that already had its
+   * slice, and it bakes nothing.
+   *
+   * ⚠️ **A SLICE IS AT LEAST ONE BITMAP, AND A FEW TAKE LONGER THAN A FRAME.** The hydra's neck and
+   * collar pieces are 40–60 ms each on the bench; nothing short of a smaller drawing makes one of those
+   * cheaper, and fifteen bitmaps of 743 are over 15 ms. They are spread across the break with the rest.
+   */
+  const AHEAD_SLICE_MS = 6;
+  /** Wall clock before which no slice is spent — `AHEAD_SLICE_MS` has why it is clock and not steps. */
+  let pictureAheadAt = 0;
+  /** The picture's ahead, beside the music's `ahead` and on its terms: the place being made ready. */
+  let pictureAhead: {
+    readonly place: ThemeKind;
+    readonly view: Atlas['view'];
+    readonly resolution: number;
+    readonly steps: Generator<void, Atlas, void>;
+    atlas: Atlas | null;
+  } | null = null;
+
+  /** The atlas for `place` and its own sky, baked whole — the stepwise twin of `applyPlace`'s bake. */
+  function* bakePictureAhead(place: ThemeKind, sheet: Atlas['view'], resolution: number): Generator<void, Atlas, void> {
+    const next = yield* bakeAtlasStepwise(colours, sheet, resolution, place);
+    yield* bakePlaceSky(next, place);
+    return next;
+  }
+
+  /** Spend one step's slice on the place that is coming, if there is one and it is not done. */
+  const stepPlaceAhead = (): void => {
+    const coming = pictureComingFor(state.screen.current, state.run.level, travelSwapped);
+    if (coming === null || coming === bakedPlace) {
+      pictureAhead = null;
+      return;
+    }
+    const resolution = view.scale * dpr;
+    // A resize mid-bake is an atlas at the wrong resolution: begin again rather than install it.
+    if (pictureAhead === null || pictureAhead.place !== coming || pictureAhead.view !== atlas.view || pictureAhead.resolution !== resolution) {
+      pictureAhead = { place: coming, view: atlas.view, resolution, steps: bakePictureAhead(coming, atlas.view, resolution), atlas: null };
+    }
+    if (pictureAhead.atlas !== null) return;
+    const now = performance.now();
+    if (now < pictureAheadAt) return;
+    const until = now + AHEAD_SLICE_MS;
+    let spent = now;
+    do {
+      const step = pictureAhead.steps.next();
+      spent = performance.now();
+      if (step.done === true) {
+        pictureAhead.atlas = step.value;
+        return;
+      }
+    } while (spent < until);
+    pictureAheadAt = spent + (STEP_MS - AHEAD_SLICE_MS);
+  };
+
+  /**
+   * Whether the swap has nothing left to bake — what the burn holds its swap for. True when no place
+   * is coming, or the one coming is already on screen (two levels in one place), since then there is
+   * nothing to wait on.
+   */
+  const placeAheadReady = (): boolean => {
+    const coming = pictureComingFor(state.screen.current, state.run.level, travelSwapped);
+    if (coming === null || coming === bakedPlace) return true;
+    return pictureAhead !== null && pictureAhead.place === coming && pictureAhead.atlas !== null;
+  };
+
+  /**
+   * The atlas baked ahead for `place`, finished now if it is not yet, or `null` when there is none
+   * that fits — another place's, or one begun at a resolution the screen no longer has.
+   */
+  const takePlaceAhead = (place: ThemeKind | null): Atlas | null => {
+    const held = pictureAhead;
+    pictureAhead = null;
+    if (held === null || place === null || held.place !== place) return null;
+    if (held.view !== atlas.view || held.resolution !== view.scale * dpr) return null;
+    return held.atlas ?? drain(held.steps);
   };
 
   /**
@@ -3390,12 +3534,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const stepCrossing = (): void => {
     if (state.screen.current !== 'travel') return;
     travelSteps += 1;
-    const ready = crossingIsReady();
+    /*
+      ⚠️ **AND THE SHIP DOES NOT ARRIVE SOMEWHERE THE PICTURE HAS NOT GOT TO — 0604.** The swap waits
+      for the place baked on the way, so the landing waits for the swap: a burn that trailed off over
+      the old place's sky would be the cut the streaks exist to hide. The floor is untouched, and the
+      ceiling still ends it — 0340's honest failure, which here is the old frozen frame and no worse.
+    */
+    const ready = crossingIsReady() && travelSwapped;
     if (travelLandingAt < 0 && travelMayLand(state.settings.travel, travelSteps, ready)) travelLandingAt = travelSteps;
-    world.warp = warpAt(travelSteps, travelLandingAt);
-    // At full burn, once: the streaks are what hide it. `travelSwapped`'s own note has the argument,
-    // and `placeOnScreen` is what reads it.
-    if (!travelSwapped && world.warp >= 1) {
+    world.warp = warpAt(travelSteps, travelLandingAt);    // At full burn, once: the streaks are what hide it. `travelSwapped`'s own note has the argument,
+    // and `placeOnScreen` is what reads it. Once the place is baked (0604), or once the ceiling has
+    // started the ship down regardless, in which case `applyPlace` finishes the bake on the spot.
+    if (!travelSwapped && world.warp >= 1 && (placeAheadReady() || travelLandingAt >= 0)) {
       travelSwapped = true;
       /*
         ⚠️ **AND THE WALLS GO WITH THE PLACE — 0383.** The Mire's bank runs on for as long as its level
@@ -4366,7 +4516,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       held place over, so a crossing spent before it would ask *is the place loaded* one step earlier
       than the step it became loaded on — and `applyPlace` is what re-bakes the atlas the chart is
       drawn into.
+
+      ⚠️ **AND THE PLACE BAKED ON THE WAY IS SPENT ON BETWEEN THEM — 0604**: after `applyPlace`, so a
+      swap installs the bake before another slice is spent on it, and before the crossing, which asks
+      whether there is anything left of it to wait for.
     */
+    stepPlaceAhead();
     stepCrossing();
     /*
       ⚠️ **THE SPLASH IS READY WHEN THE GAME HAS LOADED AND IT HAS BEEN READ** — 0415: not before

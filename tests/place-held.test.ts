@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { picturePlaceFor, placeFor } from '../src/app/music.ts';
+import { pictureComingFor, picturePlaceFor, placeFor } from '../src/app/music.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
 import type { Screen } from '../src/state/screens.ts';
 
@@ -39,5 +39,29 @@ describe('the place stays behind the menus — 0518', () => {
     expect(picturePlaceFor('travel', null, FIELD, LATE + 1, false)).toBe(FIELD);
     expect(picturePlaceFor('travel', null, FIELD, LATE + 1, true)).toBe(placeFor(LATE + 1));
     expect(picturePlaceFor('intro', null, FIELD, LATE, false)).toBe(placeFor(0));
+  });
+});
+
+describe('the place is baked on the way — 0604', () => {
+  it('bakes, from the break, exactly the place the burn will swap to', () => {
+    /*
+      ⚠️ **THE ONE CLAIM THAT MAKES BAKING AHEAD SAFE.** An atlas baked for the wrong place would be
+      thrown away at the swap and the old frozen frame paid in full — silently, since the swap still
+      happens. So for every boundary on the roster, the place baked during the break and the build is
+      the place `picturePlaceFor` swaps to at full burn.
+    */
+    for (let level = 1; level < LEVEL_KINDS.length; level += 1) {
+      const swappedTo = picturePlaceFor('travel', null, placeFor(level - 1), level, true);
+      expect(pictureComingFor('cleared', level, false), `the break before level ${level} bakes another place`).toBe(swappedTo);
+      expect(pictureComingFor('travel', level, false), `the burn into level ${level} bakes another place`).toBe(swappedTo);
+    }
+  });
+
+  it('and bakes nothing once the swap has happened, or anywhere else', () => {
+    expect(pictureComingFor('travel', LATE, true), 'a place is still being baked after it was swapped in').toBeNull();
+    const elsewhere: Screen[] = ['playing', 'paused', 'gameOver', 'title', 'music', 'outro', 'victory', 'intro'];
+    for (const screen of elsewhere) {
+      expect(pictureComingFor(screen, LATE, false), `${screen} bakes a place nobody is heading for`).toBeNull();
+    }
   });
 });

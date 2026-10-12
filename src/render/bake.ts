@@ -21946,6 +21946,8 @@ export const CHART_TIGHTEN = 0.6;
 /** A stop's disc, as a fraction of the tile; and how many of its radii out the destination's ring is. */
 export const CHART_STOP = 0.035;
 export const CHART_RING = 2.1;
+/** A reached stop's halo, in its own radii — inside the destination's ring, so the ring still reads. */
+const CHART_HALO = 1.7;
 
 /**
  * Where a point `u` of the way along the whole route falls, as a fraction of the chart's tile — `u`
@@ -21981,6 +21983,27 @@ export function chartRadius(u: number): number {
  */
 const CHART_SAMPLES = 40;
 
+/** How many samples of a leg one dash of the route ahead is, and one gap: five dashes a leg. */
+const CHART_DASH = 4;
+
+/**
+ * How strongly a leg not yet flown is stroked, in the ink the caller lifts for it — 0604. With
+ * `CHART_AHEAD_LIFT` in `src/app/chrome.ts`, it is what `tests/travel.test.ts` holds to 3:1 on the
+ * plate in every place and palette: WCAG's floor for a graphic a reader needs, where it was 1.0.
+ */
+export const CHART_AHEAD_ALPHA = 0.85;
+
+/** The graticule's rings, as shares of `CHART_OUTER` — 0604. */
+const CHART_RINGS = [1 / 3, 2 / 3] as const;
+
+/**
+ * The bezel's radius as a share of the tile, and how many ticks are on it — 0604. Every tenth of a
+ * turn, and outside the widest mark a stop wears (`CHART_OUTER + CHART_STOP × CHART_RING`), so the
+ * route's first place sits inside the instrument rather than on its rim.
+ */
+export const CHART_BEZEL = 0.497;
+const CHART_TICKS = 36;
+
 /**
  * The Coil as a route, drawn whole: the spiral, the stops on it, and which legs have been flown.
  *
@@ -22000,27 +22023,91 @@ const CHART_SAMPLES = 40;
  *
  * ⚠️ **NOTHING IS PAINTED OVER THE WHOLE TILE**, so the canvas is transparent wherever the route is
  * not and whatever is behind the banner shows through it.
+ *
+ * ── AND IT READS AS AN INSTRUMENT — `docs/decisions/0604-the-place-is-baked-on-the-way.md` ───────
+ *
+ * ⚠️ **REPORTED AS *"THE MAP DISPLAY LOOKS PRETTY DODGY"*, AND THE ROUTE AHEAD WAS NOT THERE TO SEE.**
+ * A leg not yet flown was the palette's sky ink — `#2a2c44`, chosen to be *nowhere near anything the
+ * player has to find* — at three tenths, on a plate four fifths the void: 1.0 to 1.14 to 1 against
+ * its backing, across the seven places and both palettes. So the coil was a few coloured arcs and some loose dots, and the only part of the spiral a
+ * player could see was the part already behind them. The caller lifts that ink now; the legs ahead
+ * are dashed in it, which says *not flown yet* by its shape rather than by being invisible.
+ *
+ * ⚠️ **A GRATICULE UNDER IT, BECAUSE A SPIRAL ON ITS OWN HAS NO SCALE.** Two rings at a third and two
+ * thirds of the route's start and a bezel of ticks round the outside: the coil reads as descending
+ * because it visibly crosses them, which is `docs/game.md`'s one demand of the chart, said by the
+ * picture rather than by a label. All of it in `faint`, at less than the route, so it is a ground.
+ *
+ * ⚠️ **A LEG BEHIND IS LIT, NOT JUST COLOURED**: a wide faint stroke of its destination's light under
+ * a narrow bright one, which is how every other light in the game is drawn (0236's rim and glow).
  */
 export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: number, faint: string): void {
   const legs = LEVEL_KINDS.length - 1;
   if (legs < 1) return;
   const glowOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].glow[palette];
   const bodyOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].nebula[palette];
+  const middle = size / 2;
   ctx.lineCap = 'round';
-  for (let leg = 0; leg < legs; leg += 1) {
-    const done = leg < flown;
-    ctx.lineWidth = Math.max(1, size * 0.008);
-    ctx.globalAlpha = done ? 0.9 : 0.3;
-    ctx.strokeStyle = done ? glowOf(leg + 1) : faint;
+  // The graticule: two rings inside the route's start and the bezel outside it.
+  ctx.strokeStyle = faint;
+  ctx.lineWidth = Math.max(1, size * 0.004);
+  ctx.globalAlpha = 0.35;
+  for (const share of CHART_RINGS) {
     ctx.beginPath();
+    ctx.moveTo(middle + CHART_OUTER * share * size, middle);
+    ctx.arc(middle, middle, CHART_OUTER * share * size, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  for (let tick = 0; tick < CHART_TICKS; tick += 1) {
+    const a = (tick / CHART_TICKS) * Math.PI * 2;
+    // A long tick on each quarter, so the bezel has a top and the route's first stop sits under it.
+    const inner = tick % (CHART_TICKS / 4) === 0 ? CHART_BEZEL - 0.03 : CHART_BEZEL - 0.012;
+    ctx.moveTo(middle + Math.cos(a) * inner * size, middle + Math.sin(a) * inner * size);
+    ctx.lineTo(middle + Math.cos(a) * CHART_BEZEL * size, middle + Math.sin(a) * CHART_BEZEL * size);
+  }
+  ctx.stroke();
+  /*
+    A leg as one path; dashed, it is every other run of `CHART_DASH` samples, each its own sub-path of
+    the one stroke — the pen has no `setLineDash`, and a dash that is geometry is one the tracing pen
+    in the tests can see.
+  */
+  const legPath = (leg: number, dashed: boolean): void => {
+    ctx.beginPath();
+    let open = false;
     for (let s = 0; s <= CHART_SAMPLES; s += 1) {
       const u = (leg + s / CHART_SAMPLES) / legs;
       const x = chartTileX(u) * size;
       const y = chartTileY(u) * size;
-      if (s === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      // Whether the run this sample begins is drawn: always, unless dashed and it is a gap.
+      const drawn = !dashed || Math.floor(s / CHART_DASH) % 2 === 0;
+      if (!open) {
+        if (drawn) ctx.moveTo(x, y);
+        open = drawn;
+      } else {
+        ctx.lineTo(x, y);
+        open = drawn;
+      }
     }
-    ctx.stroke();
+  };
+  for (let leg = 0; leg < legs; leg += 1) {
+    if (leg < flown) {
+      ctx.strokeStyle = glowOf(leg + 1);
+      ctx.globalAlpha = 0.22;
+      ctx.lineWidth = Math.max(2, size * 0.03);
+      legPath(leg, false);
+      ctx.stroke();
+      ctx.globalAlpha = 0.95;
+      ctx.lineWidth = Math.max(1, size * 0.011);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = faint;
+      ctx.globalAlpha = CHART_AHEAD_ALPHA;
+      ctx.lineWidth = Math.max(1, size * 0.007);
+      legPath(leg, true);
+      ctx.stroke();
+    }
   }
   /*
     ⚠️ **THE STOPS AFTER THE LEGS, so a disc is never cut in half by the line arriving at it.** The
@@ -22038,14 +22125,27 @@ export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: n
       be saying something about the places rather than about the run.
     */
     const ahead = stop > flown;
-    ctx.globalAlpha = ahead ? 0.35 : 1;
+    /*
+      ⚠️ **A PLACE REACHED IS LIT, AND ONE AHEAD IS STILL ITS OWN COLOUR — 0604.** Ahead was a body at
+      a third over a rim at four tenths, which on the plate was a smudge; it is the same two marks at
+      about twice that now, so each place to come is a place and not a gap in the route. Behind and the
+      destination get a halo of their light as well, which is the half that says *been* or *going*.
+    */
+    if (!ahead) {
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = glowOf(stop);
+      ctx.beginPath();
+      ctx.arc(x, y, r * CHART_HALO, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = ahead ? 0.6 : 1;
     ctx.fillStyle = bodyOf(stop);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = ahead ? 0.4 : 0.95;
+    ctx.globalAlpha = ahead ? 0.75 : 0.95;
     ctx.strokeStyle = glowOf(stop);
-    ctx.lineWidth = Math.max(1, size * 0.006);
+    ctx.lineWidth = Math.max(1, size * 0.007);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.stroke();
@@ -22055,7 +22155,7 @@ export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: n
       it the player has to count round a spiral to find out.
     */
     if (stop === flown) {
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = 0.85;
       ctx.beginPath();
       ctx.arc(x, y, r * CHART_RING, 0, Math.PI * 2);
       ctx.stroke();
@@ -22231,10 +22331,44 @@ export function bakeAtlas(
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
 ): Atlas {
+  const steps = bakeAtlasStepwise(palette, view, pixelsPerUnit, theme);
+  for (;;) {
+    const step = steps.next();
+    if (step.done === true) return step.value;
+  }
+}
+
+/**
+ * The same bake, one sprite at a time — `docs/decisions/0604-the-place-is-baked-on-the-way.md`.
+ *
+ * It yields after every sprite, so a caller can spread a whole place's atlas over the frames of a
+ * respite and a burn instead of stopping the game for it. **`bakeAtlas` above is this, drained**, so
+ * there is one bake and not two descriptions of one: every boot runs the stepwise path.
+ *
+ * ⚠️ **AN INDEXED WRITE INTO A FULL-LENGTH ARRAY, WHICH IS `map`'s GUARANTEE KEPT A DIFFERENT WAY.**
+ * The note above says why a loop that pushes is refused: a skipped push slides every sprite after it
+ * down by one. A write to `bitmaps[i]` for every `i` cannot slide, and a slot left empty is refused
+ * at the end rather than blitted as nothing.
+ */
+export function* bakeAtlasStepwise(
+  palette: Palette,
+  view: SpriteView,
+  pixelsPerUnit: number,
+  theme: ThemeKind = 'approach',
+): Generator<void, Atlas, void> {
+  const bitmaps = new Array<CanvasImageSource>(SPRITE_KINDS.length);
+  for (let i = 0; i < SPRITE_KINDS.length; i++) {
+    bitmaps[i] = bakeOne(SPRITE_KINDS[i]!, palette, view, pixelsPerUnit, theme);
+    yield;
+  }
+  // A counted loop and not `some`, which skips the holes of a sparse array — the one thing asked.
+  for (let i = 0; i < bitmaps.length; i++) {
+    if (bitmaps[i] === undefined) throw new Error(`bakeAtlas: ${SPRITE_KINDS[i]!} was left unbaked`);
+  }
   return {
     view,
     theme,
-    bitmaps: SPRITE_KINDS.map((kind) => bakeOne(kind, palette, view, pixelsPerUnit, theme)),
+    bitmaps,
     extents: SPRITE_KINDS.map((kind) => SPRITE_EXTENT[kind]),
     pixelsPerUnit,
     light: SPRITE_KINDS.map((kind) => LIGHT_KINDS.includes(kind)),

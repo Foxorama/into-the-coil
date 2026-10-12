@@ -209,8 +209,9 @@ export const PROBES = [
     guard: 'and the drawing is one disc per level where the curve says, with the legs behind it in their places’ colours',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    const done = leg < flown;\n    ctx.lineWidth = Math.max(1, size * 0.008);',
-      replace: '    const done = leg < legs;\n    ctx.lineWidth = Math.max(1, size * 0.008);',
+      // Re-anchored by 0604, whose legs behind are lit and whose legs ahead are dashed: the same break.
+      find: '  for (let leg = 0; leg < legs; leg += 1) {\n    if (leg < flown) {',
+      replace: '  for (let leg = 0; leg < legs; leg += 1) {\n    if (leg < legs) {',
     },
   },
   {
@@ -269,7 +270,8 @@ export const PROBES = [
     guard: 'sits clear of the middle, keeps its backing, takes no pointer and has nothing to press',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  margin-top: min(1.25rem, 4cqh);\n  margin-bottom: auto;\n',
+      // Re-anchored by 0604, which put the plate under the readout's strip rather than behind it.
+      find: '  margin-top: calc(clamp(${STRIP.fontFloorRem}rem, ${STRIP.fontCqh}cqh, ${STRIP.fontCapRem}rem) * ${STRIP.padEm + STRIP.plateEm + STRIP.padEm});\n  margin-bottom: auto;\n',
       replace: '',
     },
   },

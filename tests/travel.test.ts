@@ -22,9 +22,11 @@ import {
   travelMayLand,
   warpAt,
 } from '../src/content/travel.ts';
-import { STYLE } from '../src/app/chrome.ts';
+import { CHART_AHEAD_LIFT, STYLE } from '../src/app/chrome.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import {
+  CHART_AHEAD_ALPHA,
+  CHART_BEZEL,
   CHART_OUTER,
   CHART_RING,
   CHART_STOP,
@@ -418,6 +420,9 @@ describe('the chart is the roster, drawn as a descent', () => {
   it('and every stop is inside the canvas, ring and all', () => {
     // 0277 shipped a serpent whose halo ran off its tile. The destination's ring is the widest mark.
     expect(CHART_OUTER + CHART_STOP * CHART_RING, 'the chart draws outside its own canvas').toBeLessThan(0.5);
+    // 0604: and the bezel round it is outside every stop's widest mark and inside the canvas.
+    expect(CHART_BEZEL, 'the bezel cuts through the first place’s ring').toBeGreaterThan(CHART_OUTER + CHART_STOP * CHART_RING);
+    expect(CHART_BEZEL, 'the bezel is drawn off the edge of the canvas').toBeLessThan(0.5);
     expect(chartRadius(0), 'the route no longer starts at the outside of the chart').toBe(CHART_OUTER);
     expect(chartRadius(1), 'the innermost stop is not the centre').toBe(0);
   });
@@ -451,29 +456,78 @@ describe('the chart is the roster, drawn as a descent', () => {
     const faint = '#123456';
     const { pen, trace } = tracingPen();
     drawChart(pen, size, 'vivid', flownLegs, faint);
-    expect(trace.passes.length, 'the chart drew one disc per place and this is not that many').toBe(STOPS);
-    expect(trace.inks.length, 'a leg per pair of places, a rim per place, and one ring on the destination').toBe(
-      LEGS + STOPS + 1,
-    );
+    /*
+      ⚠️ **A DISC IS FOUND BY ITS SIZE, SINCE 0604, AND NOT BY BEING THE NTH FILL.** A reached place
+      wears a halo of its light under its disc, so the fills are no longer one per place; what is
+      claimed is still exactly one disc per place, where the curve puts it. A disc is flattened to a
+      regular polygon by the tracing pen, so its centre is its points' mean and its radius their
+      mean distance from it.
+    */
+    const discs = trace.passes
+      .map((pass) => {
+        const points = pass.subpaths[0]!;
+        const cx = points.reduce((sum, [x]) => sum + x, 0) / points.length;
+        const cy = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
+        const r = points.reduce((sum, [x, y]) => sum + Math.hypot(x - cx, y - cy), 0) / points.length;
+        return { cx, cy, r };
+      })
+      .filter((disc) => Math.abs(disc.r / size - CHART_STOP) < CHART_STOP * 0.05);
+    expect(discs.length, 'the chart drew one disc per place and this is not that many').toBe(STOPS);
     for (let stop = 0; stop < STOPS; stop += 1) {
       const [fx, fy] = at(stop);
-      const points = trace.passes[stop]!.subpaths[0]!;
-      // A disc is flattened to a regular polygon by the tracing pen, so its centre is its points' mean.
-      const cx = points.reduce((sum, [x]) => sum + x, 0) / points.length;
-      const cy = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
-      expect(cx / size, `stop ${stop} is drawn away from where the route puts it`).toBeCloseTo(fx, 3);
-      expect(cy / size, `stop ${stop} is drawn away from where the route puts it`).toBeCloseTo(fy, 3);
+      expect(discs[stop]!.cx / size, `stop ${stop} is drawn away from where the route puts it`).toBeCloseTo(fx, 3);
+      expect(discs[stop]!.cy / size, `stop ${stop} is drawn away from where the route puts it`).toBeCloseTo(fy, 3);
     }
     /*
       ⚠️ **A LEG BEHIND THE RUN IS ITS DESTINATION'S COLOUR AND A LEG AHEAD IS NOT ANY PLACE'S.** That
       is the whole of how this picture says *these are behind you*, so it is the claim most worth
       holding — and it is per place, read off `THEMES`, which is 0282's *can the thing differ per
       instance* asked of the chart.
+
+      ⚠️ **A LEG IS EVERY STROKE THAT SETS OFF FROM ITS FIRST PLACE, SINCE 0604**: a leg behind is two
+      strokes (its light and its line) and a leg ahead is one stroke of dashes, so a leg is no longer
+      the nth ink. Nothing else on the chart starts at a stop's centre — a ring starts on its rim.
     */
     for (let leg = 0; leg < LEGS; leg += 1) {
+      const [sx, sy] = at(leg);
+      const strokes = trace.inks.filter((ink) => {
+        const first = ink.subpaths[0]?.[0];
+        return first !== undefined && Math.hypot(first[0] - sx * size, first[1] - sy * size) < 1e-6;
+      });
+      expect(strokes.length, `leg ${leg} was not drawn`).toBeGreaterThan(0);
       const want = leg < flownLegs ? THEMES[LEVELS[LEVEL_KINDS[leg + 1]!].theme].glow.vivid : faint;
-      expect(trace.inks[leg]!.colour, `leg ${leg} is drawn in the wrong colour`).toBe(want);
+      for (const stroke of strokes) expect(stroke.colour, `leg ${leg} is drawn in the wrong colour`).toBe(want);
     }
+  });
+
+  it('and the route ahead can be seen on the plate, in every place and both palettes', () => {
+    /*
+      `docs/decisions/0604-the-place-is-baked-on-the-way.md`. *"The map display looks pretty dodgy."*
+      A leg not yet flown was the palette's sky ink at three tenths, and on the plate that is 1.0 to
+      1.14 to 1 — the coil ahead of the ship was not on the chart at all, so the picture was some
+      coloured arcs and loose dots.
+
+      ⚠️ **3:1, WHICH IS WCAG'S FLOOR FOR A GRAPHIC A READER NEEDS** — non-text, so not the 4.5 the
+      name is held to. Against the plate at its LIGHTEST, as the name's guard below is: the void at four
+      fifths over the place's backdrop, the accent's wash, and the chart's own disc of light, all read
+      out of the stylesheet rather than retyped. The ink is what the pen is handed and the alpha what it
+      strokes at, both read from where they are set.
+    */
+    const disc = /\.itc-travel-crossing-chartbox \{[^}]*?radial-gradient\(circle, color-mix\(in srgb, var\(--itc-accent, var\(--itc-ink\)\) (\d+)%/.exec(STYLE);
+    expect(disc, 'the chart no longer sits in a disc of its place’s light — this guard’s backing is stale').not.toBeNull();
+    const light = Number(disc![1]) / 100;
+    const failures: string[] = [];
+    for (const palette of Object.keys(PALETTES) as PaletteName[]) {
+      for (const kind of LEVEL_KINDS) {
+        const theme = THEMES[LEVELS[kind].theme];
+        const accent = theme.glow[palette];
+        const plate = mix(mix(mix(theme.space[palette], PALETTES[palette].space, 0.8), accent, 0.16), accent, light);
+        const ink = mix(plate, mix(PALETTES[palette].sky, '#ffffff', CHART_AHEAD_LIFT), CHART_AHEAD_ALPHA);
+        const ratio = contrast(ink, plate);
+        if (ratio < 3) failures.push(`${theme.title} (${palette}): ${ratio.toFixed(2)}:1`);
+      }
+    }
+    expect(failures, 'the route ahead cannot be seen on these plates — WCAG’s floor for a graphic is 3:1').toEqual([]);
   });
 });
 
