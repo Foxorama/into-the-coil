@@ -236,6 +236,13 @@ export interface WaveEntry {
 }
 
 /**
+ * Each way round an island, in lane units, on every tier — `docs/decisions/0600-the-corridor-forks.md`.
+ * The player's answer to *what a tier's narrowest means at a fork*: *"a fork's own thirty a way, every
+ * tier."* Three ships across as drawn, and a choice rather than a squeeze.
+ */
+export const FORK_WAY = 30;
+
+/**
  * Where a wave comes from when it does not say.
  *
  * The single description of the default, read by the spawner and by the guard rather than restated
@@ -449,6 +456,17 @@ export interface CorridorRow {
    * same places on every tier; how narrow they get and how steeply their walls may run is the tier's.
    */
   shape?: readonly { at: number; swing: number; narrow: number }[];
+  /**
+   * Where it forks — `docs/decisions/0600-the-corridor-forks.md`: an island of the same stone from `at`
+   * for `length`, in level coordinates, with a way either side of it. Absent is a corridor that never
+   * forks.
+   *
+   * ⚠️ **THE ISLAND IS LAID FROM THE FACES, SO A FORK IS AUTHORED WHERE THE SHAPE HOLDS THE CORRIDOR
+   * OPEN.** Each way is `FORK_WAY` on every tier whatever the island has to give up for it, so a fork
+   * put where the corridor pinches is an island too thin to read as stone — and
+   * `tests/corridor.test.ts` refuses it, on every tier.
+   */
+  forks?: readonly { at: number; length: number }[];
   /**
    * A corridor that is a FLOOR of acid rather than two walls of stone — 0383, and absent for stone.
    *
@@ -1750,24 +1768,43 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
         do not shrink with a screen: the hold still opens 249 units before the lattice and closes 581
         after it, at 1159 and 1989. The ends, the opening's 300 and the last 500, are distances too.
       */
+      /*
+        ⚠️ **AND IT OPENS OUT THREE TIMES, TO FORK — 0600.** Each fork's island is laid from the faces,
+        so the shape holds the corridor at its full width from a little before each island to a little
+        after it, and the island comes to its point inside that: one in the first turning stretch, two
+        in the second, none in a fight's stretch.
+      */
       shape: [
         { at: 300, swing: 0, narrow: 0 },
-        { at: 436, swing: -0.8, narrow: 0.6 },
-        { at: 591, swing: 0.7, narrow: 0.9 },
-        { at: 755, swing: 0.9, narrow: 0.4 },
-        { at: 918, swing: -0.6, narrow: 1 },
-        { at: 1073, swing: 0, narrow: 0.5 },
+        { at: 420, swing: -0.8, narrow: 0.7 },
+        { at: 520, swing: 0.3, narrow: 0.9 },
+        { at: 590, swing: 0, narrow: 0 },
+        { at: 960, swing: 0, narrow: 0 },
+        { at: 1040, swing: -0.6, narrow: 1 },
+        { at: 1100, swing: 0, narrow: 0.5 },
         { at: 1159, swing: 0, narrow: 0 },
         { at: 1873, swing: 0, narrow: 0 },
         { at: 2001, swing: -0.9, narrow: 0.5 },
-        { at: 2147, swing: 0.5, narrow: 0.8 },
-        { at: 2311, swing: 0.9, narrow: 1 },
-        { at: 2474, swing: 0, narrow: 0.6 },
-        { at: 2638, swing: -0.8, narrow: 0.9 },
-        { at: 2802, swing: 0.6, narrow: 1 },
-        { at: 2965, swing: 0.9, narrow: 0.4 },
-        { at: 3129, swing: -0.3, narrow: 0.8 },
+        { at: 2147, swing: 0.4, narrow: 1 },
+        { at: 2240, swing: 0.1, narrow: 0.6 },
+        { at: 2330, swing: 0, narrow: 0 },
+        { at: 2700, swing: 0, narrow: 0 },
+        { at: 2790, swing: -0.8, narrow: 0.9 },
+        { at: 2870, swing: 0.2, narrow: 1 },
+        { at: 2950, swing: 0, narrow: 0 },
         { at: 3308, swing: 0, narrow: 0 },
+      ],
+      /*
+        ⚠️ **TWENTY TILES EACH: A POINT, A STRETCH AT ITS WIDEST AND A POINT.** An island is at its widest
+        — forty-eight, which leaves the player's thirty a way in the box's hundred and eight — eight tiles
+        from each end at `ISLE_NOSE_RISE`, so the middle four hold it there: a little under seven seconds
+        from one point passing the ship to the other, and longer than the screen, so a way once taken is
+        flown to its end.
+      */
+      forks: [
+        { at: 696, length: 240 },
+        { at: 2436, length: 240 },
+        { at: 3048, length: 240 },
       ],
     },
   },

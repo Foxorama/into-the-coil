@@ -95,6 +95,46 @@ export interface Corridor {
   poolCaps: readonly number[];
   poolFrom: number;
   poolTo: number;
+  /**
+   * The islands the corridor forks round — `docs/decisions/0600-the-corridor-forks.md`: `[low face,
+   * high face]` per knot, as `faces` is, and `NaN` at a knot no island stands on. Empty for a corridor
+   * that never forks, which is every one but the Labyrinth's.
+   *
+   * ⚠️ **AN ISLAND IS STONE BETWEEN THE TWO WAYS, AND ITS FACES ARE THE WAYS' INNER WALLS.** Its low
+   * face is a far wall to whatever is below it and its high face a near wall to whatever is above, so
+   * every question the stone answers — `stoneAt`, `outOfStone`, a line of sight — asks it as it asks a
+   * wall, with the side `ISLE_BELOW` or `ISLE_ABOVE`.
+   */
+  isles: Float64Array;
+}
+
+/**
+ * The sides an island is met from — 0600. `ISLE_BELOW` is the island seen from below it, where it
+ * stands as a far wall does, and `ISLE_ABOVE` from above, as a near wall. Their signs are the walls'
+ * own, so `Math.sign(side)` says which way out of the stone is, for a wall and an island alike.
+ */
+export const ISLE_BELOW = 2;
+export const ISLE_ABOVE = -2;
+
+/** The side a carved island tile is recorded under in `passages` — one tag for the island's whole width. */
+export const ISLE_CARVE = 2;
+
+/** The island's face on `side` (`ISLE_BELOW` its low face, `ISLE_ABOVE` its high one) at `along`, or `NaN`. */
+function isleFace(corridor: Corridor, along: number, side: number): number {
+  const isles = corridor.isles;
+  if (isles.length === 0 || along < corridor.from || along > corridor.to) return Number.NaN;
+  const knots = isles.length / 2;
+  const t = (along - corridor.from) / corridor.extent;
+  const i = Math.min(knots - 2, Math.max(0, Math.floor(t)));
+  const f = Math.min(1, t - i);
+  const slot = side > 0 ? 0 : 1;
+  const a = isles[i * 2 + slot]!;
+  const b = isles[(i + 1) * 2 + slot]!;
+  // On a knot, the knot — its point, where the faces meet, is on one.
+  if (f === 0) return a;
+  // An island ends on a knot; past it, the tile has no island in it.
+  if (Number.isNaN(a) || Number.isNaN(b)) return Number.NaN;
+  return a + (b - a) * f;
 }
 
 /** Which of `faces`' knots knot `k` is — itself, or its place in the repeat (0383). */
@@ -106,8 +146,15 @@ export function knotOf(corridor: Corridor, k: number): number {
 /**
  * Where the face on `side` stands at `along`, in across units — or the far side of the world where
  * the corridor is not, so nothing outside it is ever in stone.
+ *
+ * ⚠️ **AND AN ISLAND'S FACE FOR `ISLE_BELOW` OR `ISLE_ABOVE` — 0600**, with the same answer where no
+ * island stands: a face on the far side of the world, so nothing there is ever in it.
  */
 export function faceAt(corridor: Corridor, along: number, side: number): number {
+  if (side === ISLE_BELOW || side === ISLE_ABOVE) {
+    const face = isleFace(corridor, along, side);
+    return Number.isNaN(face) ? (side < 0 ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY) : face;
+  }
   if (along < corridor.from || along > corridor.to) return side < 0 ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
   const knots = corridor.faces.length / 2;
   const t = (along - corridor.from) / corridor.extent;
@@ -129,7 +176,9 @@ export function opened(passages: Float64Array, a: number, b: number, side: numbe
 }
 
 /**
- * Which wall a body of `radius` at (`along`, `across`) is in: −1 the near, +1 the far, 0 neither.
+ * Which wall a body of `radius` at (`along`, `across`) is in: −1 the near, +1 the far, 0 neither — or
+ * an island, `ISLE_BELOW` when the body is nearer its low face and `ISLE_ABOVE` its high one (0600), so
+ * the sign is always the way out.
  *
  * ⚠️ **AN OPENING IS NOT STONE**, so a flanker coming through its own passage (0348) is in neither —
  * which is the whole reason a passage is opened.
@@ -153,6 +202,23 @@ export function stoneAt(corridor: Corridor | null, along: number, across: number
     const at = Math.max(a, Math.min(b, along));
     if (across - radius < faceAt(corridor, at, -1) && !opened(corridor.passages, a, b, -1)) return -1;
     if (across + radius > faceAt(corridor, at, 1) && !opened(corridor.passages, a, b, 1)) return 1;
+    /*
+      ⚠️ **AND THE ISLAND BETWEEN THE WAYS — 0600 — ASKED AT ITS WIDEST UNDER THE HULL, NOT NEAREST
+      ITS CENTRE.** A wall's face nearest a body is where it reaches furthest in; an island's point is
+      the opposite, nothing at the tip and widening away from it, so asked nearest the centre a hull
+      over the point read clear while its rim lay on the stone a unit back — flying the Labyrinth, every
+      sighting the picture guard made was one. A face is straight within a tile, so the widest is at an
+      end of the stretch the hull covers.
+    */
+    if (corridor.isles.length === 0) continue;
+    const p = Math.max(a, Math.min(b, along - radius));
+    const q = Math.max(a, Math.min(b, along + radius));
+    const low = Math.min(isleFace(corridor, p, ISLE_BELOW), isleFace(corridor, q, ISLE_BELOW));
+    const high = Math.max(isleFace(corridor, p, ISLE_ABOVE), isleFace(corridor, q, ISLE_ABOVE));
+    // Where its faces meet — its point — it has no width, and nothing is in it.
+    if (high > low && across + radius > low && across - radius < high && !opened(corridor.passages, a, b, ISLE_CARVE)) {
+      return across < (low + high) / 2 ? ISLE_BELOW : ISLE_ABOVE;
+    }
   }
   return 0;
 }
@@ -169,12 +235,21 @@ export function outOfStone(corridor: Corridor, along: number, across: number, ra
   const extent = corridor.extent;
   const first = Math.floor((along - radius - corridor.from) / extent);
   const last = Math.floor((along + radius - corridor.from) / extent);
+  // An island's carves are kept under one tag for its whole width — 0600.
+  const isle = side === ISLE_BELOW || side === ISLE_ABOVE;
+  const tag = isle ? ISLE_CARVE : side;
   let out = across;
   for (let t = first; t <= last; t++) {
     const a = corridor.from + t * extent;
     const b = a + extent;
-    if (opened(corridor.passages, a, b, side)) continue;
-    const face = faceAt(corridor, Math.max(a, Math.min(b, along)), side);
+    if (opened(corridor.passages, a, b, tag)) continue;
+    let face = faceAt(corridor, Math.max(a, Math.min(b, along)), side);
+    // An island at its widest under the hull, where `stoneAt` asks it — 0600.
+    if (isle) {
+      const p = faceAt(corridor, Math.max(a, Math.min(b, along - radius)), side);
+      const q = faceAt(corridor, Math.max(a, Math.min(b, along + radius)), side);
+      face = side < 0 ? Math.max(face, p, q) : Math.min(face, p, q);
+    }
     out = side < 0 ? Math.max(out, face + radius) : Math.min(out, face - radius);
   }
   return out;
@@ -276,6 +351,47 @@ export function layShore(out: Float64Array, shore: readonly number[], beyond: nu
   }
 }
 
+/** One island of a corridor's forks — `CorridorRow.forks`, in level coordinates. */
+export interface ForkPoint {
+  readonly at: number;
+  readonly length: number;
+}
+
+/**
+ * Lay a corridor's islands round its faces — `docs/decisions/0600-the-corridor-forks.md`. `NaN` at every
+ * knot no island stands on; `[low face, high face]` at the knots one does, from the knot nearest a
+ * fork's `at` to the knot nearest its end.
+ *
+ * ⚠️ **EACH WAY IS AT LEAST `way` WIDE, BY CONSTRUCTION, AND THAT IS THE PLAYER'S ANSWER** — *a fork's
+ * own thirty a way, every tier*. The island is centred between the faces and is as wide as leaves `way`
+ * either side of it, so it is laid AFTER the faces and reads them: where the corridor is narrower than
+ * two ways, the island is narrower, down to nothing.
+ *
+ * ⚠️ **ITS ENDS COME TO A POINT, AT `nose` A TILE A SIDE.** An island that began at full width would be
+ * a wall square across the lane, and a body flying into it would have nowhere to be carried; a point
+ * parts what flies at it, as a turning wall carries what flies along it. `nose` is the same on every
+ * tier, so it is held under the gentlest tier's slope by the guard rather than by the tier's row.
+ *
+ * ⚠️ **WHOLE LANE UNITS**, as the faces are, so the painter needs one baked piece per rise.
+ */
+export function layIsles(out: Float64Array, faces: Float64Array, extent: number, forks: readonly ForkPoint[] | undefined, way: number, nose: number): void {
+  out.fill(Number.NaN);
+  if (forks === undefined) return;
+  const knots = Math.min(out.length, faces.length) / 2;
+  for (const fork of forks) {
+    const first = Math.round(fork.at / extent);
+    const last = Math.round((fork.at + fork.length) / extent);
+    for (let k = Math.max(0, first); k <= Math.min(knots - 1, last); k++) {
+      const near = faces[k * 2]!;
+      const far = faces[k * 2 + 1]!;
+      const middle = Math.round((near + far) / 2);
+      const half = Math.max(0, Math.min(nose * (k - first), nose * (last - k), middle - near - way, far - middle - way));
+      out[k * 2] = middle - half;
+      out[k * 2 + 1] = middle + half;
+    }
+  }
+}
+
 /** The shape's swing and narrowing at `at`: a half-cosine between points, held beyond the ends. */
 export function shapeAt(shape: readonly ShapePoint[] | undefined, at: number): { swing: number; narrow: number } {
   if (shape === undefined || shape.length === 0) return STRAIGHT;
@@ -315,6 +431,49 @@ export function bandAt(corridor: Corridor, along: number, radius: number, side: 
 }
 
 /**
+ * How far towards `side` a hull of `radius` at (`along`, `across`) can go before an island stops it —
+ * 0600 — read where `bandAt` reads a wall: at the hull's centre and at every knot it spans. `±Infinity`
+ * on a side with no island, so it only ever tightens a band.
+ *
+ * ⚠️ **THE ISLAND IS ON ONE SIDE OF A BODY, AND WHICH IS WHERE THE BODY IS.** Below the island's middle
+ * its low face is the ceiling of the way the body is in; above it, its high face is the floor. So a body
+ * in either way is held in that way, and the island never pulls one across itself.
+ */
+export function isleBand(corridor: Corridor, along: number, across: number, radius: number, side: number): number {
+  let limit = side < 0 ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
+  if (corridor.isles.length === 0) return limit;
+  limit = isleLimit(corridor, along, across, radius, side, limit);
+  // And at both ends of the hull, where `stoneAt` asks an island (its point widens away from the tip).
+  limit = isleLimit(corridor, along - radius, across, radius, side, limit);
+  limit = isleLimit(corridor, along + radius, across, radius, side, limit);
+  const first = Math.ceil((along - radius - corridor.from) / corridor.extent);
+  const last = Math.floor((along + radius - corridor.from) / corridor.extent);
+  for (let k = first; k <= last; k++) limit = isleLimit(corridor, corridor.from + k * corridor.extent, across, radius, side, limit);
+  return limit;
+}
+
+function isleLimit(corridor: Corridor, at: number, across: number, radius: number, side: number, limit: number): number {
+  const low = isleFace(corridor, at, ISLE_BELOW);
+  const high = isleFace(corridor, at, ISLE_ABOVE);
+  if (Number.isNaN(low)) return limit;
+  const below = across < (low + high) / 2;
+  if (side > 0 && below) return Math.min(limit, low - radius);
+  if (side < 0 && !below) return Math.max(limit, high + radius);
+  return limit;
+}
+
+/**
+ * The edge on `side` of the way a hull of `radius` at (`along`, `across`) is in — 0600: the wall's
+ * band, tightened by an island on that side of it. Where the corridor does not fork it is `bandAt`,
+ * exactly, so a floor's open side is as far beyond the box as it always was.
+ */
+export function wayAt(corridor: Corridor, along: number, across: number, radius: number, side: number): number {
+  const wall = bandAt(corridor, along, radius, side);
+  const isle = isleBand(corridor, along, across, radius, side);
+  return side < 0 ? Math.max(wall, isle) : Math.min(wall, isle);
+}
+
+/**
  * Where a hull of `radius` authored at `lane` of the corridor at rest stands at `along`, in the
  * corridor as it is there — 0350. The hull's place in the band it can occupy at rest is its place in
  * the band it can occupy here, so a wave authored for 88 units that arrives in 34 is narrower rather
@@ -325,12 +484,12 @@ export function bandAt(corridor: Corridor, along: number, radius: number, side: 
  * radius wherever the corridor is squeezed, and a weave that fitted the box by less than that was put
  * down where the ride then carried it into the wall.
  */
-export function laneIn(corridor: Corridor | null, along: number, lane: number, radius: number): number {
+export function laneIn(corridor: Corridor | null, along: number, lane: number, radius: number, way = 0): number {
   if (corridor === null || along < corridor.from || along > corridor.to) return lane;
-  const low = heldAt(corridor, along, radius, -1);
-  const high = heldAt(corridor, along, radius, 1);
-  const restLow = corridor.centre - corridor.width / 2 + radius;
-  const restWidth = corridor.width - radius * 2;
+  let low = heldAt(corridor, along, radius, -1);
+  let high = heldAt(corridor, along, radius, 1);
+  let restLow = corridor.centre - corridor.width / 2 + radius;
+  let restWidth = corridor.width - radius * 2;
   if (restWidth <= 0 || high <= low) return (low + high) / 2;
   /*
     ⚠️ **A LANE OUTSIDE THE CORRIDOR AT REST IS WHERE IT WAS AUTHORED — 0383.** The Labyrinth's rest is
@@ -338,6 +497,25 @@ export function laneIn(corridor: Corridor | null, along: number, lane: number, r
     bends only what flies low over it, and a wave authored above it is not the floor's to move.
   */
   if (lane < restLow || lane > restLow + restWidth) return lane;
+  /*
+    ⚠️ **BESIDE AN ISLAND THE BAND IS ONE WAY, AND WHICH WAY IS THE LANE'S — 0600.** Asked for in the plan:
+    *"a wave is authored into one branch or both — absent meaning the branch nearest its lane."* Each
+    member is read into the way on its own side of the corridor's middle, and its place in that half of
+    the corridor at rest is its place in the way — so a column off the middle arrives in one way and a
+    line across the middle parts round the island. A `way` given — a flanker's, the way beside the wall
+    it comes through — puts it in that one, read across its whole width, as a narrowing corridor reads it.
+  */
+  if (corridor.isles.length > 0 && !Number.isNaN(isleFace(corridor, along, ISLE_BELOW))) {
+    const half = restWidth / 2;
+    const below = way !== 0 ? way < 0 : lane < restLow + half;
+    if (below) high = Math.min(high, isleBand(corridor, along, low, radius, 1));
+    else low = Math.max(low, isleBand(corridor, along, high, radius, -1));
+    if (way === 0) {
+      restWidth = half;
+      if (!below) restLow += half;
+    }
+    if (high <= low) return (low + high) / 2;
+  }
   return low + ((lane - restLow) * (high - low)) / restWidth;
 }
 
@@ -361,11 +539,18 @@ export function heldAt(corridor: Corridor, along: number, radius: number, side: 
  * motion authored across the box rather than a place in it (0350's weave). One where there is no
  * corridor.
  */
-export function squeezeAt(corridor: Corridor | null, along: number, radius: number): number {
+export function squeezeAt(corridor: Corridor | null, along: number, radius: number, across = Number.NaN): number {
   if (corridor === null || along < corridor.from || along > corridor.to) return 1;
   const restWidth = corridor.width - radius * 2;
   if (restWidth <= 0) return 1;
-  return Math.max(0, heldAt(corridor, along, radius, 1) - heldAt(corridor, along, radius, -1)) / restWidth;
+  let low = heldAt(corridor, along, radius, -1);
+  let high = heldAt(corridor, along, radius, 1);
+  // Beside an island, the way the body is in — 0600: a weave swings across its way, not the corridor.
+  if (!Number.isNaN(across)) {
+    low = Math.max(low, isleBand(corridor, along, across, radius, -1));
+    high = Math.min(high, isleBand(corridor, along, across, radius, 1));
+  }
+  return Math.max(0, high - low) / restWidth;
 }
 
 /** How far apart the points are that a line of sight is tested at, in world units. */

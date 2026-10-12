@@ -78,8 +78,8 @@ import { BOLT_STEPS, paintBodyBolts, paintBolts, paintScene, type Bound, type La
 import { NO_HOP, paintPort, paintStand } from '../render/port.ts';
 import { hydraJointOf } from '../content/necks.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
-import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
-import { LANDMARK_SLOTS, LOADED_TUBE, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, UNSEEN, WALL_RISES, strokeAt } from '../content/sprites.ts';
+import { ISLE_ABOVE, ISLE_BELOW, ISLE_CARVE, bandAt, deepestFace, faceAt, heldAt, isleBand, laneIn, layFaces, layIsles, layShore, outOfStone, squeezeAt, stoneAt, wayAt, type Corridor } from '../sim/corridor.ts';
+import { ISLE_NOSE_RISE, LANDMARK_SLOTS, LOADED_TUBE, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, UNSEEN, WALL_RISES, strokeAt } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import { VEINS_OF, arteryAt } from '../content/veins.ts';
@@ -94,7 +94,7 @@ import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellOrb
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
-import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
+import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, FORK_WAY, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
 import { type BossFight, type DifficultyRow, bossToughnessFor, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, VOLLEY_CYCLE, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
@@ -3158,7 +3158,8 @@ function stoneStops(w: World): void {
     const bomb = w.bombs.at(i);
     const side = stoneAt(corridor, bomb.along, bomb.across, 0);
     if (side === 0) continue;
-    bomb.across = faceAt(corridor, bomb.along, side) - side * 0.5;
+    // `Math.sign`: an island's side is ±2, and its sign is the way out as a wall's is (0600).
+    bomb.across = faceAt(corridor, bomb.along, side) - Math.sign(side) * 0.5;
     bomb.lifeFor = Math.min(bomb.lifeFor, 1);
   }
   for (let i = w.enemies.size - 1; i >= 0; i--) {
@@ -4118,7 +4119,7 @@ function steerWheels(w: World): void {
     const corridor = w.corridor;
     if (corridor !== null) {
       const side = stoneAt(corridor, b.fromAlong, b.fromAcross, b.radius);
-      if (side !== 0) b.fromAcross = faceAt(corridor, b.fromAlong, side) - side * (b.radius + 0.5);
+      if (side !== 0) b.fromAcross = faceAt(corridor, b.fromAlong, side) - Math.sign(side) * (b.radius + 0.5);
     }
     // It closes `settle` of the way each step, no faster than the row's speed: out fast, and slowing.
     let vA = (b.fromAlong - (b.along + w.scrollPerStep)) * wheel.settle;
@@ -4862,7 +4863,12 @@ function carveStone(w: World, along: number, across: number, radius: number): vo
   const extent = corridor.extent;
   const firstTile = Math.floor((along - radius - corridor.from) / extent);
   const lastTile = Math.floor((along + radius - corridor.from) / extent);
-  for (let side = -1; side <= 1; side += 2) {
+  /*
+    The two walls, and then an island — 0600: a rift breaks stone wherever the stone stands, and an
+    island is carved across its whole width, under one tag, as the painter drops its whole column.
+  */
+  const last = corridor.isles.length > 0 ? CARVE_ISLE : 1;
+  for (let side = -1; side <= last; side += 2) {
     let runFrom = 0;
     let runTo = -1;
     for (let t = firstTile; t <= lastTile; t++) {
@@ -4873,8 +4879,12 @@ function carveStone(w: World, along: number, across: number, radius: number): vo
       const off = at - along;
       const chord = off * off < radius * radius ? Math.sqrt(radius * radius - off * off) : -1;
       if (chord < 0) continue;
-      const face = faceAt(corridor, at, side);
-      const covers = side < 0 ? across - chord < face : across + chord > face;
+      const covers =
+        side === CARVE_ISLE
+          ? across + chord > faceAt(corridor, at, ISLE_BELOW) && across - chord < faceAt(corridor, at, ISLE_ABOVE)
+          : side < 0
+            ? across - chord < faceAt(corridor, at, side)
+            : across + chord > faceAt(corridor, at, side);
       if (!covers) continue;
       if (runTo < runFrom) runFrom = a;
       runTo = b;
@@ -4897,9 +4907,12 @@ function carveStone(w: World, along: number, across: number, radius: number): vo
     }
     corridor.passages[slot] = runFrom;
     corridor.passages[slot + 1] = runTo;
-    corridor.passages[slot + 2] = side;
+    corridor.passages[slot + 2] = side === CARVE_ISLE ? ISLE_CARVE : side;
   }
 }
+
+/** The pass of `carveStone` that carves an island, after the walls' −1 and +1 — 0600. */
+const CARVE_ISLE = 3;
 
 /**
  * A rift opening at `(along, across)`: the body that is both the rift and its picture, the boss's
@@ -7419,10 +7432,10 @@ function standingAdds(w: World, kind: number): number {
  * squeezed in proportion, and a member a squeezed formation would still push into stone is stopped a
  * hull short of it.
  */
-function inCorridor(w: World, along: number, lane: number, radius: number): number {
+function inCorridor(w: World, along: number, lane: number, radius: number, way = 0): number {
   const corridor = w.corridor;
   if (corridor === null) return lane;
-  const across = laneIn(corridor, along, lane, radius);
+  const across = laneIn(corridor, along, lane, radius, way);
   // Beyond the corridor's span the band is infinite and the clamp does nothing, as it should.
   if (along < corridor.from || along > corridor.to) return across;
   /*
@@ -7431,7 +7444,10 @@ function inCorridor(w: World, along: number, lane: number, radius: number): numb
     as it always was: the Labyrinth's is in the box, where the two numbers agree, and the Mire has no
     near wall, so a member its formation puts above the box is left where the author put it.
   */
-  return Math.min(heldAt(corridor, along, radius, 1), Math.max(bandAt(corridor, along, radius, -1), across));
+  const held = Math.min(heldAt(corridor, along, radius, 1), Math.max(bandAt(corridor, along, radius, -1), across));
+  // And never into an island, on whichever side of it the member was read — 0600.
+  if (corridor.isles.length === 0) return held;
+  return Math.min(isleBand(corridor, along, held, radius, 1), Math.max(isleBand(corridor, along, held, radius, -1), held));
 }
 
 /**
@@ -7476,7 +7492,34 @@ function rideCorridor(w: World, pool: Pool<Entity>): void {
     if (e.steerAcross !== 0 && e.steerAcross >= lowBefore && e.steerAcross <= highBefore) {
       e.steerAcross = lowNow + (e.steerAcross - lowBefore) * scale;
     }
+    if (corridor.isles.length > 0) holdInWay(corridor, e);
   }
+}
+
+/**
+ * A body an island has come to, or that has come to an island, held in the way it was in —
+ * `docs/decisions/0600-the-corridor-forks.md`.
+ *
+ * ⚠️ **PARTED AT THE POINT.** A body flying down the lane onto an island's point is a wall coming in on
+ * it, which is what the ride is for: it is put at the face on the side of the middle it was on.
+ *
+ * ⚠️ **AND HELD OFF THE FACES, WHICH THE WALLS DO NOT DO — AND THAT IS THE DECISION'S ONE DEPARTURE.**
+ * A body that steers into a wall is destroyed by it (0349); one that steers into an island is put back
+ * beside it. A way is thirty units of the box's hundred and eight, and the Labyrinth's patterns were
+ * authored for the box: a weave about the middle swings through where an island stands, and under the
+ * walls' rule every one that met a fork would burst on it — 0600 has the count. So the island holds a
+ * body in its way as a drifter's turn and a weave's squeeze already try to, and this is what holds it
+ * when they do not.
+ */
+function holdInWay(corridor: Corridor, e: Entity): void {
+  const side = stoneAt(corridor, e.along, e.across, e.radius);
+  if (side !== ISLE_BELOW && side !== ISLE_ABOVE) return;
+  const low = faceAt(corridor, e.along, ISLE_BELOW);
+  const high = faceAt(corridor, e.along, ISLE_ABOVE);
+  // The side of the middle it came from, which is the way it is in; where the middle cannot be read
+  // here — between an island's tiles — the side the stone itself named.
+  const way = Number.isFinite(low) && Number.isFinite(high) ? (e.prevAcross < (low + high) / 2 ? ISLE_BELOW : ISLE_ABOVE) : side;
+  e.across = outOfStone(corridor, e.along, e.across, e.radius, way);
 }
 
 /**
@@ -7911,7 +7954,13 @@ function spawnWave(w: World, index: number): void {
       burn, a column of five weavers at lane 50 put its members down at 0.50, 0.39, 0.25, 0.10 and
       −0.04 of the band, and the stone took the last.
     */
-    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);
+    /*
+      ⚠️ **AND BESIDE AN ISLAND, IN A WAY — 0600.** Each member in the way on its own side of the middle
+      (`laneIn`); a flanker in the way beside the wall it comes through, because one aimed at the far
+      way would cross the island to get there, and the island is stone.
+    */
+    const way = flanking ? side : 0;
+    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius, way);
     /*
       ⚠️ **A flanker's formation offset is applied ALONG rather than across at the entry point.** The
       members leave the edge in a stream at their own target lanes; spreading them across the lane
@@ -8253,8 +8302,9 @@ function steerEnemies(w: World): void {
             */
             if (w.corridor !== null) {
               const lands = e.across + e.velAcross;
-              if (lands <= bandAt(w.corridor, e.along, e.radius, -1)) e.velAcross = m.roam;
-              else if (lands >= bandAt(w.corridor, e.along, e.radius, 1)) e.velAcross = -m.roam;
+              // The way it is in, so an island turns it as a wall does — 0600.
+              if (lands <= wayAt(w.corridor, e.along, e.across, e.radius, -1)) e.velAcross = m.roam;
+              else if (lands >= wayAt(w.corridor, e.along, e.across, e.radius, 1)) e.velAcross = -m.roam;
             }
             break;
           }
@@ -8288,8 +8338,9 @@ function steerEnemies(w: World): void {
         // nose is not the face beside its middle (`bandAt`). Past the corridor's ends there is no face,
         // and the open level's band is the bound again — and so is it on a side with no wall, which a
         // floor's near side is (0383): its face is a lane beyond the box, and it turns where it always did.
-        const low = Math.max(bandAt(corridor, e.along, e.radius, -1), ROAM_MIN);
-        const high = Math.min(bandAt(corridor, e.along, e.radius, 1), ROAM_MAX);
+        // And the way it is in beside an island, which turns it as a wall does — 0600.
+        const low = Math.max(wayAt(corridor, e.along, e.across, e.radius, -1), ROAM_MIN);
+        const high = Math.min(wayAt(corridor, e.along, e.across, e.radius, 1), ROAM_MAX);
         const next = e.across + e.velAcross;
         if (next <= low) {
           e.across = Math.max(e.across, low);
@@ -8309,7 +8360,8 @@ function steerEnemies(w: World): void {
           in one level.
         */
         const k = TAU / m.wavelength;
-        e.velAcross = m.amplitude * k * Math.cos(e.along * k) * e.velAlong * squeezeAt(w.corridor, e.along, e.radius);
+        // Beside an island, squeezed to the way it is in — 0600.
+        e.velAcross = m.amplitude * k * Math.cos(e.along * k) * e.velAlong * squeezeAt(w.corridor, e.along, e.radius, e.across);
         break;
       }
       /*
@@ -12091,6 +12143,10 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
   const faces = new Float64Array(knots * 2);
   if (bank !== undefined) layShore(faces, bank.shore, -ACROSS_SPAN);
   else layFaces(faces, extent, row.centre, row.width, row.shape, tier.corridor.narrowest, tier.corridor.slope);
+  // The islands it forks round, laid from those faces — 0600. Empty where it never forks.
+  // @setup: a level boundary — the islands' faces, one array for the level.
+  const isles = new Float64Array(row.forks !== undefined && bank === undefined ? knots * 2 : 0);
+  if (isles.length > 0) layIsles(isles, faces, extent, row.forks, FORK_WAY, ISLE_NOSE_RISE);
   return {
     sprite,
     extent,
@@ -12124,6 +12180,7 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
     poolCaps: bank !== undefined ? bank.pool.map((kind) => SPRITE[kind]) : NO_BEDS,
     poolFrom: 0,
     poolTo: -1,
+    isles,
   };
 }
 

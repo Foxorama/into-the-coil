@@ -16,17 +16,17 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
+import { FORK_WAY, LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
-import { SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, WALL_RISE_MAX } from '../src/content/sprites.ts';
+import { ISLE_NOSES, ISLE_NOSE_RISE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, WALL_RISE_MAX } from '../src/content/sprites.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_MARGIN } from '../src/sim/flight.ts';
 import { GameFrame, dropPickups, layRoom } from '../src/app/frame.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
-import { bandAt, stoneAt } from '../src/sim/corridor.ts';
+import { ISLE_ABOVE, ISLE_BELOW, bandAt, faceAt, stoneAt, wayAt } from '../src/sim/corridor.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
@@ -153,6 +153,9 @@ describe('0348 — the labyrinth is walled', () => {
             const rise = Math.abs(corridor.faces[k * 2 + slot]! - corridor.faces[(k - 1) * 2 + slot]!);
             steepest = Math.max(steepest, rise / corridor.extent);
             expect(rise, `${kind}/${tier}: a rise of ${rise} across one tile has no cap`).toBeLessThanOrEqual(WALL_RISE_MAX);
+            // An island's faces are walls too, and the tier's slope is about every wall — 0600.
+            const isle = Math.abs(corridor.isles[k * 2 + slot]! - corridor.isles[(k - 1) * 2 + slot]!);
+            if (!Number.isNaN(isle)) steepest = Math.max(steepest, isle / corridor.extent);
           }
         }
         expect(tightest, `${kind}/${tier}: the corridor pinches to ${tightest}, under the tier's ${narrowest}`).toBeGreaterThanOrEqual(narrowest);
@@ -185,21 +188,29 @@ describe('0348 — the labyrinth is walled', () => {
     const origin = screenY(view, 0, 0);
     let checked = 0;
     let sloped = 0;
+    let islands = 0;
     for (const cap of caps) {
       const rise = (WALL_RISES as readonly number[]).indexOf(cap.sprite) - WALL_RISE_MAX;
       const middle = (cap.y - origin) / view.scale;
       const along = (cap.x - screenX(view, 0, 0)) / view.scale + camera;
       const k = Math.round((along - corridor.extent / 2 - corridor.from) / corridor.extent);
+      // A turned cap is a near wall's face, or an island's high one; an unturned one the far wall's, or
+      // an island's low one — 0600. Whichever face of the two the cap stands on, it must stand on it.
       const slot = cap.turn !== 0 ? 0 : 1;
-      const a = corridor.faces[k * 2 + slot]!;
-      const b = corridor.faces[(k + 1) * 2 + slot]!;
-      expect(middle - rise / 2, `the cap at knot ${k} starts its face at ${(middle - rise / 2).toFixed(2)}, not ${a}`).toBeCloseTo(a, 6);
-      expect(middle + rise / 2, `the cap at knot ${k} ends its face at ${(middle + rise / 2).toFixed(2)}, not ${b}`).toBeCloseTo(b, 6);
+      const wall = [corridor.faces[k * 2 + slot]!, corridor.faces[(k + 1) * 2 + slot]!];
+      const isle = [corridor.isles[k * 2 + 1 - slot], corridor.isles[(k + 1) * 2 + 1 - slot]];
+      const onIsle = isle[0] !== undefined && Math.abs(middle - (isle[0] + isle[1]!) / 2) < Math.abs(middle - (wall[0]! + wall[1]!) / 2);
+      const [a, b] = onIsle ? (isle as number[]) : wall;
+      expect(middle - rise / 2, `the cap at knot ${k} starts its face at ${(middle - rise / 2).toFixed(2)}, not ${a}`).toBeCloseTo(a!, 6);
+      expect(middle + rise / 2, `the cap at knot ${k} ends its face at ${(middle + rise / 2).toFixed(2)}, not ${b}`).toBeCloseTo(b!, 6);
       checked++;
       if (rise !== 0) sloped++;
+      if (onIsle) islands++;
     }
     expect(checked).toBeGreaterThan(0);
     expect(sloped, 'every cap in the turning stretch was level, so this checked no turn').toBeGreaterThan(0);
+    // And with the first island on the screen, its caps were among them — or this checked no island.
+    expect(islands, 'no cap stood on an island, so this checked none').toBeGreaterThan(0);
   });
 
   it('AND IT RUNS ALL THE WAY TO THE ROOM: the room’s side walls begin where the corridor’s end', () => {
@@ -310,7 +321,18 @@ describe('0348 — the labyrinth is walled', () => {
             for (const b of surface.blits) {
               if (Math.abs(b.x - ex) >= half + er - 0.5 || Math.abs(b.y - ey) >= half + er - 0.5) continue;
               const capAt = (WALL_RISES as readonly number[]).indexOf(b.sprite);
-              if (capAt >= 0) {
+              const noseAt = (ISLE_NOSES as readonly number[]).indexOf(b.sprite);
+              if (noseAt >= 0) {
+                /*
+                  An island's point — 0600: stone between two faces that open from the point, a rise a
+                  side a tile, turned over at the island's far end. Read where the body is along, as a
+                  cap is: is the body's extent across within the stone there.
+                */
+                const x = Math.max(-half, Math.min(half, ex - b.x));
+                const u = (x + half) / (half * 2);
+                const open = (noseAt + (b.turn !== 0 ? 1 - u : u)) * ISLE_NOSE_RISE * view.scale;
+                if (Math.abs(ey - b.y) - er >= open - 0.5) continue;
+              } else if (capAt >= 0) {
                 // The face under the body, and the stone on its far side of it: below for the far wall,
                 // above for the near one, which is the same cap turned over.
                 const rise = capAt - WALL_RISE_MAX;
@@ -609,5 +631,102 @@ describe('0348 — the labyrinth is walled', () => {
     }
     expect(thrown, 'nothing was thrown, so this measured nothing').toBeGreaterThan(10);
     expect(checked).toBeGreaterThan(0);
+  });
+});
+
+describe('0600 — the corridor forks', () => {
+  const forking = walled.filter((kind) => (LEVELS[kind].corridor!.forks?.length ?? 0) > 0);
+
+  it('the Labyrinth forks, or this block holds nothing', () => {
+    // *"Branching paths so it feels like a labyrinth"* — the ask, held as its own existence.
+    expect(forking.length).toBeGreaterThan(0);
+  });
+
+  it('THE PLAYER’S NUMBER, PER TIER: every way round every island is at least thirty, and every island reads as stone', () => {
+    /*
+      *"A fork's own thirty a way, every tier."* Read off each tier's islands as laid, in lane units,
+      at every knot an island stands on. And each island reaches a tile of stone across — the plan's
+      *"at least a tile (12) to read as stone"* — or it is a seam in the floor, not a fork.
+    */
+    for (const kind of forking) {
+      for (const tier of DIFFICULTY_KINDS) {
+        const corridor = facesAt(kind, tier);
+        const knots = corridor.faces.length / 2;
+        let islands = 0;
+        let widest = 0;
+        for (let k = 0; k < knots; k++) {
+          const low = corridor.isles[k * 2]!;
+          const high = corridor.isles[k * 2 + 1]!;
+          if (Number.isNaN(low)) {
+            if (widest > 0) {
+              expect(widest, `${kind}/${tier}: an island ending at knot ${k} is never a tile across`).toBeGreaterThanOrEqual(corridor.extent);
+              islands++;
+            }
+            widest = 0;
+            continue;
+          }
+          widest = Math.max(widest, high - low);
+          if (high <= low) continue;
+          expect(low - corridor.faces[k * 2]!, `${kind}/${tier}: the way below the island at knot ${k}`).toBeGreaterThanOrEqual(FORK_WAY);
+          expect(corridor.faces[k * 2 + 1]! - high, `${kind}/${tier}: the way above the island at knot ${k}`).toBeGreaterThanOrEqual(FORK_WAY);
+        }
+        expect(islands, `${kind}/${tier}: the forks it authors laid no island`).toBe(LEVELS[kind].corridor!.forks!.length);
+      }
+    }
+  });
+
+  it('AND EVERY TILE OF AN ISLAND IS ONE THE PAINTER CAN DRAW: a tile across at both ends, or one of its point’s two', () => {
+    /*
+      A cap's stone reaches six units past its face, so an island is drawn with caps only where it is a
+      tile across at both ends of a column; thinner, the column must be one of the point's two baked
+      tiles exactly — symmetric about one middle, opening `ISLE_NOSE_RISE` a side a tile from the point.
+      An island authored where the corridor is still opening is laid narrower than that, off its middle,
+      and would be drawn wrong: refused here, on every tier.
+    */
+    for (const kind of forking) {
+      for (const tier of DIFFICULTY_KINDS) {
+        const corridor = facesAt(kind, tier);
+        const knots = corridor.faces.length / 2;
+        const wrong: string[] = [];
+        for (let k = 0; k + 1 < knots; k++) {
+          const [la, ha, lb, hb] = [corridor.isles[k * 2]!, corridor.isles[k * 2 + 1]!, corridor.isles[(k + 1) * 2]!, corridor.isles[(k + 1) * 2 + 1]!];
+          if (Number.isNaN(la) || Number.isNaN(lb)) continue;
+          const wa = ha - la;
+          const wb = hb - lb;
+          if (Math.min(wa, wb) >= corridor.extent) continue;
+          const narrow = Math.min(wa, wb);
+          const wide = Math.max(wa, wb);
+          const point = narrow === 0 && wide === ISLE_NOSE_RISE * 2;
+          const next = narrow === ISLE_NOSE_RISE * 2 && wide === ISLE_NOSE_RISE * 4;
+          if (!(point || next) || la + ha !== lb + hb) wrong.push(`knot ${k}: ${la}–${ha} to ${lb}–${hb}`);
+        }
+        expect(wrong.join('\n'), `${kind}/${tier}: island tiles no baked piece draws`).toBe('');
+      }
+    }
+  });
+
+  it('AND WHERE A BODY IS HELD IN ITS WAY, THE STONE SAYS IT IS CLEAR: a hull at its way’s edge never touches the island', () => {
+    // `bandAt`'s agreement with `stoneAt`, above, asked of the island's two faces from both ways.
+    for (const kind of forking) {
+      for (const tier of DIFFICULTY_KINDS) {
+        const corridor = facesAt(kind, tier);
+        let asked = 0;
+        const touched: string[] = [];
+        for (let along = corridor.from + 6; along < corridor.to - 6; along += 1.5) {
+          const low = faceAt(corridor, along, ISLE_BELOW);
+          const high = faceAt(corridor, along, ISLE_ABOVE);
+          if (!Number.isFinite(low) || high - low <= 0) continue;
+          for (const r of [2, 5]) {
+            const below = wayAt(corridor, along, low - FORK_WAY / 2, r, 1);
+            const above = wayAt(corridor, along, high + FORK_WAY / 2, r, -1);
+            asked += 2;
+            if (stoneAt(corridor, along, below, r) !== 0) touched.push(`${tier} along ${(along - corridor.from).toFixed(1)} r ${r} below`);
+            if (stoneAt(corridor, along, above, r) !== 0) touched.push(`${tier} along ${(along - corridor.from).toFixed(1)} r ${r} above`);
+          }
+        }
+        expect(asked, `${kind}/${tier}: no island was asked about`).toBeGreaterThan(100);
+        expect(touched.slice(0, 5).join('\n'), `${kind}/${tier}: ${touched.length} places where a hull at its way's edge is in the island`).toBe('');
+      }
+    }
   });
 });

@@ -148,3 +148,13 @@ the stone; at `solid` a wall never costs anything.
    room) are the same on all three. Guarded per tier: *narrowest* and *steepest* measured off each
    tier's corridor.
 5. The order stands: spike first.
+6. **A fork's own thirty a way, every tier** — asked in
+   [`the-night-of-2026-09-21`](the-night-of-2026-09-21.md) and answered with its recommendation.
+
+## Landed
+
+- **Step 1, the rules** — [0349](../docs/decisions/0349-the-stone-bites.md).
+- **Step 2, the corridor turns** — [0350](../docs/decisions/0350-the-corridor-turns.md).
+- **Step 3, the corridor forks** — [0600](../docs/decisions/0600-the-corridor-forks.md): three islands, thirty a
+  way on every tier. It departs from rule 3 in one place, a body that steers into an island being held
+  beside it rather than destroyed, and says why and what keeping the rule would cost.

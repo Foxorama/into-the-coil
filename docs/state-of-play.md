@@ -966,8 +966,10 @@ from play. Item 6 is landed in part —
 [0352](decisions/0352-the-mire-is-a-swamp.md), The Toxic Mire's ceiling, swamp and pools, **owed a
 play** — and its bubbles, [0353](decisions/0353-the-acid-bubbles.md), scenery until the player makes
 them obstacles. Item 7 is landed — [0354](decisions/0354-the-heart-has-veins.md), The Black Heart's
-veins and stars, **owed a play** — and with it **all seven places are painted**. **Next: 4b's forks**,
-answered (a fork's own thirty a way, every tier). **How the places
+veins and stars, **owed a play** — and with it **all seven places are painted**. 4b's forks are landed
+too — [0600](decisions/0600-the-corridor-forks.md), three islands with thirty a way on every tier —
+**owed a play on each tier**, and 0600 names the one rule an island does not share with the walls, which
+is the player's to keep or overturn. **How the places
 are built, and the player's answers on Rime Shelf and the walled Labyrinth, are in**
 [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md) — read it before
 the next item.
@@ -1160,6 +1162,14 @@ ONE MESSAGE.**
   **Owed from the play, and it is the whole verdict again:** a hand on `npm run dash`. The decision says
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
+
+### ⚠️ THE LABYRINTH FORKS — OWED A PLAY — 2026-10-12
+
+[0600](decisions/0600-the-corridor-forks.md), the last step of
+[`the-labyrinth-turns-and-forks`](../reports/the-labyrinth-turns-and-forks-2026-09-21.md). Owed: a play on
+each tier, a look at the islands' points, and the player's word on its one departure from 0349 — a body
+that steers into an island is held beside it rather than destroyed; 0600 has what keeping 0349's rule would
+cost.
 
 ### ⚠️ THE SECRET PILOTS' PAGE IS DONE — 2026-10-11
 

@@ -128,8 +128,9 @@ export const PROBES = [
     guard: 'opens the near wall it covers',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    corridor.passages[slot + 2] = side;',
-      replace: '    corridor.passages[slot + 2] = -side;',
+      // ⚠️ Re-anchored by 0600, whose island's carves are written under their own tag.
+      find: '    corridor.passages[slot + 2] = side === CARVE_ISLE ? ISLE_CARVE : side;',
+      replace: '    corridor.passages[slot + 2] = side === CARVE_ISLE ? ISLE_CARVE : -side;',
     },
   },
   {
