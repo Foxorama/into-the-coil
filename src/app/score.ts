@@ -206,7 +206,7 @@ export function entryOf(run: RunState, score: LevelScore, pilot: GolferKind, cle
 /**
  * The table as the title draws it — 0429: place, score, who flew it, on which tier, and how far they got.
  * A golfer's first name, because the column is a third of a phone's width, and the tier's one word for
- * the same reason (0606); the whole coil is *Clear*, anything else the level the run ended on.
+ * the same reason (0607); the whole coil is *Clear*, anything else the level the run ended on.
  */
 export function boardLines(table: readonly ScoreEntry[]): BoardLine[] {
   return table.map((entry, index) => ({

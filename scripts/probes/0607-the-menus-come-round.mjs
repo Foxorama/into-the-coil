@@ -1,4 +1,4 @@
-// The breaks behind docs/decisions/0606-the-menus-come-round.md.
+// The breaks behind docs/decisions/0607-the-menus-come-round.md.
 //
 // ⚠️ Every way the three asks could be quietly undone: a band's arrow that stops at its end again, the tier
 // that comes round when it is a ladder, an arrow's press grown sideways over its neighbour again, and a
@@ -7,25 +7,25 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0606',
+    decision: '0607',
     suite: 'tests/menus-round.browser.test.ts',
     broke: 'a band’s arrow standing at its end, as every band did before',
     guard: 'steps every band that comes round all the way round',
     edit: { path: 'src/app/chrome.ts', find: "    const rounds = round || band.ends === 'round';\n", replace: '    const rounds = round;\n' },
   },
   {
-    decision: '0606',
+    decision: '0607',
     suite: 'tests/menus-round.browser.test.ts',
     broke: 'the tier coming round from the hardest to the easiest',
     guard: 'steps every band that comes round all the way round',
     edit: {
       path: 'src/state/screens.ts',
-      find: "        // 0606: the one ladder on the title, and it stops at its ends — `ends`' note.\n        ends: 'stop',",
-      replace: "        // 0606: the one ladder on the title, and it stops at its ends — `ends`' note.\n        ends: 'round',",
+      find: "        // 0607: the one ladder on the title, and it stops at its ends — `ends`' note.\n        ends: 'stop',",
+      replace: "        // 0607: the one ladder on the title, and it stops at its ends — `ends`' note.\n        ends: 'round',",
     },
   },
   {
-    decision: '0606',
+    decision: '0607',
     suite: 'tests/menus-round.browser.test.ts',
     broke: 'an arrow’s press grown sideways over the chip and the next band’s arrow, as 0566 grew it',
     guard: 'lands every tap on an arrow on that arrow',
@@ -36,14 +36,14 @@ export const PROBES = [
     },
   },
   {
-    decision: '0606',
+    decision: '0607',
     suite: 'tests/menus-round.browser.test.ts',
     broke: 'the table drawing no tier',
     guard: 'draws each run’s tier on the title’s table',
     edit: { path: 'src/app/chrome.ts', find: "          [line.tier, 'board-tier'],\n", replace: '' },
   },
   {
-    decision: '0606',
+    decision: '0607',
     suite: 'tests/menus-round.browser.test.ts',
     broke: 'the tier put away on a phone, as how far the run got is',
     guard: 'draws each run’s tier on the title’s table',
@@ -54,7 +54,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0606',
+    decision: '0607',
     suite: 'tests/score.test.ts',
     broke: 'two tiers saying the same word',
     guard: 'the table says the tier each run was flown on',

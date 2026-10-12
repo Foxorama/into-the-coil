@@ -71,7 +71,7 @@ export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
    */
   title: string;
   /**
-   * The title in a word, where a column has room for no more — 0606, the high-score table's tier. Each
+   * The title in a word, where a column has room for no more — 0607, the high-score table's tier. Each
    * tier's own word, and the one the player already says for it.
    */
   short: string;

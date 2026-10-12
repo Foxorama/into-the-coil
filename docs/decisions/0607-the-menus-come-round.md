@@ -1,4 +1,4 @@
-# 0606 — The menus come round
+# 0607 — The menus come round
 
 **Accepted 2026-10-12.** Amends [0458](0458-the-title-is-rows.md)'s clamp, which every band had;
 narrows [0566](0566-the-phone-pass.md)'s grown arrow; adds a column to
@@ -65,7 +65,7 @@ option once and back to the start; past the last sub-tab is the first; the tier'
 hardest and says so. On a touch phone at 844x390, 667x375 and 480x320, on every tab and sub-tab: a press
 across each arrow lands on that arrow, and none at a chip's edge lands on one. The table draws each run's
 tier at 1280x720, 667x375 and 480x320. `tests/score.test.ts`: the table's words say each tier's own word,
-and no two alike. Probes in `scripts/probes/0606-the-menus-come-round.mjs`.
+and no two alike. Probes in `scripts/probes/0607-the-menus-come-round.mjs`.
 
 ## Owed
 

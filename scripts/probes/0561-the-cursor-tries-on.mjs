@@ -12,7 +12,7 @@ export const PROBES = [
     guard: 'steps the gun band without fitting',
     edit: {
       path: 'src/app/chrome.ts',
-      // Re-anchored by 0606, whose step comes round and so never stands on the option it left.
+      // Re-anchored by 0607, whose step comes round and so never stands on the option it left.
       find: '      if (next >= 0 && next < count && next !== from) tryOn(band, next, true);',
       replace: '      if (next >= 0 && next < count && next !== from) onChoice(band.name, next, false);',
     },

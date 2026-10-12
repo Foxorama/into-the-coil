@@ -11,7 +11,7 @@ import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SCORES_KEY, SCORES_VERSION } from '../src/save/scores.ts';
 
 /**
- * THE MENUS COME ROUND, A THUMB FINDS ITS ARROW, AND THE TABLE SAYS THE TIER — 0606, in the page.
+ * THE MENUS COME ROUND, A THUMB FINDS ITS ARROW, AND THE TABLE SAYS THE TIER — 0607, in the page.
  *
  * Asked in what the player sees: which option a press of an arrow leaves lit, which control a tap at a
  * point of an arrow lands on, and what words the table draws.
@@ -63,7 +63,7 @@ async function lit(page: Page, screen: Screen, band: string): Promise<number> {
   );
 }
 
-describe.runIf(chromePath)('0606 — the menus come round, a thumb finds its arrow, and the table says the tier', () => {
+describe.runIf(chromePath)('0607 — the menus come round, a thumb finds its arrow, and the table says the tier', () => {
   it('steps every band that comes round all the way round and back to where it began, and stops the tier at its end', async () => {
     const page = await opened(1280, 720, false);
     await openHangar(page);

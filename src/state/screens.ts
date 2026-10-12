@@ -214,7 +214,7 @@ interface ChoiceRow {
    */
   press: 'steps' | 'takes' | 'tries';
   /**
-   * What a step past the band's last option does — 0606. `'round'` comes round to its first, and the
+   * What a step past the band's last option does — 0607. `'round'` comes round to its first, and the
    * other way round to its last, so its arrows and a held direction go on for ever: *"full cycle the
    * menus in a full proper never ending sequence."* `'stop'` stands at the end, 0458's rule, for a band
    * that is a ladder — the hardest tier coming round to the easiest is a tier nobody asked for.
@@ -972,7 +972,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'steps',
-        // 0606: the one ladder on the title, and it stops at its ends — `ends`' note.
+        // 0607: the one ladder on the title, and it stops at its ends — `ends`' note.
         ends: 'stop',
       },
       /*
@@ -1072,7 +1072,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'touch',
         press: 'steps',
-        // 0606: a ladder, gentle to quick, so it stops as the tier does — quick coming round to gentle is a jump nobody pressed for.
+        // 0607: a ladder, gentle to quick, so it stops as the tier does — quick coming round to gentle is a jump nobody pressed for.
         ends: 'stop',
       },
     ],

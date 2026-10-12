@@ -1405,7 +1405,7 @@ ${each('-action-cursor')} {
 .itc-title-board-place { text-align: right; opacity: 0.6; }
 .itc-title-board-score { text-align: right; font-weight: 700; }
 .itc-title-board-pilot { text-align: left; }
-/* 0606: the tier each run was flown on, in its one word — kept on every device, where how far it got is not. */
+/* 0607: the tier each run was flown on, in its one word — kept on every device, where how far it got is not. */
 .itc-title-board-tier { text-align: left; opacity: 0.85; white-space: nowrap; }
 .itc-title-board-reached { text-align: left; opacity: 0.7; }
 .itc-title-board-fresh { color: var(--itc-gold, #ffd23f); animation: itc-title-board-lit 0.9s ease-in-out infinite alternate; }
@@ -1632,7 +1632,7 @@ ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
   .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab, .itc-hangar-band-step, .itc-parts-band-step, .itc-shop-band-step { position: relative; }
   .itc-hangar-tab::after, .itc-parts-tab::after, .itc-shop-tab::after { content: ''; position: absolute; inset: -0.5rem 0 -0.4rem; }
   /*
-    ⚠️ **0606: UP AND DOWN ONLY, NEVER ACROSS.** Grown 0.6rem to each side, an 11 px arrow two pixels from the
+    ⚠️ **0607: UP AND DOWN ONLY, NEVER ACROSS.** Grown 0.6rem to each side, an 11 px arrow two pixels from the
     next band's took that band's arrow's presses and the chip beside it took its own: *"the scroll buttons are
     hard to click without tapping the menu item next to it."* Measured at 844x390 and 667x375, a press on the
     right of a band's › landed on the next band's ‹. The width is drawn instead — the phone block's foot.
@@ -2975,7 +2975,7 @@ ${each('-band[hidden]')} { display: none; }
   .itc-title-body .itc-title-board-place { display: none; }
   .itc-title-body .itc-title-board-rows { grid-template-columns: auto auto; }
   /*
-    0606: and the tier is a small line under the pilot's name, not a column of its own. As a third column it
+    0607: and the tier is a small line under the pilot's name, not a column of its own. As a third column it
     took its width from the rows' plate, and at 480x320 and 667x375 the tier's names went to three lines and
     the continues chip was cut shorter; under the name it costs the table height, which it has beside the faces.
   */
@@ -3104,7 +3104,7 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.7rem, 3cqw, 1rem); }
 }
 /*
-  ── A THUMB'S ARROWS ON A PHONE — 0606 ────────────────────────────────────────────────────────────
+  ── A THUMB'S ARROWS ON A PHONE — 0607 ────────────────────────────────────────────────────────────
 
   *"On mobile the menus are all too close together and the scroll buttons are hard to click without tapping
   the menu item next to it."* Measured: each arrow 11 px wide and 2 px from the next band's, its hit grown
@@ -4292,7 +4292,7 @@ interface Band {
   on: 'all' | 'touch';
   /** What a press on it does — 0513, the row's `press`. */
   press: 'steps' | 'takes' | 'tries';
-  /** What a step past its last option does — 0606, the row's `ends`. */
+  /** What a step past its last option does — 0607, the row's `ends`. */
   ends: 'round' | 'stop';
   /**
    * The option the cursor has tried on and not fitted — 0561, on a band that tries. −1 when the band
@@ -4352,7 +4352,7 @@ export interface BoardLine {
   place: string;
   score: string;
   pilot: string;
-  /** 0606: the tier it was flown on, in its one word. */
+  /** 0607: the tier it was flown on, in its one word. */
   tier: string;
   reached: string;
 }
@@ -7235,7 +7235,7 @@ export function makeChrome(
   };
   /**
    * Move a band along — 0458. Clamped at its ends where the row says `stop`, because a press past *Burn*
-   * that came round to *Legendary* is a tier nobody asked for; round them where it says `round` (0606),
+   * that came round to *Legendary* is a tier nobody asked for; round them where it says `round` (0607),
    * which is every band that is not a ladder. A press on the band itself (`activate`) always goes round,
    * because it has no direction to be wrong about.
    */
@@ -7260,7 +7260,7 @@ export function makeChrome(
       // With nothing tried on the band says 0521's sentence, why some are shut, which is what tells the player there is more.
       const said = band.look < 0 ? (band.why ?? band.hints[shown] ?? '') : band.open[shown] === false ? (band.whys[shown] ?? band.why ?? '') : (band.hints[shown] ?? '');
       band.hint.textContent = fits ? said + ' · ' + FITS[device] : said;
-      // 0606: a band that comes round always has somewhere to go, unless it has one option.
+      // 0607: a band that comes round always has somewhere to go, unless it has one option.
       const round = band.ends === 'round' && band.hints.length > 1;
       band.less.disabled = !round && shown <= 0;
       band.more.disabled = !round && shown >= band.hints.length - 1;
@@ -7268,7 +7268,7 @@ export function makeChrome(
       return;
     }
     band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
-    // 0606: and one that comes round can go either way while any other option is open.
+    // 0607: and one that comes round can go either way while any other option is open.
     const elsewhere = band.ends === 'round' && band.open.some((open, i) => open !== false && i !== band.index);
     band.less.disabled = !elsewhere && !band.open.some((open, i) => open && i < band.index);
     band.more.disabled = !elsewhere && !band.open.some((open, i) => open && i > band.index);
@@ -7433,7 +7433,7 @@ export function makeChrome(
   const stepBand = (band: Band, delta: number, round: boolean): void => {
     const count = band.hints.length;
     if (count === 0) return;
-    // 0606: the row's ends decide for a direction; a press, which has none, comes round anyway.
+    // 0607: the row's ends decide for a direction; a press, which has none, comes round anyway.
     const rounds = round || band.ends === 'round';
     // 0561: a band that tries moves its look to the next option that way, shut or not, and fits nothing.
     if (band.press === 'tries') {

@@ -215,7 +215,7 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
     ]);
   });
 
-  it('0606 — the table says the tier each run was flown on, in that tier’s own word', () => {
+  it('0607 — the table says the tier each run was flown on, in that tier’s own word', () => {
     const run = { score: 1, bonus: 0, pilot: 'bo' as const, levels: 0, cleared: false, continues: 0, when: 1 };
     const said = boardLines(DIFFICULTY_KINDS.map((difficulty) => ({ ...run, difficulty }))).map((line) => line.tier);
     expect(said).toEqual(DIFFICULTY_KINDS.map((kind) => DIFFICULTIES[kind].short));
