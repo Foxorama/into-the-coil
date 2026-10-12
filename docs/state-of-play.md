@@ -1168,7 +1168,8 @@ ONE MESSAGE.**
 Asked for: *"more level specific enemy sprites per each level and make them look better."* Taken in
 the order [0601](decisions/0601-the-signatures-are-their-places-own.md) names under *Owed*: first the
 seven signatures, which were the plainest thing each place sent — landed in 0601 — then the swift,
-then The Approach's eight shared bodies. Each owes a play in its place, at speed.
+landed in [0602](decisions/0602-the-swift-is-its-places-own.md), then The Approach's eight shared
+bodies. Each owes a play in its place, at speed.
 
 ### ⚠️ THE LABYRINTH FORKS — OWED A PLAY — 2026-10-12
 

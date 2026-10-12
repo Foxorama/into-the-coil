@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ENEMIES } from '../src/content/enemies.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
@@ -73,6 +74,25 @@ describe('0446 — each place has its own faces', () => {
       }
     }
     expect(same, 'a place sends another place’s model in its own colour').toEqual([]);
+  });
+
+  it('and every place whose level sends the swift draws its own — 0602', () => {
+    /*
+      ⚠️ **0446 LEFT THE SWIFT OWED**, one drawing in the three places that send it. It is not one of
+      the eight because most places never send it, so the places held are the ones a level actually
+      flies it in — read off the levels, so a fourth that starts sending it is held from that day.
+    */
+    const senders = [...new Set(LEVEL_KINDS.filter((k) => LEVELS[k].waves.some((w) => w.enemy === 'swift')).map((k) => LEVELS[k].theme))];
+    expect(senders.length, 'no level sends the swift, so this holds nothing').toBeGreaterThan(1);
+    const base = SPRITE_KINDS[ENEMIES.swift.sprite]!;
+    const same: string[] = [];
+    for (let i = 0; i < senders.length; i++) {
+      for (let j = i + 1; j < senders.length; j++) {
+        const d = apart(outline(base, senders[i]!), outline(base, senders[j]!));
+        if (d < 2) same.push(`the swift at ${senders[i]} and at ${senders[j]} are ${d.toFixed(2)} px apart`);
+      }
+    }
+    expect(same, 'a place sends another place’s swift in its own colour').toEqual([]);
   });
 
   it('and every place’s weaver lies across the lane it weaves along, and its charger along the lane it charges down', () => {

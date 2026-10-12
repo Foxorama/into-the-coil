@@ -14358,21 +14358,136 @@ const SWIFT_HULL: readonly Pt[] = [
  * body this size the place's motif survives as one speck the size of an eye.
  */
 /** The swift's raked wings beat: drawn in and back as they lift, spread as they come down. */
-const SWIFT_POSES: readonly Pose[] = [REST, foreSwings(0.2, 0.78, -0.06), foreSwings(0.2, 1.08, 0.03)];
+/*
+  The spread wider since 0602, from 1.08: the ember swift's tongues beat 1.8 px at the old number. It is
+  the spread and not the fold that was widened, because a swept wing drawn in slides its tip along its
+  own edge — which `tests/cycles.test.ts` rightly does not count as motion — where one thrown wide
+  leaves it.
+*/
+const SWIFT_POSES: readonly Pose[] = [REST, foreSwings(0.2, 0.78, -0.06), foreSwings(0.2, 1.2, 0.05)];
 
-function paintSwift(ctx: Pen, f: Frame, skin: FoeSkin, n = 0): void {
-  const pose = SWIFT_POSES[n]!;
-  const hull = bent(SWIFT_HULL, pose);
-  nimbus(ctx, f, skin.lit, hull);
-  shaded(ctx, f, [0, -0.74], [0, 0.74], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), hull, 1, false);
+/*
+  ── THE SWIFT IN EACH PLACE THAT SENDS IT — 0602 ──────────────────────────────────────────────────
+
+  ⚠️ **0446 LEFT IT OWED: *"the swift is still one drawing in all three places that send it."*** Each
+  place that sends it authors its own outline and its own lit edge; a place that never sends it bakes
+  The Approach's, which is a default and not a constant on
+  [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)'s terms —
+  `tests/faces.test.ts` holds that every place whose level sends a swift has drawn its own.
+
+  ⚠️ **EVERY ONE IS STILL SWEPT BACK TO A V**, 0328's reason for the kind: the one shape on the sheet
+  that points. What a place changes is what the V is made of — and the draco's tail fills the notch
+  0328 left open, which is the one liberty taken, because a lizard has a tail.
+*/
+interface SwiftBody {
+  /** The outline at rest. */
+  readonly hull: readonly Pt[];
+  /** The leading edge's lit seam, one side, inboard of the edge by the seam's half-width. */
+  readonly leading: readonly Pt[];
+  /** Paint a place adds on top: a core, a membrane. */
+  readonly extra?: (ctx: Pen, f: Frame, skin: FoeSkin, pose: Pose) => void;
+  /** Its own three poses, where a swept chevron's beat does not move it: a membrane flaps from the body out. */
+  readonly poses?: readonly Pose[];
+}
+
+/** The Approach's: the plain swept chevron 0328 drew, a raider's interceptor. */
+const APPROACH_SWIFT: SwiftBody = {
+  hull: SWIFT_HULL,
   // Inboard of the leading edge by the seam's own half-width all the way to the nose, where the hull
   // is a tenth wide — `tests/accents.test.ts` refused a seam that started at 0.7 and poked past it.
+  leading: [
+    [0.5, 0.08],
+    [0.03, 0.25],
+    [-0.45, 0.42],
+  ],
+};
+
+const SWIFT_OF: { readonly [T in ThemeKind]?: SwiftBody } = {
+  /** Ember Nebula's: an ember swift, each wing's trailing edge burning off in three tongues, white-hot at the heart. */
+  nebula: {
+    hull: bilateral([
+      [0.95, 0],
+      [0.1, -0.34],
+      [-0.62, -0.72],
+      [-0.96, -0.86],
+      [-0.74, -0.56],
+      [-0.98, -0.46],
+      [-0.62, -0.28],
+      [-0.8, -0.13],
+      [-0.4, 0],
+    ]),
+    leading: [
+      [0.5, 0.08],
+      [0.03, 0.25],
+      [-0.5, 0.5],
+    ],
+    extra: (ctx, f, skin, pose) => {
+      const [cx, cy] = pose([0.42, 0]);
+      disc(ctx, f, skin.lit, cx, cy, 0.17);
+    },
+  },
+  /** Saurian Belt's: a draco, the gliding lizard — a head on a neck, membrane wings, a tail out of the V. */
+  saurian: {
+    /*
+      ⚠️ **THE FIRST DRAFT WAS AN AEROPLANE.** Straight swept wings and a straight tail off a body are
+      a jet's plan view, and it photographed as one. A draco's wing is skin over ribs, so the leading
+      edge bows and the trailing edge is scalloped between the ribs.
+    */
+    hull: bilateral([
+      [0.95, 0],
+      [0.78, -0.1],
+      [0.55, -0.1],
+      [0.36, -0.16],
+      [0.14, -0.44],
+      [-0.16, -0.72],
+      [-0.5, -0.92],
+      [-0.5, -0.74],
+      [-0.64, -0.66],
+      [-0.44, -0.56],
+      [-0.58, -0.44],
+      [-0.38, -0.36],
+      [-0.46, -0.24],
+      [-0.3, -0.15],
+      [-0.62, -0.09],
+      [-0.96, -0.05],
+    ]),
+    leading: [
+      [0.22, 0.24],
+      [0.0, 0.46],
+      [-0.36, 0.7],
+    ],
+    // A membrane flaps from the body out, as the moth's wings do; the swept beat moved its tips 1.8 px.
+    poses: [REST, wingsBeat(0.74, 0.08), wingsBeat(1.12, -0.05)],
+    // The membrane darker toward its trailing edge, so it reads as skin stretched between ribs.
+    extra: (ctx, f, skin, pose) => {
+      for (const side of [-1, 1]) {
+        shaded(ctx, f, [-0.1, 0.4 * side], [-0.5, 0.65 * side], rgba(skin.plate, 0.1), rgba(skin.plate, 0.7), posed([
+          [-0.2, 0.2 * side],
+          [0.02, 0.48 * side],
+          [-0.44, 0.78 * side],
+          [-0.42, 0.6 * side],
+          [-0.3, 0.3 * side],
+        ], pose));
+      }
+    },
+  },
+};
+
+/** The swift a place bakes: its own where its level sends one, The Approach's elsewhere. */
+const swiftOf = (theme: ThemeKind): SwiftBody => SWIFT_OF[theme] ?? APPROACH_SWIFT;
+
+/** A swift's pose `n` in a place: its own where it authors them, the swept beat otherwise. */
+const swiftPose = (theme: ThemeKind, n: number): Pose => (swiftOf(theme).poses ?? SWIFT_POSES)[n]!;
+
+function paintSwift(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = swiftPose(theme, n);
+  const body = swiftOf(theme);
+  const hull = bent(body.hull, pose);
+  nimbus(ctx, f, skin.lit, hull);
+  shaded(ctx, f, [0, -0.74], [0, 0.74], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), hull, 1, false);
+  body.extra?.(ctx, f, skin, pose);
   for (const side of [-1, 1]) {
-    seam(ctx, f, rgba(skin.lit, 0.85), 0.11, posed([
-      [0.5, 0.08 * side],
-      [0.03, 0.25 * side],
-      [-0.45, 0.42 * side],
-    ], pose));
+    seam(ctx, f, rgba(skin.lit, 0.85), 0.11, posed(body.leading.map(([x, y]): Pt => [x, y * side]), pose));
   }
 }
 
@@ -15792,8 +15907,8 @@ function drawKite(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
   if (skin !== null) paintKite(ctx, f, skin, n);
 }
 
-function drawSwift(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
-  drawBody(ctx, f, skin, bent(SWIFT_HULL, SWIFT_POSES[n]!), (s) => paintSwift(ctx, f, s, n));
+function drawSwift(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(swiftOf(theme).hull, swiftPose(theme, n)), (s) => paintSwift(ctx, f, s, theme, n));
 }
 
 function drawMinnow(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
@@ -17670,15 +17785,15 @@ export function drawKind(
     case 'swiftHit':
       // A SWEPT CHEVRON — 0328: nose forward, wings raked back, open at the back. `SWIFT_HULL` has why
       // it is none of the diamond, the delta or the triangle it shares a sky with.
-      drawSwift(ctx, f, skin, 0);
+      drawSwift(ctx, f, skin, theme, 0);
       return;
     case 'swiftB':
     case 'swiftBHit':
-      drawSwift(ctx, f, skin, 1);
+      drawSwift(ctx, f, skin, theme, 1);
       return;
     case 'swiftC':
     case 'swiftCHit':
-      drawSwift(ctx, f, skin, 2);
+      drawSwift(ctx, f, skin, theme, 2);
       return;
     case 'minnow':
     case 'minnowHit':
