@@ -90,7 +90,8 @@ All of these are existing guards, and every one was answered in the drawing, not
 
 ⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). Art baked at load; nothing persisted.
 
-## Confirmed, not assumed
+## The probes it rests on
 
-No new guard, so no new probe. The probes that anchor on this code were re-run and each still applies
-and goes red: `npm run prove 0232` (4 of 4) and `npm run prove 0410` (5 of 5).
+No new guard, so no new probe and no table of its own: every claim here is held by a guard
+0228, 0232, 0410 or 0446 already wrote. The probes that anchor on the code redrawn here were re-run
+and each still applies and goes red: `npm run prove 0232` (4 of 4) and `npm run prove 0410` (5 of 5).
