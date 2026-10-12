@@ -9,6 +9,7 @@
 
 import { BONUSES, BONUS_KINDS, shardsFor, tallyOf, type BonusKind, type Held, type LevelTally } from '../content/score.ts';
 import { GOLFERS } from '../content/golfers.ts';
+import { DIFFICULTIES } from '../content/difficulty.ts';
 import { bankedBonus, bankedScore, type RunState } from '../state/slices/run.ts';
 import type { ScoreEntry } from '../save/scores.ts';
 import type { GolferKind } from '../content/golfers.ts';
@@ -203,9 +204,9 @@ export function entryOf(run: RunState, score: LevelScore, pilot: GolferKind, cle
 }
 
 /**
- * The table as the title draws it — 0429: place, score, who flew it, and how far they got. A golfer's
- * first name, because the column is a third of a phone's width; the whole coil is *Clear*, anything
- * else the level the run ended on.
+ * The table as the title draws it — 0429: place, score, who flew it, on which tier, and how far they got.
+ * A golfer's first name, because the column is a third of a phone's width, and the tier's one word for
+ * the same reason (0606); the whole coil is *Clear*, anything else the level the run ended on.
  */
 export function boardLines(table: readonly ScoreEntry[]): BoardLine[] {
   return table.map((entry, index) => ({
@@ -213,6 +214,7 @@ export function boardLines(table: readonly ScoreEntry[]): BoardLine[] {
     score: String(entry.score),
     // The name they go by — 0546: the first word of *The Marmot* is *The*.
     pilot: GOLFERS[entry.pilot].goesBy,
+    tier: DIFFICULTIES[entry.difficulty].short,
     reached: entry.cleared ? 'Clear' : 'L' + String(entry.levels + 1),
   }));
 }

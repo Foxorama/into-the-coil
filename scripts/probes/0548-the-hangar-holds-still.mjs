@@ -61,7 +61,8 @@ export const PROBES = [
     guard: 'changes the pilot on Cosmo’s',
     edit: {
       path: 'src/state/screens.ts',
-      find: "      {\n        name: 'pilot',\n        label: 'Pilot',\n        options: pilotOptions,\n        faces: 'portraits',\n        card: 'line',\n        on: 'all',\n        press: 'steps',\n      },\n      {\n        name: 'aisle',",
+      // Re-anchored by 0606, which gave every band its `ends`.
+      find: "      {\n        name: 'pilot',\n        label: 'Pilot',\n        options: pilotOptions,\n        faces: 'portraits',\n        card: 'line',\n        on: 'all',\n        press: 'steps',\n        ends: 'round',\n      },\n      {\n        name: 'aisle',",
       replace: "      {\n        name: 'aisle',",
     },
   },

@@ -8,6 +8,7 @@ import { initialState, reduce, type State } from '../src/state/root.ts';
 import { bankedBonus, bankedScore } from '../src/state/slices/run.ts';
 import { boardLines, entryOf, levelSheet, overSheet, runSheet, tallyAtClear } from '../src/app/score.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /** The ship a run begins in — 0441. Nothing here reads it, so it is the default pilot's. */
@@ -209,9 +210,17 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
     const entry = entryOf(state.run, flying, 'bo', false, 123);
     expect(entry).toEqual({ score: 1450, bonus: 0, pilot: 'bo', difficulty: 'burn', levels: 1, cleared: false, continues: 0, when: 123 });
     expect(boardLines([entry, { ...entry, cleared: true }])).toEqual([
-      { place: '1.', score: '1450', pilot: 'Backspin', reached: 'L2' },
-      { place: '2.', score: '1450', pilot: 'Backspin', reached: 'Clear' },
+      { place: '1.', score: '1450', pilot: 'Backspin', tier: 'Burn', reached: 'L2' },
+      { place: '2.', score: '1450', pilot: 'Backspin', tier: 'Burn', reached: 'Clear' },
     ]);
+  });
+
+  it('0606 — the table says the tier each run was flown on, in that tier’s own word', () => {
+    const run = { score: 1, bonus: 0, pilot: 'bo' as const, levels: 0, cleared: false, continues: 0, when: 1 };
+    const said = boardLines(DIFFICULTY_KINDS.map((difficulty) => ({ ...run, difficulty }))).map((line) => line.tier);
+    expect(said).toEqual(DIFFICULTY_KINDS.map((kind) => DIFFICULTIES[kind].short));
+    // Each tier its own word: two that read alike would make the column say nothing.
+    expect(new Set(said).size).toBe(DIFFICULTY_KINDS.length);
   });
 });
 

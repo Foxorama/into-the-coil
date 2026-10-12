@@ -1398,13 +1398,15 @@ ${each('-action-cursor')} {
 }
 .itc-title-board-rows {
   display: grid;
-  grid-template-columns: auto auto auto auto;
+  grid-template-columns: auto auto auto auto auto;
   justify-content: center;
   gap: 0.3em 0.9em;
 }
 .itc-title-board-place { text-align: right; opacity: 0.6; }
 .itc-title-board-score { text-align: right; font-weight: 700; }
 .itc-title-board-pilot { text-align: left; }
+/* 0606: the tier each run was flown on, in its one word — kept on every device, where how far it got is not. */
+.itc-title-board-tier { text-align: left; opacity: 0.85; white-space: nowrap; }
 .itc-title-board-reached { text-align: left; opacity: 0.7; }
 .itc-title-board-fresh { color: var(--itc-gold, #ffd23f); animation: itc-title-board-lit 0.9s ease-in-out infinite alternate; }
 @keyframes itc-title-board-lit { from { text-shadow: none; } to { text-shadow: 0 0 0.6em var(--itc-hot, #ff9f1c); } }
@@ -1629,7 +1631,13 @@ ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
 @media (pointer: coarse) {
   .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab, .itc-hangar-band-step, .itc-parts-band-step, .itc-shop-band-step { position: relative; }
   .itc-hangar-tab::after, .itc-parts-tab::after, .itc-shop-tab::after { content: ''; position: absolute; inset: -0.5rem 0 -0.4rem; }
-  .itc-hangar-band-step::after, .itc-parts-band-step::after, .itc-shop-band-step::after { content: ''; position: absolute; inset: -0.7rem -0.6rem; }
+  /*
+    ⚠️ **0606: UP AND DOWN ONLY, NEVER ACROSS.** Grown 0.6rem to each side, an 11 px arrow two pixels from the
+    next band's took that band's arrow's presses and the chip beside it took its own: *"the scroll buttons are
+    hard to click without tapping the menu item next to it."* Measured at 844x390 and 667x375, a press on the
+    right of a band's › landed on the next band's ‹. The width is drawn instead — the phone block's foot.
+  */
+  .itc-hangar-band-step::after, .itc-parts-band-step::after, .itc-shop-band-step::after { content: ''; position: absolute; inset: -0.45rem 0; }
 }
 /*
   A shut option — 0521, a dash not yet won: drawn, so the player knows it is there, and told by its
@@ -2861,7 +2869,7 @@ ${each('-band[hidden]')} { display: none; }
   .itc-title-board-score, .itc-title-board-pilot { white-space: nowrap; }
   /* How far each run got goes on every phone, and the table is the height of the faces and card beside it. */
   .itc-title-body .itc-title-board-reached { display: none; }
-  .itc-title-body .itc-title-board-rows { grid-template-columns: auto auto auto; }
+  .itc-title-body .itc-title-board-rows { grid-template-columns: auto auto auto auto; }
   .itc-title-body .itc-title-board { font-size: 0.72em; }
   /*
     The tier's three names on one line each where they fit — two lines each was the band's height twice
@@ -2943,7 +2951,7 @@ ${each('-band[hidden]')} { display: none; }
     .itc-title-board { font-size: 0.85em; }
     .itc-title-board-heading { letter-spacing: 0.12em; white-space: nowrap; }
     .itc-title-board-reached { display: none; }
-    .itc-title-board-rows { grid-template-columns: auto auto auto; }
+    .itc-title-board-rows { grid-template-columns: auto auto auto auto; }
     /*
       0538: and on the narrowest the quiet row had 5 % of its row spare at 480x320 after the rest of
       this block — so the plates' own sides, the panel's, and the gap between the two plates give
@@ -2966,6 +2974,12 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-title-body .itc-title-board-place { display: none; }
   .itc-title-body .itc-title-board-rows { grid-template-columns: auto auto; }
+  /*
+    0606: and the tier is a small line under the pilot's name, not a column of its own. As a third column it
+    took its width from the rows' plate, and at 480x320 and 667x375 the tier's names went to three lines and
+    the continues chip was cut shorter; under the name it costs the table height, which it has beside the faces.
+  */
+  .itc-title-body .itc-title-board-tier { grid-column: 2; font-size: 0.78em; margin-top: -0.35em; opacity: 0.7; }
   .itc-title-body .itc-title-board-heading { letter-spacing: 0.12em; white-space: nowrap; }
   .itc-title-body .itc-title-choices > :not(.itc-title-action-lead) { padding-left: 0.3em; padding-right: 0.3em; font-size: 0.7em; }
   .itc-title-body .itc-title-chip .itc-title-option { padding: 0.3em 0.45em; }
@@ -3088,6 +3102,25 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-keeper, .itc-parts-keeper { display: none; }
   /* The readout typeset by the width up here — by the height it was the stand's full width over the ship. */
   .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { font-size: clamp(0.7rem, 3cqw, 1rem); }
+}
+/*
+  ── A THUMB'S ARROWS ON A PHONE — 0606 ────────────────────────────────────────────────────────────
+
+  *"On mobile the menus are all too close together and the scroll buttons are hard to click without tapping
+  the menu item next to it."* Measured: each arrow 11 px wide and 2 px from the next band's, its hit grown
+  sideways over both. So on a touch phone the arrow is drawn the width a thumb's edge can find, its press
+  grown only up and down (0566's box, above), with a gap to its chip and a wider one to the next band. The
+  chips give the width — each is cut shorter, and the card under the bands names the one under the cursor
+  whole (0579); a press that lands on the wrong control cannot be read back.
+
+  After the phone's and the upright layouts, so it is the last word on both; before 0568's, which is neither.
+*/
+@media (pointer: coarse) {
+  @container (max-height: 460px) or ((orientation: portrait) and (max-width: 700px)) {
+    .itc-hangar-plate .itc-hangar-band-step, .itc-parts-plate .itc-parts-band-step, .itc-shop-plate .itc-shop-band-step { min-width: 1.25rem; text-align: center; }
+    .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band, .itc-shop-plate .itc-shop-band { column-gap: 0.2rem; }
+    .itc-hangar-group, .itc-parts-group { column-gap: 0.75rem; }
+  }
 }
 /*
   ── THE HANGAR OPENS OUT — 0568 ────────────────────────────────────────────────────────────────────
@@ -4259,6 +4292,8 @@ interface Band {
   on: 'all' | 'touch';
   /** What a press on it does — 0513, the row's `press`. */
   press: 'steps' | 'takes' | 'tries';
+  /** What a step past its last option does — 0606, the row's `ends`. */
+  ends: 'round' | 'stop';
   /**
    * The option the cursor has tried on and not fitted — 0561, on a band that tries. −1 when the band
    * shows what is fitted. A step moves it, a press fits it, and leaving the band puts it back to −1.
@@ -4317,6 +4352,8 @@ export interface BoardLine {
   place: string;
   score: string;
   pilot: string;
+  /** 0606: the tier it was flown on, in its one word. */
+  tier: string;
   reached: string;
 }
 
@@ -6275,6 +6312,7 @@ export function makeChrome(
         index: 0,
         on: choice.on,
         press: choice.press,
+        ends: choice.ends,
         look: -1,
         buttons,
         faces: choice.faces,
@@ -7196,9 +7234,10 @@ export function makeChrome(
     if (focus && here !== undefined && document.activeElement !== here) here.focus({ preventScroll: !scroll });
   };
   /**
-   * Move a band along — 0458. Clamped at its ends, because a band is a line with two ends the player
-   * can see, and a press past *Burn* that came round to *Legendary* is a tier nobody asked for; a press
-   * on the band itself (`activate`) is the one way round, because it has no direction to be wrong about.
+   * Move a band along — 0458. Clamped at its ends where the row says `stop`, because a press past *Burn*
+   * that came round to *Legendary* is a tier nobody asked for; round them where it says `round` (0606),
+   * which is every band that is not a ladder. A press on the band itself (`activate`) always goes round,
+   * because it has no direction to be wrong about.
    */
   /*
     ⚠️ **A STEP SKIPS WHAT IS SHUT — 0521**, to the next open option that way, and stands still where
@@ -7221,14 +7260,18 @@ export function makeChrome(
       // With nothing tried on the band says 0521's sentence, why some are shut, which is what tells the player there is more.
       const said = band.look < 0 ? (band.why ?? band.hints[shown] ?? '') : band.open[shown] === false ? (band.whys[shown] ?? band.why ?? '') : (band.hints[shown] ?? '');
       band.hint.textContent = fits ? said + ' · ' + FITS[device] : said;
-      band.less.disabled = shown <= 0;
-      band.more.disabled = shown >= band.hints.length - 1;
+      // 0606: a band that comes round always has somewhere to go, unless it has one option.
+      const round = band.ends === 'round' && band.hints.length > 1;
+      band.less.disabled = !round && shown <= 0;
+      band.more.disabled = !round && shown >= band.hints.length - 1;
       paintCardOf(band);
       return;
     }
     band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
-    band.less.disabled = !band.open.some((open, i) => open && i < band.index);
-    band.more.disabled = !band.open.some((open, i) => open && i > band.index);
+    // 0606: and one that comes round can go either way while any other option is open.
+    const elsewhere = band.ends === 'round' && band.open.some((open, i) => open !== false && i !== band.index);
+    band.less.disabled = !elsewhere && !band.open.some((open, i) => open && i < band.index);
+    band.more.disabled = !elsewhere && !band.open.some((open, i) => open && i > band.index);
     paintCardOf(band);
   };
   /** Which of Cosmo's shelves is in view, by screen — 0542's `setInView`, kept since 0562 for the card. */
@@ -7390,17 +7433,19 @@ export function makeChrome(
   const stepBand = (band: Band, delta: number, round: boolean): void => {
     const count = band.hints.length;
     if (count === 0) return;
+    // 0606: the row's ends decide for a direction; a press, which has none, comes round anyway.
+    const rounds = round || band.ends === 'round';
     // 0561: a band that tries moves its look to the next option that way, shut or not, and fits nothing.
     if (band.press === 'tries') {
       const from = band.look >= 0 ? band.look : band.index >= 0 ? band.index : delta > 0 ? -1 : count;
-      const next = from + delta;
-      if (next >= 0 && next < count) tryOn(band, next, true);
+      const next = rounds ? (from + delta + count) % count : from + delta;
+      if (next >= 0 && next < count && next !== from) tryOn(band, next, true);
       return;
     }
     let next = band.index;
     for (let tried = 0; tried < count; tried++) {
       let at = next + delta;
-      if (round) at = (at + count) % count;
+      if (rounds) at = (at + count) % count;
       else if (at < 0 || at >= count) return;
       next = at;
       if (band.open[next] !== false) break;
@@ -7716,6 +7761,7 @@ export function makeChrome(
           [line.place, 'board-place'],
           [line.score, 'board-score'],
           [line.pilot, 'board-pilot'],
+          [line.tier, 'board-tier'],
           [line.reached, 'board-reached'],
         ];
         for (const [text, part] of cells) {

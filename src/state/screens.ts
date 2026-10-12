@@ -213,6 +213,15 @@ interface ChoiceRow {
    * shut option too, so the player can see what it is and read what opens it.
    */
   press: 'steps' | 'takes' | 'tries';
+  /**
+   * What a step past the band's last option does — 0606. `'round'` comes round to its first, and the
+   * other way round to its last, so its arrows and a held direction go on for ever: *"full cycle the
+   * menus in a full proper never ending sequence."* `'stop'` stands at the end, 0458's rule, for a band
+   * that is a ladder — the hardest tier coming round to the easiest is a tier nobody asked for.
+   *
+   * ⚠️ **A FACT EACH ROW AUTHORS, ON `press`'s TERMS** (0282): the chrome reads it and never the band's name.
+   */
+  ends: 'round' | 'stop';
 }
 
 /**
@@ -549,6 +558,7 @@ function sectionBand(stand: StandRow): ScreenChoice {
     faces: 'words',
     on: 'all',
     press: 'steps',
+    ends: 'round',
   };
 }
 
@@ -953,6 +963,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         // A press on the highlighted pilot flies them — 0513.
         press: 'takes',
+        ends: 'round',
       },
       {
         name: 'difficulty',
@@ -961,6 +972,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'steps',
+        // 0606: the one ladder on the title, and it stops at its ends — `ends`' note.
+        ends: 'stop',
       },
       /*
         0517: whether the run may be continued — asked for on this screen, because it is the other
@@ -977,6 +990,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'chip',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
     ],
     steps: false,
@@ -1021,6 +1035,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
       {
         name: 'travel',
@@ -1029,6 +1044,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
       /*
         ⚠️ **THE HAND — 0590, ON EVERY DEVICE**: *left* is the game mirrored, and on a touch screen the
@@ -1043,6 +1059,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
       /*
         ⚠️ **THE TOUCH SECTION — 0512**, on a screen that can be touched and nowhere else: how quick the
@@ -1055,6 +1072,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'touch',
         press: 'steps',
+        // 0606: a ladder, gentle to quick, so it stops as the tier does — quick coming round to gentle is a jump nobody pressed for.
+        ends: 'stop',
       },
     ],
     steps: false,
@@ -1095,6 +1114,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         card: 'whole',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
       // 0579: the sub-tabs, under the pilot and over the one group they have in view.
       sectionBand(HANGAR_STAND),
@@ -1105,6 +1125,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       /*
         0523: what hangs from the dash — nothing first, then every dangle in the table's order, the ones
@@ -1118,6 +1139,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       /*
         0526: the gun the ship flies — each ship's own, in the ship table's order, named as the pilot
@@ -1133,6 +1155,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       /*
         0524: the special a run opens with two of — each ship's own gun's, in the ship table's order,
@@ -1148,6 +1171,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       /*
         0578: the tubes the ship carries into a run — none first, then every rack in the table's order, the
@@ -1161,6 +1185,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
     ],
     steps: false,
@@ -1201,6 +1226,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         card: 'line',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
       // 0584: the sub-tabs, as Hangin' Out's (0579), over the one group they have in view.
       sectionBand(PARTS_STAND),
@@ -1218,6 +1244,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       /*
         0528: the look on its nose, its dome or its flank — three places, because every ship authors its
@@ -1231,6 +1258,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       /*
         0529: the body's colour — the factory's first, then every hue round the wheel — and its tone. Two
@@ -1244,6 +1272,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       {
         name: 'tone',
@@ -1252,6 +1281,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       // 0530: what the engines burn — the standard, then every flame Cosmo's sells. Built by walking `FLAME_KINDS`.
       {
@@ -1261,6 +1291,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
       /*
         0584: the shell its shields wear — every shell in the table's order, named with where it comes from.
@@ -1276,6 +1307,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'tries',
+        ends: 'round',
       },
     ],
     steps: false,
@@ -1332,6 +1364,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         card: 'line',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
       {
         name: 'aisle',
@@ -1340,6 +1373,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         faces: 'words',
         on: 'all',
         press: 'steps',
+        ends: 'round',
       },
       ...SHELF_KINDS.map(
         (kind): ScreenChoice => ({
@@ -1349,6 +1383,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
           faces: 'words',
           on: 'all',
           press: 'steps',
+          ends: 'round',
         }),
       ),
     ],
