@@ -108,6 +108,51 @@ describe.runIf(chromePath)('the crossing is a caption over a game that is still 
     expect(m.chartShare, 'the chart is too small to read as a route').toBeGreaterThan(0.12);
   });
 
+  it('sits under the readout and the score rather than behind them, on the desktop and a phone', async () => {
+    /*
+      `docs/decisions/0604-the-place-is-baked-on-the-way.md`. *"The map display looks pretty dodgy."*
+      Photographed at both sizes, the plate was drawn BEHIND the readout: its top was a rem and a
+      quarter down and the strip is three and a half of its own em, so the leg's kicker and the top
+      of the chart were under the lives and the score. The guard above measured where the plate
+      ended and never where it began.
+
+      ⚠️ **IN PIXELS, BOTH SHOWN AS A BURN SHOWS THEM**, since 0428 puts both up over the crossing — and
+      after the plate's own entrance, whose first frame starts it higher than it rests.
+    */
+    const prefix = prefixFor('travel');
+    for (const [width, height] of [[1280, 720], [844, 390]] as const) {
+      browser ??= await launchChromium({ headless: true });
+      const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
+      const page = await context.newPage();
+      await page.goto(dist);
+      await page.waitForSelector('canvas');
+      await page.evaluate((p: string) => {
+        document.querySelector(`.${p.slice(0, -1)}`)?.classList.add(`${p}shown`);
+        document.querySelector('.itc-playing-hud')?.classList.add('itc-playing-hud-shown');
+        document.querySelector('.itc-playing-score')?.classList.add('itc-playing-score-shown');
+      }, prefix);
+      await page.waitForTimeout(900);
+      const m = await page.evaluate((p: string) => {
+        const panel = document.querySelector(`.${p}panel`);
+        const hud = document.querySelector('.itc-playing-hud');
+        const score = document.querySelector('.itc-playing-score');
+        if (!(panel instanceof HTMLElement) || !(hud instanceof HTMLElement) || !(score instanceof HTMLElement)) return null;
+        return {
+          plate: panel.getBoundingClientRect().top,
+          readout: hud.getBoundingClientRect().bottom,
+          score: score.getBoundingClientRect().bottom,
+          readoutHeight: hud.getBoundingClientRect().height,
+        };
+      }, prefix);
+      await context.close();
+      expect(m, 'there is no plate, readout or score to measure').not.toBeNull();
+      // A readout with no height is not one, and a plate under nothing is under it vacuously.
+      expect(m!.readoutHeight, `the readout was not shown at ${width}×${height}`).toBeGreaterThan(0);
+      expect(m!.plate, `the plate is behind the readout at ${width}×${height}`).toBeGreaterThanOrEqual(m!.readout);
+      expect(m!.plate, `the plate is behind the score at ${width}×${height}`).toBeGreaterThanOrEqual(m!.score);
+    }
+  });
+
   it('is framed and lit in the colour it is handed, and says what its parts are', async () => {
     /*
       `docs/decisions/0341-the-crossing-reads-as-a-nav-plate.md`. *"The popup explaining things could

@@ -552,6 +552,21 @@ export function picturePlaceFor(
   return audition;
 }
 
+/**
+ * The place the picture is about to become, while one is known and not yet on screen — `null`
+ * otherwise. `docs/decisions/0604-the-place-is-baked-on-the-way.md`.
+ *
+ * From the boss's death, because that is when the run's level moves on and the destination is a
+ * fact; until the burn swaps the backdrop, because from then on `picturePlaceFor` already says it.
+ * **It is `picturePlaceFor`'s own answer after the swap**, asked early, so the place baked ahead and
+ * the place swapped to cannot be two different places.
+ */
+export function pictureComingFor(screen: Screen, runLevel: number, swapped: boolean): ThemeKind | null {
+  if (screen === 'cleared') return placeFor(runLevel);
+  if (screen === 'travel' && !swapped) return placeFor(runLevel);
+  return null;
+}
+
 /*
   ── THE MUSIC ROOM WALKS A LEVEL — `docs/decisions/0212-the-room-walks-the-level.md` ─────────────
 

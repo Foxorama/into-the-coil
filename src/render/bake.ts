@@ -21946,6 +21946,8 @@ export const CHART_TIGHTEN = 0.6;
 /** A stop's disc, as a fraction of the tile; and how many of its radii out the destination's ring is. */
 export const CHART_STOP = 0.035;
 export const CHART_RING = 2.1;
+/** A reached stop's halo, in its own radii — inside the destination's ring, so the ring still reads. */
+const CHART_HALO = 1.7;
 
 /**
  * Where a point `u` of the way along the whole route falls, as a fraction of the chart's tile — `u`
@@ -21981,6 +21983,27 @@ export function chartRadius(u: number): number {
  */
 const CHART_SAMPLES = 40;
 
+/** How many samples of a leg one dash of the route ahead is, and one gap: five dashes a leg. */
+const CHART_DASH = 4;
+
+/**
+ * How strongly a leg not yet flown is stroked, in the ink the caller lifts for it — 0604. With
+ * `CHART_AHEAD_LIFT` in `src/app/chrome.ts`, it is what `tests/travel.test.ts` holds to 3:1 on the
+ * plate in every place and palette: WCAG's floor for a graphic a reader needs, where it was 1.0.
+ */
+export const CHART_AHEAD_ALPHA = 0.85;
+
+/** The graticule's rings, as shares of `CHART_OUTER` — 0604. */
+const CHART_RINGS = [1 / 3, 2 / 3] as const;
+
+/**
+ * The bezel's radius as a share of the tile, and how many ticks are on it — 0604. Every tenth of a
+ * turn, and outside the widest mark a stop wears (`CHART_OUTER + CHART_STOP × CHART_RING`), so the
+ * route's first place sits inside the instrument rather than on its rim.
+ */
+export const CHART_BEZEL = 0.497;
+const CHART_TICKS = 36;
+
 /**
  * The Coil as a route, drawn whole: the spiral, the stops on it, and which legs have been flown.
  *
@@ -22000,27 +22023,91 @@ const CHART_SAMPLES = 40;
  *
  * ⚠️ **NOTHING IS PAINTED OVER THE WHOLE TILE**, so the canvas is transparent wherever the route is
  * not and whatever is behind the banner shows through it.
+ *
+ * ── AND IT READS AS AN INSTRUMENT — `docs/decisions/0604-the-place-is-baked-on-the-way.md` ───────
+ *
+ * ⚠️ **REPORTED AS *"THE MAP DISPLAY LOOKS PRETTY DODGY"*, AND THE ROUTE AHEAD WAS NOT THERE TO SEE.**
+ * A leg not yet flown was the palette's sky ink — `#2a2c44`, chosen to be *nowhere near anything the
+ * player has to find* — at three tenths, on a plate four fifths the void: 1.0 to 1.14 to 1 against
+ * its backing, across the seven places and both palettes. So the coil was a few coloured arcs and some loose dots, and the only part of the spiral a
+ * player could see was the part already behind them. The caller lifts that ink now; the legs ahead
+ * are dashed in it, which says *not flown yet* by its shape rather than by being invisible.
+ *
+ * ⚠️ **A GRATICULE UNDER IT, BECAUSE A SPIRAL ON ITS OWN HAS NO SCALE.** Two rings at a third and two
+ * thirds of the route's start and a bezel of ticks round the outside: the coil reads as descending
+ * because it visibly crosses them, which is `docs/game.md`'s one demand of the chart, said by the
+ * picture rather than by a label. All of it in `faint`, at less than the route, so it is a ground.
+ *
+ * ⚠️ **A LEG BEHIND IS LIT, NOT JUST COLOURED**: a wide faint stroke of its destination's light under
+ * a narrow bright one, which is how every other light in the game is drawn (0236's rim and glow).
  */
 export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: number, faint: string): void {
   const legs = LEVEL_KINDS.length - 1;
   if (legs < 1) return;
   const glowOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].glow[palette];
   const bodyOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].nebula[palette];
+  const middle = size / 2;
   ctx.lineCap = 'round';
-  for (let leg = 0; leg < legs; leg += 1) {
-    const done = leg < flown;
-    ctx.lineWidth = Math.max(1, size * 0.008);
-    ctx.globalAlpha = done ? 0.9 : 0.3;
-    ctx.strokeStyle = done ? glowOf(leg + 1) : faint;
+  // The graticule: two rings inside the route's start and the bezel outside it.
+  ctx.strokeStyle = faint;
+  ctx.lineWidth = Math.max(1, size * 0.004);
+  ctx.globalAlpha = 0.35;
+  for (const share of CHART_RINGS) {
     ctx.beginPath();
+    ctx.moveTo(middle + CHART_OUTER * share * size, middle);
+    ctx.arc(middle, middle, CHART_OUTER * share * size, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.5;
+  ctx.beginPath();
+  for (let tick = 0; tick < CHART_TICKS; tick += 1) {
+    const a = (tick / CHART_TICKS) * Math.PI * 2;
+    // A long tick on each quarter, so the bezel has a top and the route's first stop sits under it.
+    const inner = tick % (CHART_TICKS / 4) === 0 ? CHART_BEZEL - 0.03 : CHART_BEZEL - 0.012;
+    ctx.moveTo(middle + Math.cos(a) * inner * size, middle + Math.sin(a) * inner * size);
+    ctx.lineTo(middle + Math.cos(a) * CHART_BEZEL * size, middle + Math.sin(a) * CHART_BEZEL * size);
+  }
+  ctx.stroke();
+  /*
+    A leg as one path; dashed, it is every other run of `CHART_DASH` samples, each its own sub-path of
+    the one stroke — the pen has no `setLineDash`, and a dash that is geometry is one the tracing pen
+    in the tests can see.
+  */
+  const legPath = (leg: number, dashed: boolean): void => {
+    ctx.beginPath();
+    let open = false;
     for (let s = 0; s <= CHART_SAMPLES; s += 1) {
       const u = (leg + s / CHART_SAMPLES) / legs;
       const x = chartTileX(u) * size;
       const y = chartTileY(u) * size;
-      if (s === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      // Whether the run this sample begins is drawn: always, unless dashed and it is a gap.
+      const drawn = !dashed || Math.floor(s / CHART_DASH) % 2 === 0;
+      if (!open) {
+        if (drawn) ctx.moveTo(x, y);
+        open = drawn;
+      } else {
+        ctx.lineTo(x, y);
+        open = drawn;
+      }
     }
-    ctx.stroke();
+  };
+  for (let leg = 0; leg < legs; leg += 1) {
+    if (leg < flown) {
+      ctx.strokeStyle = glowOf(leg + 1);
+      ctx.globalAlpha = 0.22;
+      ctx.lineWidth = Math.max(2, size * 0.03);
+      legPath(leg, false);
+      ctx.stroke();
+      ctx.globalAlpha = 0.95;
+      ctx.lineWidth = Math.max(1, size * 0.011);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = faint;
+      ctx.globalAlpha = CHART_AHEAD_ALPHA;
+      ctx.lineWidth = Math.max(1, size * 0.007);
+      legPath(leg, true);
+      ctx.stroke();
+    }
   }
   /*
     ⚠️ **THE STOPS AFTER THE LEGS, so a disc is never cut in half by the line arriving at it.** The
@@ -22038,14 +22125,27 @@ export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: n
       be saying something about the places rather than about the run.
     */
     const ahead = stop > flown;
-    ctx.globalAlpha = ahead ? 0.35 : 1;
+    /*
+      ⚠️ **A PLACE REACHED IS LIT, AND ONE AHEAD IS STILL ITS OWN COLOUR — 0604.** Ahead was a body at
+      a third over a rim at four tenths, which on the plate was a smudge; it is the same two marks at
+      about twice that now, so each place to come is a place and not a gap in the route. Behind and the
+      destination get a halo of their light as well, which is the half that says *been* or *going*.
+    */
+    if (!ahead) {
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = glowOf(stop);
+      ctx.beginPath();
+      ctx.arc(x, y, r * CHART_HALO, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = ahead ? 0.6 : 1;
     ctx.fillStyle = bodyOf(stop);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = ahead ? 0.4 : 0.95;
+    ctx.globalAlpha = ahead ? 0.75 : 0.95;
     ctx.strokeStyle = glowOf(stop);
-    ctx.lineWidth = Math.max(1, size * 0.006);
+    ctx.lineWidth = Math.max(1, size * 0.007);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.stroke();
@@ -22055,7 +22155,7 @@ export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: n
       it the player has to count round a spiral to find out.
     */
     if (stop === flown) {
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = 0.85;
       ctx.beginPath();
       ctx.arc(x, y, r * CHART_RING, 0, Math.PI * 2);
       ctx.stroke();
@@ -22231,10 +22331,141 @@ export function bakeAtlas(
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
 ): Atlas {
+  const steps = bakeAtlasStepwise(palette, view, pixelsPerUnit, theme);
+  for (;;) {
+    const step = steps.next();
+    if (step.done === true) return step.value;
+  }
+}
+
+/**
+ * The same bake, one sprite at a time — `docs/decisions/0604-the-place-is-baked-on-the-way.md`.
+ *
+ * It yields after every sprite, so a caller can spread a whole place's atlas over the frames of a
+ * respite and a burn instead of stopping the game for it. **`bakeAtlas` above is this, drained**, so
+ * there is one bake and not two descriptions of one: every boot runs the stepwise path.
+ *
+ * ⚠️ **AN INDEXED WRITE INTO A FULL-LENGTH ARRAY, WHICH IS `map`'s GUARANTEE KEPT A DIFFERENT WAY.**
+ * The note above says why a loop that pushes is refused: a skipped push slides every sprite after it
+ * down by one. A write to `bitmaps[i]` for every `i` cannot slide, and a slot left empty is refused
+ * at the end rather than blitted as nothing.
+ *
+ * ⚠️ **`keep` IS THE ATLAS ON SCREEN, AND A PLACE CHANGE BORROWS FROM IT — 0605.** Every slot no place
+ * changes (`keptAcrossPlaces`) is taken from it as it is, and only the rest are baked, so a step is
+ * spent only where there is something to draw. It must be the same palette's: an atlas does not
+ * record which palette it was baked in, and the one caller has only one.
+ */
+export function* bakeAtlasStepwise(
+  palette: Palette,
+  view: SpriteView,
+  pixelsPerUnit: number,
+  theme: ThemeKind = 'approach',
+  keep: Atlas | null = null,
+): Generator<void, Atlas, void> {
+  const bitmaps = new Array<CanvasImageSource>(SPRITE_KINDS.length);
+  // `keep` lends its bitmaps only when it is the same picture at the same size — 0605.
+  const lends = keep !== null && keep.view === view && keep.pixelsPerUnit === pixelsPerUnit;
+  const kept = lends ? keptAcrossPlaces() : null;
+  for (let i = 0; i < SPRITE_KINDS.length; i++) {
+    if (kept !== null && kept[i] === true) {
+      bitmaps[i] = keep!.bitmaps[i]!;
+      continue;
+    }
+    bitmaps[i] = bakeOne(SPRITE_KINDS[i]!, palette, view, pixelsPerUnit, theme);
+    yield;
+  }
+  // A counted loop and not `some`, which skips the holes of a sparse array — the one thing asked.
+  for (let i = 0; i < bitmaps.length; i++) {
+    if (bitmaps[i] === undefined) throw new Error(`bakeAtlas: ${SPRITE_KINDS[i]!} was left unbaked`);
+  }
+  return finishAtlas(view, theme, bitmaps, pixelsPerUnit);
+}
+
+/*
+  ── WHAT A PLACE CHANGES — `docs/decisions/0605-a-place-rebakes-only-what-it-changes.md` ─────────
+
+  ⚠️ **THE KINDS WHOSE DRAWING READS THE PLACE, AS MEASURED, AND EVERY OTHER ONE IS CARRIED OVER.**
+  Each of these was baked in all seven places, in both palettes, in both views and at two resolutions,
+  and differed somewhere; every kind NOT here came out pixel for pixel the same in all of them. So a
+  place change re-bakes these and lends the rest from the atlas already on screen — about a third of
+  the work, and none of the hydra's pieces, which were the worst single frames 0604 measured.
+
+  ⚠️ **A LIST, BECAUSE THE PLACE IS READ IN HUNDREDS OF PAINTERS** — a foe's skin, a lord's, a shot's
+  tint, a sky — and no one line of `drawKind` says whether a kind reads it. What makes a list safe is
+  which way it fails. A kind on it that has stopped reading the place is merely re-baked for nothing.
+  A kind that starts reading the place and is NOT on it would carry the last place's picture into the
+  next, and `tests/place-drawn.browser.test.ts` bakes every kind off this list in every place and
+  palette and goes red naming it. **The answer to that red is to add the kind here**, never to make
+  its drawing the same everywhere.
+*/
+export const PLACE_DRAWN: ReadonlySet<SpriteKind> = new Set<SpriteKind>([
+  'drifter', 'drifterHit', 'lancer', 'lancerHit', 'weaver', 'weaverHit', 'turret', 'turretHit',
+  'charger', 'chargerHit', 'warden', 'wardenHit', 'spinner', 'spinnerHit', 'sower', 'sowerHit',
+  'picket', 'picketHit', 'moth', 'mothHit', 'raptor', 'raptorHit', 'kite', 'kiteHit', 'swift',
+  'swiftHit', 'minnow', 'minnowHit', 'sentry', 'sentryHit', 'shard', 'shardHit', 'spore', 'sporeHit',
+  'gaze', 'gazeHit', 'drifterB', 'drifterBHit', 'drifterC', 'drifterCHit', 'lancerB', 'lancerBHit',
+  'lancerC', 'lancerCHit', 'weaverB', 'weaverBHit', 'weaverC', 'weaverCHit', 'turretB', 'turretBHit',
+  'turretC', 'turretCHit', 'chargerB', 'chargerBHit', 'chargerC', 'chargerCHit', 'wardenB',
+  'wardenBHit', 'wardenC', 'wardenCHit', 'spinnerB', 'spinnerBHit', 'spinnerC', 'spinnerCHit',
+  'sowerB', 'sowerBHit', 'sowerC', 'sowerCHit', 'picketB', 'picketBHit', 'picketC', 'picketCHit',
+  'mothB', 'mothBHit', 'mothC', 'mothCHit', 'raptorB', 'raptorBHit', 'raptorC', 'raptorCHit', 'kiteB',
+  'kiteBHit', 'kiteC', 'kiteCHit', 'swiftB', 'swiftBHit', 'swiftC', 'swiftCHit', 'minnowB',
+  'minnowBHit', 'minnowC', 'minnowCHit', 'sentryB', 'sentryBHit', 'sentryC', 'sentryCHit', 'shardB',
+  'shardBHit', 'shardC', 'shardCHit', 'sporeB', 'sporeBHit', 'sporeC', 'sporeCHit', 'gazeB',
+  'gazeBHit', 'gazeC', 'gazeCHit', 'boss', 'bossHit', 'boss2', 'boss2Hit', 'boss3', 'boss3Hit',
+  'boss4', 'boss4Hit', 'boss5', 'boss5Hit', 'boss6', 'boss6Hit', 'boss7', 'boss7Hit', 'boss8',
+  'boss8Hit', 'boss8Up', 'boss8Down', 'boss8Gape', 'boss8GapeHit', 'boss8Shut', 'boss8ShutHit',
+  'serpentBody', 'serpentBodyHit', 'boss8Horn2', 'boss8Horn2Hit', 'boss8Horn2Up', 'boss8Horn2Down',
+  'boss8Horn2Gape', 'boss8Horn2GapeHit', 'boss8Horn2Shut', 'boss8Horn2ShutHit', 'boss8Horn3',
+  'boss8Horn3Hit', 'boss8Horn3Up', 'boss8Horn3Down', 'boss8Horn3Gape', 'boss8Horn3GapeHit',
+  'boss8Horn3Shut', 'boss8Horn3ShutHit', 'boss9', 'boss9Hit', 'boss9Up', 'boss9Down', 'boss9Gape',
+  'boss9GapeHit', 'boss9Shut', 'boss9ShutHit', 'boss9Barbed', 'boss9BarbedHit', 'boss9BarbedUp',
+  'boss9BarbedDown', 'boss9BarbedGape', 'boss9BarbedGapeHit', 'boss9BarbedShut', 'boss9BarbedShutHit',
+  'volansTail', 'volansTailHit', 'volansTailBarbed', 'volansTailBarbedHit', 'boss10', 'boss10Hit',
+  'boss10Up', 'boss10Down', 'boss10Gape', 'boss10GapeHit', 'boss10Charged', 'boss10ChargedHit',
+  'boss10GapeCharged', 'boss10GapeChargedHit', 'quetzalWing0', 'quetzalWing1', 'quetzalWing2',
+  'quetzalWing3', 'quetzalWing4', 'quetzalWing5', 'quetzalWing6', 'quetzalWing7', 'quetzalWing8',
+  'quetzalWing9', 'quetzalWing10', 'quetzalWing11', 'quetzalWing0Hit', 'quetzalWing1Hit',
+  'quetzalWing2Hit', 'quetzalWing3Hit', 'quetzalWing4Hit', 'quetzalWing5Hit', 'quetzalWing6Hit',
+  'quetzalWing7Hit', 'quetzalWing8Hit', 'quetzalWing9Hit', 'quetzalWing10Hit', 'quetzalWing11Hit',
+  'boss11', 'boss11Hit', 'boss11Chipped', 'boss11ChippedHit', 'boss11Broken', 'boss11BrokenHit',
+  'boss11Burnt', 'boss11BurntHit', 'boss11Wreck', 'boss11WreckHit', 'shedScale', 'shedEmber',
+  'shedFeather', 'shedTooth', 'shedIce', 'shedFlesh', 'shedGlass', 'boss12', 'boss12Hit', 'boss13',
+  'boss13Hit', 'hydraTail', 'hydraTailHit', 'tendril', 'tendrilHit', 'tendrilLit', 'oralArm', 'spit',
+  'lance', 'flak', 'spine', 'quill', 'ripple', 'curl', 'cog', 'clot', 'tooth', 'skyFar', 'skyNear',
+  'skyRush', 'skyNebula', 'skyGround', 'skyRange', 'landmark', 'landmarkB', 'landmarkC',
+]);
+
+/**
+ * Which slots a place change may lend from the atlas on screen, by blit index — 0605. Built once.
+ *
+ * ⚠️ **NOT ONLY WHAT `PLACE_DRAWN` LEAVES, BECAUSE SOME SLOTS ARE WRITTEN AGAIN AFTER THE BAKE.** The
+ * place's own sky (`bakeNebula`, `bakeGround`, `bakeLandmark`), the fitted ship (`bakeShipFit`) and
+ * its flame (`bakeFlame`) overwrite their slots in the atlas they are handed, so the atlas on screen
+ * holds those slots as the LAST place, or the last fit, left them — not as a bake would. They are
+ * re-baked every time, and a new writer into an atlas joins this list.
+ */
+let keptSlots: readonly boolean[] | null = null;
+function keptAcrossPlaces(): readonly boolean[] {
+  if (keptSlots !== null) return keptSlots;
+  const kept = SPRITE_KINDS.map((kind) => !PLACE_DRAWN.has(kind));
+  const rebaked: number[] = [SPRITE.skyNebula, SPRITE.skyVeins, SPRITE.artery, SPRITE.skyGround, SPRITE.skyRange, ...LANDMARK_SLOTS];
+  for (const kind of ['mireBank', ...MIRE_BANK_CAPS, ...MIRE_BED, ...MIRE_ACID_CAPS] as const) rebaked.push(SPRITE[kind]);
+  for (const ship of SHIP_KINDS) {
+    for (const hull of SHIPS[ship].hulls) rebaked.push(hull.base, hull.hit);
+    for (const cycle of SHIPS[ship].dance) rebaked.push(...cycle.frames);
+  }
+  for (const thrust of THRUST_KINDS) for (const lean of LEAN_KINDS) rebaked.push(...THRUST[thrust].frames[lean]);
+  for (const index of rebaked) kept[index] = false;
+  keptSlots = kept;
+  return kept;
+}
+
+function finishAtlas(view: SpriteView, theme: ThemeKind, bitmaps: CanvasImageSource[], pixelsPerUnit: number): Atlas {
   return {
     view,
     theme,
-    bitmaps: SPRITE_KINDS.map((kind) => bakeOne(kind, palette, view, pixelsPerUnit, theme)),
+    bitmaps,
     extents: SPRITE_KINDS.map((kind) => SPRITE_EXTENT[kind]),
     pixelsPerUnit,
     light: SPRITE_KINDS.map((kind) => LIGHT_KINDS.includes(kind)),
