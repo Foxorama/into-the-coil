@@ -11,6 +11,11 @@
  * ran out goes to, and it reads the run, never the settings — the settings slice takes part in no
  * agreement. It reaches nothing the frame reads; what it changes is which screen comes after the
  * last death.
+ *
+ * ⚠️ **FREEPLAY IS EARNED, PER TIER — 0608.** *"Freeplay gets unlocked only for an individual difficulty
+ * when you finish that difficulty with at least one pilot."* Until then the chip is not on the title and
+ * a run on that tier is one credit, whatever the settings hold (`creditsFor`,
+ * `src/state/slices/hangar.ts`).
  */
 
 /** Every way a run may be credited, in the order the band offers them. Closed. */

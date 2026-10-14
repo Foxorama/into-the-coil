@@ -44,8 +44,11 @@ ends the run.
 second shield, so the complement only goes down. See *Upgrades*.
 
 **A run is one credit unless the player chose Freeplay** —
-[0517](decisions/0517-no-quarters-given.md). The title's continues chip is *No quarters given* until
-it is pressed: a run that runs out ends on the game-over screen, with its account and *Main Menu*.
+[0517](decisions/0517-no-quarters-given.md) — **and Freeplay is earned, one tier at a time**: it is
+offered on a tier once that tier has been finished, by any pilot —
+[0608](decisions/0608-freeplay-is-earned.md). Until then the title has no continues chip for it. Where
+there is one it is *No quarters given* until it is pressed: a run that runs out ends on the game-over
+screen, with its account and *Main Menu*.
 On *Freeplay*, kept between visits like the other settings, **a run that ends may be continued**,
 once per ending and only from the screen it ends on —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The level does not restart: the field is frozen
@@ -290,7 +293,8 @@ grounds that a shield is the better version of the same promise: it stops the de
 shield saves now. **This is open rather than settled**, and it is what
 [0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is currently standing in for — and
 since [0517](decisions/0517-no-quarters-given.md) the free continue is Freeplay's, so on the default a
-run is the tier's lives and nothing else.
+run is the tier's lives and nothing else — and since [0608](decisions/0608-freeplay-is-earned.md) a
+tier must be finished on one credit before its continue is offered at all.
 
 ⚠️ **A player who just died is flying with everything they had** — 0372. The scatter that handed a
 death's ladders back on the field (0066, 0243, 0266) is gone with the cost it answered.

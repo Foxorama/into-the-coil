@@ -34,6 +34,8 @@ import { TUBE_WARES, TUBE_WARE_KINDS, tubesOf, type RackKind } from '../../conte
 import { MISSILE_KINDS } from '../../content/missiles.ts';
 import { SHELLS, type ShellKind } from '../../content/shells.ts';
 import { WEAPONS } from '../../content/weapons.ts';
+import { DIFFICULTY_KINDS, type DifficultyKind } from '../../content/difficulty.ts';
+import { DEFAULT_CREDIT, type CreditKind } from '../../content/credits.ts';
 
 export interface HangarState {
   /**
@@ -114,6 +116,12 @@ export interface HangarState {
    * lock may name a count of them (`src/content/golfers.ts`).
    */
   crashes: number;
+  /**
+   * Whether each tier has been finished — 0608: the jellyfish beaten on it, in any ship and on any
+   * credits. Asked for: *"freeplay gets unlocked only for an individual difficulty when you finish that
+   * difficulty with at least one pilot."* Only ever set, as a win is.
+   */
+  finished: Readonly<Record<DifficultyKind, boolean>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -137,7 +145,9 @@ export type HangarAction =
   // 0584: the shell its shields wear.
   | { slice: 'hangar'; type: 'shell'; ship: ShipKind; shell: ShellKind }
   // 0592: a life lost to a body.
-  | { slice: 'hangar'; type: 'crashed' };
+  | { slice: 'hangar'; type: 'crashed' }
+  // 0608: a tier finished.
+  | { slice: 'hangar'; type: 'finished'; difficulty: DifficultyKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -163,7 +173,17 @@ export const initialHangar: HangarState = {
   rack: perShip(() => 'bare'),
   shell: perShip((kind) => SHIPS[kind].shield.look),
   crashes: 0,
+  finished: perTier(() => false),
 };
+
+/**
+ * The credits a run on `difficulty` begins on — 0608: what the title's chip holds once that tier has been
+ * finished, and one credit until it has. A Freeplay chosen on a finished tier is kept in the settings and
+ * stays chosen; it is not offered, and not flown, on a tier that has not earned it.
+ */
+export function creditsFor(state: HangarState, difficulty: DifficultyKind, chosen: CreditKind): CreditKind {
+  return state.finished[difficulty] ? chosen : DEFAULT_CREDIT;
+}
 
 /**
  * How many things the player has bought — 0592: every ware with a price that they own, of any shelf. The
@@ -222,6 +242,13 @@ export function liveryOf(hue: unknown, tone: unknown): Livery | null {
   const h = typeof hue === 'number' && Number.isInteger(hue) && hue >= 0 && hue < HUES.length ? hue : null;
   const t = typeof tone === 'number' && Number.isInteger(tone) && tone >= 0 && tone < TONES.length ? tone : null;
   return h === null || t === null ? null : { hue: h, tone: t };
+}
+
+/** Each tier mapped to `of(kind)`, on `perShip`'s terms. */
+function perTier<T>(of: (kind: DifficultyKind) => T): Record<DifficultyKind, T> {
+  const out: Partial<Record<DifficultyKind, T>> = {};
+  for (const kind of DIFFICULTY_KINDS) out[kind] = of(kind);
+  return out as Record<DifficultyKind, T>;
 }
 
 /** Each ownable kind mapped to `of(kind)`, on `perShip`'s terms. */
@@ -369,6 +396,9 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     // 0592: one more, and only ever more.
     case 'crashed':
       return { ...state, crashes: state.crashes + 1 };
+    // 0608: on the win's terms — only ever set, and identity kept when it already was.
+    case 'finished':
+      return state.finished[action.difficulty] ? state : { ...state, finished: { ...state.finished, [action.difficulty]: true } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;
