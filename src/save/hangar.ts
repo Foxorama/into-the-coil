@@ -24,6 +24,7 @@ import { FLAME_KINDS } from '../content/flames.ts';
 import { OWNABLE_KINDS, type OwnableKind } from '../content/wares.ts';
 import { RACK_KINDS } from '../content/racks.ts';
 import { SHELL_KINDS } from '../content/shells.ts';
+import { DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
 import { type HangarState, artOpen, flameOpen, gunOpen, liveryOf, liveryOpen, plateOpen, rackOpen, rimOpen, shellOpen, specialOpen } from '../state/slices/hangar.ts';
 import type { Store } from './store.ts';
 
@@ -163,13 +164,20 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     none for a document written before it.
   */
   const crashes = Number.isSafeInteger(doc.crashes) && (doc.crashes as number) >= 0 ? (doc.crashes as number) : base.crashes;
-  return { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes };
+  /*
+    0608: the tiers finished — a new field on version 1, read as the wins are: only `true`, per tier, so a
+    document written before it reads as none finished and a tier the game has added reads as not.
+  */
+  const finishedDoc = typeof doc.finished === 'object' && doc.finished !== null ? (doc.finished as Partial<Record<DifficultyKind, unknown>>) : null;
+  const finished = { ...base.finished };
+  for (const kind of DIFFICULTY_KINDS) if (finishedDoc?.[kind] === true) finished[kind] = true;
+  return { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes, finished };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  const { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes } = hangar;
-  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes });
+  const { won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes, finished } = hangar;
+  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes, finished });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

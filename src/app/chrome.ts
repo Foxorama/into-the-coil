@@ -3337,6 +3337,8 @@ ${faced((p) => `.${p}option-face, .${p}option-face:not(.${p}option-on)`)} { bord
   that cost nothing, and in a row of three the size of the screen it was the word that wrapped the row.
 */
 .itc-title-choices > .itc-title-chip { display: flex; flex: 1 1 0; min-width: 0; padding: 0; opacity: 1; order: -1; }
+/* 0608: and gone on a tier not yet finished, where the run is one credit and there is nothing to choose. */
+.itc-title-choices > .itc-title-chip[hidden] { display: none; }
 .itc-title-chip .itc-title-options { flex: 1 1 auto; min-width: 0; }
 .itc-title-chip .itc-title-option { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .itc-title-chip .itc-title-option:not(.itc-title-option-on) { display: none; }

@@ -72,8 +72,9 @@ export const PROBES = [
     guard: 'is kept between visits, and a document written before it reads as none',
     edit: {
       path: 'src/save/hangar.ts',
-      find: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes });',
-      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell });',
+      // Re-anchored by 0608, which writes the tiers finished after the crashes.
+      find: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, crashes, finished });',
+      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery, flame, rack, shell, finished });',
     },
   },
   {

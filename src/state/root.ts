@@ -154,9 +154,12 @@ function agree(state: State): State {
     opening is the jellyfish beaten, so a page closed during the finale has still won; the victory
     screen nineteen seconds later would have lost it. The run's ship, read off the run, so a pilot
     changed on the title afterwards cannot move which ship was won in.
+
+    0608: and its tier finished, which is what opens Freeplay on it — read off the run on the same terms.
   */
   if (state.screen.current === 'cleared' && state.run.level >= LEVEL_KINDS.length) {
-    const hangar = reduceHangar(state.hangar, { slice: 'hangar', type: 'won', ship: state.run.ship });
+    const won = reduceHangar(state.hangar, { slice: 'hangar', type: 'won', ship: state.run.ship });
+    const hangar = reduceHangar(won, { slice: 'hangar', type: 'finished', difficulty: state.run.difficulty });
     return { ...state, screen: reduceScreen(state.screen, SHOW_FINALE), hangar };
   }
   return state;

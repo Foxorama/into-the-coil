@@ -19,6 +19,8 @@ import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty
 import { CREDIT_KINDS, type CreditKind } from '../src/content/credits.ts';
 import { SCREENS, type ChoiceName, type Screen } from '../src/state/screens.ts';
 import { SHELF_KINDS, SHELVES, type OwnableKind } from '../src/content/wares.ts';
+import { serialiseHangar } from '../src/save/hangar.ts';
+import { initialHangar } from '../src/state/slices/hangar.ts';
 
 /** The CSS selector for a screen's shown overlay. */
 export const shown = (screen: Screen): string => '.' + prefixFor(screen) + 'shown';
@@ -79,11 +81,23 @@ export async function launch(page: Page, tier: DifficultyKind): Promise<void> {
 /**
  * On the title: choose `credits` on the continues band — 0517. A test whose subject is the run-over
  * screen and its *Continue* chooses Freeplay first, because no quarters is the default.
+ *
+ * ⚠️ **ON A PAGE OPENED ON `EVERY_TIER_FINISHED` — 0608.** The chip is on the title only for a tier
+ * finished, so a fresh store has nothing to press; `seeded` (`tests/seed.ts`) opens on one that has.
  */
 export async function credit(page: Page, credits: CreditKind): Promise<void> {
   await page.waitForSelector(shown('title'), { state: 'attached' });
+  if (!(await page.locator(`[${SETTING_ATTR}="credits"]`).first().isVisible())) {
+    throw new Error('the continues chip is not on the title — open the page on EVERY_TIER_FINISHED (0608)');
+  }
   await choose(page, 'credits', CREDIT_KINDS.indexOf(credits));
 }
+
+/** A kept hangar in which every tier has been finished, so Freeplay is offered on all of them — 0608. */
+export const EVERY_TIER_FINISHED: string = serialiseHangar({
+  ...initialHangar,
+  finished: Object.fromEntries(DIFFICULTY_KINDS.map((kind) => [kind, true])) as Record<DifficultyKind, boolean>,
+});
 
 /** The readout, up while a run flies. */
 const HUD_SHOWN = '.itc-playing-hud-shown';

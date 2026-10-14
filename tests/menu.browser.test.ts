@@ -6,7 +6,9 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { afterFrames } from './frames.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { credit, launch, openRoom, shown as shownScreen } from './title.ts';
+import { EVERY_TIER_FINISHED, credit, launch, openRoom, shown as shownScreen } from './title.ts';
+import { seeded } from './seed.ts';
+import { HANGAR_KEY } from '../src/save/hangar.ts';
 import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS, MENU_REPEAT_AFTER } from '../src/app/menu.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
@@ -103,7 +105,11 @@ async function open(): Promise<Page> {
     // nothing at all — which would pass.
     Object.defineProperty(navigator, 'getGamepads', { value: snapshot, configurable: true });
   }, PAD_STATE);
-  await page.goto(dist);
+  /*
+    0608: on a store in which every tier is finished, so the continues chip is on the title — the quiet
+    row these tests walk has it, and the run-over screen they lose a run onto is Freeplay's.
+  */
+  await seeded(context, dist, HANGAR_KEY, EVERY_TIER_FINISHED);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   /*
     ⚠️ **PAST THE INTRO BY ESCAPE, WHICH THE PAGE DOES NOT COUNT AS A HAND ON IT** — 0412. Every test

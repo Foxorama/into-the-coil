@@ -5,7 +5,9 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { credit, launch } from './title.ts';
+import { EVERY_TIER_FINISHED, credit, launch } from './title.ts';
+import { seeded } from './seed.ts';
+import { HANGAR_KEY } from '../src/save/hangar.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { SCORES_KEY, parseScores } from '../src/save/scores.ts';
@@ -43,8 +45,8 @@ afterAll(async () => {
 async function open(): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-  const page = await context.newPage();
-  await page.goto(dist);
+  // 0608: on a store in which every tier is finished, so Freeplay — whose screen this is — is offered.
+  const page = await seeded(context, dist, HANGAR_KEY, EVERY_TIER_FINISHED);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   await pastIntro(page);
   return page;

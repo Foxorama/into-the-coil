@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { choose, credit, fly, openHangar, shown } from './title.ts';
+import { EVERY_TIER_FINISHED, choose, credit, fly, openHangar, shown } from './title.ts';
 import { SCORES_KEY } from '../src/save/scores.ts';
 import { seeded } from './seed.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
@@ -99,8 +99,8 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
     */
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    const page = await context.newPage();
-    await page.goto(dist);
+    // 0608: on a store in which every tier is finished, so the run-over screen's Freeplay is offered.
+    const page = await seeded(context, dist, HANGAR_KEY, EVERY_TIER_FINISHED);
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await credit(page, 'free');

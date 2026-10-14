@@ -982,6 +982,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         ⚠️ **A CHIP BESIDE *SETTINGS*, AND A BAND DID NOT FIT.** A third band put *Fly* under the fold
         of a 1280x720 laptop, and on a phone the title's grid has one cell for the tier. Chosen by the
         player of three ways to fit it: a chip costs the screen no height.
+
+        ⚠️ **SHOWN ONLY ON A TIER FINISHED — 0608.** Freeplay is earned per tier, so on any other the
+        shell hides the chip and the run is one credit (`creditsFor`, `src/state/slices/hangar.ts`).
       */
       {
         name: 'credits',

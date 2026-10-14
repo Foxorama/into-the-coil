@@ -160,7 +160,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { artOpen, flameOpen, gunOpen, needsFirst, pilotRecord, plateOpen, rackOpen, reduceHangar, rimOpen, shellOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
+import { artOpen, creditsFor, flameOpen, gunOpen, needsFirst, pilotRecord, plateOpen, rackOpen, reduceHangar, rimOpen, shellOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1813,6 +1813,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const scoreStore = keptStore;
   let scoreTable = readScores(scoreStore);
+  /*
+    0608: a tier finished before the hangar kept which — a cleared run on the table is one, so a player
+    who had already beaten a tier is not asked to beat it again for its Freeplay. Written at once, so the
+    table can later drop the row and the tier stays finished.
+  */
+  const keptHangar = state.hangar;
+  // @setup: once, as the page opens.
+  for (const entry of scoreTable) {
+    if (entry.cleared) state = reduce(state, { slice: 'hangar', type: 'finished', difficulty: entry.difficulty });
+  }
+  if (state.hangar !== keptHangar) writeHangar(keptStore, state.hangar);
   /** The row a run just set, lit on the title until the next run begins. `-1` for none. */
   let freshPlace = -1;
   let runRecorded = false;
@@ -2047,6 +2058,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     if (hangarChanged) {
       writeHangar(keptStore, state.hangar);
+      showCredits();
       // 0594: a pilot opened mid-run — the tenth crash — opens what waits on them from the next pickup on.
       fitHangar();
       /*
@@ -2295,6 +2307,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   }
   /** Whether the splash has had a press the page could turn the sound on with — 0513. */
   let splashPressed = false;
+  /**
+   * 0608: the continues chip, on the title only for a tier that has been finished — Freeplay is earned
+   * per tier, and on any other the run is one credit with nothing to choose. Re-read when the tier moves
+   * and when the hangar does, which is when a tier is finished.
+   */
+  function showCredits(): void {
+    chrome.setBandShown('credits', state.hangar.finished[state.settings.difficulty]);
+  }
   const startRun = (): void => {
     pilotArmed = true;
     const ship = GOLFERS[state.settings.pilot].ship;
@@ -2304,7 +2324,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     lifecycle.begin(
       state.settings.difficulty,
       ship,
-      state.settings.credits,
+      // 0608: the chip's credits on a tier finished, one credit on any other.
+      creditsFor(state.hangar, state.settings.difficulty, state.settings.credits),
       ownSpecial(state.hangar.special[ship]),
       SHIPS[state.hangar.gun[ship]].weapon,
       state.hangar.rim[ship],
@@ -2449,6 +2470,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else if (name === 'difficulty') {
       dispatch({ slice: 'settings', type: 'difficulty', difficulty: DIFFICULTY_KINDS[index] ?? TUNED });
       chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
+      showCredits();
     } else if (name === 'pilot') {
       /*
         ⚠️ **A PRESS ON THE HIGHLIGHTED PILOT FLIES THEM — 0513, AND A THUMB'S FIRST LANDING DOES NOT.**
@@ -2767,6 +2789,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
   // 0517: and the continues band on the credits the state holds, kept between visits.
   chrome.setChoice('credits', CREDIT_KINDS.indexOf(state.settings.credits));
+  showCredits();
   /*
     BACK — 0458: B on a pad, Escape on a keyboard, and the *Back* buttons. Where it goes is the row's
     `back`; `'opener'` is whichever screen opened the menu (`src/state/slices/screen.ts` records it).

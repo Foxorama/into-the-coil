@@ -49,9 +49,9 @@ export const PROBES = [
     guard: 'the Thunderbolt’s storm fitted to the fighter',
     edit: {
       path: 'src/app/mount.ts',
-      // Re-anchored by 0578, which laid the call a line an argument when it added the rack's tubes.
-      find: '      state.settings.credits,\n      ownSpecial(state.hangar.special[ship]),',
-      replace: '      state.settings.credits,\n      ownSpecial(ship),',
+      // Re-anchored by 0578, which laid the call a line an argument when it added the rack's tubes, and 0608, which reads the credits through creditsFor.
+      find: '      creditsFor(state.hangar, state.settings.difficulty, state.settings.credits),\n      ownSpecial(state.hangar.special[ship]),',
+      replace: '      creditsFor(state.hangar, state.settings.difficulty, state.settings.credits),\n      ownSpecial(ship),',
     },
   },
 ];

@@ -8,6 +8,11 @@ import { initialState, reduce, type Action, type State } from '../src/state/root
 import { SCREENS } from '../src/state/screens.ts';
 import { initialSettings } from '../src/state/slices/settings.ts';
 import { serialiseSettings, settingsFrom, SETTINGS_VERSION } from '../src/save/settings.ts';
+import { creditsFor, initialHangar } from '../src/state/slices/hangar.ts';
+import { hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
+import { DIFFICULTY_KINDS, TUNED, type DifficultyKind } from '../src/content/difficulty.ts';
+import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
 
 /**
  * NO QUARTERS GIVEN — `docs/decisions/0517-no-quarters-given.md`.
@@ -101,5 +106,48 @@ describe('the game over’s account', () => {
     const lines = endSheet(state.run, flying(0, 0, 0, 0), null, 0);
     expect(lines.find((l) => l.label === 'Shot down')?.value).toBe('0%');
     expect(lines.some((l) => l.label === 'Ranks'), 'ranks shown for a run that cleared nothing').toBe(false);
+  });
+});
+
+/** A run on `difficulty` flown to the end of its last level and its break shown — the run finished. */
+function finishOn(difficulty: DifficultyKind, ship: ShipKind = initialRun.ship, from: State = initialState): State {
+  const begun = reduce(reduce(from, { slice: 'run', type: 'begin', difficulty, ship, credits: 'none' }), PLAY);
+  const last: State = { ...begun, run: { ...begun.run, level: LEVEL_KINDS.length } };
+  return reduce(last, { slice: 'screen', type: 'show', screen: 'cleared' });
+}
+
+describe('Freeplay is earned, per tier — 0608', () => {
+  it('no tier is finished on a first visit, so every run is one credit whatever the band holds', () => {
+    for (const kind of DIFFICULTY_KINDS) {
+      expect(initialHangar.finished[kind], kind).toBe(false);
+      expect(creditsFor(initialHangar, kind, 'free'), `Freeplay flown on ${kind} before it was finished`).toBe('none');
+    }
+  });
+
+  it('a run finished opens Freeplay on its own tier and on no other', () => {
+    for (const tier of DIFFICULTY_KINDS) {
+      const { hangar } = finishOn(tier);
+      for (const kind of DIFFICULTY_KINDS) {
+        expect(hangar.finished[kind], `finishing ${tier} left ${kind} ${hangar.finished[kind] ? 'open' : 'shut'}`).toBe(kind === tier);
+        expect(creditsFor(hangar, kind, 'free')).toBe(kind === tier ? 'free' : 'none');
+      }
+      // And on a finished tier the band's choice is flown as it stands, one credit included.
+      expect(creditsFor(hangar, tier, 'none')).toBe('none');
+    }
+  });
+
+  it('any pilot finishes it, and a run that does not finish opens nothing', () => {
+    for (const ship of SHIP_KINDS) expect(finishOn(TUNED, ship).hangar.finished[TUNED], ship).toBe(true);
+    expect(runOut('none').hangar.finished[DEFAULT_DIFFICULTY]).toBe(false);
+  });
+
+  it('is kept between visits, only ever as finished, and a document from before it reads as none', () => {
+    const { hangar } = finishOn(TUNED);
+    expect(hangarFrom(serialiseHangar(hangar), initialHangar).finished).toEqual(hangar.finished);
+    const before = JSON.parse(serialiseHangar(initialHangar)) as Record<string, unknown>;
+    delete before.finished;
+    expect(hangarFrom(JSON.stringify(before), initialHangar).finished).toEqual(initialHangar.finished);
+    const edited = { ...before, finished: { [TUNED]: 'yes', [DIFFICULTY_KINDS[0]!]: 1 } };
+    expect(hangarFrom(JSON.stringify(edited), initialHangar).finished).toEqual(initialHangar.finished);
   });
 });

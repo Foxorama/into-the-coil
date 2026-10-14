@@ -1,6 +1,7 @@
 # 0517 — No quarters given
 
-**Accepted 2026-10-05.** Asked for: *"a new toggle setting on the main title screen. Default is No
+**Accepted 2026-10-05.** Amended by [0608](0608-freeplay-is-earned.md): the chip is offered only on a
+tier that has been finished. Asked for: *"a new toggle setting on the main title screen. Default is No
 quarters given, other option is Freeplay. Freeplay works exactly like the game works now. No quarters
 given removes the continue button from the continue screen; it changes into a game over screen that
 gives the score summary and stats about that run and has a 'Main Menu' button."* And, while it was being
