@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameFrame, launchSpecial, wearHull, type World } from '../src/app/frame.ts';
 import type { CueKind } from '../src/content/cues.ts';
+import { DEBRIS_KIND } from '../src/content/debris.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
@@ -84,8 +85,8 @@ describe('0615 — the ball is solid', () => {
     // Pressed on with the stick, the ball is in the body no deeper than one step of its flight carries it.
     expect(-deepest * PX, `the ball went ${(-deepest * PX).toFixed(1)} px into a body it could not break`).toBeLessThan(2 * PX);
     expect(world.ship.along, 'the ball passed through the body').toBeLessThan(body.along);
-    // And is seen to come off it, with the stick still held into it: a ball's width, near enough.
-    expect(farthest * PX, `knocked off, the ball came ${(farthest * PX).toFixed(1)} px back`).toBeGreaterThan(12);
+    // And is seen to come off it, with the stick still held into it — 0617: half as far as off a boss, below.
+    expect(farthest * PX, `knocked off, the ball came ${(farthest * PX).toFixed(1)} px back`).toBeGreaterThan(5);
     // And comes back, and lands again: a ram still rams.
     expect(cues.filter((c) => c === 'ram').length, 'the ball came off and never landed again').toBeGreaterThanOrEqual(6);
   });
@@ -137,6 +138,106 @@ describe('0615 — the ball is solid', () => {
   });
 });
 
+describe('0617 — the War Dance stops, swings and burns', () => {
+  it('THE REPORTED ONE: turned hard round at a body behind it, it brakes with flame out of its front, swings, and burns with flame out of its back', () => {
+    const { world, frame } = flying('fighter');
+    launchSpecial(world, 'warDance');
+    frame.step();
+    // A body straight behind it, the hardest turn there is, and nothing else in view.
+    const speed = Math.hypot(world.danceAlong, world.danceAcross);
+    bodyAt(world, 1e6, world.ship.along - (world.danceAlong / speed) * 50, world.ship.across - (world.danceAcross / speed) * 50);
+    const px = (u: number): number => u * PX * STEPS_PER_SECOND;
+    const speeds: number[] = [];
+    const thrust: number[] = [];
+    let ahead = 0;
+    let behind = 0;
+    for (let step = 0; step < 40 && world.danceFor > 0; step++) {
+      frame.step();
+      speeds.push(world.danceSpeed);
+      thrust.push(world.danceThrust);
+      if (world.danceThrust === 0) continue;
+      // A mote of flame beside the ship, against where the dance is going: ahead of it for a brake, behind for a burn.
+      let front = false;
+      let back = false;
+      for (let i = 0; i < world.debris.size; i++) {
+        const mote = world.debris.at(i);
+        if (mote.kind !== DEBRIS_KIND.ember) continue;
+        const dA = mote.along - world.ship.along;
+        const dC = mote.across - world.ship.across;
+        if (Math.hypot(dA, dC) > DANCE.reach + 6) continue;
+        const into = dA * world.danceAlong + dC * world.danceAcross;
+        if (into > 0) front = true;
+        if (into < 0) back = true;
+      }
+      if (world.danceThrust < 0 && front) ahead++;
+      if (world.danceThrust > 0 && back) behind++;
+    }
+    const braked = thrust.indexOf(-1);
+    const burned = thrust.indexOf(1, braked);
+    expect(braked, 'it never braked into a turn of half a circle').toBeGreaterThanOrEqual(0);
+    expect(burned, 'it never burned out of the turn').toBeGreaterThan(braked);
+    // In pixels a second on the screen the reports were made on: slowed to a crawl, then thrown.
+    const slowest = Math.min(...speeds.slice(braked, burned + 1));
+    const fastest = Math.max(...speeds.slice(burned));
+    expect(px(slowest), `at its slowest it flew ${px(slowest).toFixed(0)} px a second`).toBeLessThan(px(DANCE.speed) * 0.5);
+    expect(px(fastest), `burning out it reached ${px(fastest).toFixed(0)} px a second`).toBeGreaterThan(px(DANCE.speed) * 1.4);
+    expect(ahead, `its brake threw no flame out of its front (${ahead})`).toBeGreaterThan(3);
+    expect(behind, `its burn threw no flame out of its back (${behind} of ${thrust.filter((t) => t > 0).length} burning steps)`).toBeGreaterThan(3);
+  });
+});
+
+describe('0617 — the knock is half as far off a body as off a boss', () => {
+  /**
+   * How far the ball comes back off `target` the first time it lands on it, flown straight at it with the stick
+   * held there — in pixels, the player's units (0027).
+   */
+  function firstKnock(world: World, frame: GameFrame, stick: { along: number; across: number }, target: () => Entity, cues: CueKind[]): number {
+    let landed = false;
+    let farthest = 0;
+    for (let step = 0; step < 3 * STEPS_PER_SECOND; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ramHeat = 0;
+      const t = target();
+      const d = Math.hypot(t.along - world.ship.along, t.across - world.ship.across);
+      stick.along = (t.along - world.ship.along) / d;
+      stick.across = (t.across - world.ship.across) / d;
+      const before = cues.length;
+      frame.step();
+      const gap = gapTo(world, target(), RAM.reach);
+      if (!landed) {
+        landed = cues.slice(before).includes('ram');
+        continue;
+      }
+      if (gap < farthest) break;
+      farthest = gap;
+    }
+    expect(landed, 'the ball never landed').toBe(true);
+    return farthest * PX;
+  }
+
+  it('THE REPORTED ONE: off a body the ball comes back about half as far as off a boss, the stick held into both', () => {
+    const body = flying('ball');
+    body.world.ship.invulnFor = Number.MAX_SAFE_INTEGER;
+    const drifter = bodyAt(body.world, 1e6, body.world.ship.along + 20, body.world.ship.across);
+    const offBody = firstKnock(body.world, body.frame, body.stick, () => drifter, body.cues);
+
+    const level: LevelRow = { ...LEVELS.approach, waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS };
+    const boss = flying('ball', level);
+    for (let i = 0; i < 900 && (boss.world.bossPool.size === 0 || i < 700); i++) {
+      boss.world.ship.health = boss.world.shipRow.health;
+      if (boss.world.bossPool.size > 0) boss.world.bossPool.at(0).health = boss.world.bossFullHealth;
+      boss.frame.step();
+    }
+    expect(boss.world.bossPool.size, 'the boss never arrived').toBe(1);
+    const offBoss = firstKnock(boss.world, boss.frame, boss.stick, () => boss.world.bossPool.at(0), boss.cues);
+
+    expect(offBoss, `off the boss the ball came ${offBoss.toFixed(1)} px back`).toBeGreaterThan(12);
+    const share = offBody / offBoss;
+    expect(share, `off a body it came ${offBody.toFixed(1)} px back, ${(share * 100).toFixed(0)}% of the boss's ${offBoss.toFixed(1)}`).toBeGreaterThan(0.35);
+    expect(share, `off a body it came ${offBody.toFixed(1)} px back, ${(share * 100).toFixed(0)}% of the boss's ${offBoss.toFixed(1)}`).toBeLessThan(0.65);
+  });
+});
+
 describe('0615 — the War Dance is a pinball', () => {
   /** A dancing fighter heading for a body of `health` laid `ahead` units along its heading. */
   function dancingAt(health: number, ahead = 14) {
@@ -150,8 +251,12 @@ describe('0615 — the War Dance is a pinball', () => {
 
   it('off a body it cannot break: turned away from it, thrown off faster, and heard as a bumper', () => {
     const { world, frame, cues, body } = dancingAt(1000);
+    const heading = { along: world.danceAlong, across: world.danceAcross };
     let met = -1;
+    // 0617: the speed it came at, which is its own and no longer the row's — it may be burning into the body.
+    let came = 0;
     for (let step = 0; step < 30 && met < 0; step++) {
+      came = Math.hypot(world.ship.velAlong - world.scrollPerStep, world.ship.velAcross);
       frame.step();
       if (cues.includes('danceBumper')) met = step;
     }
@@ -162,8 +267,28 @@ describe('0615 — the War Dance is a pinball', () => {
     const vAlong = world.ship.velAlong - world.scrollPerStep;
     const vAcross = world.ship.velAcross;
     expect(vAlong * awayAlong + vAcross * awayAcross, 'the dance went on into the body').toBeGreaterThan(0);
-    expect(Math.hypot(vAlong, vAcross), 'the bumper threw it off no faster than it came').toBeGreaterThan(DANCE.speed * 1.2);
+    // 0617: and off the side it came at — at a burn's speed a dance that is not turned goes out of the far side.
+    expect(awayAlong * heading.along + awayAcross * heading.across, 'the dance went through the body').toBeLessThan(0);
+    expect(Math.hypot(vAlong, vAcross), `the bumper threw it off at ${Math.hypot(vAlong, vAcross).toFixed(2)}, no faster than the ${came.toFixed(2)} it came at`).toBeGreaterThan(came * 1.2);
     expect(gapTo(world, body, DANCE.reach) * PX, 'the dance is still inside the body').toBeGreaterThan(-2 * PX);
+  });
+
+  it('0617 — at its fastest it never goes through a body it cannot break, however its step falls on it', () => {
+    for (let offset = 0; offset < DANCE.thrown; offset += 0.5) {
+      const { world, frame, body } = dancingAt(1e6, DANCE.thrown * 2 + offset);
+      const speed = Math.hypot(world.danceAlong, world.danceAcross);
+      const heading = { along: world.danceAlong / speed, across: world.danceAcross / speed };
+      world.danceSpeed = DANCE.thrown;
+      world.danceAlong = heading.along * DANCE.thrown;
+      world.danceAcross = heading.across * DANCE.thrown;
+      for (let step = 0; step < 6; step++) {
+        // Flown straight at it at the bumper's speed, nothing bending it.
+        world.dancePullIn = 10;
+        frame.step();
+      }
+      const past = (world.ship.along - body.along) * heading.along + (world.ship.across - body.across) * heading.across;
+      expect(past, `${offset.toFixed(1)} units off the step, the dance went through the body`).toBeLessThan(0);
+    }
   });
 
   it('through a body it breaks, on the heading it had', () => {

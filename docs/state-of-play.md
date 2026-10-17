@@ -1169,7 +1169,9 @@ ONE MESSAGE.**
 Dance is a pinball off walls and bodies and bends at the boss, both of its bounces sound like a table, and the bar
 is twenty. [0616](decisions/0616-the-water-flows.md): the Water Cannon is a stream that bows, runs out and flies
 on. Owed, as both decisions' *Owed* say: a play of the knock, of a dance at a mid-boss, and of the spray; the ear
-on the two pinball sounds.
+on the two pinball sounds. [0617](decisions/0617-the-dance-burns.md), from the play of 0615: a body knocks half
+as far as a boss, the dance stops, swings and burns with flame, and the ram is a fifth heavier on a boss — owed a
+play, above all of a dance at a mid-boss, and a sound for the burn.
 
 ### ⚠️ THE CROSSING NO LONGER FREEZES, AND ITS CHART IS REDRAWN — OWED A PLAY ON A PHONE — 2026-10-12
 

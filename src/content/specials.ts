@@ -702,7 +702,21 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       heading: 0.62,
       pull: 0.12,
       kick: 1.5,
-      kickSteps: 20,
+      /*
+        ⚠️ **STOP, SWING, BURN — 0617.** *"It being all the same consistent speed still makes it feel weird."* Off a
+        bumper at up to `thrown`, it is stopped to `slow` in six steps, swings round at up to a third of a radian a
+        step there, and burns up to `top` in fifteen — a tenth of a second braking and a quarter burning, with a
+        retro-flame ahead of it while it brakes and a plume behind while it burns. A bumper with no ceiling threw it
+        at eight a step, and braking at half this it ended a third of the screen from the boss: on the boss's half
+        77% of a dance, against 84% here. Play numbers.
+      */
+      thrown: 6.8,
+      top: 5.4,
+      slow: 1.2,
+      brake: 1,
+      burn: 0.28,
+      turnAt: 0.6,
+      ease: 0.06,
       free: 3,
       flare: [SPRITE.danceFlare0, SPRITE.danceFlare1, SPRITE.danceFlare2, SPRITE.danceFlare3],
       flareHold: 6,
@@ -833,11 +847,25 @@ export interface Dance {
    */
   readonly pull: number;
   /**
-   * How much faster it leaves a body it did not break, as a multiple of `speed` — 0615: a pinball's bumper,
-   * which throws the ball off harder than it arrived. Settles back to `speed` over `kickSteps`.
+   * How much faster it leaves a body it did not break, as a multiple of the speed it met it at — 0615: a
+   * pinball's bumper, which throws the ball off harder than it arrived — past `top`, which is the burn's, up to
+   * `thrown` (0617).
    */
   readonly kick: number;
-  readonly kickSteps: number;
+  readonly thrown: number;
+  /**
+   * Its speed is its own and not `speed` always — 0617: *"if it's doing an abrupt turn back to the boss or
+   * monsters … it needs thrusters hard firing and a 'stop, speed, burn' type approach."* With what it dances at
+   * more than `turnAt` radians off its nose it brakes by `brake` a step, down to `slow`; with it inside that, it
+   * burns by `burn` a step, up to `top`; with nothing to dance at it settles to `speed` by `ease` of the gap a
+   * step. It turns `pull` a step at `speed` and tighter as it slows, so a hard turn is a stop, a swing and a burn.
+   */
+  readonly top: number;
+  readonly slow: number;
+  readonly brake: number;
+  readonly burn: number;
+  readonly turnAt: number;
+  readonly ease: number;
   /**
    * Steps it flies straight off a wall or a body before it bends again — 0615, or a target past a wall would
    * hold it against the wall, bouncing every step.
