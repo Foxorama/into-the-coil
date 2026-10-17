@@ -11,13 +11,23 @@
 import type { KeeperKind } from '../content/keepers.ts';
 import type { Palette } from '../content/palette.ts';
 import { mix, rgba, shade } from './bake.ts';
-import { paintCosmo } from './cosmo-art.ts';
+import { cosmoSkin, paintCosmo, paintCosmoHead } from './cosmo-art.ts';
 
 /** Each keeper's painter, filling a `size` square: the head in the top two thirds, the shoulders below. */
 export const KEEPER_FACES: Record<KeeperKind, (ctx: CanvasRenderingContext2D, palette: Palette, size: number) => void> = {
   cosmo: paintCosmo,
   unity: paintUnity,
   mmxxvi: paintMmxxvi,
+};
+
+/**
+ * Each keeper whole, as they stand about the dock — 0611: `extent` world units across the `size` square, the
+ * soles on the line `feet` under its middle, which is their row's `about.feet`.
+ */
+export const KEEPER_ABOUT: Record<KeeperKind, (ctx: CanvasRenderingContext2D, palette: Palette, size: number, extent: number, feet: number) => void> = {
+  cosmo: paintCosmoAbout,
+  unity: paintUnityAbout,
+  mmxxvi: paintMmxxviAbout,
 };
 
 /** Unity's inks, one set for the bust and the figure, so the two are one weasel in one set of clothes. */
@@ -485,13 +495,8 @@ function boot(ctx: CanvasRenderingContext2D, palette: Palette, x: number, y: num
  */
 function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: number): void {
   const u = size / 100;
-  const dark = palette.space;
+  const { dark, suit, apron } = mmxxviInks(palette);
   const line = Math.max(1, 2.2 * u);
-  const feather = mix(palette.hazard, palette.impact, 0.25);
-  const featherShade = shade(mix(feather, palette.bullet, 0.3), -0.12);
-  const bill = mix(palette.bullet, palette.fire, 0.4);
-  const suit = mix(palette.impact, palette.blade, 0.35);
-  const apron = shade(palette.player, -0.5);
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.strokeStyle = dark;
@@ -616,6 +621,35 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.rect(50 * u, 89 * u, 12 * u, 9 * u);
   ctx.fill();
   ctx.stroke();
+  paintMmxxviHelmet(ctx, palette, u, 1);
+}
+
+/** MMXXVI's inks, one set for the bust and the figure, so the two are one duck in one suit. */
+function mmxxviInks(palette: Palette) {
+  const feather = mix(palette.hazard, palette.impact, 0.25);
+  return {
+    dark: palette.space,
+    feather,
+    featherShade: shade(mix(feather, palette.bullet, 0.3), -0.12),
+    bill: mix(palette.bullet, palette.fire, 0.4),
+    suit: mix(palette.impact, palette.blade, 0.35),
+    apron: shade(palette.player, -0.5),
+  };
+}
+
+/**
+ * MMXXVI's helmet and all that is in it — the bubble, the ring it is seated in, the neck, the head, the beret,
+ * the eyes and the bill — in the bust's own 100 square at `u` a hundredth of it, so the plate's portrait and
+ * the figure about the dock are one duck (0611, on 0554's terms for Unity's head). `px` is one pixel in the
+ * frame it is drawn in, the floor under every line.
+ */
+function paintMmxxviHelmet(ctx: CanvasRenderingContext2D, palette: Palette, u: number, px: number): void {
+  const { dark, feather, featherShade, bill } = mmxxviInks(palette);
+  const line = Math.max(px, 2.2 * u);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
   // Inside the bubble, behind the duck: the glass's far side, a cool tint.
   ctx.fillStyle = rgba(palette.frost, 0.1);
   bubble(ctx, u);
@@ -675,7 +709,7 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.fill();
   ctx.stroke();
   ctx.strokeStyle = palette.player;
-  ctx.lineWidth = Math.max(1, 1.3 * u);
+  ctx.lineWidth = Math.max(px, 1.3 * u);
   ctx.beginPath();
   ctx.ellipse(50 * u, (RING + 0.6) * u, 17.8 * u, 3.3 * u, 0, Math.PI * 0.12, Math.PI * 0.88);
   ctx.stroke();
@@ -738,7 +772,7 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.ellipse(38 * u, 14.6 * u, 5 * u, 1.8 * u, -0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = dark;
-  ctx.lineWidth = Math.max(1, 2.4 * u);
+  ctx.lineWidth = Math.max(px, 2.4 * u);
   ctx.beginPath();
   ctx.moveTo(41 * u, 11.8 * u);
   ctx.lineTo(42 * u, 8.8 * u);
@@ -775,7 +809,7 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   */
   const rim = shade(bill, -0.5);
   ctx.strokeStyle = rim;
-  ctx.lineWidth = Math.max(1, 0.95 * u);
+  ctx.lineWidth = Math.max(px, 0.95 * u);
   ctx.fillStyle = shade(bill, -0.18);
   ctx.beginPath();
   ctx.moveTo(40 * u, 42.4 * u);
@@ -829,7 +863,7 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.lineWidth = line;
   // The helmet's near side: the bubble's rim, a long highlight and a glint, the light on its antenna.
   ctx.strokeStyle = palette.blade;
-  ctx.lineWidth = Math.max(1, 1.6 * u);
+  ctx.lineWidth = Math.max(px, 1.6 * u);
   ctx.beginPath();
   ctx.moveTo(60.6 * u, 7.9 * u);
   ctx.lineTo(63.6 * u, 3 * u);
@@ -843,16 +877,16 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.arc(63.2 * u, 2.3 * u, 0.8 * u, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = rgba(palette.frost, 0.85);
-  ctx.lineWidth = Math.max(1, 1.8 * u);
+  ctx.lineWidth = Math.max(px, 1.8 * u);
   bubble(ctx, u);
   ctx.stroke();
   ctx.strokeStyle = rgba(palette.impact, 0.7);
-  ctx.lineWidth = Math.max(1, 2.6 * u);
+  ctx.lineWidth = Math.max(px, 2.6 * u);
   ctx.beginPath();
   ctx.arc(50 * u, BUBBLE.y * u, 26.5 * u, Math.PI * 1.08, Math.PI * 1.42);
   ctx.stroke();
   ctx.strokeStyle = rgba(palette.frost, 0.35);
-  ctx.lineWidth = Math.max(1, 1.4 * u);
+  ctx.lineWidth = Math.max(px, 1.4 * u);
   ctx.beginPath();
   ctx.arc(50 * u, BUBBLE.y * u, 27.5 * u, Math.PI * 0.06, Math.PI * 0.3);
   ctx.stroke();
@@ -896,4 +930,415 @@ function bubble(ctx: CanvasRenderingContext2D, u: number): void {
 function head(ctx: CanvasRenderingContext2D, u: number, dx: number, dy: number): void {
   ctx.beginPath();
   ctx.ellipse((48.5 + dx) * u, (32 + dy) * u, 19 * u, 17.5 * u, 0, 0, Math.PI * 2);
+}
+
+/*
+  ── WHOLE, ABOUT THE DOCK — 0611 ────────────────────────────────────────────────────────────────────
+
+  *"the moving characters can appear on top of each other - and apparently kinda floating in mid air"*:
+  0569 stood the two busts at the ship, so a head and shoulders hung over its roof with nothing under them.
+  A keeper away from their counter is drawn whole, their soles on the floor of where they are. Each figure
+  wears its bust's own head (`paintUnityHead`, `paintCosmoHead`, `paintMmxxviHelmet`) on a small body, as
+  0554's Unity does on the bench, so the plate's portrait and the figure on the deck are one character.
+  Each is drawn in world units with the soles at the origin, then stood on `feet`.
+*/
+
+/** Into the figure's frame: world units, the origin on the soles, `feet` under the square's middle. */
+function standOn(ctx: CanvasRenderingContext2D, size: number, extent: number, feet: number): void {
+  ctx.save();
+  ctx.translate(size / 2, size / 2);
+  ctx.scale(size / extent, size / extent);
+  ctx.translate(0, feet);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+}
+
+/** A shadow on the floor under a figure's feet, `rx` either side, so they stand on it rather than over it. */
+function footShadow(ctx: CanvasRenderingContext2D, dark: string, rx: number): void {
+  ctx.fillStyle = rgba(dark, 0.4);
+  ctx.beginPath();
+  ctx.ellipse(0, -0.05, rx, 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** The head's 100 square on Cosmo whole, in world units — the bust's big head on a small body. */
+const COSMO_HEAD = 8.2;
+/** Where Cosmo's shoulders are over the soles: the bust's collar line, 70 down its square, sits here. */
+const COSMO_SHOULDERS = -8.4;
+
+/**
+ * Cosmo whole — the bust's own head on the bust's own clothes: a white shirt, the violet waistcoat over it
+ * with two gold buttons and the gold bow tie at the collar, trousers a shade under the waistcoat, black
+ * shoes. One arm at the side, the other up in a shopkeeper's wave, a three-fingered green hand open.
+ */
+function paintCosmoAbout(ctx: CanvasRenderingContext2D, palette: Palette, size: number, extent: number, feet: number): void {
+  const skin = cosmoSkin(palette);
+  const dark = palette.space;
+  const vest = shade(palette.ally, -0.15);
+  const trousers = shade(palette.ally, -0.55);
+  const shirt = palette.impact;
+  const px = extent / size;
+  const line = Math.max(px, 0.17);
+  const s = COSMO_SHOULDERS;
+  standOn(ctx, size, extent, feet);
+  footShadow(ctx, dark, 2);
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  // The legs, a little apart, and a shoe at the foot of each, its sole on the floor.
+  for (const side of [-1, 1] as const) {
+    limb(ctx, dark, trousers, 1.0, line, [
+      [side * 0.6, -4.5],
+      [side * 0.68, -0.6],
+    ]);
+  }
+  ctx.fillStyle = mix(dark, palette.ally, 0.15);
+  for (const side of [-1, 1] as const) {
+    ctx.beginPath();
+    ctx.ellipse(side * 0.9, -0.34 - line / 2, 0.78, 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  // The arm at the side, under the body: the sleeve, and a green hand at its end.
+  limb(ctx, dark, shirt, 0.7, line, [
+    [-1.6, s + 0.5],
+    [-2.0, s + 2.2],
+    [-1.95, -4.6],
+  ]);
+  greenHand(ctx, skin, dark, -1.95, -4.4, line);
+  // The shirt, then the waistcoat over it, open in a V down to its points.
+  ctx.fillStyle = shirt;
+  ctx.beginPath();
+  ctx.moveTo(-1.9, s + 0.5);
+  ctx.quadraticCurveTo(-1.9, s, -1.2, s);
+  ctx.lineTo(1.2, s);
+  ctx.quadraticCurveTo(1.9, s, 1.9, s + 0.5);
+  ctx.lineTo(1.55, -4.3);
+  ctx.lineTo(-1.55, -4.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = vest;
+  for (const side of [-1, 1] as const) {
+    ctx.beginPath();
+    ctx.moveTo(side * 0.35, s + 0.1);
+    ctx.lineTo(side * 1.2, s);
+    ctx.quadraticCurveTo(side * 1.9, s, side * 1.9, s + 0.5);
+    ctx.lineTo(side * 1.6, -4.4);
+    ctx.lineTo(side * 0.15, -3.9);
+    ctx.lineTo(side * 0.15, -5.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.fillStyle = palette.hazard;
+  for (const y of [-5.4, -4.7]) {
+    ctx.beginPath();
+    ctx.arc(-0.42, y, 0.13, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // The waving arm, over the body: up from the shoulder, the hand open beside the head.
+  limb(ctx, dark, shirt, 0.7, line, [
+    [1.6, s + 0.5],
+    [2.75, s + 1.2],
+    [3.15, s - 1.3],
+  ]);
+  greenHand(ctx, skin, dark, 3.2, s - 1.65, line);
+  // The head, the bust's own, its collar line on the shoulders.
+  const u = COSMO_HEAD / 100;
+  ctx.save();
+  ctx.translate(-50 * u, s - 70 * u);
+  paintCosmoHead(ctx, palette, u, px);
+  ctx.restore();
+  // The bow tie at the collar, over the neck.
+  ctx.fillStyle = palette.hazard;
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  for (const side of [-1, 1] as const) {
+    ctx.beginPath();
+    ctx.moveTo(0, s + 0.25);
+    ctx.lineTo(side * 0.75, s - 0.15);
+    ctx.lineTo(side * 0.75, s + 0.65);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** A three-fingered green hand: a round palm and three short fingers up. */
+function greenHand(ctx: CanvasRenderingContext2D, skin: string, dark: string, x: number, y: number, line: number): void {
+  ctx.fillStyle = skin;
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  for (const [dx, dy] of [
+    [-0.28, -0.38],
+    [0, -0.48],
+    [0.28, -0.38],
+  ] as const) {
+    ctx.beginPath();
+    ctx.ellipse(x + dx, y + dy, 0.13, 0.24, dx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, 0.38, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
+/** The helmet's 100 square on MMXXVI whole, in world units, and where its ring sits over the soles. */
+const DUCK_HELMET = 8.4;
+const DUCK_SHOULDERS = -8;
+
+/**
+ * MMXXVI whole — the bust's own helmet, the duck in it, seated on a white suit: the painter's apron over it
+ * splashed in the shop's inks, gloves and boots a shade of the steel. One arm hangs; the other holds a brush
+ * up, wet with the enemy's red, as a painter sizes up the work.
+ */
+function paintMmxxviAbout(ctx: CanvasRenderingContext2D, palette: Palette, size: number, extent: number, feet: number): void {
+  const { dark, suit, apron } = mmxxviInks(palette);
+  const px = extent / size;
+  const line = Math.max(px, 0.17);
+  const s = DUCK_SHOULDERS;
+  const steel = shade(palette.blade, -0.25);
+  standOn(ctx, size, extent, feet);
+  footShadow(ctx, dark, 2);
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  // The legs, and a boot under each, its sole on the floor.
+  for (const side of [-1, 1] as const) {
+    limb(ctx, dark, suit, 1.05, line, [
+      [side * 0.62, -4.2],
+      [side * 0.66, -0.7],
+    ]);
+  }
+  ctx.fillStyle = steel;
+  for (const side of [-1, 1] as const) {
+    ctx.beginPath();
+    ctx.moveTo(side * 0.1, -line / 2);
+    ctx.lineTo(side * 0.1, -0.95);
+    ctx.lineTo(side * 1.15, -0.95);
+    ctx.quadraticCurveTo(side * 1.65, -0.6, side * 1.6, -line / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  // The hanging arm, under the body, and its glove.
+  limb(ctx, dark, suit, 0.75, line, [
+    [-1.65, s + 0.6],
+    [-2.05, s + 2.3],
+    [-1.95, -4.4],
+  ]);
+  ctx.fillStyle = steel;
+  ctx.beginPath();
+  ctx.arc(-1.95, -4.2, 0.42, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // The suit's body, round at the shoulders.
+  ctx.fillStyle = suit;
+  ctx.beginPath();
+  ctx.moveTo(-1.6, -3.9);
+  ctx.lineTo(-1.95, s + 0.9);
+  ctx.quadraticCurveTo(-1.9, s, -1, s);
+  ctx.lineTo(1, s);
+  ctx.quadraticCurveTo(1.9, s, 1.95, s + 0.9);
+  ctx.lineTo(1.6, -3.9);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // The apron over it, its straps up to the collar, splashed.
+  ctx.save();
+  ctx.fillStyle = apron;
+  ctx.beginPath();
+  ctx.moveTo(-1.05, s + 1.5);
+  ctx.lineTo(1.05, s + 1.5);
+  ctx.lineTo(1.35, -3.3);
+  ctx.lineTo(-1.35, -3.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.clip();
+  for (const [x, y, r, ink] of [
+    [-0.7, -5.2, 0.28, palette.enemy],
+    [0.6, -4.3, 0.24, palette.acid],
+    [-0.2, -3.8, 0.2, palette.hazard],
+    [0.45, -6.0, 0.18, palette.void],
+  ] as const) {
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(x + r * 1.1, y + r * 0.8, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.strokeStyle = apron;
+  ctx.lineWidth = 0.3;
+  ctx.beginPath();
+  ctx.moveTo(-0.95, s + 1.55);
+  ctx.lineTo(-1.2, s + 0.15);
+  ctx.moveTo(0.95, s + 1.55);
+  ctx.lineTo(1.2, s + 0.15);
+  ctx.stroke();
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  // The brush arm, over the body: the elbow out, the brush held up beside the helmet, wet with red.
+  limb(ctx, dark, suit, 0.75, line, [
+    [1.65, s + 0.6],
+    [2.6, s + 1.6],
+    [2.75, s - 0.1],
+  ]);
+  for (const [ink, w] of [
+    [dark, 0.26 + line * 2],
+    [shade(palette.bullet, -0.35), 0.26],
+  ] as const) {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = w;
+    ctx.beginPath();
+    ctx.moveTo(2.75, s + 0.4);
+    ctx.lineTo(2.95, s - 2.2);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  ctx.fillStyle = palette.blade;
+  ctx.beginPath();
+  ctx.rect(2.72, s - 2.6, 0.48, 0.42);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = palette.enemy;
+  ctx.beginPath();
+  ctx.moveTo(2.72, s - 2.6);
+  ctx.quadraticCurveTo(2.75, s - 3.3, 2.98, s - 3.5);
+  ctx.quadraticCurveTo(3.21, s - 3.3, 3.2, s - 2.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = steel;
+  ctx.beginPath();
+  ctx.arc(2.78, s - 0.15, 0.42, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // The helmet, the bust's own, its ring seated on the suit's shoulders.
+  const u = DUCK_HELMET / 100;
+  ctx.save();
+  ctx.translate(-50 * u, s - (RING + 1) * u);
+  paintMmxxviHelmet(ctx, palette, u, px);
+  ctx.restore();
+  ctx.restore();
+}
+
+/**
+ * Unity whole and upright — 0611: the bench's figure (`paintUnityStanding`) off the bench, with nothing to
+ * lean on: stood square, a paw on the hip, and the giant wrench carried over the near shoulder, its jaw up
+ * behind the hat. The same head, shirt, overalls, boots and tail.
+ */
+function paintUnityAbout(ctx: CanvasRenderingContext2D, palette: Palette, size: number, extent: number, feet: number): void {
+  const { dark, fur, navy, hiVis } = unityInks(palette);
+  const px = extent / size;
+  const line = Math.max(px, 0.17);
+  standOn(ctx, size, extent, feet);
+  footShadow(ctx, dark, 1.5);
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  // The tail, short and brown, out behind the hip.
+  limb(ctx, dark, fur, 0.5, line, [
+    [-0.6, -2.9],
+    [-1.4, -2.6],
+    [-1.8, -1.9],
+  ]);
+  // The legs, stood square, a boot under each with its sole on the floor.
+  for (const x of [-0.42, 0.42]) {
+    limb(ctx, dark, navy, 0.78, line, [
+      [x, -3],
+      [x, -0.45],
+    ]);
+  }
+  boot(ctx, palette, -0.55, -0.28 - line / 2, 0, line);
+  boot(ctx, palette, 0.6, -0.28 - line / 2, 0, line);
+  // The far arm under the body, its paw on the hip.
+  limb(ctx, dark, hiVis, 0.55, line, [
+    [-0.95, -5.45],
+    [-1.55, -4.4],
+    [-1.0, -3.7],
+  ]);
+  // The shirt's body, then the overalls over it — the bench figure's own.
+  ctx.fillStyle = hiVis;
+  ctx.beginPath();
+  ctx.moveTo(-1.05, -3.3);
+  ctx.lineTo(-1.1, -5.2);
+  ctx.quadraticCurveTo(-1.05, -5.8, -0.4, -5.8);
+  ctx.lineTo(0.4, -5.8);
+  ctx.quadraticCurveTo(1.05, -5.8, 1.1, -5.2);
+  ctx.lineTo(1.05, -3.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = navy;
+  ctx.beginPath();
+  ctx.moveTo(-0.62, -5.1);
+  ctx.lineTo(0.62, -5.1);
+  ctx.lineTo(0.8, -3.7);
+  ctx.lineTo(0.95, -2.6);
+  ctx.lineTo(-0.95, -2.6);
+  ctx.lineTo(-0.8, -3.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = navy;
+  ctx.lineWidth = 0.24;
+  ctx.beginPath();
+  ctx.moveTo(-0.55, -5);
+  ctx.lineTo(-0.75, -5.75);
+  ctx.moveTo(0.55, -5);
+  ctx.lineTo(0.75, -5.75);
+  ctx.stroke();
+  ctx.fillStyle = palette.blade;
+  for (const x of [-0.45, 0.45]) {
+    ctx.beginPath();
+    ctx.arc(x, -4.92, 0.11, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = fur;
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  ctx.beginPath();
+  ctx.arc(-1.0, -3.7, 0.24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // The wrench over the near shoulder: its ring end down in front, its jaw up behind the head.
+  const grip = { x: 1.9, y: -3.7 };
+  const jaw = { x: -2.2, y: -10 };
+  const length = Math.hypot(jaw.x - grip.x, jaw.y - grip.y);
+  ctx.save();
+  ctx.translate(grip.x, grip.y);
+  ctx.rotate(Math.atan2(jaw.x - grip.x, grip.y - jaw.y));
+  paintWrench(ctx, palette, length, 0.6, 1, 0.36, line);
+  ctx.restore();
+  // The near arm over it, its paw round the shaft.
+  const along = (1.05 - grip.x) / (jaw.x - grip.x);
+  const paw = { x: 1.05, y: grip.y + (jaw.y - grip.y) * along };
+  limb(ctx, dark, hiVis, 0.55, line, [
+    [0.95, -5.45],
+    [1.6, -4.4],
+    [paw.x, paw.y],
+  ]);
+  ctx.strokeStyle = palette.blade;
+  ctx.lineWidth = 0.14;
+  ctx.beginPath();
+  ctx.moveTo(0.8, -4.8);
+  ctx.lineTo(1.3, -4.8);
+  ctx.stroke();
+  ctx.fillStyle = fur;
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = line;
+  ctx.beginPath();
+  ctx.arc(paw.x, paw.y, 0.26, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // The head, the bust's own, its neck into the collar — over the wrench's shaft, which passes behind it.
+  const u = HEAD / 100;
+  ctx.translate(0, -5.75);
+  ctx.translate(-50 * u, -76 * u);
+  paintUnityHead(ctx, palette, u, px);
+  ctx.restore();
 }

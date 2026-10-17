@@ -33,7 +33,7 @@ import {
 import { SPRITE } from '../src/content/sprites.ts';
 import { CADDIE_DISC, SHIPS, SHIP_KINDS, fitted, type ShipKind } from '../src/content/ships.ts';
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
-import { KEEPER_KINDS } from '../src/content/keepers.ts';
+import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../src/content/keepers.ts';
 import { SKY } from '../src/app/mount.ts';
 import { NO_HOP, paintPort, paintStand } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
@@ -164,6 +164,14 @@ describe('the picture', () => {
     for (let t = 0; t < 60; t++) {
       paintStand(stand, viewOf(NARROW.width, NARROW.height), t, SKY, SHIPS.thunderbolt, null);
       for (const b of stand.blits) seen.add(b.sprite);
+    }
+    // 0611: and every keeper whole, about the dock — at every one of their spots, the others at their counters.
+    for (const keeper of KEEPER_KINDS) {
+      for (let i = 0; i < KEEPERS[keeper].spots.length; i++) {
+        const spots = Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, kind === keeper ? i : 0])) as Record<KeeperKind, number>;
+        paintStand(stand, viewOf(NARROW.width, NARROW.height), 0, SKY, SHIPS.firebird, null, NO_HOP, spots);
+        for (const b of stand.blits) seen.add(b.sprite);
+      }
     }
     // 0584: and the shell round the ship, while one is being chosen, in each of its shimmer frames.
     for (let t = 0; t < 60; t++) {
