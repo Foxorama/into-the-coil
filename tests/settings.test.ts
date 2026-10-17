@@ -27,18 +27,18 @@ describe('the settings screen is its tables', () => {
     here first.
   */
   /*
-    ⚠️ **AND THE RUMBLE BESIDE THE SOUND — 0613**, on every device: the fifth band this guard was red for, and
-    the layout it asked about answered there — on a touch screen three columns of two, two and one
-    (`src/app/chrome.ts`), held whole by `tests/layout.browser.test.ts`.
+    ⚠️ **AND THE RUMBLE LAST — 0613**, on every device: the fifth band this guard was red for, and the layout it
+    asked about answered there — on a touch screen the four in two columns of two and the rumble a strip under
+    both (`src/app/chrome.ts`), held whole by `tests/layout.browser.test.ts`.
   */
-  it('offers the sound, the rumble, the crossing, the hand and the steering, and the look no longer', () => {
+  it('offers the sound, the crossing, the hand, the steering and the rumble, and the look no longer', () => {
     const offered = SCREENS.settings.choices.map((c) => [c.name, c.on]);
     expect(offered).toEqual([
       ['sound', 'all'],
-      ['rumble', 'all'],
       ['travel', 'all'],
       ['hand', 'all'],
       ['steer', 'touch'],
+      ['rumble', 'all'],
     ]);
   });
 

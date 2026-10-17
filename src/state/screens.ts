@@ -1051,19 +1051,6 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         press: 'steps',
         ends: 'round',
       },
-      /*
-        ⚠️ **THE HANDS — 0613, ON EVERY DEVICE**: whether the ball's landings are felt on a pad or a phone. A
-        comfort knob over the hands and not over the sim (0024): `src/content/rumble.ts` holds what it changes.
-      */
-      {
-        name: 'rumble',
-        label: 'Rumble',
-        options: RUMBLE_KINDS.map((kind) => ({ label: RUMBLES[kind].title, hint: RUMBLES[kind].hint })),
-        faces: 'words',
-        on: 'all',
-        press: 'steps',
-        ends: 'round',
-      },
       {
         name: 'travel',
         label: 'Travel',
@@ -1101,6 +1088,22 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         press: 'steps',
         // 0607: a ladder, gentle to quick, so it stops as the tier does — quick coming round to gentle is a jump nobody pressed for.
         ends: 'stop',
+      },
+      /*
+        ⚠️ **THE HANDS — 0613, ON EVERY DEVICE**: whether the ball's landings are felt on a pad or a phone. A
+        comfort knob over the hands and not over the sim (0024): `src/content/rumble.ts` holds what it changes.
+        LAST, so on a touch screen it is the third column alone, as narrow as its two words
+        (`src/app/chrome.ts`): put beside the sound, it took a third of the width from bands whose words
+        need half, and CI's fonts drew them past their tracks on the smallest phone.
+      */
+      {
+        name: 'rumble',
+        label: 'Rumble',
+        options: RUMBLE_KINDS.map((kind) => ({ label: RUMBLES[kind].title, hint: RUMBLES[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+        ends: 'round',
       },
     ],
     steps: false,

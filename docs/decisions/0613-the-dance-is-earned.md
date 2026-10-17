@@ -182,8 +182,12 @@ in the blast pool with no damage of its own, so the blast pairings pass over it.
 - `tests/run.test.ts`: *a run begins … on `OPENING_CHARGES` of that ship's own gun special* held every row to the
   pair; this decision replaces the pair on the ball's row on purpose, so the guard reads each row's own (0282).
 - `tests/settings.test.ts`: *offers the sound, the crossing, the hand and the steering* said in its own comment
-  that a fifth band was a decision about the touch layout and would be red first. This is that band: on a touch
-  screen Settings is three columns of two, two and one, rows still two high (`src/app/chrome.ts`).
+  that a fifth band was a decision about the touch layout and would be red first. This is that band, and it is
+  last: on a touch screen the four keep their two columns of two, and the rumble is a strip under both — on a
+  phone one line, its name beside On and Off, with no hint (`src/app/chrome.ts`). A third column was tried
+  first and CI's fonts drew the crossing, the hand and the steering past their tracks at 480x320; a third row
+  of whole bands scrolled 27 px at 667x375. Both were measured under `font-family: Verdana`, which fails
+  neither on `main`'s four bands and reproduced CI's fault here.
 - `tests/settings-kept.test.ts`, `tests/accents.test.ts`: the rumble in `moved()`, and the wave's two frames
   hull-less, as the flare's are.
 

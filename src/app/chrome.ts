@@ -2574,20 +2574,23 @@ ${each('-band[hidden]')} { display: none; }
   content on a 390 px phone and 39 px too many on a touch laptop; the width every landscape screen has
   to spare is the room. Filled down the columns, two to a column since 0590 took the look away and made
   the hand a band for every device — the sound and the crossing, then the hand and the steering — so the
-  two columns are the same height and the walk goes down one and on to the next. Since 0613 the rumble is a
-  fifth, so it is three columns, two, two and one, the rows still two high because height is what a landscape
-  phone has none of. The third column, the steering alone, is half again as wide for its three words and its
-  step arrows, and on a phone, where the arrows go, twice as wide.
+  two columns are the same height and the walk goes down one and on to the next.
+
+  ⚠️ **AND THE RUMBLE IS A STRIP ACROSS THE FOOT — 0613**, the fifth band, last in the walk. A third column
+  took a third of the width from bands whose words need half, and CI's fonts drew the crossing, the hand and
+  the steering past their tracks on the smallest phone; a third row of whole bands scrolled 27 px on a 667x375.
+  Two words, On and Off, need neither a column nor a band's height, so on a phone it is one line: its name
+  beside its segments, under both columns.
 */
 .itc-settings-touch .itc-settings-settings-box {
   display: grid;
   grid-template-rows: repeat(2, auto);
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr);
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   column-gap: min(1rem, 2cqw);
   width: min(100%, 64em);
 }
+.itc-settings-touch .itc-settings-band:has([${SETTING_ATTR}='rumble']) { grid-row: 3; grid-column: 1 / -1; }
 /* 0566: and a phone held upright, which only the hangar's tabs are drawn on (the gate has the rest). */
 @container (max-height: 460px) or ((orientation: portrait) and (max-width: 700px)) {
   /*
@@ -2604,7 +2607,6 @@ ${each('-band[hidden]')} { display: none; }
     And without touch, two columns on a phone too — 0613: the rumble made four bands, and four in a column
     were eighteen pixels past the smallest landscape phone. Two by two, filled down the columns.
   */
-  .itc-settings-touch .itc-settings-settings-box { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr); }
   .itc-settings-settings-box:not(.itc-settings-touch *) {
     display: grid;
     grid-template-rows: repeat(2, auto);
@@ -2637,6 +2639,9 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-settings-touch .itc-settings-band { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'label' 'track' 'hint'; gap: 0.1em; padding: 0.2em 0.25em; }
   .itc-settings-touch .itc-settings-band-label { text-align: center; }
+  /* 0613: the rumble's strip, one line — its name beside On and Off, and no hint, which the two words say. */
+  .itc-settings-touch .itc-settings-band:has([${SETTING_ATTR}='rumble']) { grid-template-columns: max-content minmax(0, 1fr); grid-template-areas: 'label track'; align-items: center; column-gap: 0.6em; }
+  .itc-settings-touch .itc-settings-band:has([${SETTING_ATTR}='rumble']) .itc-settings-band-hint { display: none; }
   .itc-settings-touch .itc-settings-option { font-size: 0.8em; padding: 0.3em 0.25em; }
   ${each('-band')} {
     grid-template-columns: max-content auto minmax(0, 1fr) auto;
