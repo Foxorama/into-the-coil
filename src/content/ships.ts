@@ -1065,7 +1065,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
  * roster to satisfy a shape. Moving it to the row later changes no caller.
  *
  * ⚠️ **THE CEILING, SINCE 0355, AND NOT THE CAP.** What a pilot may carry is the tier's —
- * `shellCap` on `src/content/difficulty.ts`'s row, three on the gentle two and none on Burn — and this
+ * `shellCap` on `src/content/difficulty.ts`'s row, three on every tier since 0614 — and this
  * is the most any tier may ask for: the size of the shell pool in `src/app/mount.ts` and the most
  * pips the readout grows. `docs/decisions/0355-a-tier-opens-on-a-shell.md`.
  */

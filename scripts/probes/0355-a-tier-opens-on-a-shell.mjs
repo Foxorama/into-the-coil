@@ -58,23 +58,10 @@ export const PROBES = [
       replace: '  const full = w.shipRow.health + 3;',
     },
   },
-  {
-    decision: '0355',
-    suite: 'tests/hud.browser.test.ts',
-    // The readout sized by the ceiling: three empty sockets on Burn, for a shell it may never carry.
-    broke: 'the readout sized by MAX_SHIELDS rather than by the tier',
-    guard: 'draws one pip per shield the ship can carry on its tier',
-    edit: {
-      path: 'src/app/mount.ts',
-      // ⚠️ Re-anchored by 0373, which counts the stack where `chargesOf` totalled the entries.
-      // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
-      // ⚠️ And by 0539: the stacks are read off the arsenal given.
-      // ⚠️ And by 0609: the tier's cap through `shellCapFor`, which is the ship's own where its row says one.
-      // ⚠️ And by 0613: the run's stacks with an earned special's bar (`runStacks`).
-      find: 'shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), runStacks()',
-      replace: 'shieldsOf(world.shipRow, world.ship.health), MAX_SHIELDS, runStacks()',
-    },
-  },
+  // ⚠️ RETIRED BY 0614: the readout sized by `MAX_SHIELDS` rather than by the tier. Every tier carries
+  // three since then, and so does the one ship that says its own, so the break changes nothing a
+  // browser can launch and stayed green. The guard stays (`draws one pip per shield the ship can carry
+  // on its tier`); a tier or ship with another cap makes this probe worth writing again.
   {
     decision: '0355',
     suite: 'tests/tier-shell.test.ts',
