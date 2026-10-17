@@ -94,6 +94,11 @@ export const PORT_KINDS = [
   'blueTopBurn',
   'blueTopFlare',
   'blueTopSurge',
+  /*
+    0612: whoever is aboard a ship that shows its pilot, alone, in the ship's box — laid over the ship once
+    they have boarded. The pictures above are the ship with nobody aboard, as the pad shows it.
+  */
+  'blueRider',
   'viper',
   'viperIdle',
   'viperBurn',
@@ -196,6 +201,8 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   blueTopBurn: HANGAR_SHIP * 2,
   blueTopFlare: HANGAR_SHIP * 2,
   blueTopSurge: HANGAR_SHIP * 3,
+  // 0612: in the ship's own box, so laid where the ship is it sits where the fight draws it.
+  blueRider: HANGAR_SHIP,
   // A tenth smaller since 0461, beside a pilot's ship a fifth smaller (`HANGAR_SCALE`); her flames with her.
   viper: VIPER_BOX,
   viperIdle: VIPER_BOX * 2,

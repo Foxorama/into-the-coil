@@ -126,8 +126,10 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
   // Each ship at its own size in the shot, against the shared scale — 0450; its cockpit and its wingtips with it.
   const inside = ship.intro.hangar;
   const outside = ship.intro.outside;
-  if (t < BEATS.cut) paintHangar(surface, view, t, sky, ship.cockpit.along * HANGAR_SCALE * inside, ship.cockpit.across * HANGAR_SCALE * inside, inside);
-  else paintOutside(surface, view, t - BEATS.outside, sky, ship.wingtip * HANGAR_SCALE * outside, outside);
+  // 0612: a ship that shows its pilot shows them once they are aboard, and only then.
+  const seated = ship.seat !== null;
+  if (t < BEATS.cut) paintHangar(surface, view, t, sky, ship.cockpit.along * HANGAR_SCALE * inside, ship.cockpit.across * HANGAR_SCALE * inside, inside, seated);
+  else paintOutside(surface, view, t - BEATS.outside, sky, ship.wingtip * HANGAR_SCALE * outside, outside, seated);
   // The fades: up out of the backdrop at the start, down and up again across the cut, and down at the end.
   let veil = 0;
   if (t < BEATS.fadeIn) veil = 1 - t / BEATS.fadeIn;
@@ -624,7 +626,10 @@ function hopAt(since: number): number {
   return HOP_HEIGHT * Math.abs(Math.sin(u * Math.PI * 1.5)) * (1 - u);
 }
 
-function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number, size: number): void {
+/** How far through the leap the pilot starts to fade into the ship — and, since 0612, onto the seat of one that shows them. */
+const LANDS = 0.6;
+
+function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number, size: number, seated: boolean): void {
   paintRoom(surface, view, t, sky);
   // The alarm, turning once she has gone: a beacon sweeps past the viewer once a turn.
   if (t >= BEATS.alarm) {
@@ -662,7 +667,12 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   const blueBob = t < BEATS.blueGo ? blueBobAt(t) : 0;
   const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo, BLUE_LAUNCH_ACCEL);
   const blueAcross = STAGE.blueRide - LIFT * ease(t, BEATS.blueLift, BEATS.blueGo) + blueBob;
-  paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo, size);
+  /*
+    0612: a ship that shows its pilot is empty until they board, and they come up on it as the leaping
+    figure fades into it — the same last two fifths of the leap, so one becomes the other.
+  */
+  const aboard = seated ? ease(t, BEATS.pilotLeap + LANDS * (BEATS.pilotIn - BEATS.pilotLeap), BEATS.pilotIn) : 0;
+  paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo, size, aboard);
   /*
     ⚠️ **VENOMA RAN HERE — 0416 — OUT OF THE DOOR AND UP INTO THE VIPER, UNTIL 0444.** *"it doesn't add
     anything and makes the ending worse when you see the villain running with no captive."* She is
@@ -687,7 +697,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
       const toAcross = blueAcross + cockpitAcross;
       const along = LEAP_FROM + (toAlong - LEAP_FROM) * u;
       const across = fromAcross + (toAcross - fromAcross) * u - 14 * u * (1 - u);
-      put(surface, view, PORT_SPRITE.pilotLeap, along, across, 1 - ease(u, 0.6, 1), 0, 1 - 0.45 * u);
+      put(surface, view, PORT_SPRITE.pilotLeap, along, across, 1 - ease(u, LANDS, 1), 0, 1 - 0.45 * u);
     }
   }
   // The canopy catching the light as the pilot drops in.
@@ -713,14 +723,17 @@ function paintViper(surface: Surface, view: View, t: number, along: number, acro
 
 /**
  * The pilot's ship as the hangar sees it — side-on, for a ship whose fight picture is from above (0444)
- * — its engine, the surge its launch is heard in, and the flash it leaves the pad in.
+ * — its engine, the surge its launch is heard in, and the flash it leaves the pad in. 0612: and whoever
+ * rides it, laid over it at `rider`'s share of the way aboard — nought on the pad, and in the intro until
+ * the pilot's leap lands.
  */
-function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number, size: number): void {
+function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number, size: number, rider = 0): void {
   const flame = flameOf(t, lit, go, PORT_SPRITE.blueIdle, PORT_SPRITE.blueBurn, PORT_SPRITE.blueFlare);
   if (flame >= 0) put(surface, view, flame, along, across, 1, 0, size);
   const surge = surgeAt(t, go);
   if (surge > 0) put(surface, view, PORT_SPRITE.blueSurge, along, across, surge, 0, size);
   put(surface, view, PORT_SPRITE.blueSide, along, across, 1, 0, size);
+  if (rider > 0) put(surface, view, PORT_SPRITE.blueRider, along, across, rider, 0, size);
   if (t >= go && t < go + FLASH_STEPS) {
     put(surface, view, PORT_SPRITE.flash, along - 12, across, 0.8 * (1 - (t - go) / FLASH_STEPS), 0, FLASH_GROW);
   }
@@ -824,7 +837,7 @@ function paintTrail(surface: Surface, view: View, s: number, runs: number, blue:
   }
 }
 
-function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip: number, size: number): void {
+function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip: number, size: number, seated: boolean): void {
   if (s < 0) return;
   /*
     ⚠️ **THE FIRST LEVEL'S SKY, AT THE FIRST LEVEL'S SPEED, AND AT ITS OWN SIZE — 0416.** The camera
@@ -880,4 +893,10 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip
   }
   putOut(surface, view, PORT_SPRITE.blueSide + frame, blueAlong, blueAcross, 1, blueTurn, size);
   if (tilt > frame) putOut(surface, view, PORT_SPRITE.blueSide + frame + 1, blueAlong, blueAcross, tilt - frame, blueTurn, size);
+  /*
+    0612: and its pilot aboard it, on a ship that shows them. Every such ship is drawn the same in every frame
+    of the tilt — the fight's drawing, which is side-on or round already (`HANGAR_ART` is null for both) —
+    so the one rider sits on every frame.
+  */
+  if (seated) putOut(surface, view, PORT_SPRITE.blueRider, blueAlong, blueAcross, 1, blueTurn, size);
 }

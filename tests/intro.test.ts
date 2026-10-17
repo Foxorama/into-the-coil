@@ -150,6 +150,8 @@ describe('the picture', () => {
   it('draws every piece of the port it bakes, at some moment of it', () => {
     const seen = new Set<number>();
     for (let t = 0; t < INTRO_STEPS; t += 1) for (const b of drawAt(t, NARROW).blits) seen.add(b.sprite);
+    // 0612: and every ship's intro, so the rider a ship that shows its pilot carries once they board is seen.
+    for (const ship of SHIP_KINDS) for (let t = BEATS.pilotIn; t < INTRO_STEPS; t += 30) for (const b of drawAt(t, NARROW, ship).blits) seen.add(b.sprite);
     /*
       ⚠️ **OR ON THE STAND, SINCE 0540**, which is baked from the same pieces: the hangar's tabs stand in the
       room, and a car on a rim that turns has its spinners drawn there and in no frame of the intro.

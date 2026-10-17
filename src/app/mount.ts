@@ -109,7 +109,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shelled, openingHealthFor, ownFit, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shelled, openingHealthFor, ownFit, ownRider, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -2867,7 +2867,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   function fitOf(ship: ShipKind, gun: WeaponKind, h: HangarState = state.hangar): Fit {
     // 0582: and the rack it carries, so the pad wears its tubes as the run will.
     // 0584: and the shell its shields wear, which the pad shows round it while a shell is being chosen.
-    return { gun, rim: h.rim[ship], art: h.art[ship], livery: liveryFor(h.livery[ship], palette), flame: h.flame[ship], tubes: RACKS[h.rack[ship]].tubes, shell: h.shell[ship] };
+    // 0612: and its own pilot aboard, as a run flies it; the port draws its pad, and its intro until they board, empty.
+    return { gun, rim: h.rim[ship], art: h.art[ship], livery: liveryFor(h.livery[ship], palette), flame: h.flame[ship], tubes: RACKS[h.rack[ship]].tubes, shell: h.shell[ship], rider: ownRider(ship) };
   }
   /** How the hangar has fitted `ship` — 0527: its own fit, with the gun the hangar gave it; 0561: as the stand shows it. */
   function hangarFit(ship: ShipKind): Fit {
