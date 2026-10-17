@@ -151,6 +151,8 @@ export const CUE_KINDS = [
   'warDance',
   'danceHum',
   'danceBounce',
+  // And each body it lands on or comes off, a pinball's bumper — 0615.
+  'danceBumper',
   // And its bar full on the ship that earns it — 0613.
   'danceReady',
   // The Water Cannon opening up — 0595.
@@ -2345,23 +2347,51 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, at: 0.28, seconds: 0.03, gain: 0.22, attack: 0.0005, curve: 5, lowFrom: 11000, highFrom: 3400, pan: -0.4 },
     ],
   },
+  /*
+    ⚠️ **A PINBALL'S, BOTH OF THEM — 0615.** *"The sound should be more akin to a pinball like sound than the current
+    sound."* 0609's wall was a rubber ball off steel with a wobbling boing in it, which is a toy. A pinball table is
+    two sounds: the rubber of a slingshot or a rail — a dry thwack with a small bright ping off the post — and the
+    pop bumper, a solenoid's thock with the table's chime struck over it. The wall is the first, every body the
+    dance lands on or comes off is the second (`danceBumper`), so the two are told apart by ear as they are on a table.
+  */
   danceBounce: {
     // The ship off a wall: the sparks where it met it — `bounceDance`. Panned to where it hit.
     twin: 'dance-bounces',
-    air: 0.15,
+    air: 0.2,
     hold: 4,
     // Over the hum it lands in, and every gun (0145).
     gain: 0.32,
     glue: 0.08,
     figure: [1, 0.82, 0.92, 0.78],
     layers: [
-      // The knock: a hard rubber ball off a steel wall, a thump falling a fifth, driven.
-      { wave: 'sine', from: inKey(9), to: inKey(2), seconds: 0.11, gain: 0.85, attack: 0.0008, curve: 3.4, drive: 0.45 },
-      // The boing in it, a sixth over and wobbling, gone fast.
-      { wave: 'tri', from: inKey(16), to: inKey(12), at: 0.01, seconds: 0.14, gain: 0.3, attack: 0.002, curve: 2.6, vibrato: 18 },
-      // The crack of it and the sparks off it: bright noise, short.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.55, attack: 0.0005, curve: 4, lowFrom: 12000, lowTo: 5000, highFrom: 1800, q: 0.9 },
-      { wave: 'noise', from: 0, to: 0, at: 0.04, seconds: 0.03, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 12000, highFrom: 4000, pan: -0.3, panTo: 0.3 },
+      // The thwack: the rubber taking the ball, short and dry, a fifth falling, driven.
+      { wave: 'sine', from: inKey(9), to: inKey(5), seconds: 0.07, gain: 0.8, attack: 0.0005, curve: 4.5, drive: 0.5 },
+      // The snap of the rubber: a click of bright noise, gone in a breath.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.6, attack: 0.0003, curve: 6, lowFrom: 11000, lowTo: 6000, highFrom: 2200, q: 0.8 },
+      // The ping off the post: a small hard bell, the fourth up in the high octave.
+      { wave: 'tri', from: inKey(31), to: inKey(31), at: 0.004, seconds: 0.16, gain: 0.26, attack: 0.001, curve: 4.2 },
+      { wave: 'sine', from: inKey(38), to: inKey(38), at: 0.004, seconds: 0.1, gain: 0.12, attack: 0.001, curve: 5 },
+    ],
+  },
+  danceBumper: {
+    // The ship off a body: the sparks and the burst where it met it — `knockRam`, and every landing in a dance.
+    twin: 'dance-bounces',
+    air: 0.25,
+    hold: 4,
+    // A little over the wall, which it is the louder of on a table, and under the burn.
+    gain: 0.34,
+    glue: 0.1,
+    figure: [1, 0.82, 0.92, 0.78],
+    layers: [
+      // The solenoid: a hard thock, the octave falling to the root, driven.
+      { wave: 'sine', from: inKey(14), to: inKey(7), seconds: 0.06, gain: 0.85, attack: 0.0005, curve: 4.5, drive: 0.55 },
+      // The skirt's metal snapping up: a click of noise.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.015, gain: 0.55, attack: 0.0003, curve: 6, lowFrom: 9000, highFrom: 2500, q: 1.2 },
+      // The table's chime: a square's bell on the root four octaves up, softened, and its fifth over it.
+      { wave: 'square', from: inKey(35), to: inKey(35), at: 0.006, seconds: 0.2, gain: 0.24, attack: 0.001, curve: 3.6, lowFrom: 5200, lowTo: 3000 },
+      { wave: 'tri', from: inKey(39), to: inKey(39), at: 0.006, seconds: 0.15, gain: 0.18, attack: 0.001, curve: 4 },
+      // And the score's bloop rolling up under it, the fifth to the octave.
+      { wave: 'square', from: inKey(25), to: inKey(28), at: 0.02, seconds: 0.06, gain: 0.12, attack: 0.001, curve: 3, lowFrom: 3200 },
     ],
   },
   /**

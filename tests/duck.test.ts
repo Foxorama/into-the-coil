@@ -41,6 +41,7 @@ import { BLITS_PER_JET, PAINT_FADE_STEPS, STROKES_PER_JET, paintBolts } from '..
 import { SPRAY_LAYERS } from '../src/render/canvas.ts';
 import { BOLT_SPRAY, BOLT_WATER, screenX, screenY, type BoltLook, type BoltTone, type Surface } from '../src/render/surface.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
+import { streamAcross, streamAlong, streamAngle, streamOldest, streamWidth, streamYoungest } from '../src/sim/stream.ts';
 import { STEPS_PER_SECOND, lockHint } from '../src/state/screens.ts';
 import { flameOpen, initialHangar, pilotRecord, waresBought } from '../src/state/slices/hangar.ts';
 import { OWNABLE_KINDS, OWNABLES } from '../src/content/wares.ts';
@@ -49,6 +50,50 @@ import { NO_LEVEL, playableWorld } from './world.ts';
 
 const PAINT = WEAPONS.paintball.paint!;
 const JET = SPECIALS.waterCannon.jet!;
+/** How far the jet's water flies in a step — 0616. */
+const SPEED = JET.length / JET.flight;
+
+/**
+ * The stream a jet link was laid on, in world units, finely: its middle and its half-width at each point, from
+ * the youngest of its water to the oldest — 0616, off the one description the frame lands and the painter draws.
+ */
+function streamOf(link: Entity, fine = 4): { along: number; across: number; width: number; age: number }[] {
+  const clock = link.spin;
+  const points: { along: number; across: number; width: number; age: number }[] = [];
+  const young = streamYoungest(clock, JET.steps);
+  const old = streamOldest(clock, JET.flight);
+  for (let i = 0; i <= (old - young) * fine; i++) {
+    const age = young + i / fine;
+    points.push({
+      along: link.along + streamAlong(clock, age, JET.sweep, JET.period, SPEED),
+      across: link.across + streamAcross(clock, age, JET.sweep, JET.period, SPEED),
+      width: streamWidth(age, JET.flight, JET.width, JET.tipWidth),
+      age,
+    });
+  }
+  return points;
+}
+
+/** The jet link in the bolt pool, or `null`. */
+function jetLink(world: World): Entity | null {
+  for (let i = 0; i < world.bolts.size; i++) if (world.bolts.at(i).kind === JET_BOLT_KIND) return world.bolts.at(i);
+  return null;
+}
+
+/** How far `(along, across)` is from the stream, past the width it lands at there: negative is inside it. */
+function outside(points: ReturnType<typeof streamOf>, along: number, across: number): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const dA = b.along - a.along;
+    const dC = b.across - a.across;
+    const t = Math.max(0, Math.min(1, ((along - a.along) * dA + (across - a.across) * dC) / (dA * dA + dC * dC)));
+    const off = Math.hypot(along - (a.along + t * dA), across - (a.across + t * dC)) - (a.width + (b.width - a.width) * t);
+    if (off < best) best = off;
+  }
+  return best;
+}
 
 /** A world flying the Aqua Duck with its own marker, its tubes held off. */
 function inTheDuck(level: LevelRow = NO_LEVEL): { world: World; frame: GameFrame } {
@@ -202,7 +247,7 @@ describe('0595 — the paintball marker fires a scattered string of paint', () =
 });
 
 describe('0595 — the Water Cannon sweeps a jet of water across the lane', () => {
-  it('plays for two seconds from the gun, swinging both ways across the nose, and stops', () => {
+  it('plays for two seconds from the gun, swinging both ways across the nose, and its last water flies on after it', () => {
     const { world, frame } = inTheDuck();
     world.fireIn = Number.MAX_SAFE_INTEGER;
     expect(canThrow(world, 'waterCannon')).toBe(true);
@@ -211,21 +256,20 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     let laid = 0;
     let up = false;
     let down = false;
-    for (let step = 0; step < JET.steps + 30; step++) {
+    for (let step = 0; step < JET.steps + JET.flight + 30; step++) {
       frame.step();
-      for (let i = 0; i < world.bolts.size; i++) {
-        const link = world.bolts.at(i);
-        if (link.kind !== JET_BOLT_KIND) continue;
-        laid++;
-        const turn = Math.atan2(-link.fromAcross, -link.fromAlong);
-        if (turn > JET.sweep * 0.8) down = true;
-        if (turn < -JET.sweep * 0.8) up = true;
-        // From the muzzle, as long as it reaches.
-        expect(Math.hypot(link.fromAlong, link.fromAcross)).toBeCloseTo(JET.length, 5);
-        expect(link.along - link.fromAlong * 0 + link.fromAlong - (world.ship.along + world.shipRow.muzzle.along), 'the jet does not leave the muzzle').toBeCloseTo(0, 5);
-      }
+      const link = jetLink(world);
+      if (link === null) continue;
+      laid++;
+      const nozzle = streamAngle(link.spin, JET.sweep, JET.period);
+      if (link.spin < JET.steps && nozzle > JET.sweep * 0.8) down = true;
+      if (link.spin < JET.steps && nozzle < -JET.sweep * 0.8) up = true;
+      // Laid at the muzzle, its oldest water as far out as it has flown — 0616: the length, once it has had a flight.
+      expect(link.along - (world.ship.along + world.shipRow.muzzle.along), 'the jet does not leave the muzzle').toBeCloseTo(0, 5);
+      expect(Math.hypot(link.fromAlong, link.fromAcross)).toBeCloseTo(SPEED * streamOldest(link.spin, JET.flight), 5);
     }
-    expect(laid / STEPS_PER_SECOND, 'the jet did not play for its two seconds').toBeCloseTo(JET.steps / STEPS_PER_SECOND, 1);
+    // The nozzle plays for its two seconds, and what it fired last is in the air for a flight after.
+    expect(laid, 'the jet did not play for its two seconds and its water’s flight').toBe(JET.steps + JET.flight);
     expect(up && down, 'the jet did not swing across both sides of the nose').toBe(true);
     expect(world.jetFor).toBe(0);
     expect(canThrow(world, 'waterCannon')).toBe(true);
@@ -256,13 +300,27 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
   it('lands as wide as it is drawn, out to the edge of its spray near the tip', () => {
     const { world, frame } = inTheDuck();
     world.fireIn = Number.MAX_SAFE_INTEGER;
-    const t = 0.9;
-    const edge = JET.width + (JET.tipWidth - JET.width) * t;
+    launchSpecial(world, 'waterCannon');
+    // 0616: once its water has flown its length, so there is a tip to be near.
+    for (let i = 0; i < JET.flight; i++) frame.step();
+    // Where the stream will be on the next step, nine tenths of the way out, and just inside its edge there.
+    const clock = JET.flight;
+    const age = JET.flight * 0.9;
+    const edge = streamWidth(age, JET.flight, JET.width, JET.tipWidth);
+    const tA = streamAlong(clock, age + 0.5, JET.sweep, JET.period, SPEED) - streamAlong(clock, age - 0.5, JET.sweep, JET.period, SPEED);
+    const tC = streamAcross(clock, age + 0.5, JET.sweep, JET.period, SPEED) - streamAcross(clock, age - 0.5, JET.sweep, JET.period, SPEED);
+    const run = Math.hypot(tA, tC);
+    const off = edge + ENEMIES.drifter.radius * 0.9;
     const muzzle = world.shipRow.muzzle;
-    bodyAt(world, muzzle.along + JET.length * t, muzzle.across + edge + ENEMIES.drifter.radius * 0.9, 1e6);
+    // Off the ship, which rides the camera on the next step as the body does.
+    bodyAt(
+      world,
+      muzzle.along + streamAlong(clock, age, JET.sweep, JET.period, SPEED) + (-tC / run) * off,
+      muzzle.across + streamAcross(clock, age, JET.sweep, JET.period, SPEED) + (tA / run) * off,
+      1e6,
+    );
     const enemy = world.enemies.at(0);
     expect(edge - JET.width, 'the spray does not open, so this asks nothing').toBeGreaterThan(1);
-    launchSpecial(world, 'waterCannon');
     frame.step();
     expect(enemy.health, 'the spray was drawn over a body at its edge and did not land on it').toBeLessThan(1e6);
   });
@@ -281,42 +339,35 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     const enemy = world.enemies.at(0);
     launchSpecial(world, 'waterCannon');
     let landed = 0;
-    for (let step = 0; step < JET.steps; step++) {
+    for (let step = 0; step < JET.steps + JET.flight; step++) {
       const before = enemy.health;
       frame.step();
       if (before - enemy.health <= 0) continue;
       landed++;
-      let link: Entity | null = null;
-      for (let i = 0; i < world.bolts.size; i++) if (world.bolts.at(i).kind === JET_BOLT_KIND) link = world.bolts.at(i);
+      const link = jetLink(world);
       expect(link, `step ${step}: the jet landed with nothing drawn`).not.toBeNull();
-      // The drawn column: from the muzzle (`along + from`) to its end (`along`).
-      const ax = link!.along + link!.fromAlong;
-      const ay = link!.across + link!.fromAcross;
-      const dx = link!.along - ax;
-      const dy = link!.across - ay;
-      const t = Math.max(0, Math.min(1, ((enemy.along - ax) * dx + (enemy.across - ay) * dy) / (dx * dx + dy * dy)));
-      const off = Math.hypot(enemy.along - (ax + t * dx), enemy.across - (ay + t * dy));
-      // 0610: a spray that opens from `width` at the muzzle to `tipWidth` at its end, and is drawn so.
-      const drawn = link!.radius + (link!.radius * link!.swell - link!.radius) * t;
-      expect(drawn, 'the spray is drawn at a width other than the one it lands at').toBeCloseTo(JET.width + (JET.tipWidth - JET.width) * t, 9);
-      expect(off, `step ${step}: it landed on a body ${off.toFixed(2)} units from the spray drawn that step`).toBeLessThanOrEqual(
-        drawn + enemy.radius + 1e-6,
-      );
+      // 0616: the stream the link was laid on, bowed as it is drawn, and as wide as it is drawn along it.
+      expect(link!.radius * link!.swell, 'the spray is drawn at a width other than the one it lands at').toBeCloseTo(JET.tipWidth, 9);
+      const off = outside(streamOf(link!), enemy.along, enemy.across);
+      expect(off, `step ${step}: it landed on a body ${off.toFixed(2)} units off the spray drawn that step`).toBeLessThanOrEqual(enemy.radius + 1e-6);
     }
     expect(landed, 'the jet never landed on the body it swept across').toBeGreaterThan(0);
 
-    // And on its last step: a body that arrives on the line the jet ends on is landed on.
+    // And on its last step: a body on the last of its water in the air is landed on — 0616, after the nozzle has stopped.
     const { world: last, frame: lastFrame } = inTheDuck();
     last.fireIn = Number.MAX_SAFE_INTEGER;
     launchSpecial(last, 'waterCannon');
-    for (let step = 0; step < JET.steps - 1; step++) lastFrame.step();
-    const final = JET.sweep * Math.sin((Math.PI * 2 * (JET.steps - 1)) / JET.period);
-    bodyAt(last, Math.cos(final) * JET.length * 0.6 + last.shipRow.muzzle.along, Math.sin(final) * JET.length * 0.6 + last.shipRow.muzzle.across, 1e6);
+    const final = JET.steps + JET.flight - 2;
+    for (let step = 0; step < final; step++) lastFrame.step();
+    // The last two parcels in the air on that step, the oldest and the one after it.
+    const age = JET.flight - 0.5;
+    bodyAt(last, last.shipRow.muzzle.along + streamAlong(final, age, JET.sweep, JET.period, SPEED), last.shipRow.muzzle.across + streamAcross(final, age, JET.sweep, JET.period, SPEED), 1e6);
     const late = last.enemies.at(last.enemies.size - 1);
     const health = late.health;
     lastFrame.step();
+    expect(health - late.health, 'the jet’s last water was drawn and landed nothing').toBeGreaterThan(0);
+    lastFrame.step();
     expect(last.jetFor).toBe(0);
-    expect(health - late.health, 'the jet’s last step was drawn and landed nothing').toBeGreaterThan(0);
   });
 
   it('between steps, its root is drawn on the muzzle where the ship is drawn', () => {
@@ -331,7 +382,8 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     expect(link, 'no jet was drawn').not.toBeNull();
     expect(Math.abs(world.ship.across - world.ship.prevAcross), 'the ship did not move, so this asks nothing').toBeGreaterThan(0.1);
     // The painter's own interpolation, at the start of the step: the jet's root against the ship's muzzle there.
-    const rootAcross = link!.prevAcross + link!.prevFromAcross;
+    // 0616: the link is laid at the root, so where it was is where the root was.
+    const rootAcross = link!.prevAcross;
     const muzzleAcross = world.ship.prevAcross + world.shipRow.muzzle.across;
     expect(rootAcross, 'the jet’s root is drawn a step ahead of the muzzle it plays from').toBeCloseTo(muzzleAcross, 6);
   });
@@ -375,7 +427,8 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     };
     paintBolts(surface, world.view, world.bolts, world.cameraAlong, 1);
     expect(calls.length, 'the jet is not its stated number of strokes').toBe(STROKES_PER_JET);
-    expect(blits.length, 'the jet is not its stated number of blits').toBe(BLITS_PER_JET);
+    // 0616: at most its stated blits — a drop is drawn only off water that was fired, so none before the press.
+    expect(blits.length, 'the jet is over its stated number of blits').toBeLessThanOrEqual(BLITS_PER_JET);
     for (const sprite of blits) expect([SPRITE.sprayDrop, SPRITE.sprayMist], 'the jet blitted something that is not its spray').toContain(sprite);
     expect(blits, 'the jet threw no drops').toContain(SPRITE.sprayDrop);
     expect(blits, 'the jet’s tip is not mist').toContain(SPRITE.sprayMist);
@@ -388,34 +441,36 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     expect(body, 'no layer of a strand is the width it lands at — 0250').toBeDefined();
     expect(body!.additive, 'the spray’s body is light added to the frame').toBe(false);
     expect(Math.max(...SPRAY_LAYERS.map((l) => l.width)), 'a strand is drawn wider than it lands').toBe(4);
-    // In pixels: the half-width of the spray, measured off the strokes, at the nozzle and at the tip.
-    const link = world.bolts.at([...Array(world.bolts.size).keys()].find((i) => world.bolts.at(i).kind === JET_BOLT_KIND)!);
+    /*
+      In pixels: the half-width of the spray, measured off the strokes against the stream it was laid on — 0616,
+      which bows, so each vertex is measured from the nearest of the stream's middle and against the width it
+      lands at there.
+    */
+    const link = jetLink(world)!;
     const scale = world.view.scale;
-    const rootX = calls[0]!.points[0]!;
-    const rootY = calls[0]!.points[1]!;
-    const tipX = screenX(world.view, link.along - world.cameraAlong, link.across);
-    const tipY = screenY(world.view, link.along - world.cameraAlong, link.across);
-    const reach = Math.hypot(tipX - rootX, tipY - rootY);
-    expect(reach / scale, 'the spray is not the length it lands to').toBeCloseTo(JET.length, 3);
-    const ux = (tipX - rootX) / reach;
-    const uy = (tipY - rootY) / reach;
+    const middle = streamOf(link, 16).map((p) => ({ ...p, x: screenX(world.view, p.along - world.cameraAlong, p.across), y: screenY(world.view, p.along - world.cameraAlong, p.across) }));
+    const tip = middle[middle.length - 1]!;
+    expect(Math.hypot(tip.along - link.along, tip.across - link.across), 'the spray is not the length it lands to').toBeCloseTo(JET.length, 3);
     let atRoot = 0;
     let atTip = 0;
     for (const c of calls) {
       // A strand's body is four times the width it is handed, and its half is two.
       const half = c.width * 2;
       for (let v = 0; v < c.count; v++) {
-        const px = c.points[v * 2]! - rootX;
-        const py = c.points[v * 2 + 1]! - rootY;
-        const t = px * ux + py * uy;
-        const side = Math.abs(px * uy - py * ux) + half;
-        const lands = (JET.width + ((JET.tipWidth - JET.width) * t) / reach) * scale;
-        expect(side, `a strand is drawn ${(side / scale).toFixed(2)} units off the line where the spray lands ${(lands / scale).toFixed(2)}`).toBeLessThanOrEqual(lands + 1e-6);
+        const px = c.points[v * 2]!;
+        const py = c.points[v * 2 + 1]!;
+        let nearest = middle[0]!;
+        for (const p of middle) if (Math.hypot(px - p.x, py - p.y) < Math.hypot(px - nearest.x, py - nearest.y)) nearest = p;
+        const side = Math.hypot(px - nearest.x, py - nearest.y) + half;
+        // Within a sample's spacing of where the spray lands, which the sampling allows.
+        const lands = nearest.width * scale + (SPEED / 16) * scale;
+        expect(side, `a strand is drawn ${(side / scale).toFixed(2)} units off the stream where the spray lands ${(nearest.width).toFixed(2)}`).toBeLessThanOrEqual(lands + 1e-6);
         if (v === 0) atRoot = Math.max(atRoot, side);
         if (v === c.count - 1) atTip = Math.max(atTip, side);
       }
     }
-    expect(atRoot / scale, 'the spray does not leave the nozzle at its width there').toBeCloseTo(JET.width, 6);
+    // To the screen buffer's own precision: its points are single floats.
+    expect(atRoot / scale, 'the spray does not leave the nozzle at its width there').toBeCloseTo(JET.width, 4);
     expect(atTip / scale, 'the spray does not open toward its tip').toBeGreaterThan(JET.width * 2);
     expect(atTip / scale, 'the spray is drawn much narrower at its tip than it lands').toBeGreaterThan(JET.tipWidth * 0.75);
   });
@@ -543,6 +598,119 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     expect(face, 'the Water Cannon is no face of the bomb pickup').toBeGreaterThanOrEqual(0);
     expect(facesShut('bomb', pilotRecord(initialHangar))[face], 'a first-time player is offered the Water Cannon').toBe(true);
     expect(facesShut('bomb', pilotRecord(bought(5)))[face], 'MMXXVI is open and the Water Cannon is still shut').toBe(false);
+  });
+});
+
+/*
+  ⚠️ **THE WATER FLOWS — 0616**, in pixels on the screen the report was made on, off the strokes the painter lays:
+  *"it's currently static and stiff and so doesn't feel like a water spray at all."* Four things a rod swung from
+  the nozzle cannot do and water does: bow as it sweeps, run out from the nozzle when it opens, fly on off it when
+  it stops, and carry its ripples out with it.
+*/
+describe('0616 — the Water Cannon’s water flows', () => {
+  /** The strokes the painter lays for the jet after `steps` steps of it, at the end of the last. */
+  function paintedAfter(steps: number) {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    launchSpecial(world, 'waterCannon');
+    for (let i = 0; i < steps; i++) frame.step();
+    const strokes: number[][] = [];
+    const surface: Surface = {
+      clear(): void {},
+      blit(): void {},
+      bolt(points: Float32Array, count: number): void {
+        strokes.push(Array.from(points.subarray(0, count * 2)));
+      },
+    };
+    paintBolts(surface, world.view, world.bolts, world.cameraAlong, 1);
+    const link = jetLink(world);
+    const muzzleX = link === null ? 0 : screenX(world.view, link.along - world.cameraAlong, link.across);
+    const muzzleY = link === null ? 0 : screenY(world.view, link.along - world.cameraAlong, link.across);
+    return { world, link, strokes, muzzleX, muzzleY };
+  }
+
+  it('THE REPORTED ONE: it bows as the nozzle sweeps — its tip trails the nozzle round, in pixels', () => {
+    // Laid at the middle of a swing, where the nozzle turns fastest and points straight ahead.
+    const { world, link, strokes, muzzleX, muzzleY } = paintedAfter(JET.period + 1);
+    expect(streamAngle(link!.spin, JET.sweep, JET.period), 'the nozzle is not at the middle of its swing').toBeCloseTo(0, 6);
+    // The middle strand's far end, against the straight line the nozzle points along.
+    const middle = strokes[(STROKES_PER_JET - 1) / 2]!;
+    const tipX = middle[middle.length - 2]!;
+    const tipY = middle[middle.length - 1]!;
+    const aheadX = screenX(world.view, link!.along + 1 - world.cameraAlong, link!.across) - muzzleX;
+    const aheadY = screenY(world.view, link!.along + 1 - world.cameraAlong, link!.across) - muzzleY;
+    const run = Math.hypot(aheadX, aheadY);
+    const off = Math.abs((tipX - muzzleX) * (aheadY / run) - (tipY - muzzleY) * (aheadX / run));
+    expect(off, `the spray's tip is ${off.toFixed(0)} px off the line the nozzle points along: a rod, not water`).toBeGreaterThan(100);
+  });
+
+  it('runs out from the nozzle when it opens, at the water’s speed', () => {
+    const lengths: number[] = [];
+    for (const steps of [3, 6, 9]) {
+      const { world, strokes, muzzleX, muzzleY } = paintedAfter(steps);
+      const edge = strokes[0]!;
+      lengths.push(Math.hypot(edge[edge.length - 2]! - muzzleX, edge[edge.length - 1]! - muzzleY) / world.view.scale);
+    }
+    // Three steps of flight between each — the water's speed, give or take the edge's own width.
+    expect(lengths[1]! - lengths[0]!, `it ran out ${(lengths[1]! - lengths[0]!).toFixed(1)} units in three steps`).toBeGreaterThan(SPEED * 3 - JET.tipWidth);
+    expect(lengths[2]! - lengths[1]!, `it ran out ${(lengths[2]! - lengths[1]!).toFixed(1)} units in three steps`).toBeGreaterThan(SPEED * 3 - JET.tipWidth);
+    expect(lengths[2]!, 'it opened at its full length').toBeLessThan(JET.length * 0.8);
+  });
+
+  it('flies on off the nozzle when it stops: the last of its water leaves it, still drawn', () => {
+    const gaps: number[] = [];
+    for (const after of [2, 5, 8]) {
+      const { world, link, strokes, muzzleX, muzzleY } = paintedAfter(JET.steps + after);
+      expect(link, `${after} steps after the nozzle stopped, the water in the air is not drawn`).not.toBeNull();
+      expect(strokes.length).toBe(STROKES_PER_JET);
+      const edge = strokes[0]!;
+      gaps.push(Math.hypot(edge[0]! - muzzleX, edge[1]! - muzzleY) / world.view.scale);
+    }
+    // The back of the stream leaves the nozzle at the water's speed, give or take its own width there.
+    expect(gaps[0]!, 'the stream is still on the nozzle after the nozzle stopped').toBeGreaterThan(SPEED);
+    expect(gaps[1]! - gaps[0]!, 'the back of the stream did not fly on').toBeGreaterThan(SPEED * 3 - JET.tipWidth);
+    expect(gaps[2]! - gaps[1]!, 'the back of the stream did not fly on').toBeGreaterThan(SPEED * 3 - JET.tipWidth);
+  });
+
+  it('its ripples ride out with its water, and do not boil in place', () => {
+    // An edge strand's dent in from the spray's edge, as a share of what it may be at that age, from one step to the next.
+    function dents(steps: number): { age: number; dent: number }[] {
+      const { world, link, strokes } = paintedAfter(steps);
+      const middle = streamOf(link!, 16).map((p) => ({ ...p, x: screenX(world.view, p.along - world.cameraAlong, p.across), y: screenY(world.view, p.along - world.cameraAlong, p.across) }));
+      const edge = strokes[0]!;
+      const out: { age: number; dent: number }[] = [];
+      for (let v = 0; v < edge.length / 2; v++) {
+        let nearest = middle[0]!;
+        for (const p of middle) if (Math.hypot(edge[v * 2]! - p.x, edge[v * 2 + 1]! - p.y) < Math.hypot(edge[v * 2]! - nearest.x, edge[v * 2 + 1]! - nearest.y)) nearest = p;
+        const off = Math.hypot(edge[v * 2]! - nearest.x, edge[v * 2 + 1]! - nearest.y) / world.view.scale;
+        if (nearest.age < 3) continue;
+        out.push({ age: nearest.age, dent: (nearest.width - JET.width - off) / (nearest.age / JET.flight) });
+      }
+      return out;
+    }
+    const at = (list: { age: number; dent: number }[], age: number): number => {
+      for (let i = 1; i < list.length; i++) {
+        const a = list[i - 1]!;
+        const b = list[i]!;
+        if (age >= a.age && age <= b.age) return a.dent + ((b.dent - a.dent) * (age - a.age)) / (b.age - a.age);
+      }
+      return Number.NaN;
+    };
+    const now = dents(40);
+    const next = dents(41);
+    let carried = 0;
+    let still = 0;
+    let n = 0;
+    for (const { age, dent } of now) {
+      const rode = at(next, age + 1);
+      const stayed = at(next, age);
+      if (!Number.isFinite(rode) || !Number.isFinite(stayed)) continue;
+      carried += Math.abs(rode - dent);
+      still += Math.abs(stayed - dent);
+      n++;
+    }
+    expect(n, 'too little of the strand to compare').toBeGreaterThan(6);
+    expect(carried / n, `a ripple a step on is ${(carried / n).toFixed(3)} from where its water went, ${(still / n).toFixed(3)} from where it was`).toBeLessThan((still / n) * 0.5);
   });
 });
 

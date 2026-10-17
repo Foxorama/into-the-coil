@@ -248,11 +248,16 @@ describe('0609 — the War Dance bounces round the whole box, flares, hums, and 
     return { world, cues, across, along, headings, flares, sparked, after };
   }
 
-  it('meets a wall about every half second, off on a new heading each time, and crosses the whole box', () => {
+  it('meets a wall about every half second, off it at the angle it met it, and crosses the whole box', () => {
     const { world, across, along, headings } = danced('fighter');
     const seconds = DANCE.steps / STEPS_PER_SECOND;
     expect(world.danceBounces / seconds, `${world.danceBounces} walls in ${seconds} s`).toBeGreaterThanOrEqual(1.5);
-    expect(headings.size, 'every wall sent it off on the same heading').toBeGreaterThanOrEqual(3);
+    /*
+      0615, where 0609 asked for three headings or more: a wall reflects it, so in a box with nothing in it the
+      dance leaves every wall as steep as it met it — one heading, its signs the walls'. What turns it is a body
+      (`0615 — the War Dance is a pinball`, below).
+    */
+    expect([...headings], 'a wall turned the dance off the angle it met it at').toEqual([DANCE.heading.toFixed(3)]);
     // As shares of the box the player flies in — the player's units (0027).
     const lane = ACROSS_SPAN - 2 * PLAYER_MARGIN;
     const box = leadFor(world.view.alongSpan) - PLAYER_ALONG_MARGIN;

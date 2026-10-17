@@ -91,23 +91,13 @@ export const PROBES = [
       replace: '    if (ship.health >= fullHealthFor(w.shipRow, w.difficulty)) w.regenIn = regen.rest;',
     },
   },
-  {
-    decision: '0609',
-    suite: 'tests/dance.test.ts',
-    broke: 'every wall sending the dance off on its first heading again',
-    guard: 'meets a wall about every half second, off on a new heading each time, and crosses the whole box',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '  const angle = dance.angles[w.danceBounces % dance.angles.length] ?? Math.PI / 4;',
-      replace: '  const angle = dance.angles[0] ?? Math.PI / 4;',
-    },
-  },
+  // 0615 took the six headings out — a wall reflects the dance now — and its own probe file holds the reflection.
   {
     decision: '0609',
     suite: 'tests/dance.test.ts',
     // 0593's 2.2: three walls in three seconds, measured, where 3.4 meets six.
     broke: 'the dance back at its old speed',
-    guard: 'meets a wall about every half second, off on a new heading each time, and crosses the whole box',
+    guard: 'meets a wall about every half second, off it at the angle it met it, and crosses the whole box',
     edit: { path: 'src/content/specials.ts', find: '      speed: 3.4,', replace: '      speed: 2.2,' },
   },
   {

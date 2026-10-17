@@ -1163,6 +1163,14 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE BALL IS SOLID AND THE WATER FLOWS — OWED A PLAY AND AN EAR — 2026-10-17
+
+[0615](decisions/0615-the-ball-is-solid.md): the Hamster Ball comes back off whatever it does not break, the War
+Dance is a pinball off walls and bodies and bends at the boss, both of its bounces sound like a table, and the bar
+is twenty. [0616](decisions/0616-the-water-flows.md): the Water Cannon is a stream that bows, runs out and flies
+on. Owed, as both decisions' *Owed* say: a play of the knock, of a dance at a mid-boss, and of the spray; the ear
+on the two pinball sounds.
+
 ### ⚠️ THE CROSSING NO LONGER FREEZES, AND ITS CHART IS REDRAWN — OWED A PLAY ON A PHONE — 2026-10-12
 
 Reported: *"the level transitions are a bit chuggy on mobile and probably some desktops, and the map

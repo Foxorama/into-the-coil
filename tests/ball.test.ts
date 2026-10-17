@@ -35,7 +35,7 @@ import { SPRITE } from '../src/content/sprites.ts';
 import type { CueKind } from '../src/content/cues.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { weaponFor } from '../src/content/pickups.ts';
-import { reset } from '../src/sim/entity.ts';
+import { reset, type Entity } from '../src/sim/entity.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND, lockHint, gunWhy } from '../src/state/screens.ts';
@@ -65,12 +65,26 @@ function inTheBall(level: LevelRow = NO_LEVEL): { world: World; frame: GameFrame
 }
 
 /** A body planted on the ship, riding the camera and holding its fire — `health` of it. */
-function bodyOn(world: World, health: number): void {
+function bodyOn(world: World, health: number): Entity {
   const enemy = world.enemies.spawn()!;
   reset(enemy, world.ship.along, world.ship.across, ENEMIES.drifter);
   enemy.health = health;
   enemy.fireIn = Number.MAX_SAFE_INTEGER;
   enemy.velAlong = world.scrollPerStep;
+  return enemy;
+}
+
+/**
+ * One step with every body laid back on the ball — 0615: a body the ball cannot break knocks it off, so a
+ * fixture asking what the ball does PRESSED into one holds it there, as a player holding the stick into it does.
+ */
+function pressed(world: World, frame: GameFrame): void {
+  for (let i = 0; i < world.enemies.size; i++) {
+    const e = world.enemies.at(i);
+    e.along = e.prevAlong = world.ship.along;
+    e.across = e.prevAcross = world.ship.across;
+  }
+  frame.step();
 }
 
 /** An enemy shot laid on the ship, so it lands on the next step. */
@@ -136,7 +150,7 @@ describe('0593 — the ram lands on what the ball flies into', () => {
   it('the heat cools once the ball has touched nothing for a while', () => {
     const { world, frame } = inTheBall();
     bodyOn(world, 100000);
-    for (let i = 0; i < 30 && world.ramHeat < 0.3; i++) frame.step();
+    for (let i = 0; i < 30 && world.ramHeat < 0.3; i++) pressed(world, frame);
     world.enemies.clear();
     const hot = world.ramHeat;
     expect(hot).toBeGreaterThan(0);
@@ -151,8 +165,8 @@ describe('0593 — the ram lands on what the ball flies into', () => {
     frame.step();
     expect(ramBody(world)?.sprite).toBe(SPRITE.ramHeat0);
     bodyOn(world, 100000);
-    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ramHeat < 0.8; i++) frame.step();
-    frame.step();
+    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ramHeat < 0.8; i++) pressed(world, frame);
+    pressed(world, frame);
     expect(ramBody(world)?.sprite, `at ${world.ramHeat.toFixed(2)} of the gauge the heat under the ball is not drawn`).toBe(SPRITE.ramHeat3);
   });
 
@@ -176,7 +190,7 @@ describe('0609 — a full gauge burns a shield off, and the ball rolls on', () =
     bodyOn(world, 100000);
     let burnt = -1;
     for (let i = 0; i < 20 * STEPS_PER_SECOND && burnt < 0; i++) {
-      frame.step();
+      pressed(world, frame);
       if (world.ship.health < FULL) burnt = i;
     }
     expect(burnt, 'pressed into a body that would not die, the heat never cost the ball anything').toBeGreaterThan(0);
@@ -196,10 +210,10 @@ describe('0609 — a full gauge burns a shield off, and the ball rolls on', () =
     // As if a shot had just landed: the ship blinking for longer than the gauge takes to fill.
     world.ship.invulnFor = 4 * STEPS_PER_SECOND;
     bodyOn(world, 100000);
-    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ramHeat < 1; i++) frame.step();
+    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ramHeat < 1; i++) pressed(world, frame);
     expect(world.ramHeat, 'the gauge never filled').toBe(1);
     while (world.ship.invulnFor > 1) {
-      frame.step();
+      pressed(world, frame);
       expect(world.ship.health, 'a burn landed inside the window a hit gives').toBe(FULL);
       expect(world.ramHeat, 'the gauge was not held full while it waited').toBe(1);
     }
@@ -219,7 +233,7 @@ describe('0609 — a full gauge burns a shield off, and the ball rolls on', () =
     expect(shieldsOf(world.shipRow, world.ship.health), 'three shots did not spend three shields').toBe(0);
     while (world.ship.invulnFor > 0) frame.step();
     bodyOn(world, 100000);
-    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ship.health > 0; i++) frame.step();
+    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ship.health > 0; i++) pressed(world, frame);
     expect(world.ship.health, 'a full gauge with no shield left did not kill the ball').toBeLessThanOrEqual(0);
     expect(world.killedBy, 'a burn was counted as fire').toBe('body');
   });

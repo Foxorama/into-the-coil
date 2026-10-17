@@ -1194,6 +1194,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     danceFor: 0,
     danceKind: null,
     danceBounces: 0,
+    danceKickFor: 0,
+    dancePullIn: 0,
     danceAlong: 0,
     danceAcross: 0,
     // 0613: no shockwave out, an empty bar, nothing punched.

@@ -25,7 +25,8 @@ import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.t
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, BOLT_SPRAY, BOLT_WATER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
 import { TETHER_BOLT_KIND } from '../content/weapons.ts';
-import { JET_BOLT_KIND } from '../content/specials.ts';
+import { JET_BOLT_KIND, SPECIALS, SPECIAL_KINDS } from '../content/specials.ts';
+import { streamAcross, streamAlong, streamOldest, streamWidth, streamYoungest } from '../sim/stream.ts';
 
 /**
  * Draw one frame.
@@ -535,16 +536,19 @@ export const STROKES_PER_TETHER = 5;
 const JET_STRANDS = 5;
 const JET_VERTICES = 17;
 const JET_CHURN = 0.6;
-const JET_RAGGED = 0.12;
+// 0616: a quarter and more, so its end frays as spray breaks up — at 0.12 it ended as a bundle, photographed.
+const JET_RAGGED = 0.28;
 const JET_PAGE_STEPS = 2;
 const JET_FADE_STEPS = 10;
 /**
- * The drops flung off its edges and the mist its tip breaks into — 0610: how many of each, how many steps a drop
- * takes to travel from a quarter of the way along the spray to past its end, and how far out from the edge it
- * gets, in shares of the width at the muzzle.
+ * The drops flung off its edges and the mist its tip breaks into — 0610: how many of each, and how far out from
+ * the edge a drop gets, in shares of the width at the muzzle. Since 0616 a drop leaves the stream a third of the
+ * way out (`JET_DROP_FROM`, a share of the jet's `flight`) and flies for most of a flight more at the water's
+ * speed (`JET_DROP_LIFE`), so it ends a little past the tip.
  */
-const JET_DROPS = 8;
-const JET_DROP_STEPS = 24;
+const JET_DROPS = 14;
+const JET_DROP_FROM = 0.35;
+const JET_DROP_LIFE = 0.85;
 const JET_DROP_FLING = 1.8;
 const JET_MISTS = 3;
 const JET_MIST_STEPS = 16;
@@ -637,6 +641,11 @@ const TWIG = new Float32Array(TWIG_VERTICES * 2);
 
 // @setup: a tether's own, finer than a link — 0549.
 const TETHER = new Float32Array(TETHER_VERTICES * 2);
+
+// @setup: the Water Cannon's stream down its middle, in world units off the muzzle, and its unit normal at each — 0616.
+const JET_LINE = new Float32Array(JET_VERTICES * 2);
+// @setup: and the normal, for the same lifetime.
+const JET_NORMAL = new Float32Array(JET_VERTICES * 2);
 
 // @setup: a jagged beam's knots, both ends included, refilled per beam — 0388.
 const BEAM_PATH = new Float32Array(BEAM_MAX_POINTS * 2);
@@ -758,51 +767,110 @@ export function paintBolts(
       strokes because their shape is this frame's (0233); the drops and the mist are baked and blitted (0022).
       Every place on it is a pure function of the link and the step it was laid on, so nothing is drawn from a
       stream (0021). It fades over its last few steps rather than vanishing.
+
+      ⚠️ **AND ALONG THE STREAM, WHICH FLOWS — 0616.** *"Static and stiff."* It was drawn on one straight line at
+      the nozzle's angle, and its churn was a hash of the vertex and the step, so the strands boiled in place on
+      a rod. It is drawn down the stream the frame lands (`src/sim/stream.ts`) — bowing as the nozzle sweeps, its
+      front running out from the press, the last of it flying off after the nozzle stops — and every wobble in a
+      strand is hashed on the step the water there was FIRED on, so a ripple rides out along the spray with its
+      water at the stream's speed, and a drop leaves the edge at the water's speed and keeps going. The link is
+      laid at the muzzle, and between two steps the stream is the one at the clock between them, so the sweep
+      is drawn moving, not stepping.
     */
     if (e.kind === JET_BOLT_KIND) {
+      const jet = SPECIALS[SPECIAL_KINDS[e.face] ?? 'waterCannon'].jet;
+      if (jet === null) continue;
       const held = e.holdFor >= JET_FADE_STEPS ? 1 : e.holdFor <= 0 ? 0 : e.holdFor / JET_FADE_STEPS;
+      const clock = e.spin - 1 + alpha;
+      const young = streamYoungest(clock, jet.steps);
+      const old = streamOldest(clock, jet.flight);
+      if (old - young <= 0) continue;
+      const speed = jet.length / jet.flight;
       const root = e.radius;
-      const opens = e.radius * e.swell - root;
       const page = Math.floor(e.spin / JET_PAGE_STEPS);
       const last = JET_VERTICES - 1;
+      // The middle of the stream, its youngest water to its oldest, and the normal to it at each point.
+      for (let v = 0; v <= last; v++) {
+        const age = young + ((old - young) * v) / last;
+        JET_LINE[v * 2] = streamAlong(clock, age, jet.sweep, jet.period, speed);
+        JET_LINE[v * 2 + 1] = streamAcross(clock, age, jet.sweep, jet.period, speed);
+      }
+      for (let v = 0; v <= last; v++) {
+        const a = v === 0 ? 0 : v - 1;
+        const b = v === last ? last : v + 1;
+        const tA = JET_LINE[b * 2]! - JET_LINE[a * 2]!;
+        const tC = JET_LINE[b * 2 + 1]! - JET_LINE[a * 2 + 1]!;
+        const run = Math.sqrt(tA * tA + tC * tC);
+        JET_NORMAL[v * 2] = run > 0 ? -tC / run : 0;
+        JET_NORMAL[v * 2 + 1] = run > 0 ? tA / run : 1;
+      }
       for (let s = 0; s < JET_STRANDS; s++) {
         const share = (s / (JET_STRANDS - 1)) * 2 - 1;
         const edge = share === -1 || share === 1;
         // The edges carry the spray's width to its end; a strand inside them may break off a little short.
         const reach = edge ? 1 : 1 - (JET_RAGGED * (jag(s * 131 + 7, 0, page) + 1)) / 2;
         for (let v = 0; v <= last; v++) {
-          const t = (v / last) * reach;
-          const churn = jag(s * 131 + 7, v + 1, page) * JET_CHURN * root * t;
+          const at = v * reach;
+          const i0 = Math.floor(at);
+          const i1 = i0 < last ? i0 + 1 : last;
+          const f = at - i0;
+          const age = young + ((old - young) * at) / last;
+          // The wobble of the water here, hashed on the step it was fired — so it rides out with it.
+          const fired = clock - age;
+          const from = Math.floor(fired);
+          const between = fired - from;
+          const ripple = jag(s * 131 + 7, from, 0) * (1 - between) + jag(s * 131 + 7, from + 1, 0) * between;
+          const churn = ripple * JET_CHURN * root * (age / jet.flight);
+          const opens = streamWidth(age, jet.flight, jet.width, jet.tipWidth) - root;
           // An edge strand churns only inward, so the spray is never drawn wider than it lands.
-          const off = share * opens * t + (edge ? -share * Math.abs(churn) : churn);
-          const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
-          const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
+          const off = share * opens + (edge ? -share * Math.abs(churn) : churn);
+          const nA = JET_NORMAL[i0 * 2]! * (1 - f) + JET_NORMAL[i1 * 2]! * f;
+          const nC = JET_NORMAL[i0 * 2 + 1]! * (1 - f) + JET_NORMAL[i1 * 2 + 1]! * f;
+          const along = endAlong + JET_LINE[i0 * 2]! * (1 - f) + JET_LINE[i1 * 2]! * f + nA * off;
+          const across = endAcross + JET_LINE[i0 * 2 + 1]! * (1 - f) + JET_LINE[i1 * 2 + 1]! * f + nC * off;
           TETHER[v * 2] = screenX(view, along - cameraAlong, across);
           TETHER[v * 2 + 1] = screenY(view, along - cameraAlong, across);
         }
         surface.bolt(TETHER, JET_VERTICES, root * BEAM_STROKE * view.scale, held, BOLT_WATER, BOLT_SPRAY);
       }
-      // The drops flung off its edges, each travelling out along the spray and away from it, then round again.
+      /*
+        The drops flung off its edges: each leaves the stream a third of the way out, flies on at the water's speed
+        on the heading it was fired on, and drifts off the edge as it goes — past the tip, as water does — then
+        the next. Only water that was fired: none before the press, none after the nozzle stopped.
+      */
+      const dropLife = jet.flight * JET_DROP_LIFE;
       for (let d = 0; d < JET_DROPS; d++) {
-        const clock = e.spin + d * 5;
-        const age = (clock % JET_DROP_STEPS) / JET_DROP_STEPS;
-        const t = 0.25 + age * 0.9;
+        const since = (clock + (d * dropLife) / JET_DROPS) % dropLife;
+        const age = jet.flight * JET_DROP_FROM + since;
+        const fired = clock - age;
+        if (fired < 0 || fired > jet.steps - 1) continue;
+        const u = since / dropLife;
         const side = d % 2 === 0 ? 1 : -1;
-        const flung = 0.6 + 0.4 * Math.abs(jag(d * 37 + 3, 0, Math.floor(clock / JET_DROP_STEPS)));
-        const off = side * (root + opens * (t < 1 ? t : 1) + (0.3 + JET_DROP_FLING * age * flung) * root);
-        const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
-        const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
-        surface.blit(SPRITE.sprayDrop, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (1 - 0.35 * age), 0, held * (1 - 0.7 * age));
+        const flung = 0.6 + 0.4 * Math.abs(jag(d * 37 + 3, Math.floor(fired), 0));
+        const cA = streamAlong(clock, age, jet.sweep, jet.period, speed);
+        const cC = streamAcross(clock, age, jet.sweep, jet.period, speed);
+        const tA = streamAlong(clock, age + 0.5, jet.sweep, jet.period, speed) - streamAlong(clock, age - 0.5, jet.sweep, jet.period, speed);
+        const tC = streamAcross(clock, age + 0.5, jet.sweep, jet.period, speed) - streamAcross(clock, age - 0.5, jet.sweep, jet.period, speed);
+        const run = Math.sqrt(tA * tA + tC * tC);
+        const off = side * (streamWidth(age < jet.flight ? age : jet.flight, jet.flight, jet.width, jet.tipWidth) + (0.3 + JET_DROP_FLING * u * flung) * root);
+        const along = endAlong + cA + (run > 0 ? -tC / run : 0) * off;
+        const across = endAcross + cC + (run > 0 ? tA / run : 1) * off;
+        surface.blit(SPRITE.sprayDrop, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (1 - 0.35 * u), 0, held * (1 - 0.7 * u));
       }
-      // And the mist its tip breaks into, swelling and thinning as it hangs there.
+      // And the mist its front breaks into, swelling and thinning as it hangs there.
+      const fA = JET_LINE[last * 2]!;
+      const fC = JET_LINE[last * 2 + 1]!;
+      const fWidth = streamWidth(old, jet.flight, jet.width, jet.tipWidth);
       for (let m = 0; m < JET_MISTS; m++) {
-        const clock = e.spin + m * 5;
-        const age = (clock % JET_MIST_STEPS) / JET_MIST_STEPS;
-        const t = 0.97 + 0.12 * age;
-        const off = jag(m * 53 + 11, 0, Math.floor(clock / JET_MIST_STEPS)) * (root + opens) * 0.6;
-        const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
-        const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
-        surface.blit(SPRITE.sprayMist, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (0.55 + 0.5 * age), 0, held * 0.7 * (1 - age));
+        const turn = e.spin + m * 5;
+        const u = (turn % JET_MIST_STEPS) / JET_MIST_STEPS;
+        const off = jag(m * 53 + 11, 0, Math.floor(turn / JET_MIST_STEPS)) * fWidth * 0.6;
+        // A little past the front, the way the water was going.
+        const ahead = 0.12 * u * jet.length;
+        const run = Math.sqrt(fA * fA + fC * fC);
+        const along = endAlong + fA + (run > 0 ? (fA / run) * ahead : 0) + JET_NORMAL[last * 2]! * off;
+        const across = endAcross + fC + (run > 0 ? (fC / run) * ahead : 0) + JET_NORMAL[last * 2 + 1]! * off;
+        surface.blit(SPRITE.sprayMist, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (0.55 + 0.5 * u), 0, held * 0.7 * (1 - u));
       }
       continue;
     }

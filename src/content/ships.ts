@@ -949,8 +949,13 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       the next wave; a ball that presses on in a level fills it in five to fifteen and burns shields doing it.
       With the three-second dance on top, a dance every twelve to fifteen seconds in a fight. Volans' adds fill
       it in three. 0613 has the table; a play number.
+
+      ⚠️ **TWENTY SINCE 0615**, which made the ball solid: a body it does not break knocks it back off, so the same
+      pilot lands about two thirds as often on a boss — 0.9 to 1.9 a second where it was 1.1 to 2.7 — and twenty
+      puts it back near the ask's window: eleven to sixteen seconds a bar against every boss but the lattice
+      (twenty-two, as it was) and the hydra, and ten to nineteen in a level. 0615 has the table.
     */
-    charge: { fill: 24 },
+    charge: { fill: 20 },
     // 0594: the weasel war dance itself, Unity twisting one way and the other — the quickest, a frenzy.
     dance: [
       dancing([SPRITE.ball, SPRITE.ballDance1, SPRITE.ball, SPRITE.ballDance2], 4),

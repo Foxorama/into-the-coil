@@ -407,6 +407,80 @@ export function tetherInto(
 }
 
 /**
+ * A stream along the `count` points of `along`/`across` against a pool — 0616, the Water Cannon's: the line
+ * its water is on this step, from the nozzle (point 0) out, landing within `reach[i]` of it at point `i` and
+ * straight between. `tetherInto` along a bent line, on its terms — a target takes it only so often on its
+ * clock (or `gate`'s), and the stone stops it: a segment that crosses stone ends the stream there.
+ *
+ * ⚠️ **ONCE PER TARGET, HOWEVER MANY SEGMENTS IT TOUCHES.** A body across a bend is near two segments, and
+ * landing each would be two landings where the straight line had one; the nearest segment is the one asked.
+ */
+export function streamInto(
+  targets: Pool<Entity>,
+  along: Float64Array,
+  across: Float64Array,
+  reach: Float64Array,
+  count: number,
+  damage: number,
+  damageScale: number,
+  flashSteps: number,
+  deaths: Deaths | null,
+  hits: Deaths | null,
+  gap: number,
+  gate: Entity | null = null,
+  corridor: Corridor | null = null,
+): number {
+  // Where the stone cuts it: the stream is the segments up to the first that crosses a face.
+  let clear = 1;
+  while (clear < count && clearLine(corridor, along[clear - 1]!, across[clear - 1]!, along[clear]!, across[clear]!)) clear++;
+  let destroyed = 0;
+  if (clear < 2) return 0;
+  for (let t = targets.size - 1; t >= 0; t--) {
+    const target = targets.at(t);
+    if (target.invulnFor > 0) continue;
+    const clock = gate ?? target;
+    let found = false;
+    let pA = 0;
+    let pC = 0;
+    for (let i = 1; i < clear && !found; i++) {
+      const rA = along[i - 1]!;
+      const rC = across[i - 1]!;
+      const dA = along[i]! - rA;
+      const dC = across[i]! - rC;
+      const lengthSq = dA * dA + dC * dC;
+      const on = lengthSq > 0 ? ((target.along - rA) * dA + (target.across - rC) * dC) / lengthSq : 0;
+      const share = on < 0 ? 0 : on > 1 ? 1 : on;
+      const nA = rA + dA * share;
+      const nC = rC + dC * share;
+      const offA = target.along - nA;
+      const offC = target.across - nC;
+      const within = reach[i - 1]! + (reach[i]! - reach[i - 1]!) * share + target.radius;
+      if (offA * offA + offC * offC > within * within) continue;
+      found = true;
+      pA = nA;
+      pC = nC;
+    }
+    if (!found) continue;
+    // The tether's bucket, on the stream's clock.
+    if (gap > 0 && clock.bladeIn > (BLADE_BURST - 1) * gap) continue;
+    if (gap > 0) clock.bladeIn += gap;
+    target.health -= damage * damageScale;
+    if (hits !== null && hits.count < hits.along.length) {
+      hits.along[hits.count] = pA;
+      hits.across[hits.count] = pC;
+      hits.count++;
+    }
+    if (target.health <= 0) {
+      killed(targets, t, deaths);
+      destroyed++;
+      continue;
+    }
+    flash(target, flashSteps);
+  }
+  return destroyed;
+}
+
+/**
  * Blasts against one animal — a head, and the nodes that spend what lands on them on it — landing
  * once each however much of the animal they cover. `docs/decisions/0372-a-death-keeps-the-ladders.md`.
  *

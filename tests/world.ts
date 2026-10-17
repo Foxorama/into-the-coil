@@ -186,6 +186,8 @@ export function inertLevel(): {
   regenIn: number;
   regenSeen: number;
   danceBounces: number;
+  danceKickFor: number;
+  dancePullIn: number;
   danceFor: number;
   danceKind: SpecialKind | null;
   danceAlong: number;
@@ -340,6 +342,8 @@ export function inertLevel(): {
     regenIn: 0,
     regenSeen: 0,
     danceBounces: 0,
+    danceKickFor: 0,
+    dancePullIn: 0,
     danceFor: 0,
     danceKind: null,
     danceAlong: 0,
@@ -548,6 +552,8 @@ export function playableWorld(
     regenIn: 0,
     regenSeen: 0,
     danceBounces: 0,
+    danceKickFor: 0,
+    dancePullIn: 0,
     danceFor: 0,
     danceKind: null,
     danceAlong: 0,

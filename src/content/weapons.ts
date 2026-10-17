@@ -126,6 +126,14 @@ export interface Ram {
   readonly cool: number;
   /** What the gauge loses each step while it cools. */
   readonly drain: number;
+  /**
+   * How fast the ball comes back off a body it did not break, away from it, in world units a step in the
+   * body's frame — 0615. *"You should bounce back off bosses and objects that don't get immediately
+   * destroyed."* The least it leaves at: a ball barely touching still visibly knocks off.
+   */
+  readonly knock: number;
+  /** The share of the speed it met the body at that it keeps, back the other way — 0615: its restitution. */
+  readonly give: number;
 }
 
 /**
@@ -668,6 +676,15 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       scrape: 0.01,
       cool: 30,
       drain: 0.01,
+      /*
+        ⚠️ **A KNOCK THE PLAYER SEES, AND WHAT IT COSTS THE RAM — 0615.** At 2.0 a step away the ship's mass
+        (`FLIGHT_RESPONSE`) carries it two units back off a body with the stick still held into it — over 12 px on
+        a 1280-wide screen — and about eight with the stick let go. 1.6 came back 8 px, which reads as sticking,
+        and 2.4 cost a held ram a third of its landings on a boss; at 2.0 it lands 5.3 a second where it
+        landed 6.6, and the War Dance it earns lands two and a half times what it did. 0615 has the table.
+      */
+      knock: 2.0,
+      give: 0.4,
     },
     paint: null,
     lends: false,
