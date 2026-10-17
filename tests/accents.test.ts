@@ -300,6 +300,9 @@ const HULLLESS: readonly SpriteKind[] = [
   // A bubble on the acid is scenery drawn over the ground, a ring of light with no hull — 0353.
   'bubble',
   'bubblePop',
+  // A drop flung off the Water Cannon's spray, and the mist at its tip, are water in no pairing with no hull — 0610.
+  'sprayDrop',
+  'sprayMist',
   // The heart's pulse is light travelling in a vein, with no hull — 0354.
   'veinBead',
   /*

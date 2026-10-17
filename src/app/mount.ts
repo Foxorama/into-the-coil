@@ -139,7 +139,7 @@ import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import { SHELLS, SHELL_KINDS } from '../content/shells.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, WARES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
-import { COSMO, KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
+import { COSMO, KEEPERS, KEEPER_KINDS, drawSpots, type KeeperKind } from '../content/keepers.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import {
@@ -269,6 +269,16 @@ export const CAPACITY = {
     the pool full and landing nothing. Paid by the enemy shots, below.
   */
   blasts: 13,
+  /*
+    ⚠️ **TWENTY-EIGHT: THE PAINT THAT STAYS — 0610.** A splat was a blast that stood two thirds of a second,
+    in this pool's thirteen; at two and a half seconds a string of paint would fill it and a bomb thrown into
+    the string would land nothing. So the picture left behind is a pool of its own and the blast is a step
+    long. The marker throws one ball every six steps on every rung (`fireEvery`), so the most that can be
+    standing at once is every ball of 150 steps landing — twenty-five — and twenty-eight is the tenth of
+    headroom the shots keep. Paid out of 0286's worst case on 0153's terms: a desktop target, and twenty-eight
+    blits of a baked bitmap, only while the duck's marker is the gun.
+  */
+  paint: 28,
   /*
     ⚠️ **TWO HUNDRED SINCE 0479, AND IT WAS A HUNDRED AND FIFTY.** The flame went from 1.8 a step to 1.1,
     so the gyre's wheel's flames are on the field longer, and its fight — curtains of forty-one beside
@@ -863,6 +873,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
   const bombs = new Pool<Entity>(CAPACITY.bombs, makeEntity);
   const blasts = new Pool<Entity>(CAPACITY.blasts, makeEntity);
+  const paint = new Pool<Entity>(CAPACITY.paint, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
@@ -1192,6 +1203,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     missiles,
     bombs,
     blasts,
+    paint,
     enemyShots,
     debris,
     deaths: makeDeaths(CAPACITY.enemies),
@@ -1932,7 +1944,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const spots = Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, 0])) as Record<KeeperKind, number>;
   world.standSpots = spots;
   function moveKeepers(): void {
-    for (const kind of KEEPER_KINDS) spots[kind] = keeperRng.int(0, KEEPERS[kind].spots.length - 1);
+    // 0611: one keeper to a place in the dock, so two are never drawn in one spot.
+    drawSpots(keeperRng, spots);
     sayKeepers();
     // 0572: and the bubble moved to where the keeper now is.
     frameStand();

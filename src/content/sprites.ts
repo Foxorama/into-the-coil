@@ -1379,6 +1379,12 @@ export const SPRITE_KINDS = [
   'splatGrape',
   'splatGrapeDry',
   /*
+    The Water Cannon's spray — 0610: a drop flung off its edge, and the mist its tip breaks into. Baked and
+    blitted beside the strokes of the spray itself, which are the bolt's verb because their shape is the frame's.
+  */
+  'sprayDrop',
+  'sprayMist',
+  /*
     ── THE RAY GUN'S RINGS, IN THREE PAGES, AND WHERE THEY LAND IN TWO — 0442 ──────────────────────
 
     *"Four concentric purple energy rings that explode on impact with a small energy explosion."* Four
@@ -3011,6 +3017,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   splatBlueDry: 8,
   splatGrape: 8,
   splatGrapeDry: 8,
+  /*
+    0610: a drop of spray is under a unit across — half the smallest bullet, so a drop off the jet is never a
+    bullet's size beside one — and the mist is about the width of the spray's tip, which it hangs over.
+  */
+  sprayDrop: 1.4,
+  sprayMist: 9,
   catherineFade: 8,
   cinder: 4.5,
   cinderCool: 3.6,

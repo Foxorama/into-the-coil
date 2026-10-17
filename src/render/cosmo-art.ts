@@ -1,7 +1,9 @@
 /**
  * Cosmo, drawn — `docs/decisions/0542-cosmos-counter.md`. A bust: the alien from the family photo the
  * shop sells (0523), in a shopkeeper's waistcoat and bow tie, painted into a square canvas so the same
- * drawing is the portrait on the plate and the figure behind the stall's counter in the port.
+ * drawing is the portrait on the plate and the figure behind the stall's counter in the port. Since 0611
+ * the head is its own painter, so Cosmo whole about the dock wears the bust's face (`paintCosmoAbout` in
+ * `keeper-art.ts`).
  *
  * ⚠️ **COLD, ON `golfer-art.ts`'s TERMS**: drawn once into a bitmap, at a bake, never in a frame.
  *
@@ -12,10 +14,14 @@
 import type { Palette } from '../content/palette.ts';
 import { mix, shade } from './bake.ts';
 
+/** Cosmo's green, the family photo's. */
+export function cosmoSkin(palette: Palette): string {
+  return mix(palette.acid, palette.pickup, 0.5);
+}
+
 /** Draw Cosmo's bust to fill a `size` square: the head in the top two thirds, the shoulders below. */
 export function paintCosmo(ctx: CanvasRenderingContext2D, palette: Palette, size: number): void {
   const u = size / 100;
-  const skin = mix(palette.acid, palette.pickup, 0.5);
   const dark = palette.space;
   const outline = Math.max(1, 2.2 * u);
   ctx.lineJoin = 'round';
@@ -49,6 +55,21 @@ export function paintCosmo(ctx: CanvasRenderingContext2D, palette: Palette, size
     ctx.fill();
     ctx.stroke();
   }
+  paintCosmoHead(ctx, palette, u, 1);
+}
+
+/**
+ * Cosmo's neck and head, in the bust's own 100 square at `u` a hundredth of it — so the plate's portrait
+ * and the figure about the dock are one face (0611, on 0554's terms for Unity's). `px` is one pixel in the
+ * frame it is drawn in, the floor under every line, so the face holds its strokes at the figure's size.
+ */
+export function paintCosmoHead(ctx: CanvasRenderingContext2D, palette: Palette, u: number, px: number): void {
+  const skin = cosmoSkin(palette);
+  const dark = palette.space;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = Math.max(px, 2.2 * u);
   // The neck, and the head: wide at the brow and narrow at the chin, as the photo's are.
   ctx.fillStyle = shade(skin, -0.15);
   ctx.fillRect(44 * u, 58 * u, 12 * u, 13 * u);

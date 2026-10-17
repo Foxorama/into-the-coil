@@ -47,7 +47,8 @@ export const PROBES = [
     // The first frame of a splat in the row's own picture: a yellow ball splats pink until the next step.
     broke: 'a splat in the wrong colour on the step it lands',
     guard: 'a ball that lands splats there, in its own colour, and the splat lands on a body beside the one it hit',
-    edit: { path: 'src/app/frame.ts', find: '    const wet = paint.colours[blast.face]!.splat;', replace: '    const wet = row.sprite;' },
+    // Re-anchored by 0610: what is seen of a splat is the paint it leaves, which takes its colour here.
+    edit: { path: 'src/app/frame.ts', find: '  const wet = paint.colours[mark.face]!.splat;', replace: '  const wet = SHOTS[gun.bursts].sprite;' },
   },
   {
     decision: '0595',
@@ -76,7 +77,8 @@ export const PROBES = [
     suite: 'tests/duck.test.ts',
     // Drawn as the arc's flash, in the player's cyan, and not as water at all.
     broke: 'a jet painted as a bolt of lightning',
-    guard: 'is painted as a held column of water as wide as it lands, with its drops, at its stated cost',
+    // Re-named by 0610, which paints it as a spray: the break still draws it as lightning.
+    guard: 'is painted as a spray as wide as it lands, opening from the nozzle to its tip, with its drops and mist, at its stated cost',
     edit: { path: 'src/render/scene.ts', find: '    if (e.kind === JET_BOLT_KIND) {', replace: '    if (e.kind === JET_BOLT_KIND && false) {' },
   },
   {
