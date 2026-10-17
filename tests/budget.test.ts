@@ -132,8 +132,15 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * at each tube place — *"by ink"*, so a rack of one of each reads as one of each — and a picture baked
  * into the hull cannot change ink with the tube the run fills it with: two more blits of a baked bitmap,
  * for as long as a ship carries two tubes. Nothing else was re-sliced.
+ *
+ * ⚠️ **AND 916 SINCE 0610, ON THE PLAYER-PROJECTILE LINE.** *"The paint ball splats need to 'paint' the
+ * bosses … and fade away after 2-3 secs."* A splat stood two thirds of a second in the blast pool; at two
+ * and a half seconds a string of paint would fill that pool and a bomb would land nothing, so what is left
+ * behind is a pool of its own: one ball every six steps, every one landing, is twenty-five standing at once,
+ * and twenty-eight keeps the shots' tenth of headroom. Twenty-eight more blits of a baked bitmap while the
+ * marker is the gun, on a desktop target. Nothing else was re-sliced.
  */
-const WORST_CASE = 888;
+const WORST_CASE = 916;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

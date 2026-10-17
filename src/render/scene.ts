@@ -23,7 +23,7 @@ import { PLAYER_MARGIN, boxPastFor } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, BOLT_WATER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, BOLT_SPRAY, BOLT_WATER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
 import { TETHER_BOLT_KIND } from '../content/weapons.ts';
 import { JET_BOLT_KIND } from '../content/specials.ts';
 
@@ -265,6 +265,7 @@ export function paintScene(
   beamsBefore = -1,
   bolts: Pool<Entity> | null = null,
   jetsBefore = -1,
+  paint: Pool<Entity> | null = null,
 ): void {
   /*
     ⚠️ **`beat` IS HOW HARD THE HEART THE PLAYER HEARS IS BEATING THIS FRAME — 0401**, from nothing to
@@ -324,6 +325,13 @@ export function paintScene(
       bullets for the same reason. Stroked before the enemy shots, it is over the bodies it is landing on and
       under every bullet, and the ship stands over its root.
     */
+    /*
+      ⚠️ **AND THE PAINT A SPLAT LEAVES GOES OVER EVERY BODY AND UNDER EVERY SHOT — 0610**, on 0295's question. A
+      splat on a boss is ON the boss, so it is drawn after the boss's layers and the enemies' (and the Mire's
+      bank, which is drawn after the enemies); it is the player's own paint, so it is under every bullet, and
+      under the jet, which is water landing on what the paint is on.
+    */
+    if (layer === jetsBefore && paint !== null) paintPaint(surface, view, paint, cameraAlong, alpha);
     if (layer === jetsBefore && bolts !== null) paintBolts(surface, view, bolts, cameraAlong, alpha, 'jets');
     const entities = layers[layer]!;
     const count = entities.size;
@@ -362,6 +370,31 @@ export function paintScene(
   }
   // A caller that names no layer — a fixture, a bench of scenery — gets the front wall over everything.
   if (frontAfter < 0 || frontAfter >= layers.length) paintFront(surface, view, corridor, pools, cameraAlong, time);
+}
+
+/**
+ * Steps a splat's paint fades out over before it is gone — 0610: the last second of its two and a half
+ * (`SPLAT_STEPS` in `src/app/frame.ts`), so it is whole while the player can still see what it landed on and
+ * goes as paint does rather than vanishing.
+ */
+export const PAINT_FADE_STEPS = 60;
+
+/**
+ * Every splat's paint — 0610: one blit of its baked bitmap each, turned with the body it rides and fading out
+ * over its last `PAINT_FADE_STEPS`. A faded blit is still one draw of one bitmap (`Surface.blit`'s `alpha`).
+ */
+function paintPaint(surface: Surface, view: View, paint: Pool<Entity>, cameraAlong: number, alpha: number): void {
+  for (let i = 0; i < paint.size; i++) {
+    const e = paint.at(i);
+    // Between its last place and this one, as every body is — written apart from the layers' loop so a probe
+    // anchored on that loop's own copy still finds exactly one (0025).
+    const along = e.prevAlong + alpha * (e.along - e.prevAlong);
+    const across = e.prevAcross + alpha * (e.across - e.prevAcross);
+    const turn = e.prevTurn + alpha * (e.turn - e.prevTurn);
+    const fade = e.lifeFor >= PAINT_FADE_STEPS ? 1 : e.lifeFor / PAINT_FADE_STEPS;
+    const inView = along - cameraAlong;
+    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale, turn, fade);
+  }
 }
 
 /**
@@ -495,18 +528,30 @@ const TETHER_FADE_STEPS = 8;
 /** How many `bolt` calls one tether costs: its cord, two filaments and two sparks. */
 export const STROKES_PER_TETHER = 5;
 /**
- * The Water Cannon's jet — 0595: how many waves run along it, how far it ripples off its line as a share of
- * its width, how fast the ripple runs out from the muzzle, its spray of drops off the end, and the steps it
- * fades over as it stops.
+ * The Water Cannon's spray — 0610, and it was 0595's held column: how many strands it is laid in, the vertices
+ * on each, how far a strand churns off its line as a share of the spray's width at the muzzle, how short of the
+ * tip a strand may break off, how many steps the churn holds one shape, and the steps it fades over as it stops.
  */
-const JET_WAVES = 4 * Math.PI * 2;
-const JET_RIPPLE = 0.35;
-const JET_RUN = 0.5;
-const JET_DROPS = 3;
-const JET_DROP = 0.9;
+const JET_STRANDS = 5;
+const JET_VERTICES = 17;
+const JET_CHURN = 0.6;
+const JET_RAGGED = 0.12;
+const JET_PAGE_STEPS = 2;
 const JET_FADE_STEPS = 10;
-/** How many `bolt` calls one jet costs: its body, its white heart, and its drops. */
-export const STROKES_PER_JET = 2 + JET_DROPS;
+/**
+ * The drops flung off its edges and the mist its tip breaks into — 0610: how many of each, how many steps a drop
+ * takes to travel from a quarter of the way along the spray to past its end, and how far out from the edge it
+ * gets, in shares of the width at the muzzle.
+ */
+const JET_DROPS = 8;
+const JET_DROP_STEPS = 24;
+const JET_DROP_FLING = 1.8;
+const JET_MISTS = 3;
+const JET_MIST_STEPS = 16;
+/** How many `bolt` calls one jet costs: one per strand. */
+export const STROKES_PER_JET = JET_STRANDS;
+/** And how many blits of a baked bitmap: its drops and its mist. */
+export const BLITS_PER_JET = JET_DROPS + JET_MISTS;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
 const BOLT_JAG = 0.16;
 /** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
@@ -702,38 +747,62 @@ export function paintBolts(
       continue;
     }
     /*
-      ⚠️ **THE WATER CANNON'S JET IS A HELD COLUMN OF WATER — 0595.** Laid every step from the muzzle out
-      along where it points, and drawn as a beam is (held, as wide as it lands — 0250's rule), in the
-      water's inks, rippling outward along its length as water from a hose does, a white heart down it and
-      a spray of drops off its end. It fades over its last few steps rather than vanishing.
+      ⚠️ **THE WATER CANNON'S JET IS A SPRAY, AND IT WAS A HELD COLUMN — 0610.** *"Looks kind of like a laser
+      instead of a water spray."* 0595 drew it as a beam is — one straight stroke of light, a white core down it
+      — and that is a laser. It is laid every step from the muzzle out along where it points, as it was, and is
+      drawn as water from a hose: strands of spray fanning from the nozzle to the width it lands at its tip
+      (`radius` at the muzzle, `swell` times that at the end — 0250's rule, the picture as wide as it lands),
+      each churning on a hash that changes every other step so the spray boils, the middle ones breaking off
+      short of the end; drops flung off both edges, travelling out along it; and a mist where it breaks up at
+      its tip. Translucent water laid over the frame (`BOLT_SPRAY`), not light added to it. The strands are
+      strokes because their shape is this frame's (0233); the drops and the mist are baked and blitted (0022).
+      Every place on it is a pure function of the link and the step it was laid on, so nothing is drawn from a
+      stream (0021). It fades over its last few steps rather than vanishing.
     */
     if (e.kind === JET_BOLT_KIND) {
       const held = e.holdFor >= JET_FADE_STEPS ? 1 : e.holdFor <= 0 ? 0 : e.holdFor / JET_FADE_STEPS;
-      const last = TETHER_VERTICES - 1;
-      const tAlong = -e.fromAcross / length;
-      const tAcross = e.fromAlong / length;
-      for (let pass = 0; pass < 2; pass++) {
+      const root = e.radius;
+      const opens = e.radius * e.swell - root;
+      const page = Math.floor(e.spin / JET_PAGE_STEPS);
+      const last = JET_VERTICES - 1;
+      for (let s = 0; s < JET_STRANDS; s++) {
+        const share = (s / (JET_STRANDS - 1)) * 2 - 1;
+        const edge = share === -1 || share === 1;
+        // The edges carry the spray's width to its end; a strand inside them may break off a little short.
+        const reach = edge ? 1 : 1 - (JET_RAGGED * (jag(s * 131 + 7, 0, page) + 1)) / 2;
         for (let v = 0; v <= last; v++) {
-          const t = v / last;
-          // Pinned at the muzzle, rippling more toward its end, the waves running outward.
-          const off = t * e.radius * JET_RIPPLE * Math.sin(t * JET_WAVES - e.spin * JET_RUN);
-          const along = endAlong + e.fromAlong * (1 - t) + tAlong * off;
-          const across = endAcross + e.fromAcross * (1 - t) + tAcross * off;
+          const t = (v / last) * reach;
+          const churn = jag(s * 131 + 7, v + 1, page) * JET_CHURN * root * t;
+          // An edge strand churns only inward, so the spray is never drawn wider than it lands.
+          const off = share * opens * t + (edge ? -share * Math.abs(churn) : churn);
+          const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
+          const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
           TETHER[v * 2] = screenX(view, along - cameraAlong, across);
           TETHER[v * 2 + 1] = screenY(view, along - cameraAlong, across);
         }
-        if (pass === 0) surface.bolt(TETHER, TETHER_VERTICES, e.radius * BEAM_STROKE * view.scale, held, BOLT_WATER, BOLT_BEAM);
-        else surface.bolt(TETHER, TETHER_VERTICES, e.radius * BEAM_STROKE * 0.35 * view.scale, held * 0.8, BOLT_WATER);
+        surface.bolt(TETHER, JET_VERTICES, root * BEAM_STROKE * view.scale, held, BOLT_WATER, BOLT_SPRAY);
       }
-      // The spray off the end: drops thrown a little past it, either side, moving on with the step.
+      // The drops flung off its edges, each travelling out along the spray and away from it, then round again.
       for (let d = 0; d < JET_DROPS; d++) {
-        const reach = 1 + 0.04 * (((e.spin + d * 3) % 5) + 1);
-        const side = (d - (JET_DROPS - 1) / 2) * e.radius * 0.8;
-        const along = endAlong + e.fromAlong * (1 - reach) + tAlong * side;
-        const across = endAcross + e.fromAcross * (1 - reach) + tAcross * side;
-        DOT[0] = screenX(view, along - cameraAlong, across);
-        DOT[1] = screenY(view, along - cameraAlong, across);
-        surface.bolt(DOT, 1, JET_DROP * view.scale, held * 0.85, BOLT_WATER);
+        const clock = e.spin + d * 5;
+        const age = (clock % JET_DROP_STEPS) / JET_DROP_STEPS;
+        const t = 0.25 + age * 0.9;
+        const side = d % 2 === 0 ? 1 : -1;
+        const flung = 0.6 + 0.4 * Math.abs(jag(d * 37 + 3, 0, Math.floor(clock / JET_DROP_STEPS)));
+        const off = side * (root + opens * (t < 1 ? t : 1) + (0.3 + JET_DROP_FLING * age * flung) * root);
+        const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
+        const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
+        surface.blit(SPRITE.sprayDrop, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (1 - 0.35 * age), 0, held * (1 - 0.7 * age));
+      }
+      // And the mist its tip breaks into, swelling and thinning as it hangs there.
+      for (let m = 0; m < JET_MISTS; m++) {
+        const clock = e.spin + m * 5;
+        const age = (clock % JET_MIST_STEPS) / JET_MIST_STEPS;
+        const t = 0.97 + 0.12 * age;
+        const off = jag(m * 53 + 11, 0, Math.floor(clock / JET_MIST_STEPS)) * (root + opens) * 0.6;
+        const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
+        const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
+        surface.blit(SPRITE.sprayMist, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (0.55 + 0.5 * age), 0, held * 0.7 * (1 - age));
       }
       continue;
     }

@@ -128,6 +128,7 @@ function stationKeepingWorld(surface: Surface): World {
     missiles: new Pool<Entity>(8, makeEntity),
     bombs: new Pool<Entity>(4, makeEntity),
     blasts: new Pool<Entity>(4, makeEntity),
+    paint: new Pool<Entity>(4, makeEntity),
     onSpecial: (): void => {},
     missileIn: 10_000,
     enemies,

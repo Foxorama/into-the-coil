@@ -11,7 +11,7 @@
  */
 
 import type { Atlas } from './bake.ts';
-import { BOLT_BEAM, BOLT_FLAME, BOLT_FLASH, BOLT_HOSTILE, BOLT_ROPE, BOLT_WATER, type BoltLook, type BoltTone, type Surface } from './surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_FLASH, BOLT_HOSTILE, BOLT_ROPE, BOLT_SPRAY, BOLT_WATER, type BoltLook, type BoltTone, type Surface } from './surface.ts';
 
 /**
  * The device-pixel-ratio ceiling, per 0022.
@@ -222,7 +222,7 @@ export class CanvasSurface implements Surface {
     // The flash and the dark rim wrap the bolt and not its dots: a dot with its own wash is a
     // bead, a dot with its own rim is a dark disc punched in the flash, and the eye reads either as
     // a string of lights rather than as one flash. A dot is its glow and its core — 0238.
-    const layers = count === 1 ? DOT_LAYERS : look === BOLT_BEAM ? BEAM_LAYERS : look === BOLT_ROPE ? ROPE_LAYERS : FLASH_LAYERS;
+    const layers = count === 1 ? DOT_LAYERS : look === BOLT_BEAM ? BEAM_LAYERS : look === BOLT_ROPE ? ROPE_LAYERS : look === BOLT_SPRAY ? SPRAY_LAYERS : FLASH_LAYERS;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i]!;
       ctx.globalCompositeOperation = layer.additive ? 'lighter' : 'source-over';
@@ -333,4 +333,19 @@ export const ROPE_LAYERS: readonly BoltLayer[] = [
   { width: 2.4, alpha: 0.6, ink: 'glow', additive: true },
   { width: 1.3, alpha: 0.85, ink: 'hot', additive: true },
   { width: 0.6, alpha: 1, ink: 'core', additive: true },
+];
+
+/**
+ * A strand of spray — the Water Cannon's, 0610: *"looks kind of like a laser instead of a water spray."* It was
+ * stroked as a beam, and a beam is a column of LIGHT: a wash, a rim, and glows added to the frame round a white
+ * core, which is exactly what a laser is. Water is a translucent body: its BODY is laid over the frame
+ * (`source-over`) at the width it lands at (four, 0250's figure), a paler sheen down it and a thin line of foam,
+ * and nothing wider round it — no wash and no rim, because the spray is several of these laid across each other
+ * and a rim would cut a dark seam through every strand it crossed. Where strands overlap, at the nozzle, the
+ * water is deeper; where they part, at the tip, it thins and breaks, which is what a spray looks like.
+ */
+export const SPRAY_LAYERS: readonly BoltLayer[] = [
+  { width: 4, alpha: 0.38, ink: 'glow', additive: false },
+  { width: 2.2, alpha: 0.3, ink: 'hot', additive: true },
+  { width: 0.7, alpha: 0.45, ink: 'core', additive: true },
 ];

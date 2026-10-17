@@ -84,11 +84,13 @@ export const BOLT_FLAME: BoltTone = 2;
 /** The Water Cannon's jet — 0595: the frost's aquamarine round a white heart. */
 export const BOLT_WATER: BoltTone = 3;
 
-/** Which stack a bolt is stroked in — 0470, 0549. Closed: a flash, a beam, a rope of fire. */
-export type BoltLook = 0 | 1 | 2;
+/** Which stack a bolt is stroked in — 0470, 0549, 0610. Closed: a flash, a beam, a rope of fire, a strand of spray. */
+export type BoltLook = 0 | 1 | 2 | 3;
 export const BOLT_FLASH: BoltLook = 0;
 export const BOLT_BEAM: BoltLook = 1;
 export const BOLT_ROPE: BoltLook = 2;
+/** A strand of the Water Cannon's spray — 0610: water, so laid over the frame and not added to it as light is. */
+export const BOLT_SPRAY: BoltLook = 3;
 
 /**
  * The horizontal screen position, in CSS pixels, of a point in the camera's window.

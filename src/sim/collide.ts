@@ -362,10 +362,17 @@ export function tetherInto(
   gap: number,
   gate: Entity | null = null,
   corridor: Corridor | null = null,
+  /*
+    ⚠️ **AND HOW FAR IT REACHES AT ITS FAR END — 0610**, for a line that widens: the Water Cannon's spray is a
+    cone from the muzzle, and lands within `reach` at the root and `reachEnd` at the end, straight between.
+    A tether's is its `reach` the whole way, which is what leaving it out says.
+  */
+  reachEnd = reach,
 ): number {
   const dA = endAlong - rootAlong;
   const dC = endAcross - rootAcross;
   const lengthSq = dA * dA + dC * dC;
+  const widens = reachEnd - reach;
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
     const target = targets.at(t);
@@ -378,7 +385,7 @@ export function tetherInto(
     const pC = rootAcross + dC * share;
     const offA = target.along - pA;
     const offC = target.across - pC;
-    const within = reach + target.radius;
+    const within = reach + widens * share + target.radius;
     if (offA * offA + offC * offC > within * within) continue;
     if (gap > 0 && clock.bladeIn > gap * (BLADE_BURST - 1)) continue;
     if (!clearLine(corridor, rootAlong, rootAcross, pA, pC)) continue;
