@@ -86,8 +86,8 @@ export const PROBES = [
       // 0379 for the surge's pods, and by 0403 for the jellyfish's tentacles, and by 0447 for the nova,
       // and by 0464 for the hydra's collars, and by 0479 for the slower flame's bullets and the longer rifts,
       // and by 0527 for a car's two turning wheels, and by 0533 for the nova's two inner rings, and by
-      // 0581 for a ship's two loaded tubes.
-      find: 'const WORST_CASE = 888;',
+      // 0581 for a ship's two loaded tubes, and by 0610 for the paint a splat leaves.
+      find: 'const WORST_CASE = 916;',
       replace: 'const WORST_CASE = 500;',
     },
   },

@@ -43,7 +43,7 @@ function hangarJetsOf(ship: ShipKind): readonly Pt[] {
 }
 import { paintRunner } from './golfer-art.ts';
 import { paintCosmo } from './cosmo-art.ts';
-import { KEEPER_FACES, paintUnityStanding } from './keeper-art.ts';
+import { KEEPER_ABOUT, KEEPER_FACES, paintUnityStanding } from './keeper-art.ts';
 import { KEEPERS, KEEPER_KINDS } from '../content/keepers.ts';
 
 /**
@@ -91,7 +91,7 @@ export function bakePortShip(port: Atlas, palette: Palette, pilot: GolferRow, sh
  * the depth the eye reads as distance, and costs nothing. Every keeper's figure and counter, read off
  * their rows, so a fourth keeper is sharpened without a line here.
  */
-const SHARP_PIECES: ReadonlySet<PortKind> = new Set<PortKind>([...SHIP_PIECES, ...KEEPER_KINDS.flatMap((kind) => [KEEPERS[kind].figure, KEEPERS[kind].counter])]);
+const SHARP_PIECES: ReadonlySet<PortKind> = new Set<PortKind>([...SHIP_PIECES, ...KEEPER_KINDS.flatMap((kind) => [KEEPERS[kind].figure, KEEPERS[kind].counter, KEEPERS[kind].about.figure])]);
 
 /**
  * The port's pieces with the game's after them — 0416. The sky outside is the first level's, and it
@@ -243,6 +243,16 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     // 0550: MMXXVI's, on Cosmo's terms — the portrait's own drawing behind their counter.
     case 'mmxxvi':
       KEEPER_FACES[kind](ctx, palette, size);
+      return canvas;
+    // 0611: each keeper whole about the dock, their soles on their row's own line.
+    case 'cosmoAbout':
+      KEEPER_ABOUT.cosmo(ctx, palette, size, extent, KEEPERS.cosmo.about.feet);
+      return canvas;
+    case 'unityAbout':
+      KEEPER_ABOUT.unity(ctx, palette, size, extent, KEEPERS.unity.about.feet);
+      return canvas;
+    case 'mmxxviAbout':
+      KEEPER_ABOUT.mmxxvi(ctx, palette, size, extent, KEEPERS.mmxxvi.about.feet);
       return canvas;
     case 'viper':
       paintViper(ctx, f, palette, size);
@@ -628,6 +638,9 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'cosmo':
     case 'unity':
     case 'mmxxvi':
+    case 'cosmoAbout':
+    case 'unityAbout':
+    case 'mmxxviAbout':
       throw new Error(`bakePort: ${kind} is drawn in the ship's own frame`);
     default: {
       const never: never = kind;

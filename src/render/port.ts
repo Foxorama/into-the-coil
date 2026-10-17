@@ -49,7 +49,7 @@ import {
   TRAIL_EVERY,
   TRAIL_SAMPLES,
 } from '../content/port.ts';
-import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
+import { DOCK_PLACES, KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import { UFO_BULBS, UFO_RING, lampFrame, lampTurn, type ShipRow } from '../content/ships.ts';
 import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
@@ -196,6 +196,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   // 0572: the hover-lift at the catwalk's near end, its platform riding between the deck and the walk.
   put(surface, view, PORT_SPRITE.lift, DOCK.lift, STAGE.deck + 2.5 - PORT_EXTENT.lift / 2);
   put(surface, view, PORT_SPRITE.liftCar, DOCK.lift, liftAt(t));
+  // 0611: and whoever is riding it, their soles on its platform.
+  paintOnLift(surface, view, spots, liftAt(t));
   /*
     0569: every keeper wherever they are this visit — at their counter, at the ship, or out — and since 0571
     all three are in the room at once. The open tab's shop is lit; the others stand back in the dim.
@@ -208,8 +210,9 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     const s = DOCK.shopScale;
     put(surface, view, PORT_SPRITE.alcove, shop, DOCK.shopAcross, 1, 0, s);
     // 0554: at the counter, where they stand is theirs — behind it, or on it, as Unity stands on their bench.
-    const along = shop + place.offset.along * s;
-    const across = DOCK.shopAcross + place.offset.across * s;
+    const offset = place.at === 'counter' ? place.offset : AWAY_FROM_IT;
+    const along = shop + offset.along * s;
+    const across = DOCK.shopAcross + offset.across * s;
     if (place.at === 'counter' && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
     put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);
     if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
@@ -218,6 +221,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   }
   // The pilot's ship on its cradle on the deck, under the shops.
   const pad = DOCK.ship;
+  // 0611: whoever stands behind the ship, before the cradle, so the cradle and the ship stand in front of them.
+  paintOnDeck(surface, view, spots, 'behind');
   put(surface, view, PORT_SPRITE.cradle, pad, STAGE.deck - 1.5);
   // Lit from the first frame and never going: its idle flame for as long as the stand is up. A size up
   // from the intro's (`DOCK.shipGrow`): it is the picture of every change, and baked as much sharper.
@@ -231,8 +236,10 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     const u = (t / HOVER_RISE + i / HOVER_RINGS) % 1;
     put(surface, view, PORT_SPRITE.hoverRing, pad, plate + (under - plate) * u, Math.sin(u * Math.PI) * 0.8, 0, 1 - u * 0.15);
   }
-  // 0569: a keeper at the ship rides its bob — looking over it from behind, or standing on its roof.
-  paintAtShip(surface, view, spots, 'behind', pad, across);
+  /*
+    0569 stood a keeper at the ship here, riding its bob — a bust over its roof from behind, or Unity on it.
+    0611: *"kinda floating in mid air"*. They stand on the deck round it, before the cradle and after the ship.
+  */
   paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
@@ -289,7 +296,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
       put(surface, view, GAME_BASE + UFO_BULB[(b + chase) % UFO_BULB.length]!, at + Math.cos(a) * UFO_RIM * unit, down, 0.35 + 0.65 * near, 0, unit);
     }
   }
-  paintAtShip(surface, view, spots, 'over', pad, across);
+  // 0611: and whoever stands on the deck nearer the player than the ship, after it.
+  paintOnDeck(surface, view, spots, 'over');
   // The bay's edge at the dock's end of the room.
   put(surface, view, PORT_SPRITE.field, DOCK.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
   put(surface, view, PORT_SPRITE.bayTop, DOCK.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
@@ -335,9 +343,11 @@ export function standMarksInto(
   if (place.at === 'counter') {
     along = shop + place.offset.along * s;
     across = DOCK.shopAcross + (place.offset.across - KEEPER_HEAD) * s;
-  } else if (place.at === 'ship') {
-    along = DOCK.ship + place.offset.along * DOCK.shipGrow;
-    across = DOCK.ride + place.offset.across * DOCK.shipGrow - KEEPER_HEAD;
+  } else if (place.at !== 'away') {
+    // 0611: over their head where they stand — on the lift, half way up its ride, which it is always passing.
+    const where = DOCK_PLACES[place.at];
+    along = (where.floor === 'lift' ? DOCK.lift : DOCK.ship) + where.along;
+    across = (where.floor === 'lift' ? (STAGE.deck + DOCK.catwalk) / 2 : STAGE.deck + where.across) - row.about.tall;
   }
   out.keeperX = screenX(view, along, across);
   out.keeperY = screenY(view, along, across);
@@ -348,15 +358,36 @@ const KEEPER_HEAD = 6;
 /** How lit a shop is while another tab is open — 0571: there, and plainly not the one being spoken to. */
 const SHOP_DIM = 0.5;
 
-/** The keepers whose place this visit is at the ship, drawn `drawn` it — behind it, or over it. */
-function paintAtShip(surface: Surface, view: View, spots: Readonly<Record<KeeperKind, number>> | null, drawn: 'behind' | 'over', pad: number, across: number): void {
+/** Where a keeper not at their counter is from it — nowhere; read only to place a figure that is not drawn. */
+// @setup: one constant offset for the lifetime of the module.
+const AWAY_FROM_IT = { along: 0, across: 0 } as const;
+
+/**
+ * The keepers whose place this visit is on the deck, drawn `drawn` the ship — 0611: whole, their soles on
+ * the deck at the place's own spot round the ship's cradle.
+ */
+function paintOnDeck(surface: Surface, view: View, spots: Readonly<Record<KeeperKind, number>> | null, drawn: 'behind' | 'over'): void {
   for (let k = 0; k < KEEPER_KINDS.length; k++) {
     const kind = KEEPER_KINDS[k]!;
     const row = KEEPERS[kind];
     const place = row.spots[spots === null ? 0 : spots[kind]] ?? row.spots[0];
-    if (place.at !== 'ship' || place.drawn !== drawn) continue;
-    // Where they stand is measured on the intro's ship, and the dock's is a size up: so are they placed.
-    put(surface, view, PORT_SPRITE[row.figure], pad + place.offset.along * DOCK.shipGrow, across + place.offset.across * DOCK.shipGrow);
+    if (place.at === 'counter' || place.at === 'away') continue;
+    const where = DOCK_PLACES[place.at];
+    if (where.floor !== 'deck' || where.drawn !== drawn) continue;
+    put(surface, view, PORT_SPRITE[row.about.figure], DOCK.ship + where.along, STAGE.deck + where.across - row.about.feet);
+  }
+}
+
+/** The keeper whose place this visit is the lift, riding it — 0611: their soles on its platform's top, `floor`. */
+function paintOnLift(surface: Surface, view: View, spots: Readonly<Record<KeeperKind, number>> | null, floor: number): void {
+  for (let k = 0; k < KEEPER_KINDS.length; k++) {
+    const kind = KEEPER_KINDS[k]!;
+    const row = KEEPERS[kind];
+    const place = row.spots[spots === null ? 0 : spots[kind]] ?? row.spots[0];
+    if (place.at === 'counter' || place.at === 'away') continue;
+    const where = DOCK_PLACES[place.at];
+    if (where.floor !== 'lift') continue;
+    put(surface, view, PORT_SPRITE[row.about.figure], DOCK.lift + where.along, floor - row.about.feet);
   }
 }
 

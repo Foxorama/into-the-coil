@@ -1084,6 +1084,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   splatBlueDry: 'player',
   splatGrape: 'player',
   splatGrapeDry: 'player',
+  // 0610: the Water Cannon's spray and its mist, in the player's water as the jet is (0598).
+  sprayDrop: 'water',
+  sprayMist: 'water',
   // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
   spinnerWheel: 'player',
   spinnerWheelHit: 'hazard',
@@ -16644,6 +16647,21 @@ export function drawKind(
     case 'splatBlueDry':
     case 'splatGrapeDry':
       drawSplat(ctx, f, palette, paintColour(kind).ink, kind.endsWith('Dry'));
+      return;
+    /*
+      0610: the Water Cannon's spray, what is flung off it and the mist at its tip — water and not light, so a
+      translucent body with a glint rather than a glow; no outline, because a drop of spray has no hull.
+    */
+    case 'sprayDrop':
+      disc(ctx, f, palette.water, 0, 0, 0.8, 0.8);
+      disc(ctx, f, shade(palette.water, 0.55), -0.1, -0.1, 0.5, 0.7);
+      disc(ctx, f, palette.impact, -0.3, -0.32, 0.24, 0.85);
+      return;
+    case 'sprayMist':
+      glow(ctx, f, shade(palette.water, 0.45), 0, 0, 1.15, 0.5);
+      glow(ctx, f, shade(palette.water, 0.7), 0.35, -0.3, 0.6, 0.45);
+      glow(ctx, f, shade(palette.water, 0.7), -0.3, 0.35, 0.55, 0.4);
+      glow(ctx, f, palette.impact, 0.05, 0, 0.35, 0.5);
       return;
     /*
       0527: the Mothership's spinner at its own radius of one, unturned; the frame turns the blit. A body
