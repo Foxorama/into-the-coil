@@ -1215,15 +1215,17 @@ export interface World {
   /**
    * Steps of War Dance left, and which special it is — 0593. While it lasts the ship flies itself, bouncing
    * round its box at `danceAlong`/`danceAcross` in the camera's frame, rams everything it crosses and
-   * cannot be hurt. `danceBounces` is how many walls it has met (0609), and `danceKickFor` the steps left of
-   * the kick a body it could not break threw it off with (0615).
+   * cannot be hurt. `danceBounces` is how many walls it has met (0609). `danceSpeed` is how fast it flies —
+   * its own since 0617, braking and burning — and `danceThrust` which it did this step: -1 braked, 1 burned,
+   * 0 neither, for the flame it throws.
    */
   danceFor: number;
   danceKind: SpecialKind | null;
   danceAlong: number;
   danceAcross: number;
   danceBounces: number;
-  danceKickFor: number;
+  danceSpeed: number;
+  danceThrust: number;
   /** Steps before the dance bends at what it is dancing at again, after a wall or a body turned it — 0615. */
   dancePullIn: number;
   /**
@@ -4442,7 +4444,8 @@ function startDance(w: World, kind: SpecialKind, dance: Dance): void {
   w.danceKind = kind;
   w.danceFor = dance.steps;
   w.danceBounces = 0;
-  w.danceKickFor = 0;
+  w.danceSpeed = dance.speed;
+  w.danceThrust = 0;
   w.dancePullIn = 0;
   // 0613: the flare that said the bar was full is the dance's own now.
   w.readyFor = 0;
@@ -4489,30 +4492,90 @@ function danceShip(w: World): void {
   const ship = w.ship;
   const minAlong = w.cameraAlong + PLAYER_ALONG_MARGIN;
   const maxAlong = w.cameraAlong + leadFor(w.view.alongSpan);
-  // 0615: bent at what it dances at, and thrown faster for a while off a body it could not break.
-  pullDance(w, dance, minAlong, maxAlong);
-  const kick = 1 + ((dance.kick - 1) * w.danceKickFor) / dance.kickSteps;
-  if (w.danceKickFor > 0) w.danceKickFor--;
-  const nextAlong = ship.along + w.scrollPerStep + w.danceAlong * kick;
+  // 0615: bent at what it dances at; 0617: braking into a hard turn and burning out of it.
+  steerDance(w, dance, minAlong, maxAlong);
+  const nextAlong = ship.along + w.scrollPerStep + w.danceAlong;
   if (nextAlong < minAlong && w.danceAlong < 0) bounceDance(w, dance, 1, 0);
   else if (nextAlong > maxAlong && w.danceAlong > 0) bounceDance(w, dance, -1, 0);
-  const nextAcross = ship.across + w.danceAcross * kick;
+  const nextAcross = ship.across + w.danceAcross;
   if (nextAcross < PLAYER_MARGIN && w.danceAcross < 0) bounceDance(w, dance, 0, 1);
   else if (nextAcross > ACROSS_SPAN - PLAYER_MARGIN && w.danceAcross > 0) bounceDance(w, dance, 0, -1);
-  ship.velAlong = w.scrollPerStep + w.danceAlong * kick;
-  ship.velAcross = w.danceAcross * kick;
+  ship.velAlong = w.scrollPerStep + w.danceAlong;
+  ship.velAcross = w.danceAcross;
+  plumeDance(w, dance);
+}
+
+/**
+ * The dance's speed — 0617: *"a 'stop, speed, burn' type approach."* With what it dances at more than the row's
+ * `turnAt` off its nose it brakes, toward `slow`; with it inside that, it burns, toward `top`; with nothing to
+ * dance at, or for its `free` steps after a wall or a body turned it, it settles toward `speed`. Then its
+ * velocity is laid at that speed on its heading. `danceThrust` says which it did, for its flame.
+ */
+function steerDance(w: World, dance: Dance, minAlong: number, maxAlong: number): void {
+  const off = pullDance(w, dance, minAlong, maxAlong);
+  const was = w.danceSpeed;
+  if (off < 0) w.danceSpeed += (dance.speed - w.danceSpeed) * dance.ease;
+  else if (off > dance.turnAt) w.danceSpeed = w.danceSpeed - dance.brake < dance.slow ? dance.slow : w.danceSpeed - dance.brake;
+  // Past `top` off a bumper it eases down to it rather than snapping, as with nothing to dance at.
+  else if (w.danceSpeed > dance.top) w.danceSpeed += (dance.top - w.danceSpeed) * dance.ease;
+  else w.danceSpeed = w.danceSpeed + dance.burn > dance.top ? dance.top : w.danceSpeed + dance.burn;
+  // The retro fires for the whole of a hard turn, the stop and the swing; the burn for as long as it speeds up.
+  w.danceThrust = off > dance.turnAt ? -1 : off >= 0 && w.danceSpeed > was + 1e-9 ? 1 : 0;
+  const now = Math.hypot(w.danceAlong, w.danceAcross);
+  if (now <= 0) return;
+  w.danceAlong = (w.danceAlong / now) * w.danceSpeed;
+  w.danceAcross = (w.danceAcross / now) * w.danceSpeed;
+}
+
+/**
+ * How fast a mote of the dance's flame leaves the ship, in world units a step — 0617. One every step
+ * while it brakes or burns: a burn is a short hard thing, and a mote every other step would be sparks, not a jet.
+ */
+const PLUME_SPEED = 1.8;
+/** How far either side of the jet its two motes are thrown, in world units a step. */
+const PLUME_FAN = 0.45;
+/** Steps between one puff of flame at the dance's nozzle and the next. */
+const PLUME_PUFF_EVERY = 4;
+
+/**
+ * The flame of the dance's thrust — 0617: *"it needs thrusters hard firing."* While it burns, a mote of flame
+ * leaves its back the way it is NOT going; while it brakes, out of its front, a retro-burn. An event the model
+ * resolves, the picture mentions (0036): the speed changing is seen as the thing that changed it. Embers in the
+ * debris pool, as a fireball's trail is (0301), and dropped when the pool is full.
+ */
+function plumeDance(w: World, dance: Dance): void {
+  if (w.danceThrust === 0 || w.danceSpeed <= 0) return;
+  const uAlong = w.danceAlong / w.danceSpeed;
+  const uAcross = w.danceAcross / w.danceSpeed;
+  // Out of the back for a burn and the front for a brake.
+  const out = -w.danceThrust;
+  const atAlong = w.ship.along + out * uAlong * (dance.reach + 1);
+  const atAcross = w.ship.across + out * uAcross * (dance.reach + 1);
+  // A pair of motes a step, fanned either side of the jet — one alone, photographed, read as a trail of sparks.
+  for (let side = -PLUME_FAN; side <= PLUME_FAN; side += 2 * PLUME_FAN) {
+    const piece = w.debris.spawn();
+    if (piece === null) return;
+    const row = DEBRIS_ROWS.ember;
+    reset(piece, atAlong, atAcross, row.body, DEBRIS_KIND.ember);
+    piece.lifeFor = row.frames.length * row.hold;
+    piece.velAlong = w.scrollPerStep + out * uAlong * PLUME_SPEED - uAcross * side;
+    piece.velAcross = out * uAcross * PLUME_SPEED + uAlong * side;
+  }
+  // And the flame itself at the nozzle, every few steps, so the jet has a body and not only its sparks.
+  if (w.steps % PLUME_PUFF_EVERY === 0) flare(w, atAlong, atAcross, 'burst');
 }
 
 /**
  * Bend the dance at what it is dancing at — 0615: the boss while one is up and not beaten, and otherwise the
- * nearest body inside the view; nothing, and it flies straight. At most the row's `pull` a step, its speed
- * kept, and not for `free` steps after a wall or a body turned it (`dancePullIn`). The target is held inside
- * the box the ship flies in, so a boss standing past its edge is danced at where the ship can reach it.
+ * nearest body inside the view; nothing, and it flies straight. At most the row's `pull` a step at its `speed`,
+ * and tighter as it slows (0617), its speed kept; and not for `free` steps after a wall or a body turned it
+ * (`dancePullIn`). The target is held inside the box the ship flies in, so a boss standing past its edge is
+ * danced at where the ship can reach it. Returns how far off its nose the target was, or -1 for none.
  */
-function pullDance(w: World, dance: Dance, minAlong: number, maxAlong: number): void {
+function pullDance(w: World, dance: Dance, minAlong: number, maxAlong: number): number {
   if (w.dancePullIn > 0) {
     w.dancePullIn--;
-    return;
+    return -1;
   }
   const ship = w.ship;
   let toAlong = 0;
@@ -4532,20 +4595,24 @@ function pullDance(w: World, dance: Dance, minAlong: number, maxAlong: number): 
       toAlong = e.along;
       toAcross = e.across;
     }
-    if (nearest === Number.POSITIVE_INFINITY) return;
+    if (nearest === Number.POSITIVE_INFINITY) return -1;
   }
   toAlong = (toAlong < minAlong ? minAlong : toAlong > maxAlong ? maxAlong : toAlong) - ship.along;
   toAcross = (toAcross < PLAYER_MARGIN ? PLAYER_MARGIN : toAcross > ACROSS_SPAN - PLAYER_MARGIN ? ACROSS_SPAN - PLAYER_MARGIN : toAcross) - ship.across;
-  if (toAlong === 0 && toAcross === 0) return;
+  if (toAlong === 0 && toAcross === 0) return -1;
   const heading = Math.atan2(w.danceAcross, w.danceAlong);
   let turn = Math.atan2(toAcross, toAlong) - heading;
   if (turn > Math.PI) turn -= 2 * Math.PI;
   else if (turn < -Math.PI) turn += 2 * Math.PI;
-  if (turn > dance.pull) turn = dance.pull;
-  else if (turn < -dance.pull) turn = -dance.pull;
+  const off = Math.abs(turn);
+  // 0617: the same circle's worth of turn at its own speed, so a braked dance swings round where a fast one arcs.
+  const rate = (dance.pull * dance.speed) / (w.danceSpeed > dance.slow ? w.danceSpeed : dance.slow);
+  if (turn > rate) turn = rate;
+  else if (turn < -rate) turn = -rate;
   const speed = Math.hypot(w.danceAlong, w.danceAcross);
   w.danceAlong = Math.cos(heading + turn) * speed;
   w.danceAcross = Math.sin(heading + turn) * speed;
+  return off;
 }
 
 /*
@@ -4590,12 +4657,24 @@ function knockRam(w: World): void {
   const ram = WEAPONS[w.weapon.kind].ram;
   const reach = dance !== null ? dance.reach : ram !== null ? ram.reach : 0;
   knockDepth = 0;
-  let body = deepest(w.enemies, ship.along, ship.across, reach, null);
+  const onBody = deepest(w.enemies, ship.along, ship.across, reach, null);
+  let body = onBody;
   // A beaten boss does nothing back (0337), and nothing knocks off it.
   if (!w.bossBeaten) body = deepest(w.bossBody, ship.along, ship.across, reach, deepest(w.bossPool, ship.along, ship.across, reach, body));
   if (body === null) return;
   let nAlong = ship.along - body.along;
   let nAcross = ship.across - body.across;
+  /*
+    ⚠️ **OFF THE SIDE IT CAME AT — 0617.** A dance burning at `thrown` steps further than a small body is across,
+    so its centre may be past the body's when it is found inside it, and put out along the line between them it
+    would come out of the far side — through. Where it was before the step says which side it met.
+  */
+  const wasAlong = ship.prevAlong - body.prevAlong;
+  const wasAcross = ship.prevAcross - body.prevAcross;
+  if (nAlong * wasAlong + nAcross * wasAcross < 0) {
+    nAlong = wasAlong;
+    nAcross = wasAcross;
+  }
   const apart = Math.hypot(nAlong, nAcross);
   if (apart > 0) {
     nAlong /= apart;
@@ -4605,8 +4684,9 @@ function knockRam(w: World): void {
     nAlong = -1;
     nAcross = 0;
   }
-  ship.along += nAlong * knockDepth;
-  ship.across += nAcross * knockDepth;
+  // To touching, on that side.
+  ship.along = body.along + nAlong * (reach + body.radius);
+  ship.across = body.across + nAcross * (reach + body.radius);
   // Seen where they met (0036): sparks off the rim on the body's side.
   const atAlong = ship.along - nAlong * reach;
   const atAcross = ship.across - nAcross * reach;
@@ -4617,8 +4697,9 @@ function knockRam(w: World): void {
       w.danceAlong -= 2 * into * nAlong;
       w.danceAcross -= 2 * into * nAcross;
     }
-    if (w.danceKickFor === 0) burst(w, atAlong, atAcross, BURST.bounce);
-    w.danceKickFor = dance.kickSteps;
+    if (w.dancePullIn === 0) burst(w, atAlong, atAcross, BURST.bounce);
+    // 0617: thrown off faster than it came — past `top`, which is the burn's and not the bumper's — and braked from there (`steerDance`).
+    w.danceSpeed = w.danceSpeed * dance.kick > dance.thrown ? dance.thrown : w.danceSpeed * dance.kick;
     w.dancePullIn = dance.free;
     w.onCue('danceBumper', atAcross);
     return;
@@ -4629,15 +4710,19 @@ function knockRam(w: World): void {
   const bodyAcross = body.across - body.prevAcross;
   let vAlong = ship.velAlong - bodyAlong;
   let vAcross = ship.velAcross - bodyAcross;
+  // 0617: half as hard off a body as off a boss or a mid-boss — the deepest found was one of the enemies.
+  const share = body === onBody ? ram.bodyKnock : 1;
+  const give = ram.give * share;
+  const knock = ram.knock * share;
   const into = vAlong * nAlong + vAcross * nAcross;
   if (into < 0) {
-    vAlong -= (1 + ram.give) * into * nAlong;
-    vAcross -= (1 + ram.give) * into * nAcross;
+    vAlong -= (1 + give) * into * nAlong;
+    vAcross -= (1 + give) * into * nAcross;
   }
   const off = vAlong * nAlong + vAcross * nAcross;
-  if (off < ram.knock) {
-    vAlong += (ram.knock - off) * nAlong;
-    vAcross += (ram.knock - off) * nAcross;
+  if (off < knock) {
+    vAlong += (knock - off) * nAlong;
+    vAcross += (knock - off) * nAcross;
   }
   ship.velAlong = bodyAlong + vAlong;
   ship.velAcross = bodyAcross + vAcross;
@@ -12614,7 +12699,8 @@ export function respawn(w: World): void {
   w.danceFor = 0;
   w.danceKind = null;
   w.danceBounces = 0;
-  w.danceKickFor = 0;
+  w.danceSpeed = 0;
+  w.danceThrust = 0;
   w.dancePullIn = 0;
   // 0613: its waves went with the blasts above; and a life opens on an empty bar, unpunched.
   w.waveIn = 0;

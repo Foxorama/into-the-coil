@@ -134,6 +134,11 @@ export interface Ram {
   readonly knock: number;
   /** The share of the speed it met the body at that it keeps, back the other way — 0615: its restitution. */
   readonly give: number;
+  /**
+   * The share of `knock` and `give` it comes off a body with that is not a boss or a mid-boss — 0617:
+   * *"kickback needs to be about half way it is on non-boss and non-miniboss enemies."*
+   */
+  readonly bodyKnock: number;
 }
 
 /**
@@ -657,8 +662,12 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       quickest fights fell to 9 to 12 s, a quarter of 0260's forty. Re-solved from the hull
       (`heldShorts`, Savior), the floor's own flight: at 1.6 the five unchained bosses are 48 to 62 s;
       the serpent and the jellyfish weigh it on their own rows.
+
+      ⚠️ **ONE AND NINE TENTHS SINCE 0617.** 0615's knock took a held ram on a boss from 6.6 landings a second to
+      5.3, and the play said *"just a shade more damage against bosses … it's very close to where it needs to
+      be, but just slightly too slow."* A fifth more puts most of what the knock took back.
     */
-    bossWeight: 1.6,
+    bossWeight: 1.9,
     landGap: 6,
     special: 'warDance',
     // Never drawn: no other ship flies it (`lends`). The ball's own front, from either view, so a reader
@@ -685,6 +694,12 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       */
       knock: 2.0,
       give: 0.4,
+      /*
+        0617: half as far off a body, as asked; the boss and the mid-boss keep the whole knock. Half the SPEED
+        came back a quarter as far with the stick held into it — 2.9 px against the boss's 12.8 — because the
+        stick wins sooner; seven tenths of it comes back half as far, and seven tenths as far with it let go.
+      */
+      bodyKnock: 0.7,
     },
     paint: null,
     lends: false,

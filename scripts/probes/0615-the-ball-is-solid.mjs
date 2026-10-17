@@ -44,7 +44,8 @@ export const PROBES = [
     suite: 'tests/solid.test.ts',
     broke: 'a bumper that throws the dance off no faster than it came',
     guard: 'off a body it cannot break: turned away from it, thrown off faster, and heard as a bumper',
-    edit: { path: 'src/app/frame.ts', find: '    w.danceKickFor = dance.kickSteps;\n', replace: '' },
+    // Re-anchored by 0617, whose speed is the dance's own.
+    edit: { path: 'src/app/frame.ts', find: '    w.danceSpeed = w.danceSpeed * dance.kick > dance.thrown ? dance.thrown : w.danceSpeed * dance.kick;\n', replace: '' },
   },
   {
     decision: '0615',
@@ -58,7 +59,8 @@ export const PROBES = [
     suite: 'tests/solid.test.ts',
     broke: 'a dance that bends at nothing, as 0609’s flew',
     guard: 'THE REPORTED ONE: against the end bosses it spends most of its time in the boss’s half of the screen',
-    edit: { path: 'src/app/frame.ts', find: '  pullDance(w, dance, minAlong, maxAlong);\n', replace: '' },
+    // Re-anchored by 0617, which asks the bend from its speed's own call.
+    edit: { path: 'src/app/frame.ts', find: '  const off = pullDance(w, dance, minAlong, maxAlong);', replace: '  const off = -1;' },
   },
   {
     decision: '0615',
