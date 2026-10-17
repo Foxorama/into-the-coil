@@ -139,7 +139,7 @@ import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import { SHELLS, SHELL_KINDS } from '../content/shells.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, WARES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
-import { COSMO, KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
+import { COSMO, KEEPERS, KEEPER_KINDS, drawSpots, type KeeperKind } from '../content/keepers.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import {
@@ -1936,7 +1936,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const spots = Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, 0])) as Record<KeeperKind, number>;
   world.standSpots = spots;
   function moveKeepers(): void {
-    for (const kind of KEEPER_KINDS) spots[kind] = keeperRng.int(0, KEEPERS[kind].spots.length - 1);
+    // 0611: one keeper to a place in the dock, so two are never drawn in one spot.
+    drawSpots(keeperRng, spots);
     sayKeepers();
     // 0572: and the bubble moved to where the keeper now is.
     frameStand();

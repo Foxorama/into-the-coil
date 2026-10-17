@@ -17,6 +17,7 @@
  */
 
 import type { PortKind } from './port.ts';
+import type { Rng } from '../sim/rng.ts';
 
 /** Everyone who keeps a counter in the port. Closed — 0016. */
 export const KEEPER_KINDS = ['cosmo', 'unity', 'mmxxvi'] as const;
@@ -60,25 +61,109 @@ export interface KeeperRow {
   /**
    * Where they may be found when the hangar is opened — 0569: *"after a run finishes the position of the
    * figure can be in a few different random locations, behind the stall, working the ship, out for coffee,
-   * something else"*. The first is where they stand before any run. Each keeper's own (0282): a whole figure
-   * may stand on the ship's roof, a bust can only look over it.
+   * something else"*. The first is where they stand before any run. Each keeper's own (0282): which of the
+   * dock's places they go to, and what they say there, is the row's.
    */
   readonly spots: readonly [KeeperSpot, ...KeeperSpot[]];
+  /**
+   * 0611: the keeper whole, as they stand about the dock — their picture in the port's atlas, and where in
+   * it they are, in its world units: the soles `feet` below the box's middle (the painter is handed this
+   * line and stands them on it), the top of them `tall` over the soles, and `half` their widest either side —
+   * those two measured off the baked picture's painted pixels, and what the stand's no-overlap guard reads.
+   * Each keeper's own: Unity a least weasel with a wrench on the shoulder, Cosmo a head taller than MMXXVI.
+   */
+  readonly about: { readonly figure: PortKind; readonly feet: number; readonly tall: number; readonly half: number };
 }
 
 /**
- * One place a keeper may be standing — 0569. Their figure's centre in the port's units from the place
- * named, drawn behind or over what is there; or nowhere, gone from the counter, which stands empty. The line
- * is what their card says while they are there, and `null` keeps their greeting.
+ * One place a keeper may be standing — 0569, amended by 0611.
  *
- * At the counter it is 0554's: where their box is centred against the counter's and whether they stand
- * behind it, the counter drawn over them, or on its top — Unity on their bench, the other two behind theirs.
+ * - **At the counter**, 0554's: where their box is centred against the counter's and whether they stand
+ *   behind it, the counter drawn over them, or on its top — Unity on their bench, the other two behind theirs.
+ * - **Away**: nowhere, gone from the counter, which stands empty.
+ * - **At one of the dock's places** (`DOCK_PLACES`), whole, their feet on its floor. A place holds one
+ *   keeper at a time — the draw is without replacement (`drawSpots`).
+ *
+ * The line is what their card says while they are there; at the counter, `null` keeps their greeting.
  */
-export interface KeeperSpot {
-  readonly at: 'counter' | 'ship' | 'away';
-  readonly offset: { readonly along: number; readonly across: number };
-  readonly drawn: 'behind' | 'over';
-  readonly line: string | null;
+export type KeeperSpot =
+  | {
+      readonly at: 'counter';
+      readonly offset: { readonly along: number; readonly across: number };
+      readonly drawn: 'behind' | 'over';
+      readonly line: string | null;
+    }
+  | { readonly at: 'away'; readonly line: string }
+  | { readonly at: DockPlaceKind; readonly line: string };
+
+/**
+ * ── THE DOCK'S PLACES — 0611 ─────────────────────────────────────────────────────────────────────
+ *
+ * *"the moving characters can appear on top of each other - and apparently kinda floating in mid air.
+ * random locations should be on the elevator, on the ground behind or in front of the vehicle or to the
+ * sides, or in their shops."* The places in the room a keeper may be found away from their counter. They
+ * are the room's, not a keeper's: one keeper to a place, so two are never drawn in one spot, and no two
+ * places' pictures meet (`tests/stand.test.ts`). Which of them a keeper goes to is their row's. Closed — 0016.
+ */
+export const DOCK_PLACE_KINDS = ['lift', 'behind', 'front', 'left', 'right'] as const;
+export type DockPlaceKind = (typeof DOCK_PLACE_KINDS)[number];
+
+/**
+ * Where a place is, as the floor a keeper stands on there.
+ *
+ * - **`lift`**: on the hover-lift's platform, `along` from its middle, riding it up to the mezzanine and down.
+ * - **`deck`**: on the deck, `along` from the ship's centre on its cradle and `across` down into the deck
+ *   from its top edge, where the back wall stands on it. `drawn` is the depth: **behind** the ship is drawn
+ *   before the cradle, so the cradle and the ship stand in front of whoever is there; **over** after the
+ *   ship, nearer the player than it is.
+ */
+export type DockPlace =
+  | { readonly floor: 'lift'; readonly along: number }
+  | { readonly floor: 'deck'; readonly along: number; readonly across: number; readonly drawn: 'behind' | 'over' };
+
+export const DOCK_PLACES: Record<DockPlaceKind, DockPlace> = {
+  // On the lift's platform, its middle — the rail is at its back corner.
+  lift: { floor: 'lift', along: 0.5 },
+  // At the back of the deck by the ship's tail, against the wall: the cradle's slope and the ship in front.
+  behind: { floor: 'deck', along: -19.5, across: 0.6, drawn: 'behind' },
+  // Down at the front of the deck, under the ship's nose, in front of the cradle's foot.
+  front: { floor: 'deck', along: 6, across: 14, drawn: 'over' },
+  // Either side of the cradle, half way down the deck.
+  left: { floor: 'deck', along: -34, across: 7, drawn: 'over' },
+  right: { floor: 'deck', along: 27, across: 7, drawn: 'over' },
+};
+
+/** Whether a spot is one of the dock's places, which a keeper shares with the others one at a time. */
+export function isDockPlace(at: KeeperSpot['at']): at is DockPlaceKind {
+  return at !== 'counter' && at !== 'away';
+}
+
+/**
+ * Where every keeper is this visit, drawn into `out` as an index into each row's `spots` — 0611. The keepers
+ * are taken in an order the stream shuffles, so no one keeper has first pick of the places; each draws
+ * evenly from their spots that are not a place another has already taken. The counter and away are a
+ * keeper's own and always there to draw, so every keeper always has somewhere to be.
+ */
+export function drawSpots(rng: Rng, out: Record<KeeperKind, number>): void {
+  const order: KeeperKind[] = [...KEEPER_KINDS];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = rng.int(0, i);
+    const swap = order[i]!;
+    order[i] = order[j]!;
+    order[j] = swap;
+  }
+  const taken: DockPlaceKind[] = [];
+  for (const kind of order) {
+    const spots = KEEPERS[kind].spots;
+    const free: number[] = [];
+    spots.forEach((spot, i) => {
+      if (!isDockPlace(spot.at) || !taken.includes(spot.at)) free.push(i);
+    });
+    const pick = free[rng.int(0, free.length - 1)]!;
+    out[kind] = pick;
+    const at = spots[pick]!.at;
+    if (isDockPlace(at)) taken.push(at);
+  }
 }
 
 /** Cosmo, whose lines the shell reads by name — `src/app/mount.ts`'s `keeperLine`. */
@@ -107,10 +192,16 @@ export const COSMO = {
   spots: [
     // At the stall, a head over the counter, a unit to the bar's side of its middle, as 0542 stood them.
     { at: 'counter', offset: { along: -1, across: -5 }, drawn: 'behind', line: null },
-    // Looking the ship over from behind it, the head over its roof.
-    { at: 'ship', offset: { along: 4, across: -7.5 }, drawn: 'behind', line: 'Just admiring the lines on her. Shop’s open — I’ll be right there.' },
-    { at: 'away', offset: { along: 0, across: 0 }, drawn: 'behind', line: 'Out on a stock run — honesty box is on the counter, friend.' },
+    { at: 'away', line: 'Out on a stock run — honesty box is on the counter, friend.' },
+    // 0611: about the dock, whole, and the shop open whatever Cosmo is doing.
+    { at: 'lift', line: 'Just heading up to the shop, friend — ride along?' },
+    { at: 'behind', line: 'Just admiring the lines on her. Shop’s open — I’ll be right there.' },
+    { at: 'front', line: 'There you are! Fine machine. Finer still with a little something from the shop.' },
+    { at: 'left', line: 'Taking in the view, friend. Shop’s open whenever you are.' },
+    { at: 'right', line: 'Lovely, lovely. Picture her in something new.' },
   ],
+  // 0611: whole, in the waistcoat and bow tie, a hand up in a wave.
+  about: { figure: 'cosmoAbout', feet: 7, tall: 14.2, half: 3.7 },
 } as const satisfies KeeperRow;
 
 export const KEEPERS: Record<KeeperKind, KeeperRow> = {
@@ -139,10 +230,16 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     spots: [
       // On the bench, against the wrench, as 0554 stood them.
       { at: 'counter', offset: { along: 7, across: -4.5 }, drawn: 'over', line: null },
-      // Up on the ship's roof, wrench and all — small enough to stand there.
-      { at: 'ship', offset: { along: -2, across: -9.5 }, drawn: 'over', line: 'Just tightening a few things up top. She’ll be right.' },
-      { at: 'away', offset: { along: 0, across: 0 }, drawn: 'over', line: 'Gone for a flat white. Back in a tick.' },
+      { at: 'away', line: 'Gone for a flat white. Back in a tick.' },
+      // 0611: about the dock, the wrench over a shoulder. 0569's spot on the ship's roof went — a hovering roof is not a floor.
+      { at: 'lift', line: 'Just ducking up to the bench. Won’t be a tick.' },
+      { at: 'behind', line: 'Having a squiz round the back of her. She’ll be right.' },
+      { at: 'front', line: 'Righto, she’s all yours. I bring it all together.' },
+      { at: 'left', line: 'Just standing back for a look. She’s coming together.' },
+      { at: 'right', line: 'Tightened a few things up. Bonza.' },
     ],
+    // 0611: whole and upright, the giant wrench on a shoulder — about eight units of weasel, the wrench over them.
+    about: { figure: 'unityAbout', feet: 7, tall: 11.1, half: 3.3 },
   },
   /*
     ⚠️ **MMXXVI: THE SPACE DUCK — 0550.** *"for paints and parts a space duck named MMXXVI - we'll make it
@@ -165,9 +262,15 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     spots: [
       // Behind the booth, as 0556 lowered them.
       { at: 'counter', offset: { along: -1, across: -3 }, drawn: 'behind', line: null },
-      // Behind the ship, looking over its roof at the paint.
-      { at: 'ship', offset: { along: 6, across: -7.5 }, drawn: 'behind', line: 'Checking the finish. Hold still — it’s nearly perfect.' },
-      { at: 'away', offset: { along: 0, across: 0 }, drawn: 'behind', line: 'Out for more paint. Touch nothing wet.' },
+      { at: 'away', line: 'Out for more paint. Touch nothing wet.' },
+      // 0611: about the dock, whole, a brush in hand.
+      { at: 'lift', line: 'Going up for more colour. Mind the wet bits.' },
+      { at: 'behind', line: 'Checking the finish. Hold still — it’s nearly perfect.' },
+      { at: 'front', line: 'Stand there. No — there. The light’s better.' },
+      { at: 'left', line: 'Stepping back to see the whole of her. Art needs distance.' },
+      { at: 'right', line: 'From this side she really sings. We’ll make it look good.' },
     ],
+    // 0611: whole, in the suit and the apron, the bubble on, a brush up.
+    about: { figure: 'mmxxviAbout', feet: 7, tall: 13.4, half: 3.3 },
   },
 };

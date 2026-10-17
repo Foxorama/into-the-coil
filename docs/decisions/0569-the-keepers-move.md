@@ -2,7 +2,8 @@
 
 **Accepted 2026-10-07.** The second half of the play that [0568](0568-the-hangar-opens-out.md)
 answers. Amends [0554](0554-unity-leans-on-the-wrench.md)'s `at` and `stands` on a keeper's row,
-which are now the keeper's first spot.
+which are now the keeper's first spot. **Amended by [0611](0611-the-keepers-stand-somewhere.md)**: the
+spot at the ship is gone, and away from the counter a keeper stands whole in one of the dock's places.
 
 ## The ask
 

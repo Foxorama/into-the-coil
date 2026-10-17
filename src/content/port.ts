@@ -128,6 +128,10 @@ export const PORT_KINDS = [
   'bench',
   'mmxxvi',
   'booth',
+  // 0611: each keeper whole, as they stand about the dock — on the lift, or on the deck round the ship.
+  'cosmoAbout',
+  'unityAbout',
+  'mmxxviAbout',
   // 0550: the viewport in the back wall, its frame and its glass — the stars are the sky behind the wall.
   'viewport',
   /*
@@ -229,6 +233,10 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   bench: 30,
   mmxxvi: 14,
   booth: 30,
+  // 0611: a square round the tallest of them with the soles `about.feet` under its middle (`KEEPERS`).
+  cosmoAbout: 18,
+  unityAbout: 18,
+  mmxxviAbout: 18,
   // 0550: two wall tiles wide and a frame's width over, so the frame laps the wall round the hole.
   viewport: 44,
   // 0571: a catwalk tile, the cradle under a ship's box with its clamps, and the planet — baked small and
