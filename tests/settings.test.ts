@@ -4,6 +4,7 @@ import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { SHELF_KINDS } from '../src/content/wares.ts';
 import { SOUND_KINDS } from '../src/content/sound.ts';
+import { RUMBLE_KINDS } from '../src/content/rumble.ts';
 import { TRAVEL_KINDS } from '../src/content/travel.ts';
 import { HAND_KINDS, STEER_KINDS } from '../src/content/touch.ts';
 import { SETTINGS_VERSION, settingsFrom } from '../src/save/settings.ts';
@@ -25,10 +26,16 @@ describe('the settings screen is its tables', () => {
     touch screen (`src/app/chrome.ts`), so a fifth band is a decision about that layout, and it is red
     here first.
   */
-  it('offers the sound, the crossing, the hand and the steering, and the look no longer', () => {
+  /*
+    ⚠️ **AND THE RUMBLE BESIDE THE SOUND — 0613**, on every device: the fifth band this guard was red for, and
+    the layout it asked about answered there — on a touch screen three columns of two, two and one
+    (`src/app/chrome.ts`), held whole by `tests/layout.browser.test.ts`.
+  */
+  it('offers the sound, the rumble, the crossing, the hand and the steering, and the look no longer', () => {
     const offered = SCREENS.settings.choices.map((c) => [c.name, c.on]);
     expect(offered).toEqual([
       ['sound', 'all'],
+      ['rumble', 'all'],
       ['travel', 'all'],
       ['hand', 'all'],
       ['steer', 'touch'],
@@ -36,7 +43,7 @@ describe('the settings screen is its tables', () => {
   });
 
   it('and each band is walked off its kind table, so an option added is an option shown', () => {
-    const kinds = { sound: SOUND_KINDS, travel: TRAVEL_KINDS, hand: HAND_KINDS, steer: STEER_KINDS } as const;
+    const kinds = { sound: SOUND_KINDS, rumble: RUMBLE_KINDS, travel: TRAVEL_KINDS, hand: HAND_KINDS, steer: STEER_KINDS } as const;
     for (const choice of SCREENS.settings.choices) {
       const table = kinds[choice.name as keyof typeof kinds];
       expect(choice.options, `${choice.name} offers other than its table`).toHaveLength(table.length);
@@ -88,8 +95,9 @@ describe('the settings screen is its tables', () => {
     // 0579: and Hangin' Out's sub-tabs, which step the group in view.
     // 0584: and the shell a ship's shields wear.
     // 0590: and no longer the look.
+    // 0613: and the rumble, on Settings with the sound.
     expect([...where.keys()].sort()).toEqual(
-      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rack', 'rim', 'shell', 'sound', 'special', 'steer', 'tone', 'travel', 'aisle', 'section', ...SHELF_KINDS].sort(),
+      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rack', 'rim', 'rumble', 'shell', 'sound', 'special', 'steer', 'tone', 'travel', 'aisle', 'section', ...SHELF_KINDS].sort(),
     );
   });
 });

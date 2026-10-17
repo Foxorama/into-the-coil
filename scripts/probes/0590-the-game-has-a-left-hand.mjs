@@ -61,7 +61,8 @@ export const PROBES = [
     decision: '0590',
     suite: 'tests/settings.test.ts',
     broke: 'the hand offered on touch screens alone, as the trigger side was, so a desktop cannot play left-handed',
-    guard: 'offers the sound, the crossing, the hand and the steering, and the look no longer',
+    // Renamed by 0613, which put the rumble beside the sound.
+    guard: 'offers the sound, the rumble, the crossing, the hand and the steering, and the look no longer',
     edit: {
       path: 'src/state/screens.ts',
       find: "        label: 'Hand',\n        options: HAND_KINDS.map((kind) => ({ label: HANDS[kind].title, hint: HANDS[kind].hint })),\n        faces: 'words',\n        on: 'all',",

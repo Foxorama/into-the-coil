@@ -65,6 +65,12 @@ export interface ShipRow extends Body {
   /** How this ship's shields come back on their own, or `null` for a shell that is only ever flown for — 0609. */
   regen: Regen | null;
   /**
+   * How this ship's own special is earned rather than stocked, or `null` for a ship that opens a run on its
+   * pair and takes more off the pickups — `docs/decisions/0613-the-dance-is-earned.md`. A row that says one
+   * opens on none of its own special and fills a bar by what its gun lands instead (`Charge`).
+   */
+  charge: Charge | null;
+  /**
    * The ship's War Dance at each stage — 0594: its still picture between two drawn poses of its own, its
    * parts moving in its own drawing, cycled for as long as it dances. *"We'll need animations for all
    * ships for that special."* Drawn rather than turned or swelled, because a pulsing sprite is still one
@@ -504,6 +510,21 @@ export interface Regen {
   readonly every: number;
 }
 
+/**
+ * A special earned by the gun — `docs/decisions/0613-the-dance-is-earned.md`. *"When you kill x amount of
+ * enemies or do x amount of damage (so that bosses count) you refill your special."* The bar counts what the
+ * ship's own gun lands, a landing at a time; it fills to `fill`, holds there until it is thrown, and a life
+ * opens on it empty. While the ship dances nothing fills it, so a dance never earns the next.
+ */
+export interface Charge {
+  /**
+   * What fills it, in landings: each landing of the gun is one, whatever it lands on — before a boss's weight
+   * or its window, so a boss fight and a level are counted in the same coin, and a kill is the landing that
+   * made it. 0613 has the measurement, and why a kill is worth nothing more.
+   */
+  readonly fill: number;
+}
+
 /** One bake of a ship and its hurt twin. */
 export interface Hull {
   base: number;
@@ -582,6 +603,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     shields: null,
     regen: null,
+    charge: null,
     // 0594: a roll, one way and back and the other — the slowest of the six, because a roll is big.
     dance: [
       dancing([SPRITE.fighter, SPRITE.fighterDance1, SPRITE.fighter, SPRITE.fighterDance2], 8),
@@ -639,6 +661,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     shields: null,
     regen: null,
+    charge: null,
     // 0594: spinning up — its vents and lights a third of the way round and two thirds, so still, one and
     // two are one turn the same way, and the dome leaning into it.
     dance: [
@@ -719,6 +742,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     shields: null,
     regen: null,
+    charge: null,
     // 0594: a launch and a stop — the nose up on its springs, then the tail, then level again.
     dance: [
       dancing([SPRITE.firebird, SPRITE.firebirdDance1, SPRITE.firebirdDance2], 6),
@@ -780,6 +804,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     shields: null,
     regen: null,
+    charge: null,
     // 0594: the lowrider hop — the body up on one side and then the other, on its wheels.
     dance: [
       dancing([SPRITE.estate, SPRITE.estateDance1, SPRITE.estate, SPRITE.estateDance2], 7),
@@ -842,6 +867,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     shields: null,
     regen: null,
+    charge: null,
     // 0594: leaning into it — the rider and the bars over to one side and then the other.
     dance: [
       dancing([SPRITE.thunderbolt, SPRITE.thunderboltDance1, SPRITE.thunderbolt, SPRITE.thunderboltDance2], 7),
@@ -914,6 +940,17 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     */
     shields: 3,
     regen: { rest: 120, every: 180 },
+    /*
+      ⚠️ **THE WAR DANCE IS EARNED, TWENTY-FOUR LANDINGS A BAR — 0613.** *"When you kill x amount of enemies or
+      do x amount of damage (so that bosses count) you refill your special … it should allow you to war dance
+      every 10-15 secs or so."* Flown by a ball that keeps ramming and backs off all the way to cool before its
+      heat burns a shield — the slowest way to ram — a bar is nine to twelve seconds against every end boss but
+      Volans, ten to fourteen against a mid-boss, and twelve to twenty-six in a level, most of that waiting for
+      the next wave; a ball that presses on in a level fills it in five to fifteen and burns shields doing it.
+      With the three-second dance on top, a dance every twelve to fifteen seconds in a fight. Volans' adds fill
+      it in three. 0613 has the table; a play number.
+    */
+    charge: { fill: 24 },
     // 0594: the weasel war dance itself, Unity twisting one way and the other — the quickest, a frenzy.
     dance: [
       dancing([SPRITE.ball, SPRITE.ballDance1, SPRITE.ball, SPRITE.ballDance2], 4),
@@ -973,6 +1010,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     shields: null,
     regen: null,
+    charge: null,
     // 0595: bobbing — the head down to dabble and up again, and then the tail up and the head back.
     dance: [
       dancing([SPRITE.duck, SPRITE.duckDance1, SPRITE.duck, SPRITE.duckDance2], 6),

@@ -696,6 +696,13 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       flare: [SPRITE.danceFlare0, SPRITE.danceFlare1, SPRITE.danceFlare2, SPRITE.danceFlare3],
       flareHold: 6,
       hum: 24,
+      /*
+        ⚠️ **A WAVE AT EVERY WALL AND EVERY BODY, BUT ONE A FIFTH OF A SECOND AT MOST — 0613.** *"It currently
+        has no aoe."* Six walls a dance and a body every few steps in a wave would be a ring every other step;
+        twelve steps apart, a three-second dance sends out fifteen at most. Its edge grows over nine steps and
+        fades over six. 0613 has the numbers; play numbers.
+      */
+      wave: { shot: 'danceWave', gap: 12, grow: 9, fade: 6 },
     },
     jet: null,
     opensWith: 'unity',
@@ -800,6 +807,27 @@ export interface Dance {
   readonly flareHold: number;
   /** Steps between one strike of its hum and the next, while it dances (`danceHum`) — 0609. */
   readonly hum: number;
+  /** The shockwave it sends out at every wall and every body it lands on — 0613. */
+  readonly wave: Wave;
+}
+
+/**
+ * A dance's shockwave — `docs/decisions/0613-the-dance-is-earned.md`: *"it currently has no aoe so feels like
+ * it needs something a bit more interactive there."* A ring off the ship, landing once on every body inside
+ * `shot`'s radius as a blast does (`blastInto`), and on a boss at the window, once — and never two inside `gap`.
+ */
+export interface Wave {
+  /**
+   * What it is — a row in `SHOTS`: its `radius` is how far it reaches and is drawn, and its `damage` what it
+   * takes off each body its edge crosses.
+   */
+  readonly shot: ShotKind;
+  /** Steps between one wave and the next, however many walls and bodies the dance meets inside them. */
+  readonly gap: number;
+  /** Steps its edge takes to grow from the dance's own reach to the row's radius, landing as it crosses. */
+  readonly grow: number;
+  /** Steps the spent ring stays at its full reach, fading, landing nothing. */
+  readonly fade: number;
 }
 
 /**

@@ -70,8 +70,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
       // ⚠️ And by 0539: the stacks are read off the arsenal given.
       // ⚠️ And by 0609: the tier's cap through `shellCapFor`, which is the ship's own where its row says one.
-      find: 'shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), stacksOf(state.run.arsenal)',
-      replace: 'shieldsOf(world.shipRow, world.ship.health), MAX_SHIELDS, stacksOf(state.run.arsenal)',
+      // ⚠️ And by 0613: the run's stacks with an earned special's bar (`runStacks`).
+      find: 'shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), runStacks()',
+      replace: 'shieldsOf(world.shipRow, world.ship.health), MAX_SHIELDS, runStacks()',
     },
   },
   {

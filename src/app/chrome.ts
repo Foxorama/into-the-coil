@@ -1134,6 +1134,32 @@ ${each('-action-cursor')} {
 /* The ship in reserve — 0430. A hull is long and thin where a pickup's face is round, so it is given the room a round face spends on its bubble. */
 .itc-playing-hud-ship { width: 2.2em; height: 2.2em; margin: -0.25em -0.1em; }
 /*
+  THE EARNED SPECIAL'S BAR — 0613, beside the count of the trigger it throws on, on the boss bar's terms: a
+  hollow frame and a fill, so empty and full differ in shape and not only in colour (0024). In the player's
+  ink, because what it measures is the ship's. Full, it glows and stays lit: a glow that holds, never a blink.
+*/
+.itc-playing-hud-charge {
+  position: relative;
+  width: 2.8em;
+  height: 0.55em;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-radius: 0.35em;
+  color: var(--itc-ally, var(--itc-ink));
+}
+.itc-playing-hud-charge[hidden] { display: none; }
+.itc-playing-hud-charge-fill {
+  position: absolute;
+  inset: 1px;
+  border-radius: 0.25em;
+  background: currentColor;
+  transform-origin: left center;
+  opacity: 0.8;
+}
+.itc-playing-hud-charge-full { box-shadow: 0 0 0.45em currentColor; }
+.itc-playing-hud-charge-full > .itc-playing-hud-charge-fill { opacity: 1; }
+.itc-playing-trigger-button > .itc-playing-hud-charge { position: absolute; left: 50%; bottom: 8%; width: 60%; margin-left: -30%; height: 0.5em; }
+/*
   ── WHAT THE BOSS HAS LEFT ──────────────────────────────────────────────────────────────────────
 
   Decision 0360. Top centre, over the six units of lane the ship can never enter, in the ENEMY's ink
@@ -2548,11 +2574,15 @@ ${each('-band[hidden]')} { display: none; }
   content on a 390 px phone and 39 px too many on a touch laptop; the width every landscape screen has
   to spare is the room. Filled down the columns, two to a column since 0590 took the look away and made
   the hand a band for every device — the sound and the crossing, then the hand and the steering — so the
-  two columns are the same height and the walk goes down one and on to the next.
+  two columns are the same height and the walk goes down one and on to the next. Since 0613 the rumble is a
+  fifth, so it is three columns, two, two and one, the rows still two high because height is what a landscape
+  phone has none of. The third column, the steering alone, is half again as wide for its three words and its
+  step arrows, and on a phone, where the arrows go, twice as wide.
 */
 .itc-settings-touch .itc-settings-settings-box {
   display: grid;
   grid-template-rows: repeat(2, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr);
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   column-gap: min(1rem, 2cqw);
@@ -2570,6 +2600,19 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-title-body { grid-template-columns: minmax(0, 5fr) minmax(0, 11fr); gap: min(0.6rem, 2cqh) min(1.5rem, 3cqw); }
   .itc-title-main, .itc-settings-settings-box { gap: min(0.45rem, 1.6cqh); }
+  /*
+    And without touch, two columns on a phone too — 0613: the rumble made four bands, and four in a column
+    were eighteen pixels past the smallest landscape phone. Two by two, filled down the columns.
+  */
+  .itc-settings-touch .itc-settings-settings-box { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr); }
+  .itc-settings-settings-box:not(.itc-settings-touch *) {
+    display: grid;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    column-gap: min(1rem, 2cqw);
+    width: min(100%, 64em);
+  }
   /*
     Half a phone's width each, so the band's furniture gives back what the words need, on 0460's terms:
     a segment's floor is its longest word, and *Gentle · Standard · Quick* beside a label is the widest.
@@ -4644,6 +4687,12 @@ export interface Chrome {
    */
   setHud(lives: number, health: number, maxHealth: number, stacks: readonly { label: string; sprite: number; charges: number }[]): void;
   /**
+   * The bar of a special the ship earns, beside the count of the trigger at `slot` — 0613: `fraction` from
+   * empty at 0 to full at 1, or negative for no bar. On the readout and on that trigger's disc. Called on a
+   * change, never per frame (`onCharge`).
+   */
+  setCharge(slot: number, fraction: number): void;
+  /**
    * Show exactly one screen's chrome and hide the rest. `null` shows none of it, which is what the
    * rotate gate needs — an overlay left visible under the gate is a focusable button on a page whose
    * whole message is that the game is not running.
@@ -6557,7 +6606,28 @@ export function makeChrome(
     icon.setAttribute('aria-hidden', 'true');
     return icon;
   };
-  const stackGroups: { group: HTMLElement; icon: HTMLElement; sprite: number; count: HTMLElement }[] = [];
+  // 0613: an earned special's bar — a frame and its fill, drawn by a transform so a landing costs no layout.
+  type Meter = { root: HTMLElement; fill: HTMLElement };
+  const makeMeter = (): Meter => {
+    const root = document.createElement('div');
+    root.className = 'itc-playing-hud-charge';
+    root.setAttribute('aria-hidden', 'true');
+    root.hidden = true;
+    const fill = document.createElement('div');
+    fill.className = 'itc-playing-hud-charge-fill';
+    root.appendChild(fill);
+    return { root, fill };
+  };
+  const fillMeter = (meter: Meter, fraction: number): void => {
+    meter.root.hidden = fraction < 0;
+    if (fraction < 0) return;
+    const shown = fraction > 1 ? 1 : fraction;
+    meter.fill.style.transform = 'scaleX(' + String(shown) + ')';
+    meter.root.classList.toggle('itc-playing-hud-charge-full', shown >= 1);
+  };
+  /** What a reader hears of a trigger's bar after its count — 0613. */
+  const chargeSaid = (fraction: number): string => (fraction < 0 ? '' : fraction >= 1 ? ', bar full' : ', bar ' + String(Math.round(fraction * 100)) + '%');
+  const stackGroups: { group: HTMLElement; icon: HTMLElement; sprite: number; count: HTMLElement; meter: Meter; said: string }[] = [];
   // One per trigger, three since 0447's ward — read off `SIDES`, so a fourth is a row and not an edit.
   for (let i = 0; i < SIDES.length; i++) {
     const group = document.createElement('div');
@@ -6566,9 +6636,13 @@ export function makeChrome(
     group.dataset['side'] = SIDES[i]!;
     const icon = hudIcon(SPRITE.bomb);
     const count = document.createElement('span');
-    group.append(icon, count);
-    stackGroups.push({ group, icon, sprite: SPRITE.bomb, count });
+    // 0613: and the bar of a special the ship earns on this trigger, hidden on every ship that earns none.
+    const meter = makeMeter();
+    group.append(icon, count, meter.root);
+    stackGroups.push({ group, icon, sprite: SPRITE.bomb, count, meter, said: '' });
   }
+  // What each trigger's bar last said — 0613, so a disc rebuilt on a change of face draws it again.
+  const charges: number[] = SIDES.map(() => -1);
 
   const shieldGroup = document.createElement('div');
   shieldGroup.className = 'itc-playing-hud-group itc-playing-hud-shields';
@@ -6901,7 +6975,7 @@ export function makeChrome(
   // charges. A screen reader user is not tapping a disc they cannot see the rim of.
   trigger.setAttribute('aria-hidden', 'true');
   /** One button per trigger, grown once and reused — `setHud`'s argument about churning layout. */
-  const bands: { root: HTMLElement; icon: HTMLElement; count: HTMLElement }[] = [];
+  const bands: { root: HTMLElement; icon: HTMLElement; count: HTMLElement; meter: Meter }[] = [];
   elements.push(trigger);
 
   /*
@@ -7564,7 +7638,8 @@ export function makeChrome(
         }
         const held = Math.max(0, stack.charges);
         slot.count.textContent = '×' + String(held);
-        slot.group.setAttribute('aria-label', String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + stack.label);
+        slot.said = String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + stack.label;
+        slot.group.setAttribute('aria-label', slot.said + chargeSaid(charges[i] ?? -1));
       });
       livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives, ' + livesGun + livesTubes);
       // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
@@ -7623,9 +7698,12 @@ export function makeChrome(
           const icon = glyphOf(row.sprite);
           icon.className = 'itc-playing-trigger-icon';
           const count = document.createElement('span');
-          band.append(icon, count);
+          // 0613: the bar of a special this trigger earns, at the foot of its disc.
+          const meter = makeMeter();
+          fillMeter(meter, charges[i] ?? -1);
+          band.append(icon, count, meter.root);
           trigger.appendChild(band);
-          bands.push({ root: band, icon, count });
+          bands.push({ root: band, icon, count, meter });
         }
         bandFaces = triggers.map((t) => t.sprite);
       }
@@ -7635,6 +7713,21 @@ export function makeChrome(
         bands[i]!.count.textContent = '×' + String(Math.max(0, triggers[i]?.charges ?? 0));
       }
       paintTriggers();
+    },
+    setCharge(slot: number, fraction: number): void {
+      // Every other trigger's bar off: one special is earned, on the trigger its row throws on.
+      for (let i = 0; i < charges.length; i++) {
+        const shown = i === slot ? fraction : -1;
+        charges[i] = shown;
+        const group = stackGroups[i];
+        if (group !== undefined) {
+          fillMeter(group.meter, shown);
+          // Said to a reader with the count — the bar itself is a picture.
+          group.group.setAttribute('aria-label', group.said + chargeSaid(shown));
+        }
+        const band = bands[i];
+        if (band !== undefined) fillMeter(band.meter, shown);
+      }
     },
     setBoss(fraction: number, row: BossRow | null): void {
       bossFraction = fraction;

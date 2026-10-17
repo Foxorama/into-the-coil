@@ -1063,6 +1063,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   danceFlare1: 'player',
   danceFlare2: 'player',
   danceFlare3: 'player',
+  // 0613: and its shockwave, the same flame.
+  danceWave: 'player',
+  danceWaveFade: 'player',
   // The ram's glyph and its heat — the player's, as everything the ship is.
   ram: 'player',
   ramHeat0: 'player',
@@ -16608,6 +16611,20 @@ export function drawKind(
     case 'danceFlare3':
       drawDanceFlare(ctx, f, palette, Number(kind.slice(-1)));
       return;
+    /*
+      0613: the War Dance's shockwave — a thin ring at the edge of its box, which the frame draws at the edge it
+      has grown to (`swell`), so the ring IS its reach. Nothing inside it: the edge is what lands, and a filled
+      disc a fifth of a second long every fifth of a second would be a general flash (0024). Drawn added
+      (`LIGHT_KINDS`), the flare's flame ink, hot at the leading edge and a faint wake behind it.
+    */
+    case 'danceWave':
+    case 'danceWaveFade': {
+      const fading = kind === 'danceWaveFade';
+      const rim = half / r - 0.04;
+      band(ctx, f, shade(palette.player, fading ? 0.15 : 0.6), 0, 0, rim, rim - (fading ? 0.07 : 0.1), fading ? 0.5 : 0.95);
+      band(ctx, f, palette.player, 0, 0, rim - 0.08, rim - 0.3, fading ? 0.12 : 0.3);
+      return;
+    }
     // The ram's glyph — a ball, lit, with three speed lines behind it.
     case 'ram':
       ctx.fillStyle = rgba(palette.player, 0.45);

@@ -64,8 +64,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       // ⚠️ Re-anchored by 0539: the stacks are read off the arsenal given.
-      find: '(touchable ? stacksOf(state.run.arsenal) : [])',
-      replace: '(touchable ? stacksOf(state.run.arsenal).slice(0, 1) : [])',
+      // ⚠️ And by 0613: the run's stacks with an earned special's bar (`runStacks`).
+      find: '(touchable ? runStacks() : [])',
+      replace: '(touchable ? runStacks().slice(0, 1) : [])',
     },
   },
   {

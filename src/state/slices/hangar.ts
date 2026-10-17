@@ -308,6 +308,11 @@ export function plateOpen(state: HangarState, ship: ShipKind, plate: ShipKind): 
  * than a second spelling of it: a ship's own slot, open with its win, offering what won ships bring.
  */
 export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {
+  /*
+    0613: a ship that earns its special is fitted with no other, as a ram is the only gun its ship flies — its
+    bar is solved for its own special and checked for nothing else. Every other ship still borrows the ball's.
+  */
+  if (from !== ship && SHIPS[ship].charge !== null) return false;
   // 0594: the War Dance too, now every ship dances — and the ball is won only in Unity's hands.
   return plateOpen(state, ship, from);
 }

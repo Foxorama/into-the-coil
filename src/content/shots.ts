@@ -77,7 +77,9 @@ export type ShotKind =
   | 'blast'
   | 'blastHalf'
   | 'blastWide'
-  | 'blastWidest';
+  | 'blastWidest'
+  // The War Dance's shockwave — 0613: a ring off the dancing ship at every wall and every body it lands on.
+  | 'danceWave';
 
 export interface ShotRow extends Body {
   /**
@@ -424,6 +426,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'blastHalf',
   'blastWide',
   'blastWidest',
+  'danceWave',
 ];
 
 /**
@@ -1193,6 +1196,18 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     speed: 0,
     fission: SPENT_BY_ARRIVING,
   },
+  /**
+   * The War Dance's shockwave — `docs/decisions/0613-the-dance-is-earned.md`. A ring whose edge grows from the
+   * dancing ship to `radius`, taking `damage` off every body it crosses, once; drawn at its edge as it grows
+   * (`swell`), on the blast's rule that the picture is the reach.
+   *
+   * ⚠️ **FOURTEEN UNITS: A TENTH AND A LITTLE OF THE LANE EITHER SIDE OF THE SHIP.** A ram reaches three, the
+   * ball's own edge; a ray's burst five; a bomb thirty-four. A wave reaches the body beside the one the ship
+   * hit and the rank behind it, and never the far side of a wave — the dance is still the thing that does the
+   * work, and the ring is what it throws off. **THREE, THE RAM'S OWN**, so it kills what a landing would: every
+   * enemy of health three or under in one, the four-health ones in two. Play numbers.
+   */
+  danceWave: { sprite: SPRITE.danceWave, spriteHit: SPRITE.danceWave, radius: 14, health: 1, damage: 3, speed: 0, fission: SPENT_BY_ARRIVING },
 };
 
 /**

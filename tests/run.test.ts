@@ -159,6 +159,9 @@ describe('a run is lives', () => {
       *"A game starts with two bombs"*, a bomb being what the ask calls every gun's special. Over every
       ship, so a ship whose special sits on the other trigger, or whose gun opens on somebody else's
       special, is a different answer — 0282: the opening differs per ship.
+
+      ⚠️ **AND A SHIP WHOSE ROW EARNS ITS SPECIAL OPENS ON NONE OF IT — 0613**, which replaced the pair on that
+      row on purpose: the Hamster Ball's War Dance is a bar its ram fills, and the empty bar is its stock.
     */
     for (const ship of SHIP_KINDS) {
       const run = play({ slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship, credits: 'free' }).run;
@@ -166,9 +169,8 @@ describe('a run is lives', () => {
       expect(run.tubes, `the ${ship} opened on a tube nobody fitted`).toEqual([]);
       const own = WEAPONS[SHIPS[ship].weapon].special;
       const side = SPECIALS[own].side;
-      expect(run.arsenal[side], `the ${ship} did not open on ${OPENING_CHARGES} of its own ${own}`).toEqual(
-        Array.from({ length: OPENING_CHARGES }, () => own),
-      );
+      const opens = SHIPS[ship].charge === null ? OPENING_CHARGES : 0;
+      expect(run.arsenal[side], `the ${ship} did not open on ${opens} of its own ${own}`).toEqual(Array.from({ length: opens }, () => own));
       for (const other of SIDES) {
         if (other !== side) expect(run.arsenal[other], `the ${ship} opened with something on its ${other} trigger`).toEqual([]);
       }
