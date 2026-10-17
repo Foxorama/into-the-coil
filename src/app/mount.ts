@@ -269,6 +269,16 @@ export const CAPACITY = {
   */
   blasts: 13,
   /*
+    ⚠️ **TWENTY-EIGHT: THE PAINT THAT STAYS — 0610.** A splat was a blast that stood two thirds of a second,
+    in this pool's thirteen; at two and a half seconds a string of paint would fill it and a bomb thrown into
+    the string would land nothing. So the picture left behind is a pool of its own and the blast is a step
+    long. The marker throws one ball every six steps on every rung (`fireEvery`), so the most that can be
+    standing at once is every ball of 150 steps landing — twenty-five — and twenty-eight is the tenth of
+    headroom the shots keep. Paid out of 0286's worst case on 0153's terms: a desktop target, and twenty-eight
+    blits of a baked bitmap, only while the duck's marker is the gun.
+  */
+  paint: 28,
+  /*
     ⚠️ **TWO HUNDRED SINCE 0479, AND IT WAS A HUNDRED AND FIFTY.** The flame went from 1.8 a step to 1.1,
     so the gyre's wheel's flames are on the field longer, and its fight — curtains of forty-one beside
     the wheel — peaked at 174 at Legend and 158 at Savior, flown by `scripts/weigh-stuck.mjs` with the
@@ -859,6 +869,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
   const bombs = new Pool<Entity>(CAPACITY.bombs, makeEntity);
   const blasts = new Pool<Entity>(CAPACITY.blasts, makeEntity);
+  const paint = new Pool<Entity>(CAPACITY.paint, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
@@ -1185,6 +1196,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     missiles,
     bombs,
     blasts,
+    paint,
     enemyShots,
     debris,
     deaths: makeDeaths(CAPACITY.enemies),
