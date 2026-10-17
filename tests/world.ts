@@ -462,6 +462,7 @@ export function playableWorld(
   const bolts = new Pool<Entity>(CAPACITY.bolts, makeEntity);
   const bombs = new Pool<Entity>(CAPACITY.bombs, makeEntity);
   const blasts = new Pool<Entity>(CAPACITY.blasts, makeEntity);
+  const paint = new Pool<Entity>(CAPACITY.paint, makeEntity);
   const enemyShots = new Pool<Entity>(CAPACITY.enemyShots, makeEntity);
   const debris = new Pool<Entity>(CAPACITY.debris, makeEntity);
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
@@ -549,6 +550,7 @@ export function playableWorld(
     bolts,
     bombs,
     blasts,
+    paint,
     onSpecial: (): void => {},
     enemyShots,
     debris,

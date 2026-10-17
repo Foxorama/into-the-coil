@@ -107,7 +107,7 @@ import {
   type PickupRow,
   type Weapon,
 } from '../content/pickups.ts';
-import { TETHER_BOLT_KIND, WEAPONS, type CatherineWheel, type FlightKind, type Ram } from '../content/weapons.ts';
+import { TETHER_BOLT_KIND, WEAPONS, WEAPON_KINDS, type CatherineWheel, type FlightKind, type Ram } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
 import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
@@ -667,7 +667,7 @@ const RAY_PAGES = [SPRITE.ray, SPRITE.rayRipple, SPRITE.raySwell] as const;
 
 /** Step a thrown bomb's explosion through its three pictures, and a ray's burst through its two. */
 function stepExplosions(w: World): void {
-  const paint = WEAPONS[w.weapon.kind].paint;
+  // A splat is not here since 0610: its blast is a step long and unseen, and its picture is the paint pool's.
   for (let i = 0; i < w.blasts.size; i++) {
     const blast = w.blasts.at(i);
     let sprite: number;
@@ -676,10 +676,6 @@ function stepExplosions(w: World): void {
     else if (blast.kind === FIREWORK_KIND) {
       const pages = FIREWORK_PAGES[blast.face % FIREWORK_PAGES.length]!;
       sprite = blast.lifeFor > FIREWORK_STEPS - 6 ? pages[0] : blast.lifeFor > 14 ? pages[1] : pages[2];
-    } else if (blast.kind === SPLAT_KIND && paint !== null) {
-      // 0595: wet in its colour as it lands, and then dried flat — the colours of the gun that threw it.
-      const colour = paint.colours[blast.face % paint.colours.length]!;
-      sprite = blast.lifeFor > SPLAT_STEPS - SPLAT_WET ? colour.splat : colour.dry;
     } else continue;
     blast.sprite = sprite;
     blast.spriteBase = sprite;
@@ -721,11 +717,25 @@ function burstRays(w: World, landed: Deaths): void {
 }
 
 /**
- * How long a splat stays on screen — 0595: wet for a sixth of a second and then dried flat for half a
- * second more, holding station in the world. The damage lands on the first step, as every blast's does.
+ * How long a splat's paint stays — 0610, and it was 0595's two thirds of a second: *"fade away after 2-3
+ * secs."* Two and a half seconds, wet for the first sixth of one, then dried; the painter fades it out
+ * over the last second (`PAINT_FADE_STEPS`), so it is whole for a second and a half — long enough to be
+ * seen riding a boss that moves — and gone in the middle of the two to three the player asked for. The
+ * damage lands on the step it lands, as every blast's does, and the blast that carries it lasts that step.
  */
-const SPLAT_STEPS = 40;
+export const SPLAT_STEPS = 150;
 const SPLAT_WET = 10;
+/**
+ * How far in from a boss's rim a splat that landed on it is put, as a share of the body's radius — 0610.
+ * A ball lands at its own centre, a ball's radius outside the hurtbox; a splat there is half off the
+ * animal. Pulled in to three quarters of the radius, the paint is on the body it hit.
+ */
+const SPLAT_ON = 0.75;
+/**
+ * How far past the face of the stone a splat on it sits, in world units — 0610: its picture is eight across,
+ * so most of it is on the wall and the rest is the drops thrown back off it.
+ */
+const SPLAT_INTO_STONE = 1.5;
 /** The kind a splat carries in the blast pool, beside an explosion, a rift, a ray's burst and a firework. */
 export const SPLAT_KIND = 5;
 /**
@@ -738,30 +748,187 @@ const PAINT_KIND = 6;
 /**
  * Every paintball that landed this step splats where it did, in its own colour — 0595: *"each bursts into a
  * splat on whatever it hits."* A blast in the blast pool, as a ring's burst is, landing through the same
- * pairing on every body inside it, once.
+ * pairing on every body inside it, once; and since 0610 the paint it leaves, on the boss it hit and riding it.
  */
 function splatPaint(w: World, landed: Deaths): void {
   const gun = WEAPONS[w.weapon.kind];
   const paint = gun.paint;
   if (paint === null || gun.bursts === null) return;
-  const row = SHOTS[gun.bursts];
   // 0599: and heard where the first of them bursts — the splat's own, beside the `hit` the arrival already sounds.
   if (landed.count > 0) w.onCue('splat', landed.across[0]!);
   for (let i = 0; i < landed.count; i++) {
-    const blast = w.blasts.spawn();
-    // A splat the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
-    if (blast === null) return;
-    reset(blast, landed.along[i]!, landed.across[i]!, row, SPLAT_KIND);
     const colour = landed.kind[i]! - PAINT_KIND;
-    blast.face = colour >= 0 && colour < paint.colours.length ? colour : 0;
-    // In its colour from the step it lands — `stepExplosions` has already run this step, and the row's own
-    // picture is the first colour's, so a yellow ball would splat pink for a frame (0036).
-    const wet = paint.colours[blast.face]!.splat;
-    blast.sprite = wet;
-    blast.spriteBase = wet;
-    blast.spriteHit = wet;
-    // It holds station in the world, as a ring's burst does.
-    blast.lifeFor = SPLAT_STEPS;
+    const face = colour >= 0 && colour < paint.colours.length ? colour : 0;
+    splatAt(w, landed.along[i]!, landed.across[i]!, face);
+    leavePaint(w, landed.along[i]!, landed.across[i]!, face, true);
+  }
+}
+
+/**
+ * The blast a splat lands as — 0595's, on the ring burst's terms: on every body inside it, once, on the step it
+ * lands. **Unseen and a step long since 0610**: the picture is the paint `leavePaint` leaves, and a blast
+ * standing two and a half seconds would spend the slots a bomb's blast needs.
+ */
+function splatAt(w: World, along: number, across: number, face: number): void {
+  const bursts = WEAPONS[w.weapon.kind].bursts;
+  if (bursts === null) return;
+  const blast = w.blasts.spawn();
+  // A splat the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
+  if (blast === null) return;
+  reset(blast, along, across, SHOTS[bursts], SPLAT_KIND);
+  blast.face = face;
+  blast.sprite = UNSEEN;
+  blast.spriteBase = UNSEEN;
+  blast.spriteHit = UNSEEN;
+  // It lands this step, and `stepEntities` lets it go at the start of the next.
+  blast.lifeFor = 1;
+}
+
+/**
+ * The paint a splat leaves — 0610: *"the paint ball splats need to 'paint' the bosses and mini bosses."* In the
+ * ball's colour from the step it lands (0036: the row's own picture is the first colour's, and a yellow ball
+ * would splat pink for a frame), on the boss's hull or a node of its body when it landed on one, riding it, and
+ * holding station in the world otherwise. `onBoss` is false for a splat on the stone, which is on no body.
+ */
+function leavePaint(w: World, along: number, across: number, face: number, onBoss: boolean): void {
+  const gun = WEAPONS[w.weapon.kind];
+  const paint = gun.paint;
+  if (paint === null || gun.bursts === null) return;
+  const mark = w.paint.spawn();
+  // Paint the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
+  if (mark === null) return;
+  reset(mark, along, across, SHOTS[gun.bursts], WEAPON_KINDS.indexOf(w.weapon.kind));
+  mark.damage = 0;
+  mark.face = face >= 0 && face < paint.colours.length ? face : 0;
+  const wet = paint.colours[mark.face]!.splat;
+  mark.sprite = wet;
+  mark.spriteBase = wet;
+  mark.spriteHit = wet;
+  mark.lifeFor = SPLAT_STEPS;
+  if (!onBoss || !bossTargetable(w)) return;
+  /*
+    ⚠️ **ON THE BODY THE BALL TOUCHED, READ OFF WHERE IT LANDED.** The landing log keeps a place and a kind and
+    no body, and a ball touching the hull is within the hull's radius and its own of the hull's centre — so the
+    body nearest to touching it is the one it landed on, the hull or a node of the animal. A ball that touched
+    neither landed on an ordinary enemy, and its paint holds station.
+  */
+  const reach = SHOTS[gun.shot].radius + 0.5;
+  let best = -1;
+  let bestGap = reach;
+  if (w.bossPool.size > 0) {
+    const hull = w.bossPool.at(0);
+    const gap = Math.hypot(along - hull.along, across - hull.across) - hull.radius;
+    if (gap < bestGap) {
+      best = 0;
+      bestGap = gap;
+    }
+  }
+  for (let k = 0; k < w.bossBody.size; k++) {
+    const node = w.bossBody.at(k);
+    if (node.sprite === UNSEEN || node.radius <= 0) continue;
+    const gap = Math.hypot(along - node.along, across - node.across) - node.radius;
+    if (gap < bestGap) {
+      best = k + 1;
+      bestGap = gap;
+    }
+  }
+  if (best < 0) return;
+  const body = best === 0 ? w.bossPool.at(0) : w.bossBody.at(best - 1);
+  let offAlong = along - body.along;
+  let offAcross = across - body.across;
+  const off = Math.hypot(offAlong, offAcross);
+  const most = body.radius * SPLAT_ON;
+  if (off > most) {
+    offAlong *= most / off;
+    offAcross *= most / off;
+  }
+  // In the body's own frame, the turn it had as the paint landed taken off, so it turns with the body.
+  const cos = Math.cos(body.turn);
+  const sin = Math.sin(body.turn);
+  mark.onBody = best;
+  mark.onAlong = offAlong * cos + offAcross * sin;
+  mark.onAcross = -offAlong * sin + offAcross * cos;
+  mark.onTurn = body.turn;
+  ridePaint(mark, body);
+}
+
+/** Put paint where it rides on `body` this step and the step before, so the painter draws it with the body. */
+function ridePaint(mark: Entity, body: Entity): void {
+  const turn = body.turn - mark.onTurn;
+  const prevTurn = body.prevTurn - mark.onTurn;
+  const turnAt = body.turn;
+  const prevAt = body.prevTurn;
+  mark.along = body.along + mark.onAlong * Math.cos(turnAt) - mark.onAcross * Math.sin(turnAt);
+  mark.across = body.across + mark.onAlong * Math.sin(turnAt) + mark.onAcross * Math.cos(turnAt);
+  mark.prevAlong = body.prevAlong + mark.onAlong * Math.cos(prevAt) - mark.onAcross * Math.sin(prevAt);
+  mark.prevAcross = body.prevAcross + mark.onAlong * Math.sin(prevAt) + mark.onAcross * Math.cos(prevAt);
+  mark.turn = turn;
+  mark.prevTurn = prevTurn;
+}
+
+/**
+ * Age every splat's paint, dry it, and carry what rides a boss with it — 0610. After the boss and its body have
+ * moved this step, so the paint is where they are. Paint whose body is gone — the boss came apart, or the node it
+ * was on was let go — goes with it.
+ */
+function stepPaint(w: World): void {
+  for (let i = w.paint.size - 1; i >= 0; i--) {
+    const mark = w.paint.at(i);
+    if (--mark.lifeFor <= 0) {
+      w.paint.releaseAt(i);
+      continue;
+    }
+    if (mark.lifeFor === SPLAT_STEPS - SPLAT_WET) {
+      // Dried, in the colours of the gun that threw it.
+      const paint = WEAPONS[WEAPON_KINDS[mark.kind] ?? w.weapon.kind].paint;
+      const dry = paint === null ? mark.spriteBase : paint.colours[mark.face % paint.colours.length]!.dry;
+      mark.sprite = dry;
+      mark.spriteBase = dry;
+      mark.spriteHit = dry;
+    }
+    if (mark.onBody < 0) {
+      mark.prevAlong = mark.along;
+      mark.prevAcross = mark.across;
+      continue;
+    }
+    const body = mark.onBody === 0 ? (w.bossPool.size > 0 ? w.bossPool.at(0) : null) : mark.onBody - 1 < w.bossBody.size ? w.bossBody.at(mark.onBody - 1) : null;
+    if (body === null) {
+      w.paint.releaseAt(i);
+      continue;
+    }
+    ridePaint(mark, body);
+  }
+}
+
+/** Let go of every splat riding the boss — 0610: the slot is about to hold another animal. */
+function unpaintBoss(w: World): void {
+  for (let i = w.paint.size - 1; i >= 0; i--) if (w.paint.at(i).onBody >= 0) w.paint.releaseAt(i);
+}
+
+/**
+ * Every paintball that reaches the stone splats on it — 0610: *"hit walls and obstructions."* A ball broke on
+ * the stone with a spark as every shot does (0349), and left nothing. Its blast goes off at the face on the
+ * corridor's side, as a bomb's does, so it lands on what is beside the wall and never through it; its paint is
+ * on the wall, and holds station with it.
+ */
+function paintStone(w: World, corridor: Corridor): void {
+  if (WEAPONS[w.weapon.kind].paint === null) return;
+  let heard = false;
+  for (let i = w.playerShots.size - 1; i >= 0; i--) {
+    const ball = w.playerShots.at(i);
+    if (ball.kind < PAINT_KIND) continue;
+    const side = stoneAt(corridor, ball.along, ball.across, 0);
+    if (side === 0) continue;
+    const at = faceAt(corridor, ball.along, side);
+    const face = Number.isFinite(at) ? at : ball.across;
+    // `Math.sign`: an island's side is ±2, and its sign is the way into the stone as a wall's is (0600).
+    const into = Math.sign(side);
+    const colour = ball.kind - PAINT_KIND;
+    splatAt(w, ball.along, face - into * 0.5, colour);
+    leavePaint(w, ball.along, face + into * SPLAT_INTO_STONE, colour, false);
+    if (!heard) w.onCue('splat', face);
+    heard = true;
+    w.playerShots.releaseAt(i);
   }
 }
 
@@ -1929,6 +2096,17 @@ export interface World {
   bombs: Pool<Entity>;
   blasts: Pool<Entity>;
   /**
+   * The paint a splat leaves — `docs/decisions/0610-the-paint-sticks.md`: on a boss and riding it, on the
+   * stone, or where a body was, for `SPLAT_STEPS` and fading out over the end of them. A picture in no
+   * pairing: what a splat lands it lands as a blast, on the step it lands (`splatPaint`).
+   *
+   * ⚠️ **ITS OWN POOL AND NOT THE BLASTS', AND NOT IN `layers`.** A splat in the blast pool was drawn under
+   * the boss it landed on — the blasts are the bottom layer — and at two and a half seconds a string of it
+   * would fill the thirteen slots a bomb's blast needs. It is drawn by `paintScene` over every body and under
+   * every shot, and faded by its own clock, which the generic layer loop does not have.
+   */
+  paint: Pool<Entity>;
+  /**
    * The player asked to trigger the special in slot `slot`.
    *
    * ⚠️ **Reported rather than decided, exactly as `onDeath` and `onPickup` are.** Whether there is a
@@ -2289,6 +2467,8 @@ export class GameFrame implements Frame {
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
     stepExplosions(w);
+    // The paint splats left, after the boss and its body have moved, so what rides them is where they are — 0610.
+    stepPaint(w);
     // After both pools have stepped, so the turn is this step's and `prevTurn` the last — 0447.
     turnVoids(w);
     // The storm's flicker and the whirlpool, both placed by hand — 0374.
@@ -3012,7 +3192,7 @@ export class GameFrame implements Frame {
       HEART_AT[1] = seat.prevAcross + (seat.across - seat.prevAcross) * alpha;
       heart = HEART_AT;
     }
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart, w.layers.indexOf(w.bossBody), w.bolts, w.layers.indexOf(w.enemyShots));
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart, w.layers.indexOf(w.bossBody), w.bolts, w.layers.indexOf(w.enemyShots), w.paint);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them. A boss's beams are not
     // among them: they were stroked under the animal, above — 0459. Nor is a jet: under the bullets.
@@ -3150,6 +3330,8 @@ function feedBoss(w: World): void {
 function stoneStops(w: World): void {
   const corridor = w.corridor;
   if (corridor === null) return;
+  // A paintball splats on the stone it reaches, before the rest break on it — 0610.
+  paintStone(w, corridor);
   breakInStone(w, corridor, w.playerShots);
   breakInStone(w, corridor, w.missiles);
   breakInStone(w, corridor, w.enemyShots);
@@ -4316,6 +4498,8 @@ function stepJet(w: World): void {
     reset(link, endAlong, endAcross, JET_BODY, JET_BOLT_KIND);
     // As wide as it lands, which is what the painter draws it at — a beam's rule (0250).
     link.radius = jet.width;
+    // And how many times that it has opened to at its tip — 0610: the spray's cone, on `swell`'s terms, a size.
+    link.swell = jet.tipWidth / jet.width;
     /*
       ⚠️ **AND WHERE IT WAS THE STEP BEFORE IS WHERE THE SHIP WAS** — the review of 0595, on 0551's terms for the
       tether. The painter draws between the two, so a jet whose last place was its own would be drawn a step ahead
@@ -4359,10 +4543,11 @@ function landJet(w: World, shootable: boolean, open: number, hull: Entity | null
   const endAlong = rootAlong + Math.cos(angle) * jet.length;
   const endAcross = rootAcross + Math.sin(angle) * jet.length;
   const landedBefore = w.hits.count;
-  let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor);
+  // As wide as the spray is drawn the whole way: `width` at the muzzle, opening to `tipWidth` — 0610, on 0250's rule.
+  let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor, jet.tipWidth);
   if (shootable) {
-    destroyed += tetherInto(w.bossPool, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, jet.landGap, hull, w.corridor);
-    tetherInto(w.bossBody, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, null, w.hits, jet.landGap, hull, w.corridor);
+    destroyed += tetherInto(w.bossPool, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, jet.landGap, hull, w.corridor, jet.tipWidth);
+    tetherInto(w.bossBody, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, null, w.hits, jet.landGap, hull, w.corridor, jet.tipWidth);
   }
   // 0599: heard where it landed, on every ship — as the tether's `sizzle` is, and never as the gun's `hit`.
   if (w.hits.count > landedBefore) w.onCue('douse', w.hits.across[landedBefore]!);
@@ -11748,6 +11933,8 @@ function fightOf(w: World): BossFight {
 function spawnBoss(w: World): void {
   const boss = w.bossPool.spawn();
   if (boss === null) return;
+  // Paint on the last animal in this slot is not on this one — 0610.
+  unpaintBoss(w);
   // In LEVEL coordinates like every other authored place — 0076; at the current FIGHT's distance,
   // which is the mid-boss's or the end boss's — 0247.
   reset(boss, fightAt(w) + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);
@@ -11895,6 +12082,8 @@ export function respawn(w: World): void {
   */
   w.bombs.clear();
   w.blasts.clear();
+  // And the paint its splats left, which the next ship did not throw — 0610.
+  w.paint.clear();
   // And a nova still growing, on the same terms — 0447.
   w.nova.clear();
   w.novaKind = null;

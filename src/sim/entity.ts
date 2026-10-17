@@ -550,6 +550,25 @@ export interface Entity extends Body {
    */
   wayAlong: number;
   wayAcross: number;
+  /**
+   * What a splat of paint is stuck to — `docs/decisions/0610-the-paint-sticks.md`: `-1` for nothing (it
+   * holds station in the world, on a wall or where a body was), `0` for the boss's hull, and `k + 1` for
+   * node `k` of its body. `-1` for every body that is not paint.
+   *
+   * ⚠️ **AN INDEX AND NOT A REFERENCE, AND ONLY INTO THE TWO POOLS THAT KEEP THEIR ORDER.** The hull is
+   * the boss pool's only slot, and the body pool is released from its end, so a node's index is the node
+   * for as long as it is under the pool's size. The enemies' pool swaps a dead body's slot for the last
+   * one, so an index into it would hand the paint to a stranger — which is why an ordinary enemy's splat
+   * holds station instead.
+   */
+  onBody: number;
+  /**
+   * Where on the body it rides, from the body's centre in the body's own frame — the turn it had when the
+   * paint landed taken off — in world units, and that turn (`onTurn`). Read only while `onBody` is not `-1`.
+   */
+  onAlong: number;
+  onAcross: number;
+  onTurn: number;
 }
 
 /**
@@ -670,6 +689,10 @@ export function makeEntity(): Entity {
     seekTurn: 0,
     wayAlong: 0,
     wayAcross: 0,
+    onBody: -1,
+    onAlong: 0,
+    onAcross: 0,
+    onTurn: 0,
   };
 }
 
@@ -758,6 +781,11 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   // And on no path's heading until `bendShots` takes one — 0474.
   e.wayAlong = 0;
   e.wayAcross = 0;
+  // And stuck to nothing unless it is paint that landed on a boss — 0610.
+  e.onBody = -1;
+  e.onAlong = 0;
+  e.onAcross = 0;
+  e.onTurn = 0;
 }
 
 /**

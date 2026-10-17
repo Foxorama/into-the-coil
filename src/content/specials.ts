@@ -708,7 +708,14 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     nova: null,
     candle: null,
     dance: null,
-    jet: { steps: 120, sweep: 0.55, period: 60, length: 72, width: 2.2, damage: 2, landGap: 4 },
+    /*
+      ⚠️ **NINETY LONG AND A CONE, AND IT WAS SEVENTY-TWO AND A COLUMN — 0610.** *"Looks kind of like a laser instead
+      of a water spray and needs to be a little bit longer."* A quarter longer: at the end of its swing its tip is
+      47 units off the nose where it was 38, so it sweeps 78% of the 120-unit lane where it swept 63%. It leaves the nozzle 2.8 across and opens to 8 at
+      its tip, as a hose's spray does, and lands as wide as it is drawn the whole way (0250): half again the area
+      the column landed on, on the same clock — a body takes it no more often, it is only in it longer.
+    */
+    jet: { steps: 120, sweep: 0.55, period: 60, length: 90, width: 1.4, tipWidth: 4, damage: 2, landGap: 4 },
     opensWith: 'mmxxvi',
     face: SPRITE.pickupWater,
     cue: 'waterCannon',
@@ -728,8 +735,8 @@ export const JET_BOLT_KIND = 4;
  * The Water Cannon's jet — `docs/decisions/0595-the-aqua-duck-paints.md`. For `steps` a jet of water `length`
  * long plays from the gun's muzzle, turned `sweep` radians either side of straight ahead and back once every
  * `period` steps, so it swings across the lane ahead of the ship. It lands on whatever lies within `width` of
- * it, `damage` a landing, and a body takes it only once every `landGap` steps — 0391's clock, as the blades'.
- * Every number a play number.
+ * it at the muzzle and `tipWidth` at its end, straight between — a spray that opens (0610) — `damage` a landing,
+ * and a body takes it only once every `landGap` steps — 0391's clock, as the blades'. Every number a play number.
  */
 export interface Jet {
   readonly steps: number;
@@ -739,8 +746,10 @@ export interface Jet {
   readonly period: number;
   /** How far it reaches from the muzzle, in world units. */
   readonly length: number;
-  /** How far either side of its line it lands, in world units. */
+  /** How far either side of its line it lands at the muzzle, in world units. */
   readonly width: number;
+  /** And at its far end — 0610: the spray opens between the two, and is drawn exactly that wide. */
+  readonly tipWidth: number;
   readonly damage: number;
   readonly landGap: number;
 }
