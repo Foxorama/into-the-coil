@@ -131,7 +131,18 @@ describe.runIf(chromePath)('the crossing is a caption over a game that is still 
         document.querySelector('.itc-playing-hud')?.classList.add('itc-playing-hud-shown');
         document.querySelector('.itc-playing-score')?.classList.add('itc-playing-score-shown');
       }, prefix);
-      await page.waitForTimeout(900);
+      /*
+        ⚠️ **UNTIL THE ENTRANCE HAS FINISHED, NOT FOR 900 MS** — 0044. A fixed wait failed on CI with the
+        plate 12 pixels high at 844×390, which is `itc-travel-in`'s 0.9em start: under a shard's load the
+        entrance had not run, and the guard measured its first frame rather than where the plate rests.
+      */
+      await page.evaluate(async (p: string) => {
+        const panel = document.querySelector(`.${p}panel`);
+        if (!(panel instanceof HTMLElement)) return;
+        // Only what ends: the route's pulse loops, and its `finished` never resolves.
+        const ending = panel.getAnimations({ subtree: true }).filter((a) => a.effect?.getComputedTiming().iterations !== Infinity);
+        await Promise.all(ending.map((a) => a.finished));
+      }, prefix);
       const m = await page.evaluate((p: string) => {
         const panel = document.querySelector(`.${p}panel`);
         const hud = document.querySelector('.itc-playing-hud');
