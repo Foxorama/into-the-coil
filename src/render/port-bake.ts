@@ -19,9 +19,9 @@
 
 import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, HANGAR_SCALE, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
-import type { GolferRow } from '../content/golfers.ts';
+import { figureOf, type GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, shade, trace, withFit, type Atlas, type Frame, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHELL_SPAN, SHIPS, type ShipKind } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
@@ -142,8 +142,20 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       than the fighter's bare hull, so every flame's length and width below is scaled by `JET` to stay
       the size the fighter's always were.
     */
+    /*
+      ⚠️ **WITH NOBODY ABOARD — 0612.** *"The vehicles aren't separate from the pilot."* The pad shows the ship
+      as it shows every ship, with its pilot out of sight, and the intro's pilot runs out of the bar to an empty
+      one; `blueRider` is who rides it, laid on once they have boarded (`paintPort`).
+    */
     case 'blue':
-      paintBlue(ctx, f, palette, size, pilot.ship);
+      nobodyAboard(pilot.ship, () => paintBlue(ctx, f, palette, size, pilot.ship));
+      return canvas;
+    case 'blueRider':
+      if (SHIPS[pilot.ship].seat !== null) {
+        ctx.strokeStyle = palette.space;
+        ctx.lineWidth = Math.max(1, size * 0.014);
+        drawRider(ctx, f, palette, pilot.ship, figureOf(pilot));
+      }
       return canvas;
     /*
       ⚠️ **THE HANGAR'S VIEW AND THE TILT OUT OF IT — 0444.** A ship with hangar art of its own is drawn
@@ -156,7 +168,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'blueTilt2':
     case 'blueTilt3': {
       const art = HANGAR_ART[pilot.ship];
-      if (art === null) paintBlue(ctx, f, palette, size, pilot.ship);
+      if (art === null) nobodyAboard(pilot.ship, () => paintBlue(ctx, f, palette, size, pilot.ship));
       else {
         art.paint(ctx, f, palette, size, LEAN[kind]);
         // 0582: and its tubes, their places leaning in toward the rim as the picture leans side-on.
@@ -611,6 +623,7 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'blueTopBurn':
     case 'blueTopFlare':
     case 'blueTopSurge':
+    case 'blueRider':
     case 'viper':
     case 'viperIdle':
     case 'viperBurn':
@@ -634,6 +647,11 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       throw new Error(`bakePort: unpainted ${String(never)}`);
     }
   }
+}
+
+/** `paint` with `ship` drawn as it is fitted but with nobody aboard — 0612: the pad's ship, and the intro's before its pilot boards. */
+function nobodyAboard(ship: ShipKind, paint: () => void): void {
+  withFit(ship, { ...fitNow(ship), rider: null }, paint);
 }
 
 /** A soft round light: full at the centre, gone at `radius`. */

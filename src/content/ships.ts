@@ -29,6 +29,8 @@ import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
 import type { FlameKind } from './flames.ts';
 import { SHELLS, SHELL_KINDS, type ShellKind, type ShieldShell } from './shells.ts';
+// 0612: who is aboard. `golfers.ts` imports this file for a type alone, so the two do not load each other.
+import { GOLFERS, figureOf, pilotOf, type Figure } from './golfers.ts';
 
 /** Every flyable ship. Closed. */
 export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball' | 'duck';
@@ -140,6 +142,14 @@ export interface ShipRow extends Body {
    * cockpit always was.
    */
   cockpit: Mount;
+  /**
+   * How its pilot is seen aboard — `docs/decisions/0612-the-riders-get-off.md`: `astride` a bike, `inside` a
+   * clear ball, or `null` for a ship whose pilot is out of sight under a canopy, a roof or a hull. A ship
+   * with a seat is drawn as a vehicle, and the pilot aboard is drawn on it from their own figure (`rider` on
+   * the fit); with nobody aboard — on the pad, and in the intro until they board — it is the vehicle alone.
+   * Played: *"the vehicles aren't separate from the pilot."*
+   */
+  seat: Seat | null;
   /**
    * How big the intro draws it, against the fight's box at the hangar's scale — in the hangar, and out in
    * the chase — 0448. Played: *"the intro movie for the lil caddie has the caddie too big, needs a 20%
@@ -282,6 +292,9 @@ export interface HudTheme {
   readonly trim: HudInk;
 }
 
+/** How a pilot is seen aboard a ship that shows them — 0612. Closed. */
+export type Seat = 'astride' | 'inside';
+
 /** A point on a ship, in world units about its centre: `along` toward its nose, `across` down the lane. */
 export interface Mount {
   readonly along: number;
@@ -316,12 +329,26 @@ export interface Fit {
     `sameFit` leaves it out, and only the pad's preview of it reads this.
   */
   readonly shell: ShellKind;
+  /*
+    0612: and who is seen aboard, by their figure — `null` for nobody, which is how the pad shows every ship
+    and the intro shows one before its pilot boards. Only a ship with a `seat` draws one, so a ship without
+    one is always `null` here and never re-baked over who flies it.
+  */
+  readonly rider: Figure | null;
 }
 
-/** A ship as it comes: its own gun, its own rim, its own look, the factory's paint, the standard flame, no tubes and its own shell. */
+/**
+ * Who a ship as it comes is drawn with aboard — 0612: its own pilot (0441's one each), on a ship that shows
+ * its pilot, and nobody on one that does not.
+ */
+export function ownRider(ship: ShipKind): Figure | null {
+  return SHIPS[ship].seat === null ? null : figureOf(GOLFERS[pilotOf(ship)]);
+}
+
+/** A ship as it comes: its own gun, its own rim, its own look, the factory's paint, the standard flame, no tubes, its own shell and its own pilot. */
 export function ownFit(ship: ShipKind): Fit {
   const row = SHIPS[ship];
-  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: row.flame, tubes: [], shell: row.shield.look };
+  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: row.flame, tubes: [], shell: row.shield.look, rider: ownRider(ship) };
 }
 
 /**
@@ -333,10 +360,11 @@ export function shelled(row: ShipRow, shell: ShellKind): ShipRow {
   return row.shield.look === shell ? row : { ...row, shield: SHELLS[shell].shell };
 }
 
-/** Whether two fits draw the same ship — its hull and, since 0582, its tubes; the flame is baked apart from it (`bakeFlame`). */
+/** Whether two fits draw the same ship — its hull and, since 0582, its tubes, and since 0612 who rides it; the flame is baked apart from it (`bakeFlame`). */
 export function sameFit(a: Fit, b: Fit): boolean {
   return (
     a.gun === b.gun &&
+    a.rider === b.rider &&
     a.rim === b.rim &&
     a.art === b.art &&
     a.livery === b.livery &&
@@ -578,6 +606,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // Its canopy, just ahead of the centre — 0411's three hangar units.
     cockpit: { along: 0.7, across: 0 },
+    // 0612: under its canopy, out of sight.
+    seat: null,
     intro: { hangar: 1, outside: 1 },
     // The studio's own readout, violet into cyan (0439), in a gunsight's corners.
     hud: { name: 'Gunsight', motif: 'bracket', ink: { from: 'player' }, trim: { from: 'ally' } },
@@ -643,6 +673,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The middle of its glass dome, seen side-on above the rim (`paintSaucer` in the port's bake).
     cockpit: { along: 0, across: -0.94 },
+    // 0612: under the glass, where the dome is drawn — `pilot` among its looks is the dome's, and no rider.
+    seat: null,
     /*
       ⚠️ **SMALLER THAN THE SHARED SCALE OUT IN THE CHASE — 0450.** *"Needs a 20% reduction in the hanger
       and probably a 40% reduction in the space chase."* The shared scale (`HANGAR_SCALE`) took every
@@ -712,6 +744,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     nozzles: [{ along: -4.42, across: 0.47 }],
     // Its greenhouse, seen from the side: under the T-top, above the beltline (`drawFirebird` in the bake).
     cockpit: { along: 0.25, across: -1.1 },
+    // 0612: behind the T-top's glass, unseen.
+    seat: null,
     intro: { hangar: 1, outside: 1 },
     // Its phoenix's gold on its black lacquer, the rim running from its tail lamp's orange.
     hud: { name: 'Chequered flag', motif: 'checker', ink: { from: 'hazard' }, trim: { from: 'bullet' } },
@@ -770,6 +804,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     nozzles: [{ along: -4.42, across: 0.75 }],
     // Its front glasshouse, seen from the side, behind the pillar (`drawEstate` in the bake).
     cockpit: { along: 0.4, across: -0.7 },
+    // 0612: behind its glasshouse, unseen.
+    seat: null,
     intro: { hangar: 1, outside: 1 },
     // The gilt, a shade paler to read as text, and the burl of its doors for the rim's dark end.
     hud: { name: 'Woody', motif: 'walnut', ink: { from: 'hazard', lift: 0.25 }, trim: { from: 'hazard', lift: -0.45 } },
@@ -788,7 +824,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
    * space chopper — fat wheels, a bag stood between the bars, wreathed in flame and forked lightning"*,
    * with the Marmot riding it, and the arc: *"he'll have the lightning gun equipped with it's specials
    * as his default."* Drawn from the side as the cars are, in the predecessor's frame about (0, 1)
-   * (`drawThunderbolt` in the bake; `CAR_MOUNTS` holds every place below to the drawing).
+   * (`drawThunderbolt` in the bake; `CAR_MOUNTS` holds every place below to the drawing). Since 0612 the bike
+   * is drawn bare and its rider is whoever is aboard (`seat`), drawn from their figure.
    */
   thunderbolt: {
     label: 'The Thunderbolt',
@@ -830,8 +867,10 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     tubeLook: 'nose',
     // One pipe, swept back low past the rear wheel to behind its fender.
     nozzles: [wheelAt(-15.4, 3.5, 0, 1)],
-    // His seat, under him: the intro's rider drops on here.
+    // Its seat: the intro's pilot drops on here.
     cockpit: wheelAt(-5, -2, 0, 1),
+    // 0612: its pilot rides it, astride the seat, a hand on each grip.
+    seat: 'astride',
     intro: { hangar: 1, outside: 1 },
     // The predecessor's chopper bridge: flame's amber for the counts, the arc's cyan for the trim.
     hud: { name: 'Hot rod', motif: 'hotrod', ink: { from: 'bullet', lift: 0.2 }, trim: { from: 'player' } },
@@ -848,6 +887,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
    * Unity's Hamster Ball — `docs/decisions/0593-the-hamster-ball-rolls.md`: a clear plastic ball, drawn from
    * above, with Unity — the least weasel who keeps Hangin' Out — running inside it, and a little thruster
    * pack strapped behind. It flies the ram, which is the ball itself (`WEAPONS.ram`), and nothing else.
+   * Since 0612 the ball is drawn empty and whoever runs in it is drawn from their figure (`seat`).
    */
   ball: {
     label: 'Hamster Ball',
@@ -894,8 +934,10 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     tubeLook: 'dart',
     // The thruster pack strapped behind the ball.
     nozzles: [{ along: -BALL_RADIUS - 0.55, across: 0 }],
-    // Unity, in the middle of the ball.
+    // The middle of the ball, where its pilot runs.
     cockpit: { along: 0, across: 0 },
+    // 0612: its pilot runs inside it, seen through the plastic.
+    seat: 'inside',
     intro: { hangar: 1, outside: 1 },
     // A hamster wheel turning round its readout: seed-husk amber for the counts, the plastic's blue for the trim.
     hud: { name: 'Hamster wheel', motif: 'orbit', ink: { from: 'hazard', lift: 0.15 }, trim: { from: 'player', lift: 0.25 } },
@@ -953,6 +995,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     nozzles: [wheelAt(-15.9, 2.6, 0, 1)],
     // Its porthole, on the flank behind the chest: the intro's duck drops in here.
     cockpit: wheelAt(4.4, 1.2, 0, 1),
+    // 0612: inside its hull, behind a porthole of glass and nobody in it.
+    seat: null,
     intro: { hangar: 1, outside: 1 },
     // Bath bubbles orbiting the readout: the bath duck's yellow for the counts, the water's blue for the trim.
     hud: { name: 'Bath bubbles', motif: 'orbit', ink: { from: 'hazard', lift: 0.1 }, trim: { from: 'player', toward: 'ally', by: 0.3 } },

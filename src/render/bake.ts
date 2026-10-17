@@ -37,6 +37,7 @@ import { BALL_CRADLE, BALL_RADIUS, CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING
 import { SHELLS, shieldPlateOf, type ShellKind, type ShieldLook } from '../content/shells.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
+import type { Figure } from '../content/golfers.ts';
 import { FLAMES, type FlameKind } from '../content/flames.ts';
 import { WEAPONS, type PaintColour, type WeaponKind } from '../content/weapons.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
@@ -3198,8 +3199,12 @@ function helmetArc(): Pt[] {
   return out;
 }
 
-/** The Thunderbolt and its rider from the side, in the predecessor's frame, at `stage` tubes. */
-function thunderboltOutline(stage: number, own = true): Pt[] {
+/**
+ * The Thunderbolt from the side, in the predecessor's frame, at `stage` tubes — and since 0612 with `top`
+ * along its top from behind the seat's back to the grip: its own (`THUNDERBOLT_BARE`) with nobody on it, or
+ * a rider's, which the hull takes in as the cars take in their turrets.
+ */
+function thunderboltOutline(stage: number, own = true, top: readonly Pt[] = THUNDERBOLT_BARE): Pt[] {
   const ball: Pt[] = [];
   if (own) {
     for (let i = 0; i <= 8; i++) {
@@ -3215,22 +3220,9 @@ function thunderboltOutline(stage: number, own = true): Pt[] {
     [-14.2, THUNDERBOLT_FENDER],
     ...turretsOn(THUNDERBOLT_PODS[stage]!, () => THUNDERBOLT_FENDER, THUNDERBOLT_POD_TOP),
     [-8.8, THUNDERBOLT_FENDER],
-    // The seat's back, and his tail curled up off it behind him.
-    [-9.4, -0.6],
-    [-10.4, -2],
-    [-11.6, -3.2],
-    [-10.8, -4.6],
-    [-9.6, -4],
-    [-9, -2.8],
-    // His back, hunched forward to the bars.
-    [-8.2, -3.8],
-    [-6.8, -5.8],
-    [-5, -7],
-    ...helmetArc(),
-    // The chin of the helmet, and the top of his arm out to the grip.
-    [1.2, -6.6],
-    [4, -8.2],
-    [6, -9.4],
+    // The seat's back, and from it over to the grip whoever rides it, or the bike's own top — 0612.
+    THUNDERBOLT_SEAT_BACK,
+    ...top,
     /*
       0557: the bar swept back to him from the top of a riser raked back off the fork crown — played: *"tilt
       the handlebars closer to the marmot because he's got super long arms now"*. The grip was out over the
@@ -3261,6 +3253,55 @@ function thunderboltOutline(stage: number, own = true): Pt[] {
   ];
 }
 
+/*
+  ── WHO RIDES IT — 0612 ──────────────────────────────────────────────────────────────────────────────
+
+  Played: *"the marmot and least weasel are drawn as part of the vehicles, the vehicles aren't separate from
+  the pilot."* The bike is drawn bare, with its own top from the seat to the grip, and a rider is a row of
+  `THUNDERBOLT_RIDERS` keyed on the figure of whoever is aboard (`rider` on the fit). With one, the hull
+  takes in the rider's outline in place of the bike's own top, so the rider is still silhouette and every
+  mark on them still paint on a sealed hull (0546's rule); the port lays the same rider alone over the bare
+  bike once its pilot has boarded (`drawRider`).
+*/
+
+/** The back of the seat, where the bike's top and every rider's start. */
+const THUNDERBOLT_SEAT_BACK: Pt = [-9.4, -0.6];
+
+/**
+ * The bike's own top with nobody on it, from just past the seat's back to the grip — 0612: along the seat,
+ * up the back of the tank and along its top, up the back of the bars' riser and along under the bars to the
+ * grip, where the outline goes on over them. Where a rider's arm leaves a gap, its edges are this line.
+ */
+const THUNDERBOLT_BARE: readonly Pt[] = [
+  [-6, -1.45],
+  [-1.4, -1.95],
+  [-1.4, -3.4],
+  [2.8, -3.8],
+  [7.6, -4],
+  [9.4, -4.8],
+  [9.8, -5.6],
+  [9.6, -8.6],
+  [9, -9.8],
+  [7.4, -10.3],
+  [6.1, -10.1],
+];
+
+/**
+ * How a figure rides the Thunderbolt — 0612: its outline over the bike from behind the seat's back to the
+ * grip, the gap it leaves over the bike, how it leans in the War Dance and about where, and its paint.
+ */
+interface Astride {
+  /** Its outline, after the seat's back and before the bars' top — what the hull takes in with it aboard. */
+  readonly top: readonly Pt[];
+  /** The space between the rider and the bike it leaves open — a hole in the hull. */
+  readonly gap: readonly Pt[];
+  /** How far it leans in the War Dance, in radians, and the hip it leans from — 0594. */
+  readonly lean: number;
+  readonly hip: Pt;
+  /** Its paint over the hull, every point through `box` (the lean and the predecessor's frame). */
+  readonly paint: (ctx: Pen, f: Frame, palette: Palette, box: (points: readonly Pt[]) => Pt[], at: (x: number, y: number) => Pt) => void;
+}
+
 /** The gap under his arm, between it, the tank and the bars' riser: a hole in the outline. */
 const THUNDERBOLT_GAP: readonly Pt[] = [
   [2.6, -4.6],
@@ -3275,130 +3316,187 @@ const THUNDERBOLT_GAP: readonly Pt[] = [
   [2.8, -3.8],
 ];
 
-/** How far the Marmot leans in the Thunderbolt's War Dance, in radians, and the hip he leans from — 0594. */
-const THUNDERBOLT_LEAN = 0.14;
-const THUNDERBOLT_HIP: Pt = [-7, -2];
-
 /**
- * A point of the Thunderbolt as its rider leans by `by` — 0594: turned about his hip by as much of `by` as
- * the point is his. All of it from his back up, none of it from the seat down — the pods, the fender, the
- * engine, the wheels — and none at the grip, so his paw stays on the bar; in between, a share, so nothing
- * tears where the two meet.
+ * A point of the Thunderbolt as its rider leans by `by` about `hip` — 0594: turned about the hip by as much
+ * of `by` as the point is the rider's. All of it from the back up, none of it from the seat down — the pods,
+ * the fender, the engine, the wheels — and none at the grip, so the paw stays on the bar; in between, a
+ * share, so nothing tears where the two meet. With nobody aboard, nothing leans.
  */
-function marmotLeans(by: number): (p: Pt) => Pt {
+function riderLeans(by: number, hip: Pt): (p: Pt) => Pt {
   if (by === 0) return (p) => p;
   return ([x, y]) => {
     const share = Math.min(1, Math.max(0, (-y - 2) / 3)) * Math.min(1, Math.max(0, (6 - x) / 4.5));
-    return pitchAbout(THUNDERBOLT_HIP, by * share)([x, y]);
+    return pitchAbout(hip, by * share)([x, y]);
   };
 }
 
-function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'boltTank', livery: string | null = null, pose: DancePose = 0): void {
-  /*
-    Black lacquer with a blue cast, as the predecessor's `#16181f` was, read by its chrome and its flame;
-    the arc's cyan as light (the ball, the rims, the helmet's bolt); and the Marmot in a riding suit the
-    brown of his own fur, from the player's amber taken toward the dark — every colour a palette role,
-    so the high-contrast palette answers it as it answers every hull.
-  */
-  const body = livery ?? shade(mix(palette.space, palette.player, 0.12), 0.14);
-  const chrome = shade(palette.trim, 0.7);
-  const fur = shade(mix(palette.bullet, palette.space, 0.42), 0.05);
-  const suit = shade(mix(palette.bullet, palette.space, 0.62), -0.05);
-  const helmet = shade(palette.space, 0.18);
-  /*
-    0594: its War Dance is the Marmot leaning into it — tucked down over the tank and then sat back up off
-    it. Every point of the bike goes through his lean, which moves only what is his (`marmotLeans`).
-  */
-  const lean = marmotLeans(pose === 0 ? 0 : pose === 1 ? THUNDERBOLT_LEAN : -THUNDERBOLT_LEAN);
-  const box = (points: readonly Pt[]): Pt[] => inBox(points.map(lean), 0, 1);
-  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
-  const outline = box(thunderboltOutline(stage, own));
-  ctx.fillStyle = body;
-  trace(ctx, f, outline);
-  trace(ctx, f, box(THUNDERBOLT_GAP));
-  seal(ctx);
-  // The lacquer, lit from above — with the gap under his arm cut out of it, as it is out of the hull.
-  shaded(ctx, f, at(0, -11), at(0, 6), shade(body, 0.3), shade(body, -0.3), outline, 1, false, [box(THUNDERBOLT_GAP)]);
-  // The rider: his suit over the back and the arm, his tail in fur, and a paw on the grip.
-  poly(ctx, f, suit, box([
-    [-9, -2.8],
-    [-8.2, -3.8],
-    [-6.8, -5.8],
-    [-5, -7],
-    [-2.6, -5.4],
-    [1.2, -6.6],
-    [4, -8.2],
-    [5.8, -9.28],
-    [6.8, -8.3],
-    [4.8, -6.6],
-    [2.6, -4.6],
-    [-1, -2.6],
-    [-6, -1.4],
-  ]));
-  seam(ctx, f, shade(suit, 0.35), 0.03, box([
-    [-7.8, -3.3],
-    [-6.2, -5.2],
-    [-4.6, -6.2],
-  ]), 0.8);
-  poly(ctx, f, fur, box([
+/**
+ * The Marmot astride it — 0546's rider, lifted off the bike by 0612: his tail curled up off the seat's
+ * back, his back hunched forward to the bars, his helmet with its ear bumps, and his arm out to the grip;
+ * a riding suit the brown of his own fur, from the player's amber taken toward the dark — every colour a
+ * palette role, so the high-contrast palette answers it as it answers every hull.
+ */
+const MARMOT_ASTRIDE: Astride = {
+  top: [
     [-10.4, -2],
     [-11.6, -3.2],
     [-10.8, -4.6],
     [-9.6, -4],
     [-9, -2.8],
-  ]));
-  // The light along its fur: light, not body, so it may be finer than the floor (0227).
-  poly(ctx, f, shade(fur, 0.3), box([
-    [-11.1, -3.3],
-    [-10.7, -4.2],
-    [-9.9, -3.8],
-  ]), 0.75);
-  // His leg, from the hip down to the footpeg in front of the engine, and a boot on the peg.
-  poly(ctx, f, suit, box([
-    [-6.4, -1.6],
-    [-1.6, -1.2],
-    [1.6, 0.2],
-    [3.4, 3],
-    [1.8, 3.4],
-    [0, 1.2],
-    [-4.6, 0.6],
-  ]));
-  poly(ctx, f, shade(palette.space, 0.12), box([
-    [1.4, 2.2],
-    [3.6, 2],
-    [4.8, 3.4],
-    [4.6, 4.1],
-    [1.4, 4.1],
-  ]));
-  // His paw on the grip, tucked inside the bar's outline.
-  const [px, py] = at(6.75, -10.25);
-  disc(ctx, f, fur, px, py, 0.92 * 0.062);
-  // The helmet: black, a sheen across its crown, the ear bumps lit, a cyan bolt down its side, and the
-  // visor down in the shot's amber with a glare across it.
-  poly(ctx, f, helmet, box(helmetArc()));
-  shaded(ctx, f, at(-3, -12), at(-1, -6), shade(helmet, 0.45), shade(helmet, -0.1), box(helmetArc()));
-  poly(ctx, f, palette.player, box([
-    [-4.6, -10.2],
-    [-2.6, -10.4],
-    [-3.4, -8.8],
-    [-1.8, -8.9],
-    [-4.2, -6.4],
-    [-3.6, -8.1],
-    [-5, -8],
-  ]));
-  poly(ctx, f, palette.bullet, box([
-    [-1, -9.6],
-    [0.9, -9.4],
-    [0.95, -7.7],
-    [0.2, -7.1],
-    [-1, -7.4],
-  ]));
-  poly(ctx, f, shade(palette.bullet, 0.55), box([
-    [0.2, -9.3],
-    [0.7, -9.2],
-    [0.3, -8.2],
-  ]), 0.85);
-  // The tank under his chest, a sheen along its top, and on it one of its three looks — 0528's slot.
+    // His back, hunched forward to the bars.
+    [-8.2, -3.8],
+    [-6.8, -5.8],
+    [-5, -7],
+    ...helmetArc(),
+    // The chin of the helmet, and the top of his arm out to the grip.
+    [1.2, -6.6],
+    [4, -8.2],
+    [6, -9.4],
+  ],
+  gap: THUNDERBOLT_GAP,
+  lean: 0.14,
+  hip: [-7, -2],
+  paint: (ctx, f, palette, box, at) => {
+    const fur = shade(mix(palette.bullet, palette.space, 0.42), 0.05);
+    const suit = shade(mix(palette.bullet, palette.space, 0.62), -0.05);
+    const helmet = shade(palette.space, 0.18);
+    // His suit over the back and the arm, his tail in fur, and a paw on the grip.
+    poly(ctx, f, suit, box([
+      [-9, -2.8],
+      [-8.2, -3.8],
+      [-6.8, -5.8],
+      [-5, -7],
+      [-2.6, -5.4],
+      [1.2, -6.6],
+      [4, -8.2],
+      [5.8, -9.28],
+      [6.8, -8.3],
+      [4.8, -6.6],
+      [2.6, -4.6],
+      [-1, -2.6],
+      [-6, -1.4],
+    ]));
+    seam(ctx, f, shade(suit, 0.35), 0.03, box([
+      [-7.8, -3.3],
+      [-6.2, -5.2],
+      [-4.6, -6.2],
+    ]), 0.8);
+    poly(ctx, f, fur, box([
+      [-10.4, -2],
+      [-11.6, -3.2],
+      [-10.8, -4.6],
+      [-9.6, -4],
+      [-9, -2.8],
+    ]));
+    // The light along its fur: light, not body, so it may be finer than the floor (0227).
+    poly(ctx, f, shade(fur, 0.3), box([
+      [-11.1, -3.3],
+      [-10.7, -4.2],
+      [-9.9, -3.8],
+    ]), 0.75);
+    // His leg, from the hip down to the footpeg in front of the engine, and a boot on the peg.
+    poly(ctx, f, suit, box([
+      [-6.4, -1.6],
+      [-1.6, -1.2],
+      [1.6, 0.2],
+      [3.4, 3],
+      [1.8, 3.4],
+      [0, 1.2],
+      [-4.6, 0.6],
+    ]));
+    poly(ctx, f, shade(palette.space, 0.12), box([
+      [1.4, 2.2],
+      [3.6, 2],
+      [4.8, 3.4],
+      [4.6, 4.1],
+      [1.4, 4.1],
+    ]));
+    // His paw on the grip, tucked inside the bar's outline.
+    const [px, py] = at(6.75, -10.25);
+    disc(ctx, f, fur, px, py, 0.92 * 0.062);
+    // The helmet: black, a sheen across its crown, the ear bumps lit, a cyan bolt down its side, and the
+    // visor down in the shot's amber with a glare across it.
+    poly(ctx, f, helmet, box(helmetArc()));
+    shaded(ctx, f, at(-3, -12), at(-1, -6), shade(helmet, 0.45), shade(helmet, -0.1), box(helmetArc()));
+    poly(ctx, f, palette.player, box([
+      [-4.6, -10.2],
+      [-2.6, -10.4],
+      [-3.4, -8.8],
+      [-1.8, -8.9],
+      [-4.2, -6.4],
+      [-3.6, -8.1],
+      [-5, -8],
+    ]));
+    poly(ctx, f, palette.bullet, box([
+      [-1, -9.6],
+      [0.9, -9.4],
+      [0.95, -7.7],
+      [0.2, -7.1],
+      [-1, -7.4],
+    ]));
+    poly(ctx, f, shade(palette.bullet, 0.55), box([
+      [0.2, -9.3],
+      [0.7, -9.2],
+      [0.3, -8.2],
+    ]), 0.85);
+  },
+};
+
+/**
+ * Who may be drawn astride the Thunderbolt, by their figure — 0612. A row per figure, `null` where nobody
+ * of that figure flies it: picking a pilot picks their ship (0441), so only the Marmot ever does, and a
+ * rider for anybody else would be drawn for no picture the game can show. `tests/riders.test.ts` holds
+ * every pilot whose ship shows them to a rider here, so a pilot given this ship fails until one is drawn.
+ */
+const THUNDERBOLT_RIDERS: Record<Figure, Astride | null> = {
+  person: null,
+  marmot: MARMOT_ASTRIDE,
+  weasel: null,
+  duck: null,
+};
+
+/** The rider `figure` is astride the Thunderbolt as, or a refusal naming who has none drawn. */
+function astrideAs(figure: Figure): Astride {
+  const astride = THUNDERBOLT_RIDERS[figure];
+  if (astride === null) throw new Error(`0612: no ${figure} is drawn astride the Thunderbolt`);
+  return astride;
+}
+
+/** The Thunderbolt's lacquer, or its paint: black with a blue cast, as the predecessor's `#16181f` was. */
+function thunderboltBody(palette: Palette, livery: string | null): string {
+  return livery ?? shade(mix(palette.space, palette.player, 0.12), 0.14);
+}
+
+/**
+ * The Thunderbolt, and since 0612 whoever rides it — `rider`, by figure, or `null` for the bike alone (the
+ * pad, and the intro until its pilot boards).
+ */
+function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'boltTank', livery: string | null = null, pose: DancePose = 0, rider: Figure | null = null): void {
+  /*
+    Black lacquer with a blue cast, as the predecessor's `#16181f` was, read by its chrome and its flame;
+    the arc's cyan as light (the ball, the rims, the rider's bolt) — every colour a palette role, so the
+    high-contrast palette answers it as it answers every hull.
+  */
+  const body = thunderboltBody(palette, livery);
+  const chrome = shade(palette.trim, 0.7);
+  const astride = rider === null ? null : astrideAs(rider);
+  /*
+    0594: its War Dance is its rider leaning into it — tucked down over the tank and then sat back up off it.
+    Every point of the bike goes through the lean, which moves only what is the rider's (`riderLeans`).
+  */
+  const lean = astride === null ? 0 : pose === 0 ? 0 : pose === 1 ? astride.lean : -astride.lean;
+  const leaning = riderLeans(lean, astride?.hip ?? THUNDERBOLT_SEAT_BACK);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points.map(leaning), 0, 1);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  const outline = box(thunderboltOutline(stage, own, astride?.top ?? THUNDERBOLT_BARE));
+  const holes = astride === null ? [] : [box(astride.gap)];
+  ctx.fillStyle = body;
+  trace(ctx, f, outline);
+  for (const hole of holes) trace(ctx, f, hole);
+  seal(ctx);
+  // The lacquer, lit from above — with the gap under the rider's arm cut out of it, as it is out of the hull.
+  shaded(ctx, f, at(0, -11), at(0, 6), shade(body, 0.3), shade(body, -0.3), outline, 1, false, holes);
+  // The tank under the rider's chest, a sheen along its top, and on it one of its three looks — 0528's slot.
   // Under the gap below his arm, not into it: its top runs a hair below the gap's floor.
   const tank: Pt[] = [
     [-1.2, -3.3],
@@ -3547,6 +3645,30 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
     glow(ctx, f, palette.player, bx, by, 3.2 * 0.062, 0.6);
     disc(ctx, f, palette.impact, bx, by, 0.95 * 0.062);
   }
+  // 0612: and its rider over all of it — over the seat, a leg over the engine, a paw on the grip.
+  if (astride !== null) astride.paint(ctx, f, palette, box, at);
+}
+
+/**
+ * Whoever rides the Thunderbolt, alone — 0612, for the port to lay over the bare bike once its pilot has
+ * boarded. Their silhouette is the space between their outline and the bike's own top, less the gap, in the
+ * bike's lacquer as the hull has it there, sealed, with their paint over it: laid on the bare bike, it is the
+ * picture `drawThunderbolt` draws with them aboard.
+ */
+function drawThunderboltRider(ctx: Pen, f: Frame, palette: Palette, rider: Figure, livery: string | null): void {
+  const astride = astrideAs(rider);
+  const body = thunderboltBody(palette, livery);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  const silhouette = box([THUNDERBOLT_SEAT_BACK, ...astride.top, ...[...THUNDERBOLT_BARE].reverse()]);
+  const gap = box(astride.gap);
+  ctx.beginPath();
+  ctx.fillStyle = body;
+  trace(ctx, f, silhouette);
+  trace(ctx, f, gap);
+  seal(ctx);
+  shaded(ctx, f, at(0, -11), at(0, 6), shade(body, 0.3), shade(body, -0.3), silhouette, 1, false, [gap]);
+  astride.paint(ctx, f, palette, box, at);
 }
 
 /*
@@ -3900,6 +4022,8 @@ export function drawPlayerShip(
   livery: string | null = fitNow(ship).livery,
   // 0594: and which of its War Dance's poses, or 0 standing still — each ship's own parts moving.
   pose: DancePose = 0,
+  // 0612: and who is seen aboard, by figure, or `null` for nobody — drawn only by a ship with a `seat`.
+  rider: Figure | null = fitNow(ship).rider,
 ): void {
   const own = gun === SHIPS[ship].weapon;
   // A borrowed gun stands on its mount, laid on last; 0581: and the fighter's own does too.
@@ -3956,13 +4080,13 @@ export function drawPlayerShip(
     case 'estate':
       drawEstate(ctx, f, palette, stage, own, rim, art, livery, pose);
       break;
-    // The Marmot riding it, as the cars carry their tubes in their rooflines — 0545.
+    // Its rider in its outline, as the cars carry their tubes in their rooflines — 0545; whoever is aboard, 0612.
     case 'thunderbolt':
-      drawThunderbolt(ctx, f, palette, stage, own, rim, art, livery, pose);
+      drawThunderbolt(ctx, f, palette, stage, own, rim, art, livery, pose, rider);
       break;
-    // Unity in their ball, which flies nothing but itself — 0593.
+    // Its pilot in the ball, which flies nothing but itself — 0593; whoever is aboard, 0612.
     case 'ball':
-      drawBall(ctx, f, palette, stage, art, livery, pose);
+      drawBall(ctx, f, palette, stage, art, livery, pose, rider);
       break;
     // MMXXVI's bath-duck submarine, its marker under its chin — 0595.
     case 'duck':
@@ -4185,9 +4309,15 @@ function ballHull(stage: number, rx: number, ry: number): Pt[] {
 }
 
 /**
- * Unity from above, running up the lane — 0593: a least weasel, long and low, the brown back and the
- * hi-vis shirt across it, four legs out mid-stride, the short tail behind and the bush hat over the head
- * with an ear either side of its brim. Every mark at least 0.12 of the box across, over 0106's floor.
+ * Unity from above, running up the lane — 0593, redrawn by 0612: *"the hamster ball for the least weasel
+ * looks more like it has a pudgy platypus inside driving it than the least weasel."* What made the platypus
+ * was a fat oval body, a hi-vis band across all of it, splayed round feet, and a bush hat seen from above —
+ * a flat round brim out in front of the head, which is a duck's bill. A least weasel from above is a long
+ * slim tube on short legs: a small flat head with little round ears, the brown back, the white of the belly
+ * showing along both flanks and round the muzzle where the body wraps under, and a thin tail. So the hat is
+ * off (it is a shop's, and the ball is its helmet), the hi-vis is a short vest over the shoulders, and the
+ * body is three times as long as it is wide. Every solid mark at least 0.12 of the box across, over 0106's
+ * floor; the eyes and the nose are finer, and translucent.
  *
  * ⚠️ **0594: AND THE WEASEL WAR DANCE, IN `pose`.** A least weasel's war dance is a frenzy of twisting
  * hops with the back arched. Each pose turns Unity half a radian about their middle, one way and then the
@@ -4198,7 +4328,7 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, po
   const k = scale;
   const fur = shade(palette.bullet, -0.42);
   const furDark = shade(palette.bullet, -0.6);
-  const felt = shade(mix(palette.bullet, palette.blade, 0.25), -0.55);
+  const cream = shade(mix(palette.impact, palette.hazard, 0.18), -0.04);
   const side = pose === 1 ? -1 : 1;
   const turn = pose === 0 ? 0 : side * 0.5;
   const gather = pose === 0 ? 1 : 0.86;
@@ -4210,45 +4340,139 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, po
     const ax = (x - 0.05) * gather + 0.05;
     return [(ax * cos - y * sin) * k, (ax * sin + y * cos) * k];
   };
-  // The legs first, so the body lies over their roots: forelegs reaching, hind legs pushing off.
+  const ps = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => p(x, y));
+  // The legs first, so the body lies over their roots: short, a forepaw reaching and a hind paw pushing off each side.
   for (const [x, y] of [
-    [0.22, -0.2],
-    [0.12, 0.21],
-    [-0.28, 0.19],
-    [-0.2, -0.21],
+    [0.27, -0.15],
+    [0.17, 0.15],
+    [-0.36, -0.14],
+    [-0.25, 0.15],
   ] as const) {
-    const [lx, ly] = p(x, y * legsIn);
-    disc(ctx, f, furDark, lx, ly, 0.075 * k);
+    const root = p(x * 0.92, Math.sign(y) * 0.06);
+    const paw = p(x, y * legsIn);
+    seam(ctx, f, furDark, 0.09 * k, [root, paw], 1, true);
+    disc(ctx, f, fur, paw[0], paw[1], 0.056 * k);
   }
-  // The tail, short and brown, a least weasel's — flicked out against the turn while it dances.
-  const flick = pose === 0 ? 0 : -side * 0.12;
-  seam(ctx, f, fur, 0.12 * k, [p(-0.36, 0), p(-0.52, 0.05 + flick), p(-0.6, 0.02 + flick * 1.6)], 1, true);
-  // The body: long and thin, lit along the spine.
-  const back = roundel(-0.04, 0, 0.36, 24, 0, Math.PI * 2).map(([x, y]) => p(x, y * 0.55));
-  shaded(ctx, f, p(0, -0.2), p(0, 0.2), shade(fur, 0.2), furDark, back);
-  // The hi-vis shirt across the shoulders, with its silver tape.
-  poly(ctx, f, palette.bullet, [p(0.12, -0.19), p(0.26, -0.15), p(0.26, 0.15), p(0.12, 0.19), p(-0.04, 0.19), p(-0.04, -0.19)]);
-  poly(ctx, f, shade(palette.trim, 0.7), [p(0.02, -0.19), p(0.13, -0.19), p(0.13, 0.19), p(0.02, 0.19)], 0.9);
-  // The head: ears either side, the bush hat over it, and the nose out past its brim.
+  // The tail, thin and brown, out behind the rump — flicked out against the turn while it dances.
+  const flick = pose === 0 ? 0 : -side * 0.1;
+  seam(ctx, f, fur, 0.1 * k, [p(-0.4, 0), p(-0.52, 0.04 + flick * 0.6), p(-0.62, 0.01 + flick * 1.3), p(-0.68, -0.04 + flick * 1.6)], 1, true);
+  // The body, long and slim: the white of the belly round it, where it wraps under.
+  const body = ps(roundel(-0.08, 0, 1, 28, 0, Math.PI * 2).map(([x, y]) => [x * 0.37, y * 0.12] as Pt));
+  poly(ctx, f, cream, body);
+  /*
+    The brown back over it: all of the haunches, and narrowing toward the shoulders, so the white of the
+    belly shows along the flanks of the chest and up the throat, where a running weasel's does from above.
+  */
+  const edge: Pt[] = [];
+  for (let i = 0; i <= 14; i++) {
+    const x = -0.46 + (0.73 * i) / 14;
+    const round = 0.127 * Math.sqrt(Math.max(0, 1 - ((x + 0.08) / 0.38) ** 2));
+    const taper = x < -0.12 ? 1 : 1 - 0.4 * ((x + 0.12) / 0.39);
+    edge.push([x, round * taper]);
+  }
+  const back = ps([...edge.map(([x, y]) => [x, -y] as Pt), ...edge.reverse()]);
+  shaded(ctx, f, p(0, -0.1), p(0, 0.1), shade(fur, 0.15), furDark, back);
+  // A short hi-vis vest over the shoulders, with its silver tape — Unity's shop clothes, on the back alone.
+  poly(ctx, f, palette.bullet, ps([[0.06, -0.082], [0.22, -0.068], [0.22, 0.068], [0.06, 0.082]]));
+  poly(ctx, f, shade(palette.trim, 0.7), ps([[0.12, -0.078], [0.16, -0.075], [0.16, 0.075], [0.12, 0.078]]), 0.8);
+  // The neck and the head: small and flat and wedged to the muzzle, white round the muzzle, brown over.
+  const head: Pt[] = [
+    [0.24, -0.075],
+    [0.33, -0.09],
+    [0.42, -0.088],
+    [0.5, -0.06],
+    [0.565, 0],
+    [0.5, 0.06],
+    [0.42, 0.088],
+    [0.33, 0.09],
+    [0.24, 0.075],
+  ];
+  poly(ctx, f, cream, ps(head));
+  // The little round ears, either side of the crown, a paler inside to each.
   for (const ear of [-1, 1] as const) {
-    const [ex, ey] = p(0.36, ear * 0.14);
-    disc(ctx, f, fur, ex, ey, 0.07 * k);
+    const [ex, ey] = p(0.35, ear * 0.1);
+    disc(ctx, f, fur, ex, ey, 0.06 * k);
+    disc(ctx, f, cream, ex, ey, 0.03 * k, 0.7);
   }
-  const [hx, hy] = p(0.5, 0);
-  disc(ctx, f, fur, hx, hy, 0.08 * k);
-  const [nx, ny] = p(0.56, 0);
-  disc(ctx, f, palette.space, nx, ny, 0.06 * k);
-  const [cx, cy] = p(0.38, 0);
-  disc(ctx, f, felt, cx, cy, 0.16 * k);
-  disc(ctx, f, shade(felt, -0.3), cx, cy, 0.09 * k);
-  seam(ctx, f, shade(felt, 0.35), 0.03 * k, roundel(cx, cy, 0.14 * k, 10, Math.PI * 1.1 + turn, Math.PI * 1.7 + turn), 0.7, true);
+  poly(ctx, f, fur, ps([[0.24, -0.06], [0.33, -0.075], [0.42, -0.07], [0.5, -0.035], [0.535, 0], [0.5, 0.035], [0.42, 0.07], [0.33, 0.075], [0.24, 0.06]]));
+  // Two bead eyes and the nose: finer than the floor, so translucent, as light on the face is (0227).
+  for (const eye of [-1, 1] as const) {
+    const [ex, ey] = p(0.45, eye * 0.045);
+    disc(ctx, f, palette.space, ex, ey, 0.025 * k, 0.85);
+  }
+  const [nx, ny] = p(0.555, 0);
+  disc(ctx, f, shade(palette.fire, 0.35), nx, ny, 0.025 * k, 0.85);
+}
+
+/** How a figure runs inside the Hamster Ball, seen from above — 0612, its painter on `paintUnityAbove`'s terms. */
+type Inside = (ctx: Pen, f: Frame, palette: Palette, scale: number, pose: DancePose) => void;
+
+/**
+ * Who may be drawn running inside the ball, by their figure — 0612, on `THUNDERBOLT_RIDERS`' terms: only
+ * Unity flies it, so only a least weasel is drawn, and `tests/riders.test.ts` fails a pilot given the ball
+ * until their figure has a row here.
+ */
+const BALL_RIDERS: Record<Figure, Inside | null> = {
+  person: null,
+  marmot: null,
+  weasel: paintUnityAbove,
+  duck: null,
+};
+
+/** The painter `figure` runs in the ball as, or a refusal naming who has none drawn. */
+function insideAs(figure: Figure): Inside {
+  const inside = BALL_RIDERS[figure];
+  if (inside === null) throw new Error(`0612: no ${figure} is drawn inside the Hamster Ball`);
+  return inside;
+}
+
+/**
+ * Whoever is aboard `ship`, alone, by `rider`'s figure — 0612, for the port to lay over the ship it drew
+ * with nobody aboard, once its pilot has boarded. Nothing for a ship that shows no pilot. Switched on the
+ * seat, never the ship's name (0016's *how it flies*): one ship has each seat so far, and a second bike
+ * would be a second table, not a second branch here.
+ */
+export function drawRider(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, rider: Figure, livery: string | null = fitNow(ship).livery): void {
+  const seat = SHIPS[ship].seat;
+  switch (seat) {
+    case 'astride':
+      drawThunderboltRider(ctx, f, palette, rider, livery);
+      return;
+    case 'inside':
+      insideAs(rider)(ctx, f, palette, 1, 0);
+      return;
+    case null:
+      return;
+    default: {
+      const unhandled: never = seat;
+      return unhandled;
+    }
+  }
+}
+
+/** Whether `rider` has a drawing aboard `ship` — 0612, for the guard that every pilot does on their own. */
+export function riderDrawn(ship: ShipArt, rider: Figure): boolean {
+  const seat = SHIPS[ship].seat;
+  switch (seat) {
+    case 'astride':
+      return THUNDERBOLT_RIDERS[rider] !== null;
+    case 'inside':
+      return BALL_RIDERS[rider] !== null;
+    case null:
+      return true;
+    default: {
+      const unhandled: never = seat;
+      return unhandled;
+    }
+  }
 }
 
 /**
  * The Hamster Ball at a stage — 0593. `art` is the plastic's look and `livery` its tint. 0593 drew it broken
- * here too, Unity alone on their harness; 0609 took the break out.
+ * here too, its pilot alone on their harness; 0609 took the break out. 0612: `rider` is who runs in it, by
+ * figure, or `null` for the ball empty — the pad, and the intro until its pilot boards.
  */
-function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtKind = 'clearBall', livery: string | null = null, pose: DancePose = 0): void {
+function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtKind = 'clearBall', livery: string | null = null, pose: DancePose = 0, rider: Figure | null = null): void {
   const amber = art === 'amberTint';
   const plastic = livery ?? (amber ? palette.hazard : palette.player);
   const slate = palette.trim;
@@ -4267,7 +4491,8 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtK
   for (const place of SHIPS.ball.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
     paintPylon(ctx, f, palette, [(place.along - SHIPS.ball.tubeLength / 2) / BOX_R, place.across / BOX_R]);
   }
-  paintUnityAbove(ctx, f, palette, 1, pose);
+  // 0612: whoever runs in it, under the plastic.
+  if (rider !== null) insideAs(rider)(ctx, f, palette, 1, pose);
   // The plastic over them: its tint, the look on it, and the rim and its light — what says *ball*.
   disc(ctx, f, plastic, 0, 0, BALL_R * 0.98, amber ? 0.22 : 0.12);
   // 0594: what is on the plastic turns with the ball as Unity dances in it; the light on it does not.
