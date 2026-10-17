@@ -10,6 +10,7 @@ import {
 import type { Store } from '../src/save/store.ts';
 import { initialSettings, type SettingsState } from '../src/state/slices/settings.ts';
 import { SOUND_KINDS } from '../src/content/sound.ts';
+import { RUMBLE_KINDS } from '../src/content/rumble.ts';
 import { TRAVEL_KINDS } from '../src/content/travel.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { GOLFER_KINDS } from '../src/content/golfers.ts';
@@ -41,6 +42,7 @@ function memory(refuse = false): Store & { data: Map<string, string> } {
 /** Every setting moved off its default — the first option of each table that is not it. */
 const moved = (): SettingsState => ({
   sound: SOUND_KINDS.find((k) => k !== initialSettings.sound)!,
+  rumble: RUMBLE_KINDS.find((k) => k !== initialSettings.rumble)!,
   travel: TRAVEL_KINDS.find((k) => k !== initialSettings.travel)!,
   difficulty: DIFFICULTY_KINDS.find((k) => k !== initialSettings.difficulty)!,
   pilot: GOLFER_KINDS.find((k) => k !== initialSettings.pilot)!,
@@ -73,6 +75,16 @@ describe('0510 — the settings are kept', () => {
     expect(old.sound, 'a document from before the touch section was thrown away').toBe(chosen.sound);
     expect(old.hand).toBe(initialSettings.hand);
     expect(old.steer).toBe(initialSettings.steer);
+  });
+
+  it('0613: the rumble is kept, and a document from before it reads as on', () => {
+    const store = memory();
+    const chosen = moved();
+    writeSettings(store, chosen);
+    expect(readSettings(store, initialSettings).rumble, 'the rumble was forgotten').toBe(chosen.rumble);
+    const before = JSON.stringify({ v: SETTINGS_VERSION, sound: chosen.sound });
+    expect(settingsFrom(before, initialSettings).rumble).toBe(initialSettings.rumble);
+    expect(initialSettings.rumble, 'the hands are the loud game by default (0024)').toBe('on');
   });
 
   it('the pilot is not kept — written without it, and read as whatever the visit starts with', () => {

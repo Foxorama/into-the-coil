@@ -1361,6 +1361,12 @@ export const SPRITE_KINDS = [
   'danceFlare2',
   'danceFlare3',
   /*
+    The War Dance's shockwave — 0613: a thin ring of the flare's flame at its full reach, drawn at its edge as
+    it grows (`swell`), and the same ring fading once it is spent. In the blasts' layer, under every shot.
+  */
+  'danceWave',
+  'danceWaveFade',
+  /*
     The paintball marker — 0595. `paintball` is the gun's own glyph, which the hangar shows for it: the
     marker and its hopper with a ball leaving. In flight each ball is one of four colours, and where it lands
     it splats in that colour, wet and then dried flat — a splat is paint, so it is a body and not light.
@@ -1834,6 +1840,9 @@ export const LIGHT_KINDS: readonly SpriteKind[] = [
   'rayFade',
   // The nova's band.
   'novaArc',
+  // The War Dance's shockwave and its fading ring — 0613: a ring of energy, added over what it crosses.
+  'danceWave',
+  'danceWaveFade',
   // The Catherine wheel's sparks — 0549: two crossing burn white where they cross, which is the depth asked for.
   'cinder',
   'cinderCool',
@@ -3003,6 +3012,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   danceFlare1: 20,
   danceFlare2: 20,
   danceFlare3: 20,
+  // 0613: the shockwave at its full reach, edge to edge — `SHOTS.danceWave.radius` across both ways, the blast's rule.
+  danceWave: 28,
+  danceWaveFade: 28,
   // 0595: the glyph at a pickup's size; a ball a little over its body; a splat at exactly its reach, on the burst's rule.
   paintball: 8,
   paintballPink: 2.6,

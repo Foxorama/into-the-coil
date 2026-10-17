@@ -13,6 +13,7 @@
  */
 
 import type { CueKind } from '../src/content/cues.ts';
+import type { FeelKind } from '../src/content/feels.ts';
 import { AUTHORED, DIFFICULTIES, type DifficultyKind } from '../src/content/difficulty.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
@@ -215,6 +216,14 @@ export function inertLevel(): {
   shownPoints: number;
   shownStreak: number;
   onScore: (points: number, streak: number) => void;
+  waveIn: number;
+  waveKind: SpecialKind | null;
+  readyFor: number;
+  charge: number;
+  punchFor: number;
+  shownCharge: number;
+  onCharge: (fraction: number) => void;
+  onFeel: (feel: FeelKind) => void;
   joltVel: number;
   joltArmed: boolean;
   joltHold: number;
@@ -260,6 +269,7 @@ export function inertLevel(): {
     onBoss: (): void => {},
     ...scoreParts(),
     ...joltParts(),
+    ...chargeParts(),
     // The fighter's weapon with no tubes, which is what an empty upgrade list resolves to. A fixture
     // that wanted a different ship would say so — 0441.
     weapon: weaponFor(SHIPS.fighter, []),
@@ -362,6 +372,23 @@ export function scoreParts(): { score: LevelScore; shownPoints: number; shownStr
 /** The lurch half of a world: standing still, no swing running, and nothing on a dash to swing — 0461, 0466. */
 export function joltParts(): { joltVel: number; joltArmed: boolean; joltHold: number; joltWarp: boolean; onJolt: () => void } {
   return { joltVel: 0, joltArmed: false, joltHold: 0, joltWarp: false, onJolt: (): void => {} };
+}
+
+/**
+ * The earned special's half of a world — 0613: no wave out, an empty bar, nothing punched, a readout that has
+ * drawn no bar, and no hands. A fixture that wants to feel the landings replaces `onFeel`.
+ */
+export function chargeParts(): {
+  waveIn: number;
+  waveKind: SpecialKind | null;
+  readyFor: number;
+  charge: number;
+  punchFor: number;
+  shownCharge: number;
+  onCharge: (fraction: number) => void;
+  onFeel: (feel: FeelKind) => void;
+} {
+  return { waveIn: 0, waveKind: null, readyFor: 0, charge: 0, punchFor: 0, shownCharge: -1, onCharge: (): void => {}, onFeel: (): void => {} };
 }
 
 /** The pickup half of a world, built the way `mount.ts` builds it rather than restated. */
@@ -721,6 +748,7 @@ export function playableWorld(
     onBoss: (): void => {},
     ...scoreParts(),
     ...joltParts(),
+    ...chargeParts(),
     onPickup: (kind: PickupKind, face: number): void => {
       taken.push(kind);
       faces.push(face);

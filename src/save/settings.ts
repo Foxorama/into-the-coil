@@ -17,6 +17,7 @@
 
 import { DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUND_KINDS } from '../content/sound.ts';
+import { RUMBLE_KINDS } from '../content/rumble.ts';
 import { TRAVEL_KINDS } from '../content/travel.ts';
 import { HAND_KINDS, STEER_KINDS } from '../content/touch.ts';
 import { CREDIT_KINDS } from '../content/credits.ts';
@@ -47,6 +48,7 @@ function oneOf<K extends string>(kinds: readonly K[], raw: unknown, fallback: K)
 export function keptOf(settings: SettingsState): KeptSettings {
   return {
     sound: settings.sound,
+    rumble: settings.rumble,
     travel: settings.travel,
     difficulty: settings.difficulty,
     hand: settings.hand,
@@ -75,6 +77,11 @@ export function settingsFrom(text: string | null, base: SettingsState): Settings
   if (doc.v !== SETTINGS_VERSION) return base;
   return {
     sound: oneOf(SOUND_KINDS, doc.sound, base.sound),
+    /*
+      0613: whether a landing is felt — a new field on version 1, on 0512's per-field terms: a document written
+      before it has none and reads as the default, and an older build reading one with it ignores the field.
+    */
+    rumble: oneOf(RUMBLE_KINDS, doc.rumble, base.rumble),
     travel: oneOf(TRAVEL_KINDS, doc.travel, base.travel),
     difficulty: oneOf(DIFFICULTY_KINDS, doc.difficulty, base.difficulty),
     /*

@@ -20,6 +20,7 @@
  */
 
 import { DEFAULT_SOUND, type SoundKind } from '../../content/sound.ts';
+import { DEFAULT_RUMBLE, type RumbleKind } from '../../content/rumble.ts';
 import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
 import { DEFAULT_GOLFER, type GolferKind } from '../../content/golfers.ts';
 import { TUNED, type DifficultyKind } from '../../content/difficulty.ts';
@@ -45,6 +46,14 @@ interface SettingValue {
    * `docs/decisions/0072-a-cue-is-baked-and-played.md`.
    */
   sound: SoundKind;
+  /**
+   * Whether a landing is felt in the hands — 0613. `src/content/rumble.ts` is the table.
+   *
+   * ⚠️ **It reaches the shell's `onFeel` and nothing else, on `sound`'s exact terms**: the frame names what
+   * happened (`src/content/feels.ts`) and cannot see this field or its table, so switching it off stills the
+   * pad and changes nothing the step does (0024).
+   */
+  rumble: RumbleKind;
   /**
    * How much of the crossing between two places the player sits through.
    * `src/content/travel.ts` is the table.
@@ -115,6 +124,7 @@ export type SettingsState = { readonly [K in SettingName]: SettingValue[K] };
  */
 export type SettingsAction =
   | { slice: 'settings'; type: 'sound'; sound: SoundKind }
+  | { slice: 'settings'; type: 'rumble'; rumble: RumbleKind }
   | { slice: 'settings'; type: 'travel'; travel: TravelKind }
   | { slice: 'settings'; type: 'pilot'; pilot: GolferKind }
   | { slice: 'settings'; type: 'difficulty'; difficulty: DifficultyKind }
@@ -128,6 +138,7 @@ export type SettingsAction =
  */
 export const initialSettings: SettingsState = {
   sound: DEFAULT_SOUND,
+  rumble: DEFAULT_RUMBLE,
   travel: DEFAULT_TRAVEL,
   pilot: DEFAULT_GOLFER,
   difficulty: TUNED,
@@ -148,6 +159,9 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
     // from its neighbours is a slice somebody has to read three times.
     case 'travel':
       return state.travel === action.travel ? state : { ...state, travel: action.travel };
+    // 0613: the hands, on the same shape.
+    case 'rumble':
+      return state.rumble === action.rumble ? state : { ...state, rumble: action.rumble };
     // 0415: the golfer, on the same shape.
     case 'pilot':
       return state.pilot === action.pilot ? state : { ...state, pilot: action.pilot };

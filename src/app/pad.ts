@@ -23,6 +23,7 @@
  */
 
 import { SPECIAL_BINDINGS } from '../content/actions.js';
+import { FEELS, FEEL_GAP_MS, FEEL_KINDS, type FeelKind } from '../content/feels.js';
 import type { ScrollAxis } from '../sim/camera.js';
 import type { Intent } from '../sim/intent.js';
 import type { InputSource } from './input.js';
@@ -203,3 +204,67 @@ export function attachPad(options: PadOptions = {}): InputSource {
 
 /** @setup: one empty snapshot, so the no-navigator path allocates nothing per step. */
 const EMPTY: readonly (Gamepad | null)[] = [];
+
+/*
+  ── THE HANDS — `docs/decisions/0613-the-dance-is-earned.md` ─────────────────────────────────────────
+
+  *"Hamster ball needs some haptic feedback or something for when you hit a ship or an enemy, but it can't be
+  overwhelming because it's a lot."* The frame names what happened (`onFeel`); this plays it on every pad that
+  can rumble (`vibrationActuator`, the Gamepad API's `dual-rumble`), or on a phone's motor where there is no
+  pad and the page may buzz (`navigator.vibrate`). Feature-detected both ways: a pad or a browser without
+  either plays nothing, and nothing is an error.
+
+  ⚠️ **ONE PULSE A `FEEL_GAP_MS` AT MOST, AND ONLY A STRONGER ONE INSIDE IT.** A ball pressed into a wave
+  lands a dozen times a second, and a pulse for each would run the motors without a break — the overwhelming
+  part. So a feel inside the gap of the last is dropped unless it outranks it (`FEEL_KINDS`' order): a burn
+  is felt through a run of knocks, and a run of knocks is one tap a tenth of a second.
+
+  ⚠️ **AT STEP RATE AT MOST, AND OFF THE HOT LIST**, as `contribute` is: `getGamepads` allocates, and the
+  actuator's promise is a call the platform makes. A step with no landing calls none of it.
+*/
+
+export interface RumbleOptions {
+  /** Injected so a test can drive a stub; the real navigator by default, as `attachPad`'s. */
+  pads?: () => readonly (Gamepad | null)[];
+  /**
+   * A phone's motor, or `null` — the default. The shell hands one over only on a screen a finger can land on
+   * (`touchable`), because a desktop browser has `navigator.vibrate` and answers it with a console warning.
+   */
+  buzz?: ((ms: number) => void) | null;
+}
+
+/** A function that plays `feel` at `now` (milliseconds) on whatever can be felt, under the gap — 0613. */
+export function attachRumble(options: RumbleOptions = {}): (feel: FeelKind, now: number) => void {
+  // @setup: fixed at attach, as the pad's are.
+  const readPads =
+    options.pads ??
+    ((): readonly (Gamepad | null)[] =>
+      typeof navigator === 'undefined' || !navigator.getGamepads ? EMPTY : navigator.getGamepads());
+  // @setup: the phone's motor, if the shell handed one over.
+  const buzz = options.buzz ?? null;
+  // @setup: the last pulse played and when, so a burst of landings is one pulse.
+  let lastAt = Number.NEGATIVE_INFINITY;
+  let lastRank = -1;
+  return (feel: FeelKind, now: number): void => {
+    const rank = FEEL_KINDS.indexOf(feel);
+    if (now - lastAt < FEEL_GAP_MS && rank <= lastRank) return;
+    const row = FEELS[feel];
+    let felt = false;
+    const pads = readPads();
+    for (let p = 0; p < pads.length; p++) {
+      const pad = pads[p];
+      const motor = pad?.connected === true ? pad.vibrationActuator : undefined;
+      if (motor === undefined || motor === null || typeof motor.playEffect !== 'function') continue;
+      felt = true;
+      // A pad unplugged between the snapshot and the call rejects; there is nothing to do about it.
+      motor.playEffect('dual-rumble', { duration: row.ms, startDelay: 0, strongMagnitude: row.strong, weakMagnitude: row.weak }).catch(() => {});
+    }
+    if (!felt && buzz !== null) {
+      buzz(row.buzz);
+      felt = true;
+    }
+    if (!felt) return;
+    lastAt = now;
+    lastRank = rank;
+  };
+}

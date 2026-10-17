@@ -81,6 +81,8 @@ import {
 import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS, rackCarrying, tubesOf } from '../content/racks.ts';
 import { AUTHORED, DIFFICULTIES, DIFFICULTY_KINDS, TUNED } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
+import { DEFAULT_RUMBLE, RUMBLES, RUMBLE_KINDS } from '../content/rumble.ts';
+import type { FeelKind } from '../content/feels.ts';
 import { nextOnGrid } from '../content/cadence.ts';
 // 0212: the last five are the music room's walk — it asks the same questions a run asks.
 import {
@@ -119,6 +121,9 @@ import {
   firstVolleyIn,
   landmarksFor,
   canThrow,
+  chargeFull,
+  chargedSpecial,
+  throwEarned,
   holdFinale,
   hushed,
   launchSpecial,
@@ -164,7 +169,7 @@ import { artOpen, creditsFor, flameOpen, gunOpen, needsFirst, pilotRecord, plate
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
-import { attachPad } from './pad.ts';
+import { attachPad, attachRumble } from './pad.ts';
 import { attachTouch } from './touch.ts';
 import { STEP_MS, runLoop } from './loop.ts';
 
@@ -267,8 +272,12 @@ export const CAPACITY = {
     counted star by star in `tests/candle.test.ts`. A candle thrown the moment the throw gap after the
     eighth void opens finds all eight rifts still open; four more is what keeps a firework from finding
     the pool full and landing nothing. Paid by the enemy shots, below.
+
+    ⚠️ **FIFTEEN SINCE 0613, FOR THE WAR DANCE'S SHOCKWAVES.** A wave is in this pool for its row's grow and
+    fade — fifteen steps — and the dance sends one at most every twelve, so two are out at once; a dance
+    thrown into that salvo would otherwise find it full and send none. Paid by the enemy shots, below.
   */
-  blasts: 13,
+  blasts: 15,
   /*
     ⚠️ **TWENTY-EIGHT: THE PAINT THAT STAYS — 0610.** A splat was a blast that stood two thirds of a second,
     in this pool's thirteen; at two and a half seconds a string of paint would fill it and a bomb thrown into
@@ -292,8 +301,11 @@ export const CAPACITY = {
 
     ⚠️ **A HUNDRED AND NINETY-FIVE SINCE 0609**, which gave one to the aura for the War Dance's flare. The
     gyre's 174 is twenty-one under it.
+
+    ⚠️ **A HUNDRED AND NINETY-THREE SINCE 0613**, which gave two to the blasts for the War Dance's
+    shockwaves. The gyre's 174 is nineteen under it.
   */
-  enemyShots: 195,
+  enemyShots: 193,
   /*
     ⚠️ **ELEVEN COME OUT OF THE PARTICLE SHARE — 0283, AND 0022 NAMES IT AS THE SHEDDABLE ONE.** The
     pools total EXACTLY 500 and `tests/budget.test.ts` holds that ceiling, so a serpent with a body
@@ -1009,6 +1021,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // Whether a finger can land on this screen — the trigger strip's question below, asked here first.
   const touchable = navigator.maxTouchPoints > 0;
   /*
+    THE HANDS — 0613. Every pad that can rumble, and a phone's motor on a screen a finger lands on; a desktop
+    browser is handed no motor, because it has `vibrate` and answers it with a console warning.
+  */
+  const rumble = attachRumble({
+    buzz:
+      touchable && typeof navigator.vibrate === 'function'
+        ? (ms: number): void => {
+            navigator.vibrate(ms);
+          }
+        : null,
+  });
+  /*
     ⚠️ **A DESKTOP KEEPS A BAR AT THE TOP FOR THE HUD — 0500**, and the world is fitted to the screen
     under it, so a monitor sees further ahead and the HUD stops covering the lane. A touch screen keeps
     none: the phone already sees further than any monitor, and it is the screen the player said looks
@@ -1172,6 +1196,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     danceBounces: 0,
     danceAlong: 0,
     danceAcross: 0,
+    // 0613: no shockwave out, an empty bar, nothing punched.
+    waveIn: 0,
+    waveKind: null,
+    readyFor: 0,
+    charge: 0,
+    punchFor: 0,
     // 0595: and no jet.
     jetFor: 0,
     jetKind: null,
@@ -1436,6 +1466,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shownPoints: 0,
     shownStreak: 0,
     onScore: (): void => {},
+    // No bar drawn at mount, and replaced below with the chrome — 0613; and the hands, below, with the pad.
+    shownCharge: -1,
+    onCharge: (): void => {},
+    onFeel: (): void => {},
     // Standing still at mount, and replaced below with the chrome — 0461, held once per swing by 0466.
     joltVel: 0,
     joltArmed: false,
@@ -1759,11 +1793,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const tier = DIFFICULTIES[state.settings.difficulty];
       // 0561: with the special tried on, so the dash counts what the run would open with if it were fitted.
       const arsenal = startingArsenal(ship, state.settings.difficulty, ownSpecial(seen().special[ship]));
+      // 0613: a ship that earns its special opens on none of it, and the readout shows what it will earn.
+      const earned = SHIPS[ship].charge === null ? null : ownSpecial(ship);
       // 0609: the pips the ship may carry, which is its own count where its row says one.
-      chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], openingHealthFor(SHIPS[ship], tier)), shellCapFor(SHIPS[ship], tier), stacksOf(arsenal));
+      chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], openingHealthFor(SHIPS[ship], tier)), shellCapFor(SHIPS[ship], tier), stacksOf(arsenal, earned));
       return;
     }
-    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), stacksOf(state.run.arsenal));
+    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), runStacks());
     chrome.setTriggers(triggers());
   };
 
@@ -1771,15 +1807,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * What each trigger throws next and how many it holds — the top of its stack, or a face that stands
    * for the side over an empty one, so the readout never loses its icon — 0373, 0376.
    */
-  const stacksOf = (arsenal: Arsenal): { label: string; sprite: number; charges: number }[] => {
+  /*
+    ⚠️ **AND A FULL BAR IS ONE MORE ON ITS TRIGGER, ON TOP — 0613**, since it is thrown first: `earned` is the
+    special a full bar holds, or `null`. Over an empty stack a ship that earns its special shows that special's
+    face rather than the side's stand-in, so the readout says what the bar is filling.
+  */
+  const stacksOf = (arsenal: Arsenal, earned: SpecialKind | null = null, full = false): { label: string; sprite: number; charges: number }[] => {
     const out: { label: string; sprite: number; charges: number }[] = [];
     for (const side of SIDES) {
       const stack = arsenal[side];
-      const row = SPECIALS[stack[stack.length - 1] ?? EMPTY_FACE[side]];
-      out.push({ label: row.label, sprite: row.face, charges: stack.length });
+      const mine = earned !== null && SPECIALS[earned].side === side;
+      const row = SPECIALS[(mine && full ? earned : undefined) ?? stack[stack.length - 1] ?? (mine ? earned : undefined) ?? EMPTY_FACE[side]];
+      out.push({ label: row.label, sprite: row.face, charges: stack.length + (mine && full ? 1 : 0) });
     }
     return out;
   };
+  /** The run's stacks as the readout shows them: with the bar of a special the ship earns — 0613. */
+  const runStacks = (): { label: string; sprite: number; charges: number }[] => stacksOf(state.run.arsenal, chargedSpecial(world), chargeFull(world));
 
   /**
    * Whether this device has a place to press at all.
@@ -1803,7 +1847,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * what it throws next and the count of its own stack. The hit test is told the same number of bands
    * (`bands` below), so the picture cannot claim a band the canvas is not listening on.
    */
-  const triggers = (): { label: string; sprite: number; charges: number }[] => (touchable ? stacksOf(state.run.arsenal) : []);
+  const triggers = (): { label: string; sprite: number; charges: number }[] => (touchable ? runStacks() : []);
 
   /*
     ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
@@ -2005,6 +2049,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0340, on the two lines above's terms: per FIELD, so a travel change re-marks one chooser and
     // does not re-bake an atlas or touch the speaker.
     const travelChanged = next.settings.travel !== state.settings.travel;
+    // 0613: and the hands, which re-mark their chooser and, turned on, tap once so the player feels what it is.
+    const rumbleChanged = next.settings.rumble !== state.settings.rumble;
     /*
       0510: what is kept, compared as it is written — so a pilot pick, which is not kept, writes
       nothing, and a setting added to what is kept is compared without a line here learning its name.
@@ -2071,6 +2117,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (state.settings.sound === 'on') speaker.play('chime');
     }
     if (travelChanged) applyTravel();
+    if (rumbleChanged) {
+      applyRumble();
+      if (RUMBLES[state.settings.rumble].felt) rumble('smash', performance.now());
+    }
     if (keptChanged) writeSettings(keptStore, state.settings);
     /*
       ⚠️ **WRITTEN THE MOMENT IT MOVES — 0521**, which for a win is the moment the jellyfish dies: the
@@ -2484,6 +2534,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   (name: ChoiceName, index: number, pointer: boolean): void => {
     if (name === 'sound') dispatch({ slice: 'settings', type: 'sound', sound: SOUND_KINDS[index] ?? DEFAULT_SOUND });
+    // 0613: the hands, on the sound's terms.
+    else if (name === 'rumble') dispatch({ slice: 'settings', type: 'rumble', rumble: RUMBLE_KINDS[index] ?? DEFAULT_RUMBLE });
     // The third, and it is the line 0072 predicted: *"the queue behind the style was already the same
     // shape."* `TRAVEL_KINDS` IS the order `src/state/screens.ts` built the options in — 0340.
     else if (name === 'travel') dispatch({ slice: 'settings', type: 'travel', travel: TRAVEL_KINDS[index] ?? DEFAULT_TRAVEL });
@@ -2967,6 +3019,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('travel', TRAVEL_KINDS.indexOf(state.settings.travel));
   };
   applyTravel();
+  /*
+    WHAT THE RUMBLE SETTING CHANGES — 0613: the mark on its chooser, and nothing else to apply. What it is FOR is
+    read where a feel is played (`world.onFeel`, below), so a step that names a landing is the same step either
+    way — the frame cannot see the setting (0024).
+  */
+  function applyRumble(): void {
+    chrome.setChoice('rumble', RUMBLE_KINDS.indexOf(state.settings.rumble));
+  }
+  applyRumble();
   /*
     WHAT THE TOUCH SECTION CHANGES — 0512: the marks on its two bands, and the side the discs are drawn
     on. What each is FOR is read where a finger is read (`attachTouch`'s `hand` and `steer`, above), so
@@ -4413,6 +4474,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
   // The score — 0428: the frame says a kill or a hit moved it, and the run's banked levels are added here.
   world.onScore = syncScore;
+  /*
+    The earned special's bar — 0613: drawn beside its trigger's count, and the count and face moved with it the
+    step it fills or is thrown, since a full bar is one more on that trigger.
+  */
+  let chargeWasFull = false;
+  world.onCharge = (fraction: number): void => {
+    const earned = chargedSpecial(world);
+    chrome.setCharge(earned === null ? -1 : SIDES.indexOf(SPECIALS[earned].side), fraction);
+    const full = fraction >= 1;
+    if (full === chargeWasFull) return;
+    chargeWasFull = full;
+    syncHud();
+  };
+  // The hands — 0613: the frame names what happened and the player's setting decides whether it is felt (0024).
+  world.onFeel = (feel: FeelKind): void => {
+    if (RUMBLES[state.settings.rumble].felt) rumble(feel, performance.now());
+  };
   // A lurch along the lane swings the dice on the estate's dash — 0461; on any other ship's plate there are none.
   world.onJolt = chrome.swayDice;
   // And the table the title rolls, as this browser kept it — 0429.
@@ -4658,7 +4736,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surges included (0373).
   */
   world.onWreck = (): void => {
-    detonateArsenal(world, chargesIn(state.run.arsenal));
+    // 0613: and a full bar, which is a charge the ship was carrying as much as one on a stack.
+    detonateArsenal(world, chargesIn(state.run.arsenal) + (chargeFull(world) ? 1 : 0));
   };
 
   world.onDeath = (cause): void => {
@@ -4710,6 +4789,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onSpecial = (slot: number): void => {
     const side = SIDES[slot];
     if (side === undefined) return;
+    /*
+      ⚠️ **AN EARNED SPECIAL'S FULL BAR IS THROWN FIRST — 0613**, before anything on its trigger's stack: it is
+      the ship's own special, as the ship's own pair is thrown before the tier's ward under it (`startingArsenal`).
+      A bar not full is no charge, so the press falls to the stack, and over an empty one it is silence —
+      today's empty-stock press. Refused inside a dance as every dance press is (`canThrow`), so it costs nothing.
+    */
+    const earned = throwEarned(world, side);
+    if (earned === 'refused') return;
+    if (earned === 'thrown') {
+      syncHud();
+      return;
+    }
     const stack = state.run.arsenal[side];
     const next = stack[stack.length - 1];
     if (next === undefined) return;

@@ -96,11 +96,17 @@ function withStack(arsenal: Arsenal, side: Side, stack: readonly SpecialKind[]):
   both"* — and a run opens on two of whichever is fitted. The ward rule reads the side of THAT special,
   so a fighter fitted with the nova opens with no void on top, as the caddie always has.
 */
+/*
+  ⚠️ **AND NONE OF IT FOR A SHIP THAT EARNS ITS SPECIAL — 0613.** The Hamster Ball's War Dance is a bar its ram
+  fills (`charge` on its row), so it opens on none: the bar, empty, is its stock. It is fitted with no other
+  special (`specialOpen`), so its own is the one read, whatever a document says is fitted.
+*/
 export function startingArsenal(ship: ShipKind, difficulty: DifficultyKind, special: SpecialKind = ownSpecial(ship)): Arsenal {
-  const own = special;
+  const earns = SHIPS[ship].charge !== null;
+  const own = earns ? ownSpecial(ship) : special;
   const side = SPECIALS[own].side;
   const opening: SpecialKind[] = [];
-  for (let i = 0; i < OPENING_CHARGES; i++) opening.push(own);
+  for (let i = 0; i < (earns ? 0 : OPENING_CHARGES); i++) opening.push(own);
   const ward: SpecialKind[] = [];
   if (side !== 'ward') for (const kind of DIFFICULTIES[difficulty].opensWith) ward.push(kind);
   return withStack({ gun: [], tubes: [], ward }, side, side === 'ward' ? [...ward, ...opening] : opening);

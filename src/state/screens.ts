@@ -19,6 +19,7 @@
 import { GAME_TITLE } from '../brand.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
+import { RUMBLES, RUMBLE_KINDS } from '../content/rumble.ts';
 // 0340: the crossing's knob, on the two lines above's exact terms.
 import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 // 0512: the touch section's two, on the same terms.
@@ -99,7 +100,8 @@ export interface ScreenAction {
 // 0512: and the touch section's two.
 // 0517: and whether a run that runs out may be continued.
 // 0590: and no longer the look, whose one alternative had stopped being what it was asked for as.
-export type SettingName = 'difficulty' | 'sound' | 'travel' | 'pilot' | 'hand' | 'steer' | 'credits';
+// 0613: and whether a landing is felt in the hands.
+export type SettingName = 'difficulty' | 'sound' | 'rumble' | 'travel' | 'pilot' | 'hand' | 'steer' | 'credits';
 
 /**
  * Every slot the hangar fits on a ship — 0521. Closed. The plate is the first; the plan's queue
@@ -656,7 +658,14 @@ export function plateWhy(ship: ShipKind, won: boolean, borrowable: boolean): str
 
 /** What the special band says when `ship`'s other specials are shut — 0524, on the dash's words exactly. */
 export function specialWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
+  // 0613: a ship that earns its special is fitted with no other, won or not.
+  if (SHIPS[ship].charge !== null) return earnsWhy(ship);
   return slotWhy(ship, won, borrowable, 'special');
+}
+
+/** What a ship that earns its special says of the others — 0613, on the ram's words. */
+function earnsWhy(ship: ShipKind): string {
+  return 'The ' + plainLabel(ship) + ' earns its ' + SPECIALS[WEAPONS[SHIPS[ship].weapon].special].label + ' by ramming';
 }
 
 /** What the gun band says when `ship`'s other guns are shut — 0526, on the same words. */
@@ -730,6 +739,8 @@ export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Re
     case 'gun': {
       const from = SHIP_KINDS[index];
       if (from === undefined) return null;
+      // 0613: and a ship that earns its special is fitted with no other.
+      if (name === 'special' && from !== ship && SHIPS[ship].charge !== null) return earnsWhy(ship);
       // 0593: a ram goes on no other ship and its ship flies no other gun.
       if (name === 'gun' && from !== ship) {
         if (!WEAPONS[SHIPS[ship].weapon].lends) return 'The ' + plainLabel(ship) + ' flies nothing but its ' + WEAPONS[SHIPS[ship].weapon].label.toLowerCase();
@@ -1077,6 +1088,22 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         press: 'steps',
         // 0607: a ladder, gentle to quick, so it stops as the tier does — quick coming round to gentle is a jump nobody pressed for.
         ends: 'stop',
+      },
+      /*
+        ⚠️ **THE HANDS — 0613, ON EVERY DEVICE**: whether the ball's landings are felt on a pad or a phone. A
+        comfort knob over the hands and not over the sim (0024): `src/content/rumble.ts` holds what it changes.
+        LAST, so on a touch screen it is the third column alone, as narrow as its two words
+        (`src/app/chrome.ts`): put beside the sound, it took a third of the width from bands whose words
+        need half, and CI's fonts drew them past their tracks on the smallest phone.
+      */
+      {
+        name: 'rumble',
+        label: 'Rumble',
+        options: RUMBLE_KINDS.map((kind) => ({ label: RUMBLES[kind].title, hint: RUMBLES[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+        ends: 'round',
       },
     ],
     steps: false,

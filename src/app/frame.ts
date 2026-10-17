@@ -109,8 +109,9 @@ import {
 } from '../content/pickups.ts';
 import { TETHER_BOLT_KIND, WEAPONS, WEAPON_KINDS, type CatherineWheel, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type Side, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
+import type { FeelKind } from '../content/feels.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { STEP_MS, type Frame } from './loop.ts';
@@ -1220,6 +1221,23 @@ export interface World {
   danceAcross: number;
   danceBounces: number;
   /**
+   * Steps before the dance may send out its next shockwave — 0613: one at every wall and every body it lands
+   * on, but never two inside its row's `wave.gap`.
+   */
+  waveIn: number;
+  /** The dance whose shockwaves are out, which they read their row off — 0613; `null` before the first. */
+  waveKind: SpecialKind | null;
+  /** Steps left of the dance's flare lit round the ship to say its bar is full — 0613. */
+  readyFor: number;
+  /**
+   * The bar a ship whose row earns its special fills — 0613, in landings of its gun (`Charge`): from empty at
+   * 0 to full at the row's `fill`, where it holds until the shell throws it (`spendCharge`). A life opens on
+   * it empty; while the ship dances nothing fills it.
+   */
+  charge: number;
+  /** Steps left of the ball's punch on a landing — 0613: drawn a little bigger, settling back. */
+  punchFor: number;
+  /**
    * Steps of Water Cannon left, which special it is, and how many steps it has played — 0595. While it lasts
    * a jet of water plays from the gun's muzzle, sweeping across the lane, and lands on what it crosses.
    */
@@ -1603,6 +1621,13 @@ export interface World {
   shownStreak: number;
   /** The level's points or the streak moved. Fired on a change only — a kill or a hit. */
   onScore: (points: number, streak: number) => void;
+  /**
+   * What the earned special's bar last said — 0613: a share of the row's `fill`, quantised to
+   * `CHARGE_BAR_STEPS`, or a negative number for a ship whose row earns nothing. `shownBoss`'s argument.
+   */
+  shownCharge: number;
+  /** The bar moved — a new quantum, full, spent, or the bar coming or going. Fired on a change only. */
+  onCharge: (fraction: number) => void;
   /**
    * The ship's speed along the lane in the camera's frame at the last step, whether it has burst
    * past the dice's mark and not yet braked under it, how many steps of the last swing are left to
@@ -2267,6 +2292,12 @@ export interface World {
   */
   onCue: (kind: CueKind, across?: number) => void;
   /**
+   * Something the hands may feel happened — 0613: the ball landed, killed, hit a boss, filled its bar or
+   * burnt a shield. The step names it and the shell decides whether and how it is felt (`src/app/pad.ts`);
+   * the step cannot see the setting, on `onCue`'s terms (0024).
+   */
+  onFeel: (feel: FeelKind) => void;
+  /**
    * A fixed step happened, whether or not the simulation took it.
    *
    * ⚠️ **NOT a second `onIdle`, and the difference is the whole of decision 0063.** `onIdle` answers
@@ -2587,7 +2618,10 @@ export class GameFrame implements Frame {
     const tubesPierce = surging !== null && surging.pods.pierce > 1;
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, shotLog, bladeGap, null, -1, RAM_KIND);
     // The ram, in its own pass: a landing sparks where it was — 0593.
-    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, ramGap, null, RAM_KIND);
+    // 0613: and what it killed and landed on the enemies kept apart from the boss's, for the bar and the hands.
+    let ramKills = collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, ramGap, null, RAM_KIND);
+    killedByShots += ramKills;
+    const ramOnBodies = ramLanded(w);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
@@ -2636,7 +2670,11 @@ export class GameFrame implements Frame {
       lands at the window, as the jet and a bomb do.
     */
     const ramOpen = w.weapon.flight === 'ram' ? gunOpen : open;
-    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, ramOpen, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, ramGap, hull, RAM_KIND);
+    if (shootable) {
+      const felled = collideInto(w.playerShots, w.bossPool, 1, ramOpen, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, ramGap, hull, RAM_KIND);
+      killedByShots += felled;
+      ramKills += felled;
+    }
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
       because a void blast is in front of the animal that threw it and a pulse meets it first; and
@@ -2676,7 +2714,9 @@ export class GameFrame implements Frame {
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     // A ram's landings are its own cue and not the blade's `hit` — 0593: read off what the ram body lost.
     const rammed = ramLanded(w);
-    settleRam(w, rammed);
+    settleRam(w, rammed, rammed - ramOnBodies, ramKills);
+    // And every shockwave the dance has sent out, its edge landing on what it crosses — 0613.
+    stepWaves(w);
     let bites = bladeHits === null ? 0 : w.hits.count - rammed - doused;
     if (shootable) {
       killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
@@ -2978,6 +3018,12 @@ export class GameFrame implements Frame {
       w.shownPoints = w.score.points;
       w.shownStreak = w.score.streak;
       w.onScore(w.score.points, w.score.streak);
+    }
+    // And the earned special's bar, on the same terms — 0613.
+    const chargeShown = chargeShare(w);
+    if (chargeShown !== w.shownCharge) {
+      w.shownCharge = chargeShown;
+      w.onCharge(chargeShown);
     }
 
     // ⚠️ `flying &&`, or the wreck reports its own death again on every step of the beat. Nothing
@@ -4116,12 +4162,42 @@ function ramLanded(w: World): number {
 }
 
 /**
+ * How much bigger the ship is drawn the step its ram lands, as a share of its size, and the steps it takes to
+ * settle back — 0613. *"It can't be overwhelming because it's a lot"*: a tenth, gone in a tenth of a second, so
+ * a ball pressed into a wave reads as knocking into it and never as throbbing.
+ */
+const PUNCH = 0.1;
+const PUNCH_STEPS = 6;
+
+/**
+ * Steps the dance's flare is lit round the ship when its bar fills — 0613: its four frames once, at the
+ * dance's own hold, so the bar is seen full on the ship as well as on the readout.
+ */
+const READY_FLARE_STEPS = 24;
+
+/**
  * The ram after the pairings — 0593: heard if it landed; heated by what it landed unless the ship dances;
  * and cooled once it has touched nothing for its row's `cool`. A full gauge is `burnRam`'s, in the ship's
  * own pairings, since 0609. And the dance's clock.
+ *
+ * ⚠️ **AND FELT, PUNCHED, CHARGED AND WAVED — 0613.** A landing is named to the hands (`onFeel`) — a kill or a
+ * boss a firmer feel than a body — and the ship is drawn a little bigger for a few steps: an event the model
+ * resolves, the picture and the hands both mention (0036). While it dances, a landing sends out a shockwave
+ * (`sendWave`); while it does not, it fills the bar a ship that earns its special carries (`chargeRam`).
+ * `onBoss` is how many of the landings were on the boss, and `kills` how many bodies the ram killed.
  */
-function settleRam(w: World, landed: number): void {
-  if (landed > 0) w.onCue('ram', w.ship.across);
+function settleRam(w: World, landed: number, onBoss: number, kills: number): void {
+  if (landed > 0) {
+    w.onCue('ram', w.ship.across);
+    w.onFeel(kills > 0 || onBoss > 0 ? 'smash' : 'knock');
+    w.punchFor = PUNCH_STEPS;
+    const dance = danceOf(w);
+    if (dance !== null && w.danceKind !== null) sendWave(w, w.danceKind, dance, w.ship.along, w.ship.across);
+  }
+  // Before the dance's clock, so a landing on its last step is still the dance's and fills nothing.
+  chargeRam(w, landed);
+  punchShip(w);
+  if (w.waveIn > 0) w.waveIn--;
   if (w.danceFor > 0 && --w.danceFor === 0) {
     w.danceKind = null;
     // 0594: and stands still again.
@@ -4136,6 +4212,157 @@ function settleRam(w: World, landed: number): void {
   else if (w.ramHeat > 0) w.ramHeat = Math.max(0, w.ramHeat - ram.drain);
   // Held at full while the ship blinks, so the burn lands the step it can — `burnRam`.
   if (w.ramHeat > 1) w.ramHeat = 1;
+}
+
+/** Draw the ship, and the ram on it, at the size its punch has settled to this step — 0613. */
+function punchShip(w: World): void {
+  const swell = 1 + (PUNCH * w.punchFor) / PUNCH_STEPS;
+  if (w.shipPool.size > 0) w.ship.swell = swell;
+  for (let i = 0; i < w.playerShots.size; i++) {
+    const b = w.playerShots.at(i);
+    if (b.kind === RAM_KIND) b.swell = swell;
+  }
+  if (w.punchFor > 0) w.punchFor--;
+}
+
+/**
+ * The special a ship earns rather than stocks, or `null` — 0613: its own gun's, on a row that says how it is
+ * earned (`charge`). The shell throws it off the bar before anything on that trigger's stack.
+ */
+export function chargedSpecial(w: World): SpecialKind | null {
+  return w.shipRow.charge === null ? null : WEAPONS[w.shipRow.weapon].special;
+}
+
+/** Whether the bar is full, so a press throws the earned special — 0613. */
+export function chargeFull(w: World): boolean {
+  const charge = w.shipRow.charge;
+  return charge !== null && w.charge >= charge.fill;
+}
+
+/** The bar thrown: empty again — 0613. */
+export function spendCharge(w: World): void {
+  w.charge = 0;
+}
+
+/**
+ * A press of the trigger `side` asks the bar first — 0613: `'none'` when no full bar throws on it, so the
+ * press goes to that trigger's stack as on every ship; `'refused'` when the bar is full and the special may
+ * not leave yet (`canThrow`: a dance inside a dance), which costs nothing; `'thrown'` when it went, and the
+ * bar is empty again. The shell asks this before the stack (`onSpecial`).
+ */
+export function throwEarned(w: World, side: Side): 'none' | 'refused' | 'thrown' {
+  const earned = chargedSpecial(w);
+  if (earned === null || SPECIALS[earned].side !== side || !chargeFull(w)) return 'none';
+  if (!canThrow(w, earned)) return 'refused';
+  spendCharge(w);
+  launchSpecial(w, earned);
+  return 'thrown';
+}
+
+/** Steps the readout's bar is drawn in — 0613: twenty, a twentieth of the bar each, so it moves on a landing or two. */
+export const CHARGE_BAR_STEPS = 20;
+
+/** What the readout's bar says: a share of the fill in `CHARGE_BAR_STEPS`, or `-1` for a ship that earns nothing. */
+function chargeShare(w: World): number {
+  const charge = w.shipRow.charge;
+  if (charge === null) return -1;
+  if (w.charge >= charge.fill) return 1;
+  return Math.floor((w.charge / charge.fill) * CHARGE_BAR_STEPS) / CHARGE_BAR_STEPS;
+}
+
+/**
+ * Fill the bar by what the gun landed — 0613: each landing one, whatever it landed on — a kill is the landing
+ * that made it. Not while the ship dances, so a dance never earns the next, and not past full, where it
+ * holds until it is thrown. Filling it is heard (`danceReady`), felt, and seen: the readout's bar lights and
+ * the dance's flare licks round the ship once (`stepAuras`).
+ */
+function chargeRam(w: World, landed: number): void {
+  const charge = w.shipRow.charge;
+  if (charge === null || landed <= 0 || w.danceFor > 0 || w.shipPool.size === 0 || w.charge >= charge.fill) return;
+  w.charge += landed;
+  if (w.charge < charge.fill) return;
+  w.charge = charge.fill;
+  w.readyFor = READY_FLARE_STEPS;
+  w.onCue('danceReady', w.ship.across);
+  w.onFeel('ready');
+}
+
+/*
+  ── THE SHOCKWAVE — `docs/decisions/0613-the-dance-is-earned.md` ─────────────────────────────────────
+
+  *"It currently has no aoe so feels like it needs something a bit more interactive there."* At every wall
+  and every body the dancing ship lands on, a ring rolls out from it: its edge grows from the dance's own
+  reach to the wave row's radius over `grow` steps, and every body the edge crosses on a step takes the
+  row's damage, once — the nova's way of landing a growing ring (`crossed`), so nothing has to remember what
+  a wave has hit. A boss takes it once a wave, at the window, as a special does.
+
+  ⚠️ **AN ENTITY IN THE BLAST POOL, WITH NO DAMAGE OF ITS OWN.** It is drawn where the blasts are, under every
+  shot (0373), and carries `damage` 0 so the blast pairings pass over it: what it lands, it lands here, on its
+  edge. Its `radius` is the edge this step and its `swell` the picture's, so the ring drawn is the reach.
+*/
+
+/** The `kind` a shockwave carries in the blast pool, beside an explosion, a rift, a ray's burst, a firework and a splat. */
+export const WAVE_KIND = 7;
+
+/** Send a shockwave out from `(along, across)`, unless one went out inside the dance's `wave.gap` — 0613. */
+function sendWave(w: World, kind: SpecialKind, dance: Dance, along: number, across: number): void {
+  if (w.waveIn > 0) return;
+  const wave = w.blasts.spawn();
+  // A wave the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
+  if (wave === null) return;
+  w.waveIn = dance.wave.gap;
+  w.waveKind = kind;
+  const row = SHOTS[dance.wave.shot];
+  reset(wave, along, across, row, WAVE_KIND);
+  wave.damage = 0;
+  wave.radius = dance.reach;
+  wave.swell = dance.reach / row.radius;
+  // It rides the camera, as the dancing ship does, so it rolls out from where the ship was in the view.
+  wave.velAlong = w.scrollPerStep;
+  wave.lifeFor = dance.wave.grow + dance.wave.fade;
+  // Nothing grown yet (0); grown (1); and its boss struck (2).
+  wave.face = 0;
+}
+
+/** Grow every shockwave, land what its edge crossed this step, and turn the spent ones to their fade — 0613. */
+function stepWaves(w: World): void {
+  const dance = w.waveKind === null ? null : SPECIALS[w.waveKind].dance;
+  if (dance === null) return;
+  const row = SHOTS[dance.wave.shot];
+  const grow = (row.radius - dance.reach) / dance.wave.grow;
+  let open = -1;
+  for (let b = 0; b < w.blasts.size; b++) {
+    const wave = w.blasts.at(b);
+    if (wave.kind !== WAVE_KIND) continue;
+    const first = wave.face === 0;
+    const was = wave.radius;
+    if (!first && was >= row.radius) {
+      wave.sprite = SPRITE.danceWaveFade;
+      wave.spriteBase = SPRITE.danceWaveFade;
+      wave.spriteHit = SPRITE.danceWaveFade;
+      continue;
+    }
+    const now = was + grow > row.radius ? row.radius : was + grow;
+    wave.radius = now;
+    wave.swell = now / row.radius;
+    if (wave.face === 0) wave.face = 1;
+    for (let i = w.enemies.size - 1; i >= 0; i--) {
+      const body = w.enemies.at(i);
+      if (crossed(Math.hypot(body.along - wave.along, body.across - wave.across) - body.radius, was, now, first)) strike(w.enemies, i, row.damage, IMPACT_FLASH_STEPS, w.deaths);
+    }
+    if (wave.face === 2 || !bossTargetable(w)) continue;
+    const head = w.bossPool.at(0);
+    let reaches = crossed(Math.hypot(head.along - wave.along, head.across - wave.across) - head.radius, was, now, first);
+    for (let i = 0; !reaches && i < w.bossBody.size; i++) {
+      const node = w.bossBody.at(i);
+      reaches = crossed(Math.hypot(node.along - wave.along, node.across - wave.across) - node.radius, was, now, first);
+    }
+    if (!reaches) continue;
+    wave.face = 2;
+    if (head.invulnFor > 0) continue;
+    if (open < 0) open = landsOn(w.bossRow, head.health, w.bossFullHealth, w.difficulty, fightOf(w));
+    strike(w.bossPool, 0, row.damage * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+  }
 }
 
 /** A step of the ball against the stone — 0593: it is scraped hot, as a landing heats it, slower. */
@@ -4170,6 +4397,8 @@ function burnRam(w: World): void {
   burst(w, w.ship.along, w.ship.across, BURST.burn);
   flare(w, w.ship.along, w.ship.across, 'burst');
   w.onCue('ballBurns', w.ship.across);
+  // 0613: the one strong pulse in the hands — the thing about the ram the player must not miss.
+  w.onFeel('burn');
 }
 
 /**
@@ -4204,6 +4433,8 @@ function startDance(w: World, kind: SpecialKind, dance: Dance): void {
   w.danceKind = kind;
   w.danceFor = dance.steps;
   w.danceBounces = 0;
+  // 0613: the flare that said the bar was full is the dance's own now.
+  w.readyFor = 0;
   const toward = w.ship.across < ACROSS_SPAN / 2 ? 1 : -1;
   headDance(w, dance, 1, toward);
   // 0594: and it dances — its row's poses, from the first.
@@ -4232,6 +4463,8 @@ function bounceDance(w: World, dance: Dance, along: number, across: number): voi
   burst(w, atAlong, atAcross, BURST.bounce);
   flare(w, atAlong, atAcross, 'spark');
   w.onCue('danceBounce', atAcross);
+  // 0613: and a shockwave rolls out from the ship off the wall.
+  if (w.danceKind !== null) sendWave(w, w.danceKind, dance, w.ship.along, w.ship.across);
 }
 
 /**
@@ -6023,6 +6256,18 @@ function stepAuras(w: World): void {
     the flare's sound and its picture together.
   */
   const dance = w.dyingIn > 0 ? null : danceOf(w);
+  /*
+    ⚠️ **AND ONCE, ROUND A SHIP THAT IS NOT DANCING, WHEN ITS BAR FILLS — 0613.** The dance waiting to be thrown
+    is seen on the ship and not only on the readout: its flare's frames once through, and gone.
+  */
+  const earned = chargedSpecial(w);
+  const waiting = earned === null || w.dyingIn > 0 ? null : SPECIALS[earned].dance;
+  if (dance === null && w.readyFor > 0 && waiting !== null && waiting.flare.length > 0) {
+    w.readyFor--;
+    const into = READY_FLARE_STEPS - 1 - w.readyFor;
+    wearAura(w, DANCE_FLARE, waiting.flare[Math.floor(into / waiting.flareHold) % waiting.flare.length]!);
+    return;
+  }
   if (dance === null || dance.flare.length === 0) {
     wearAura(w, DANCE_FLARE, -1);
     return;
@@ -12190,6 +12435,11 @@ export function respawn(w: World): void {
   w.danceFor = 0;
   w.danceKind = null;
   w.danceBounces = 0;
+  // 0613: its waves went with the blasts above; and a life opens on an empty bar, unpunched.
+  w.waveIn = 0;
+  w.charge = 0;
+  w.readyFor = 0;
+  w.punchFor = 0;
   // And a jet went with the gun it played from — 0595.
   w.jetFor = 0;
   w.jetKind = null;

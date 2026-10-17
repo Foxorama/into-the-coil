@@ -151,6 +151,8 @@ export const CUE_KINDS = [
   'warDance',
   'danceHum',
   'danceBounce',
+  // And its bar full on the ship that earns it — 0613.
+  'danceReady',
   // The Water Cannon opening up — 0595.
   'waterCannon',
   // And heard for as long as it plays and wherever it lands, and the paint where it splats — 0599.
@@ -251,8 +253,16 @@ export const TWIN_KINDS = [
    * the flare's own cycle for as long as it dances, as the jet's drops are (`spray-appears`), so it never ducks.
    */
   'flare-appears',
-  /** Sparks fly off the ship where it meets the edge of its box or the stone, and it turns off it — `bounceDance`, 0609. */
+  /**
+   * Sparks fly off the ship where it meets the edge of its box or the stone, and it turns off it, and since 0613
+   * a shockwave rolls out from it — `bounceDance`, 0609.
+   */
   'dance-bounces',
+  /**
+   * The earned special's bar on the readout fills and lights, and the dance's flare licks once round the ship
+   * — `chargeRam`, 0613.
+   */
+  'charge-fills',
   /** A jet of water appears from the gun and starts sweeping the lane — `startJet`, 0595. */
   'jet-appears',
   /** Drops fly off the jet as it sweeps the lane — `stepJet`, 0599. A thing appearing, struck on a cadence. */
@@ -2352,6 +2362,26 @@ export const CUES: Record<CueKind, CueRow> = {
       // The crack of it and the sparks off it: bright noise, short.
       { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.55, attack: 0.0005, curve: 4, lowFrom: 12000, lowTo: 5000, highFrom: 1800, q: 0.9 },
       { wave: 'noise', from: 0, to: 0, at: 0.04, seconds: 0.03, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 12000, highFrom: 4000, pan: -0.3, panTo: 0.3 },
+    ],
+  },
+  /**
+   * The War Dance's bar is full — 0613, on the ship that earns it: *"you refill your special to do the war
+   * dance."* A struck gong-fifth with the flare's roar swelling under it, so it is heard as the dance waiting
+   * to be thrown — news, and not a hit. Over every gun (0145), under the burn.
+   */
+  danceReady: {
+    twin: 'charge-fills',
+    air: 0.25,
+    hold: 30,
+    gain: 0.3,
+    glue: 0.1,
+    layers: [
+      // The strike: root and fifth, bright and short, rising a step as it rings.
+      { wave: 'tri', from: inKey(7), to: inKey(8), seconds: 0.22, gain: 0.6, attack: 0.002, curve: 2.2 },
+      { wave: 'sine', from: inKey(11), to: inKey(12), at: 0.06, seconds: 0.24, gain: 0.45, attack: 0.003, curve: 2.2 },
+      { wave: 'sine', from: inKey(14), to: inKey(14), at: 0.12, seconds: 0.2, gain: 0.3, attack: 0.003, curve: 2.6 },
+      // The flare's breath under it, swelling in and gone.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.25, attack: 0.08, curve: 1.8, lowFrom: 2600, lowTo: 5000, highFrom: 400, q: 0.9, pan: -0.2, panTo: 0.2 },
     ],
   },
   /**

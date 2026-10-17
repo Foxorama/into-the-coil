@@ -111,7 +111,8 @@ export const PROBES = [
     guard: 'fits the pools: three stars aloft at most',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  blasts: 13,',
+      // Fifteen since 0613 gave the War Dance's shockwaves two; the break is still nine.
+      find: '  blasts: 15,',
       replace: '  blasts: 9,',
     },
   },
