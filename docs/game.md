@@ -232,8 +232,8 @@ seconds.
 |---|---|---|---|---|---|
 | **`bomb`** | one charge of the gun special its face shows — bomb, storm, whirlpool or candle | — | drawn | 1 | — |
 | **`missile`** | a tube of the kind its face shows, at the full rate, into the next empty one of two; with both fitted, a charge of that kind's surge | — | drawn | 1 | — |
-| **`shield`** | one hit that never reaches the hull, capped by the tier — 3, or none on Burn — or a charge of the void or the nova on the ward's trigger | — | drawn | 1; on Burn the `ward` in its place | — |
-| **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | a shield drawn on Burn | on Burn only, as the shield | — |
+| **`shield`** | one hit that never reaches the hull, capped by the tier — 3 on every tier since [0614](decisions/0614-the-shields-come-down-a-tier.md) — or a charge of the void or the nova on the ward's trigger | — | drawn | 1; the `ward` in its place where the shell is zero | — |
+| **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | a shield drawn on a shell of zero | only where the shell is zero, as the shield — no tier since 0614 | — |
 
 A run starts with two charges of its own gun's special. **The bomb pickup is where the weapon pickup
 was** ([0441](decisions/0441-a-pilot-flies-their-own-ship.md)). Any ship can take any face for one
@@ -326,9 +326,10 @@ axis**, so a change to Savior moves both —
 scripts.
 
 **A tier also sets the shell** — [0355](decisions/0355-a-tier-opens-on-a-shell.md). On *Legendary
-Pilot* every life opens on three shields and every level renews them; on *Savior of the Galaxy* a
-life opens on the hull and a shield is flown for, as it always was; on *Let the Galaxy Burn* the ship
-carries none, the mid-boss throws the ward pickup where the shield would be, and a run opens with one
+Pilot* every life opens on three shields and every level renews them; on *Savior of the Galaxy* every
+life opens on one, every level renews it to one, and two more are flown for; on *Let the Galaxy Burn*
+a life opens on the hull and three are flown for
+([0614](decisions/0614-the-shields-come-down-a-tier.md)), and a run opens with one
 void unless its ship opens on novas ([0447](decisions/0447-the-ward-is-a-third-trigger.md)).
 
 ⚠️ **The dial is gone** — [0441](decisions/0441-a-pilot-flies-their-own-ship.md). It was a second

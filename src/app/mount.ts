@@ -1777,8 +1777,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * hull became one hit (0050). The conversion is `shieldsOf`, which is also what the shell around
    * the ship is built from — so the row of pips and the ring of marks cannot disagree.
    *
-   * ⚠️ **As many sockets as the TIER lets the ship carry, since 0355** — three on the gentle two and
-   * none on Burn, where an empty row of sockets would be a promise of something the tier withholds.
+   * ⚠️ **As many sockets as the TIER lets the ship carry, since 0355** — three on every tier since 0614,
+   * and none on a shell of zero, where an empty row of sockets would be a promise of something the tier
+   * withholds.
    */
   const syncHud = (): void => {
     /*
@@ -4864,7 +4865,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       a second answer that only the pickup ever updated.
 
       ⚠️ **Capped by the TIER, in `takeShield`, since 0355.** `MAX_SHIELDS` is the most the readout
-      can draw and the tier's `shellCap` is what the pilot may wear under it — none on Burn — unless the
+      can draw and the tier's `shellCap` is what the pilot may wear under it — three on every tier since 0614 — unless the
       ship's row says its own (`shellCapFor`, 0609).
 
       ⚠️ **AND A SHIELD TAKEN AT A FULL SHELL SPILLS INTO A CHARGE — 0377**, which `takeShield` decides

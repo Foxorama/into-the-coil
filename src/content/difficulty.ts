@@ -101,6 +101,9 @@ export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
    * death. `docs/decisions/0355-a-tier-opens-on-a-shell.md`. Zero is today's game exactly — a life
    * opens on the hull (0050) and a boundary carries what it had (0058) — so a tier at zero is not a
    * branch anywhere, it is arithmetic that adds nothing.
+   *
+   * ⚠️ **Moved down a tier by 0614**: *"the game is quite hard"* — Savior opens on one, and Burn on
+   * the hull with Savior's old cap of three.
    */
   shellOpen: number;
   /**
@@ -490,8 +493,10 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     short: 'Savior',
     hint: 'Be the hero you want to be',
     lives: 3,
-    // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
-    shellOpen: 0,
+    // *"Start each level with 1 shield"* — 0614: a life opens on one, a boundary tops it up to one, and
+    // two more are flown for. It was the hull (0355's *"no change to behaviour"*) until the game was
+    // played as *"quite hard"*.
+    shellOpen: 1,
     shellCap: 3,
     opensWith: [],
     ...multipliersFor('savior'),
@@ -526,12 +531,14 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     hint: 'Best of luck mate',
     lives: 2,
     /*
-      *"No shields"* — 0355. The mid-boss threw none — *"no replacement pickups, just remove them"* —
-      until the shield pickup cycled; since 0447 it throws the ward pickup, the void and the nova, in
-      the shield's place: *"it'll spit out a void bomb pickup in place of the shield."*
+      *"Start with 0 shields, but have the capacity for each ship to gain up to 3 shields (the behaviour
+      that saviour has now)"* — 0614. A life opens on the hull and three are flown for, so the mid-boss
+      throws the shield again. It carried none from 0355 to 0614, and 0447's ward pickup was thrown in
+      the shield's place; that withholding is still the default for any shell of zero (`offeredAs` in
+      `src/app/frame.ts`), and no tier has one now.
     */
     shellOpen: 0,
-    shellCap: 0,
+    shellCap: 3,
     // One void to open on — 0447 — unless the ship's own special is already the ward's.
     opensWith: ['voidMissile'],
     ...multipliersFor('burn'),

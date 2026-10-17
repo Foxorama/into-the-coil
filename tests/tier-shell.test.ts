@@ -47,13 +47,15 @@ function hit(world: World, frame: GameFrame): void {
 }
 
 describe('0355 — the rows', () => {
-  it('THE ASK: Legend opens every life full and renewed, Savior is as it was, Burn carries none', () => {
+  it('THE ASK: Legend opens every life full and renewed, Savior on one, Burn on the hull with three to fly for', () => {
     // The player's words, which is why this names values: they are the ask, not a hand's tuning.
+    // 0355 for Legend; 0614 for the other two: *"the game is quite hard"*.
     expect(DIFFICULTIES.legendary.shellOpen, 'a Legendary life does not open on a full shell').toBe(DIFFICULTIES.legendary.shellCap);
     expect(DIFFICULTIES.legendary.shellCap, 'a Legendary shell is not the whole readout').toBe(MAX_SHIELDS);
-    expect(DIFFICULTIES.savior.shellOpen, 'Savior changed: a life no longer opens on the hull').toBe(0);
-    expect(DIFFICULTIES.savior.shellCap, 'Savior changed: it can no longer carry a full shell').toBe(MAX_SHIELDS);
-    expect(DIFFICULTIES.burn.shellCap, 'Burn can carry a shield').toBe(0);
+    expect(DIFFICULTIES.savior.shellOpen, 'a Savior level does not start with one shield').toBe(1);
+    expect(DIFFICULTIES.savior.shellCap, 'Savior can no longer carry a full shell').toBe(MAX_SHIELDS);
+    expect(DIFFICULTIES.burn.shellOpen, 'a Burn life opens wearing a shell').toBe(0);
+    expect(DIFFICULTIES.burn.shellCap, 'Burn cannot gain up to three shields').toBe(MAX_SHIELDS);
   });
 
   it('a tier opens on no more than it may carry, and carries no more than the pool can hold', () => {
@@ -196,10 +198,19 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
     return out;
   }
 
+  /*
+    ⚠️ **NO TIER CARRIES A SHELL OF ZERO SINCE 0614**, so the withholding is driven on a row that does —
+    Burn's numbers with 0355's old cap — rather than left as a rule nothing runs. It is the default for
+    any shell of zero, a tier's or a ship's (`shellCapFor`, 0609).
+  */
+  const SHELLESS: DifficultyRow = { ...DIFFICULTIES.burn, shellOpen: 0, shellCap: 0 };
+
   it('the mid-boss’s death throws every piece the tier can carry and no other, through the real frame', () => {
     let withheldSomewhere = false;
-    for (const tier of DIFFICULTY_KINDS) {
-      const { world } = playableWorld(MID_FIGHT, tier);
+    const rows: [string, DifficultyKind, DifficultyRow][] = DIFFICULTY_KINDS.map((k) => [k, k, DIFFICULTIES[k]]);
+    for (const [tier, kind, row] of [...rows, ['a shell of zero', 'burn', SHELLESS] as [string, DifficultyKind, DifficultyRow]]) {
+      const { world } = playableWorld(MID_FIGHT, kind);
+      world.difficulty = row;
       const frame = new GameFrame(world);
       for (let i = 0; i < 400 && world.bossPool.size === 0; i++) frame.step();
       expect(world.bossPool.size, 'the mid-boss never arrived').toBe(1);
@@ -213,7 +224,7 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
       expect(world.fight, `${tier}: the mid-boss could not be killed`).not.toBe(fight);
       const thrown: string[] = [];
       for (let i = 0; i < world.pickups.size; i++) thrown.push(PICKUP_KINDS[world.pickups.at(i).kind]!);
-      const want = carriable(DIFFICULTIES[tier]);
+      const want = carriable(row);
       if (want.some((kind, i) => kind !== MID_BOSS_DROP[i]) || want.length < MID_BOSS_DROP.length) withheldSomewhere = true;
       expect(thrown.sort(), `${tier}: the drop is not what the tier can carry`).toEqual([...want].sort());
     }
@@ -222,9 +233,12 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
   });
 
   it('a shield never raises health past the tier’s full shell, and the marks agree', () => {
-    for (const tier of DIFFICULTY_KINDS) {
-      const row = DIFFICULTIES[tier];
-      const { world } = playableWorld(NO_LEVEL, tier);
+    // With `SHELLESS`, since 0614 put every tier at `MAX_SHIELDS`: a cap read off the ceiling would
+    // otherwise agree with the tier's on every row there is.
+    const rows: [string, DifficultyKind, DifficultyRow][] = DIFFICULTY_KINDS.map((k) => [k, k, DIFFICULTIES[k]]);
+    for (const [tier, kind, row] of [...rows, ['a shell of zero', 'burn', SHELLESS] as [string, DifficultyKind, DifficultyRow]]) {
+      const { world } = playableWorld(NO_LEVEL, kind);
+      world.difficulty = row;
       const frame = new GameFrame(world);
       world.ship.health = world.shipRow.health;
       for (let i = 0; i < MAX_SHIELDS + 3; i++) takeShield(world);
