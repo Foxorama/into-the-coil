@@ -15,8 +15,8 @@ export const PROBES = [
     guard: 'EVERY WALL ARRIVES WHOLE',
     edit: {
       path: 'src/app/mount.ts',
-      // 196 since 0537 gave four to the blasts; the break is still 140.
-      find: '  enemyShots: 196,',
+      // 196 since 0537 gave four to the blasts, 195 since 0609 gave one to the aura; the break is still 140.
+      find: '  enemyShots: 195,',
       replace: '  enemyShots: 140,',
     },
   },

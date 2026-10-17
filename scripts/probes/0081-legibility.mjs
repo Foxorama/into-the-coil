@@ -103,8 +103,8 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0233: the hull is looked up by the weapon kind as well as the tier.
       // ⚠️ Re-anchored by 0441: by the ship's row and the tubes it carries.
       find:
-        // Re-anchored by 0593, which wears the bare hull when a ram is broken.
-        '  const hull = hullFor(w.shipRow, w.weapon.launchers, w.ramBrokenFor > 0);\n' +
+        // Re-anchored by 0593, which wore the bare hull when a ram was broken, and by 0609, which took the break out.
+        '  const hull = hullFor(w.shipRow, w.weapon.launchers);\n' +
         '  w.ship.spriteBase = hull.base;\n' +
         '  w.ship.spriteHit = hull.hit;',
       replace: '  const hull = hullFor(w.shipRow, 0);\n  void hull;',

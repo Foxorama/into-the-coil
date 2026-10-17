@@ -56,11 +56,14 @@ export interface ShipRow extends Body {
    */
   hulls: readonly [Hull, Hull, Hull];
   /**
-   * The ship at each stage while its ram is broken, or `null` for a ship that is never drawn without
-   * something it wears — 0593. The Hamster Ball breaks at full heat and Unity runs on alone until it comes
-   * back, so the picture of a broken ball is its pilot on their own (0612). Every row says its own.
+   * The shields this ship opens every life on and may carry at most, on every tier — or `null` for the
+   * tier's own (`shellOpen`, `shellCap`) — 0609. The tier's is the default and shared code holds it
+   * (`shellOpenFor`, `shellCapFor`); a row that says its own count says it here (0282). Never past
+   * `MAX_SHIELDS`, the shell pool's size (`tests/tier-shell.test.ts`).
    */
-  bare: readonly [Hull, Hull, Hull] | null;
+  shields: number | null;
+  /** How this ship's shields come back on their own, or `null` for a shell that is only ever flown for — 0609. */
+  regen: Regen | null;
   /**
    * The ship's War Dance at each stage — 0594: its still picture between two drawn poses of its own, its
    * parts moving in its own drawing, cycled for as long as it dances. *"We'll need animations for all
@@ -489,6 +492,18 @@ export function tubeOf(ship: ShipRow, launchers: number, index: number): Mount {
   return mounts[Math.min(index, mounts.length - 1)]!;
 }
 
+/**
+ * A shell that comes back on its own — 0609. After `rest` steps with no hit, a shield returns, and then one
+ * more every `every` steps until the shell is full; any hit starts the rest again. In steps, and both play
+ * numbers.
+ */
+export interface Regen {
+  /** Steps after the last hit before the first shield comes back. */
+  readonly rest: number;
+  /** Steps between one shield coming back and the next. */
+  readonly every: number;
+}
+
 /** One bake of a ship and its hurt twin. */
 export interface Hull {
   base: number;
@@ -523,10 +538,10 @@ export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird',
  * if the two ever disagree — and the failure it prevents is an `undefined` reaching `Entity.sprite`,
  * which is a blit of nothing rather than an error anybody would see.
  */
-export function hullFor(ship: ShipRow, launchers: number, bare = false): Hull {
+export function hullFor(ship: ShipRow, launchers: number): Hull {
   const stage = launchers < 0 ? 0 : launchers > 2 ? 2 : Math.floor(launchers);
-  // 0593: the ship without what it wears, where its row draws one — the Hamster Ball broken.
-  return (bare && ship.bare !== null ? ship.bare : ship.hulls)[stage]!;
+  // 0593 drew the ball broken here, on a `bare` row; 0609 took the break out, and the row with it.
+  return ship.hulls[stage]!;
 }
 
 /**
@@ -565,7 +580,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
       { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
     ],
-    bare: null,
+    shields: null,
+    regen: null,
     // 0594: a roll, one way and back and the other — the slowest of the six, because a roll is big.
     dance: [
       dancing([SPRITE.fighter, SPRITE.fighterDance1, SPRITE.fighter, SPRITE.fighterDance2], 8),
@@ -621,7 +637,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.caddieTube, hit: SPRITE.caddieTubeHit },
       { base: SPRITE.caddieTubes, hit: SPRITE.caddieTubesHit },
     ],
-    bare: null,
+    shields: null,
+    regen: null,
     // 0594: spinning up — its vents and lights a third of the way round and two thirds, so still, one and
     // two are one turn the same way, and the dome leaning into it.
     dance: [
@@ -700,7 +717,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
       { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
     ],
-    bare: null,
+    shields: null,
+    regen: null,
     // 0594: a launch and a stop — the nose up on its springs, then the tail, then level again.
     dance: [
       dancing([SPRITE.firebird, SPRITE.firebirdDance1, SPRITE.firebirdDance2], 6),
@@ -760,7 +778,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.estateTube, hit: SPRITE.estateTubeHit },
       { base: SPRITE.estateTubes, hit: SPRITE.estateTubesHit },
     ],
-    bare: null,
+    shields: null,
+    regen: null,
     // 0594: the lowrider hop — the body up on one side and then the other, on its wheels.
     dance: [
       dancing([SPRITE.estate, SPRITE.estateDance1, SPRITE.estate, SPRITE.estateDance2], 7),
@@ -821,7 +840,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.thunderboltTube, hit: SPRITE.thunderboltTubeHit },
       { base: SPRITE.thunderboltTubes, hit: SPRITE.thunderboltTubesHit },
     ],
-    bare: null,
+    shields: null,
+    regen: null,
     // 0594: leaning into it — the rider and the bars over to one side and then the other.
     dance: [
       dancing([SPRITE.thunderbolt, SPRITE.thunderboltDance1, SPRITE.thunderbolt, SPRITE.thunderboltDance2], 7),
@@ -882,12 +902,18 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.ballTube, hit: SPRITE.ballTubeHit },
       { base: SPRITE.ballTubes, hit: SPRITE.ballTubesHit },
     ],
-    // Its pilot on their own, the tubes on a harness on their back — while the ball is broken.
-    bare: [
-      { base: SPRITE.ballBare, hit: SPRITE.ballBareHit },
-      { base: SPRITE.ballBareTube, hit: SPRITE.ballBareTubeHit },
-      { base: SPRITE.ballBareTubes, hit: SPRITE.ballBareTubesHit },
-    ],
+    /*
+      ⚠️ **THREE SHIELDS ON EVERY TIER, AND THEY COME BACK — 0609.** *"Let's change it so it gets 3 shields on
+      every difficulty and instead of the ball disappearing on ram, it has a shield regen rate - currently it's
+      way too punishing with the bullets."* The ball must be touching what it kills, so it is the ship that
+      spends the most time in the bullets' face, and every other ship's shell is flown for (0050, 0355).
+
+      ⚠️ **EVERY NUMBER IN `regen` IS A PLAY NUMBER.** Two seconds without a hit before the first comes back,
+      then one every three: from bare to a full shell in eleven seconds, so a fight is spent at two or three
+      and a run of mistakes still empties it. Neither has been played.
+    */
+    shields: 3,
+    regen: { rest: 120, every: 180 },
     // 0594: the weasel war dance itself, Unity twisting one way and the other — the quickest, a frenzy.
     dance: [
       dancing([SPRITE.ball, SPRITE.ballDance1, SPRITE.ball, SPRITE.ballDance2], 4),
@@ -945,7 +971,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.duckTube, hit: SPRITE.duckTubeHit },
       { base: SPRITE.duckTubes, hit: SPRITE.duckTubesHit },
     ],
-    bare: null,
+    shields: null,
+    regen: null,
     // 0595: bobbing — the head down to dabble and up again, and then the tail up and the head back.
     dance: [
       dancing([SPRITE.duck, SPRITE.duckDance1, SPRITE.duck, SPRITE.duckDance2], 6),
@@ -1074,12 +1101,26 @@ export function shieldsOf(ship: ShipRow, health: number): number {
  * mid-boss withholding it.
  */
 export function fullHealthFor(ship: ShipRow, tier: { readonly shellCap: number }): number {
-  return ship.health + tier.shellCap;
+  return ship.health + shellCapFor(ship, tier);
 }
 
 /** The health a life opens with on a tier: its hull, plus the shell that tier opens every life on. */
 export function openingHealthFor(ship: ShipRow, tier: { readonly shellOpen: number }): number {
-  return ship.health + tier.shellOpen;
+  return ship.health + shellOpenFor(ship, tier);
+}
+
+/**
+ * The most shields this ship may carry on a tier: its row's own count where it says one, the tier's
+ * otherwise — 0609. The default is shared code and the count is the row's (0282), so the Hamster Ball's
+ * three on every tier is a number on its row and not a branch on its name.
+ */
+export function shellCapFor(ship: ShipRow, tier: { readonly shellCap: number }): number {
+  return ship.shields ?? tier.shellCap;
+}
+
+/** The shields a life opens on: the row's own count where it says one, the tier's otherwise — 0609. */
+export function shellOpenFor(ship: ShipRow, tier: { readonly shellOpen: number }): number {
+  return ship.shields ?? tier.shellOpen;
 }
 
 /**

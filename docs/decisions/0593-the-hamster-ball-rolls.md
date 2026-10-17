@@ -2,7 +2,8 @@
 
 **Accepted 2026-10-11.** Item 2 of [`the-secret-pilots-planned`](../../reports/the-secret-pilots-planned-2026-10-11.md).
 A sixth pilot and a sixth ship beside [0546](0546-the-marmot-rides.md)'s, locked on
-[0592](0592-the-crashes-are-counted.md)'s count.
+[0592](0592-the-crashes-are-counted.md)'s count. **Amended by [0609](0609-the-ball-takes-its-knocks.md)**: the ball
+no longer breaks — a full gauge burns a shield off — and it carries three shields on every tier, which come back.
 
 ## The ask
 

@@ -305,6 +305,16 @@ export const BURST = {
    * frame the player is least likely to be looking at their own ship.
    */
   shield: 5,
+  /**
+   * Fragments when the Hamster Ball's heat burns a shield off — 0609: the heat bursting out of the ball, beside
+   * the shield's own five where its mark was. Fewer than a death's pulse, because the ball rolls on.
+   */
+  burn: 8,
+  /**
+   * Fragments off a dancing ship where it meets a wall — 0609, the sparks of the impact. Few, because a dance
+   * meets one every half second and they are the wall's, not a death's.
+   */
+  bounce: 4,
   /** World units per step, radially. A spread rather than one value, so a burst is not a ring. */
   speedMin: 0.35,
   speedMax: 1.15,

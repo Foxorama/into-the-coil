@@ -114,10 +114,10 @@ export const CUE_KINDS = [
   'wheel',
   'crackle',
   'sizzle',
-  // The Hamster Ball's — 0593: the ram landing, the ball cracking apart at full heat, and coming back whole.
+  // The Hamster Ball's — 0593: the ram landing; and since 0609 a shield burnt off at full heat, and one coming back.
   'ram',
-  'ballBreak',
-  'ballMend',
+  'ballBurns',
+  'shieldBack',
   // The paintball marker's — 0595: each ball leaving with a pneumatic pop.
   'paintball',
   'threat',
@@ -147,8 +147,10 @@ export const CUE_KINDS = [
   'candle',
   'candleStar',
   'firework',
-  // The War Dance thrown — 0593.
+  // The War Dance thrown — 0593; and its hum while it dances, and each wall it hits — 0609.
   'warDance',
+  'danceHum',
+  'danceBounce',
   // The Water Cannon opening up — 0595.
   'waterCannon',
   // And heard for as long as it plays and wherever it lands, and the paint where it splats — 0599.
@@ -238,12 +240,19 @@ export const TWIN_KINDS = [
   'embers-fly',
   /** The ball lands on a body: the body flashes and the heat inside the ball climbs a stage — `stepRam`, 0593. */
   'ball-rams',
-  /** The ball breaks: its shell bursts into pieces and Unity is left on their own — `breakBall`, 0593. */
-  'ball-breaks',
-  /** The ball comes back whole round Unity, cool — `stepRam`, 0593. */
-  'ball-mends',
+  /** The ball's heat at its hottest bursts off it in sparks, the heat inside it goes cool, and a mark leaves the shell — `burnRam`, 0609. */
+  'ball-burns',
+  /** A mark comes back onto the shell and a pip onto the readout — `regenShell`, 0609. */
+  'shell-grows',
   /** The ship starts bouncing round the box on its own — `startDance`, 0593. */
   'dance-starts',
+  /**
+   * A tongue of the War Dance's flare licks out round the ship — `stepAuras`, 0609. A thing appearing, struck on
+   * the flare's own cycle for as long as it dances, as the jet's drops are (`spray-appears`), so it never ducks.
+   */
+  'flare-appears',
+  /** Sparks fly off the ship where it meets the edge of its box or the stone, and it turns off it — `bounceDance`, 0609. */
+  'dance-bounces',
   /** A jet of water appears from the gun and starts sweeping the lane — `startJet`, 0595. */
   'jet-appears',
   /** Drops fly off the jet as it sweeps the lane — `stepJet`, 0599. A thing appearing, struck on a cadence. */
@@ -1078,11 +1087,12 @@ export const CUES: Record<CueKind, CueRow> = {
     ],
   },
   /**
-   * The ball cracks apart at full heat — 0593: a bright plastic snap, a scatter of pieces left and right, and
-   * a low thud under them. Loud, because it is the one thing about the ram the player must not miss.
+   * The ball's heat burns a shield off it — 0609, where 0593's was the ball cracking apart: a bright plastic
+   * snap, a scatter of hot pieces left and right, and a low thud under them. Loud, because it is the one thing
+   * about the ram the player must not miss; the `shield` cue that sounds beside it says what it cost.
    */
-  ballBreak: {
-    twin: 'ball-breaks',
+  ballBurns: {
+    twin: 'ball-burns',
     air: 0.2,
     hold: 30,
     gain: 0.36,
@@ -1095,14 +1105,14 @@ export const CUES: Record<CueKind, CueRow> = {
     ],
   },
   /**
-   * The ball comes back whole — 0593: a bubble's bloop rising a fifth, the ram ready again. Soft: it is
-   * good news and not a warning.
+   * A shield comes back on its own — 0609, on 0593's `ballMend`, whose sound it keeps: a bubble's bloop rising
+   * a fifth. Soft: it is good news and not a warning. Played for any ship whose row says it regenerates.
    */
-  ballMend: {
-    twin: 'ball-mends',
+  shieldBack: {
+    twin: 'shell-grows',
     air: 0.2,
     hold: 30,
-    // Over every gun's 0.24 — 0145: the ball coming back is an outcome the player waits on.
+    // Over every gun's 0.24 — 0145: a shield coming back is an outcome the player waits on.
     gain: 0.28,
     glue: 0.1,
     layers: [
@@ -2298,6 +2308,50 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(11), to: inKey(16), at: 0.2, seconds: 0.08, gain: 0.32, attack: 0.002, curve: 3.2 },
       { wave: 'noise', from: 0, to: 0, at: 0.08, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: -0.3 },
       { wave: 'noise', from: 0, to: 0, at: 0.18, seconds: 0.02, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 8000, highFrom: 2400, pan: 0.3 },
+    ],
+  },
+  /*
+    ── THE DANCE FOR AS LONG AS IT LASTS, AND AT EVERY WALL — `docs/decisions/0609-the-ball-takes-its-knocks.md`
+
+    *"Noise and impact sounds when it hits the walls."* The throw's three hops were the only sound a three-second
+    dance made, so it is heard as the water is since 0599: something while it plays, and something where it lands.
+  */
+  danceHum: {
+    // The flare's roar, struck again every `hum` steps on its row while it dances — the flare's own cycle.
+    // A thing appearing, struck on a cadence: so, as the jet's spray, it never ducks the bed (0308).
+    twin: 'flare-appears',
+    air: 0.15,
+    hold: 6,
+    // Over every gun's 0.24 (0145), and under the bounce that lands on it.
+    gain: 0.25,
+    glue: 0.08,
+    layers: [
+      // The roar: broad noise with its band swept up and back, longer than the gap between strikes so they join.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.46, gain: 0.5, attack: 0.04, curve: 1.4, lowFrom: 2400, lowTo: 5200, highFrom: 300, highTo: 600, q: 0.9, pan: -0.25, panTo: 0.25 },
+      // The thrum under it: a saw on the root, wobbling as the flare licks, low enough to be felt.
+      { wave: 'saw', from: inKey(7), to: inKey(7), seconds: 0.44, gain: 0.18, attack: 0.03, curve: 1.6, lowFrom: 900, lowTo: 1400, highFrom: 60, q: 1.1, vibrato: 9 },
+      // And a crackle off its tips.
+      { wave: 'noise', from: 0, to: 0, at: 0.12, seconds: 0.03, gain: 0.26, attack: 0.0005, curve: 5, lowFrom: 11000, highFrom: 3600, pan: 0.4 },
+      { wave: 'noise', from: 0, to: 0, at: 0.28, seconds: 0.03, gain: 0.22, attack: 0.0005, curve: 5, lowFrom: 11000, highFrom: 3400, pan: -0.4 },
+    ],
+  },
+  danceBounce: {
+    // The ship off a wall: the sparks where it met it — `bounceDance`. Panned to where it hit.
+    twin: 'dance-bounces',
+    air: 0.15,
+    hold: 4,
+    // Over the hum it lands in, and every gun (0145).
+    gain: 0.32,
+    glue: 0.08,
+    figure: [1, 0.82, 0.92, 0.78],
+    layers: [
+      // The knock: a hard rubber ball off a steel wall, a thump falling a fifth, driven.
+      { wave: 'sine', from: inKey(9), to: inKey(2), seconds: 0.11, gain: 0.85, attack: 0.0008, curve: 3.4, drive: 0.45 },
+      // The boing in it, a sixth over and wobbling, gone fast.
+      { wave: 'tri', from: inKey(16), to: inKey(12), at: 0.01, seconds: 0.14, gain: 0.3, attack: 0.002, curve: 2.6, vibrato: 18 },
+      // The crack of it and the sparks off it: bright noise, short.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.55, attack: 0.0005, curve: 4, lowFrom: 12000, lowTo: 5000, highFrom: 1800, q: 0.9 },
+      { wave: 'noise', from: 0, to: 0, at: 0.04, seconds: 0.03, gain: 0.3, attack: 0.0005, curve: 5, lowFrom: 12000, highFrom: 4000, pan: -0.3, panTo: 0.3 },
     ],
   },
   /**

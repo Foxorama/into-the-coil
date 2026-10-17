@@ -105,6 +105,11 @@ const HULLLESS: readonly SpriteKind[] = [
   'ramHeat1',
   'ramHeat2',
   'ramHeat3',
+  // And the War Dance's flare, flame round a dancing ship and no body of its own — 0609.
+  'danceFlare0',
+  'danceFlare1',
+  'danceFlare2',
+  'danceFlare3',
   /*
     A plate of the deflector shell is energy round the ship, not a body — 0430. It was a sealed ring
     and was measured here as one; a honeycomb of light with an outline in the void's ink would be

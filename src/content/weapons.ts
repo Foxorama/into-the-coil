@@ -110,14 +110,15 @@ export interface CatherineWheel {
 /**
  * A ram — `docs/decisions/0593-the-hamster-ball-rolls.md`. The page: *"Hamster ball — flies into things to
  * kill them — how to die? / challenge — "overheat" → need to let shields recharge. Hamster ball break +
- * recharge."* The ship is the shot, and the cost of a landing is heat: a full gauge breaks the ball, and it
- * comes back whole and cool after `recharge`. Every number in steps and world units, and every one a play
+ * recharge."* The ship is the shot, and the cost of a landing is heat. Since 0609 a full gauge burns a
+ * shield off the ball, as a hit does, and the gauge starts again cool — the ball never breaks, and the
+ * shields come back on the ship's own `regen`. Every number in steps and world units, and every one a play
  * number.
  */
 export interface Ram {
   /** How far from the ship's centre a body is rammed, in world units: the drawn ball's edge. */
   readonly reach: number;
-  /** What one landing adds to the gauge, which breaks the ball at 1. */
+  /** What one landing adds to the gauge, which burns a shield off at 1 — 0609. */
   readonly heat: number;
   /** What a step against the stone adds — scraping a wall heats the ball as a landing does, slower. */
   readonly scrape: number;
@@ -125,8 +126,6 @@ export interface Ram {
   readonly cool: number;
   /** What the gauge loses each step while it cools. */
   readonly drain: number;
-  /** Steps the ball is broken for before it comes back whole and cool. */
-  readonly recharge: number;
 }
 
 /**
@@ -626,7 +625,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
   /**
    * Unity's ram — 0593: the Hamster Ball flown into things. Nothing leaves the ship; one body rides the
    * hull at the ball's edge and lands on what it meets as a blade does, once per its own flash and only so
-   * often on each target (`landGap`, 0391's clock). Every landing heats the ball, and a full gauge breaks it.
+   * often on each target (`landGap`, 0391's clock). Every landing heats the ball, and a full gauge burns a
+   * shield off it — 0609, where it broke the ball for three seconds.
    *
    * ⚠️ **EVERY NUMBER HERE IS A PLAY NUMBER**, set where the boss floor and the fight's own ceiling sit
    * (`tests/ball.test.ts`); none of them has been played.
@@ -643,13 +643,14 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: 1,
     weight: 1,
     /*
-      ⚠️ **EIGHT, BECAUSE A HELD RAM SPENDS MOST OF A FIGHT BROKEN.** Pressed against a boss it lands
-      every `landGap`, heats a sixth and more each time and breaks inside a second, then rams nothing
-      for three: at one it took 233 to 390 s to finish what the other guns finish in 35 to 64, from
-      the hull (`scripts/weigh-boss.mjs`, Savior). Under 0260's forty-second floor at nine, so eight;
+      ⚠️ **ONE AND SIX TENTHS SINCE 0609, AND IT WAS EIGHT BECAUSE A HELD RAM SPENT MOST OF A FIGHT BROKEN.**
+      0593 solved eight against a ball that broke inside a second on a hull and rammed nothing for three.
+      0609 took the break out, so a held ram lands every `landGap` for the whole fight: at eight the
+      quickest fights fell to 9 to 12 s, a quarter of 0260's forty. Re-solved from the hull
+      (`heldShorts`, Savior), the floor's own flight: at 1.6 the five unchained bosses are 48 to 62 s;
       the serpent and the jellyfish weigh it on their own rows.
     */
-    bossWeight: 8,
+    bossWeight: 1.6,
     landGap: 6,
     special: 'warDance',
     // Never drawn: no other ship flies it (`lends`). The ball's own front, from either view, so a reader
@@ -667,7 +668,6 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       scrape: 0.01,
       cool: 30,
       drain: 0.01,
-      recharge: 180,
     },
     paint: null,
     lends: false,

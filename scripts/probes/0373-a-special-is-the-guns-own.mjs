@@ -100,8 +100,9 @@ export const PROBES = [
     guard: 'its aura is on the ship for as long as it lasts',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    stepSurge(w);\n',
-      replace: '',
+      // Re-anchored by 0609, which lays the surge's aura and the dance's flare in one pass (`stepAuras`).
+      find: '  wearAura(w, SURGE_AURA, surge === null || blinkOff ? -1 : surge.aura);',
+      replace: '  wearAura(w, SURGE_AURA, -1);',
     },
   },
   {

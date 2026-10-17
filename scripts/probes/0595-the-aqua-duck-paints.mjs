@@ -154,8 +154,9 @@ export const PROBES = [
     guard: 'a real boss lasts forty seconds at max weapons, and every phase gets eight volleys away, so every attack is seen — the paintball',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9, paintball: 1.6 },',
-      replace: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9, paintball: 4 },',
+      // Re-anchored by 0609, which re-weighed the ram on the same row.
+      find: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 2.4, paintball: 1.6 },',
+      replace: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 2.4, paintball: 4 },',
     },
   },
 ];

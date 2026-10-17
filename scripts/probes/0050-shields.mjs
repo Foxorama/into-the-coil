@@ -205,8 +205,9 @@ export const PROBES = [
       // by 0373, which counts the stack and names what it throws next.
       // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
       // ⚠️ And by 0539: the stacks are read off the arsenal given, so the stand can count an opening one.
+      // ⚠️ And by 0609: the pips are the ship's own count where its row says one (`shellCapFor`).
       find:
-        '    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf(state.run.arsenal));',
+        '    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), stacksOf(state.run.arsenal));',
       replace:
         '    chrome.setHud(state.run.lives, world.ship.health, world.shipRow.health, stacksOf(state.run.arsenal));',
     },

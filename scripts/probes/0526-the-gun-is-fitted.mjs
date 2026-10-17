@@ -59,8 +59,9 @@ export const PROBES = [
     guard: 'every won ship that can borrow the ray, against every boss',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    gunWeights: { arc: 1, ray: 0.93, ram: 7 },',
-      replace: '    gunWeights: { arc: 1, ram: 7 },',
+      // Re-anchored by 0609, which re-weighed the ram on the same row; the break still takes only the ray's.
+      find: '    gunWeights: { arc: 1, ray: 0.93, ram: 1.5 },',
+      replace: '    gunWeights: { arc: 1, ram: 1.5 },',
     },
   },
   {

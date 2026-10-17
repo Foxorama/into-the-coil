@@ -94,8 +94,7 @@ export const SPRITE_KINDS = [
   'thunderboltTubesHit',
   /*
     Unity's Hamster Ball — 0593: a clear ball from above with Unity running in it, at no tubes, one and two.
-    And the same at each stage with the ball gone — `bare` on its row — for while it is broken: Unity on
-    their own, the tubes on a harness on their back.
+    0593 drew it broken as well, Unity on their own; 0609 took the break out, and those six with it.
   */
   'ball',
   'ballHit',
@@ -103,12 +102,6 @@ export const SPRITE_KINDS = [
   'ballTubeHit',
   'ballTubes',
   'ballTubesHit',
-  'ballBare',
-  'ballBareHit',
-  'ballBareTube',
-  'ballBareTubeHit',
-  'ballBareTubes',
-  'ballBareTubesHit',
   // MMXXVI's Aqua Duck — 0595: a bath-duck submarine from the side, at no tubes, one and two.
   'duck',
   'duckHit',
@@ -1350,15 +1343,23 @@ export const SPRITE_KINDS = [
   'cinderCool',
   /*
     The ram — 0593. `ram` is the gun's own glyph, which the hangar shows for it: a ball with speed lines. The
-    body the frame pins to the ball wears the heat instead, from cool to the edge of breaking, inside the
-    ball's outline and under its clear shell, so the heat is seen where it is and covers nothing the ball
-    does not.
+    body the frame pins to the ball wears the heat instead, from cool to the edge of burning a shield off
+    (0609), inside the ball's outline and under its clear shell, so the heat is seen where it is and covers
+    nothing the ball does not.
   */
   'ram',
   'ramHeat0',
   'ramHeat1',
   'ramHeat2',
   'ramHeat3',
+  /*
+    The War Dance's flaring aura — 0609: a corona of flame tongues round any dancing ship, four frames of it
+    turning and flaring, laid in the aura's layer under every shot (0373).
+  */
+  'danceFlare0',
+  'danceFlare1',
+  'danceFlare2',
+  'danceFlare3',
   /*
     The paintball marker — 0595. `paintball` is the gun's own glyph, which the hangar shows for it: the
     marker and its hopper with a ball leaving. In flight each ball is one of four colours, and where it lands
@@ -1900,12 +1901,6 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ballTubeHit: SHIP_BOX,
   ballTubes: SHIP_BOX,
   ballTubesHit: SHIP_BOX,
-  ballBare: SHIP_BOX,
-  ballBareHit: SHIP_BOX,
-  ballBareTube: SHIP_BOX,
-  ballBareTubeHit: SHIP_BOX,
-  ballBareTubes: SHIP_BOX,
-  ballBareTubesHit: SHIP_BOX,
   duck: SHIP_BOX,
   duckHit: SHIP_BOX,
   duckTube: SHIP_BOX,
@@ -3000,6 +2995,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ramHeat1: SHIP_BOX,
   ramHeat2: SHIP_BOX,
   ramHeat3: SHIP_BOX,
+  /*
+    0609: the War Dance's flare, its tongues reaching about eight units out — past the shell's plates (5.6
+    and their width), so it reads round a ship wearing three. Its frame's radius is 0.42 of this.
+  */
+  danceFlare0: 20,
+  danceFlare1: 20,
+  danceFlare2: 20,
+  danceFlare3: 20,
   // 0595: the glyph at a pickup's size; a ball a little over its body; a splat at exactly its reach, on the burst's rule.
   paintball: 8,
   paintballPink: 2.6,

@@ -109,7 +109,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shelled, openingHealthFor, ownFit, ownRider, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shelled, openingHealthFor, ownFit, ownRider, sameFit, shellCapFor, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -226,7 +226,8 @@ export const CAPACITY = {
   // 0581: the ship's loaded tubes, drawn over it in their kinds' inks — as many as a ship may carry.
   loaded: MAX_LAUNCHERS,
   // A surge's aura — 0373. One, out of the four pickup slots 0066's deleted scatter was given.
-  aura: 1,
+  // And a dance's flare beside it — 0609: a surge and a dance are on two triggers and may be worn at once.
+  aura: 2,
   enemies: 40,
   /*
     ⚠️ **EIGHTY-EIGHT, AND IT WAS A HUNDRED — the bolts came out of it, 0233.** A ship carries ONE
@@ -288,8 +289,11 @@ export const CAPACITY = {
 
     ⚠️ **A HUNDRED AND NINETY-SIX SINCE 0537**, which gave four to the blasts. The gyre's 174 at Legend,
     flown by `scripts/weigh-stuck.mjs`, is still twenty-two under it.
+
+    ⚠️ **A HUNDRED AND NINETY-FIVE SINCE 0609**, which gave one to the aura for the War Dance's flare. The
+    gyre's 174 is twenty-one under it.
   */
-  enemyShots: 196,
+  enemyShots: 195,
   /*
     ⚠️ **ELEVEN COME OUT OF THE PARTICLE SHARE — 0283, AND 0022 NAMES IT AS THE SHEDDABLE ONE.** The
     pools total EXACTLY 500 and `tests/budget.test.ts` holds that ceiling, so a serpent with a body
@@ -1157,12 +1161,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     aura,
     surgeFor: 0,
     surgeKind: null,
-    // 0593: a ram cool and whole, and no dance.
+    // 0593: a ram cool, and no dance.
     ramHeat: 0,
     ramCoolIn: 0,
-    ramBrokenFor: 0,
+    // 0609: a shell resting, its regen not yet counting.
+    regenIn: 0,
+    regenSeen: 0,
     danceFor: 0,
     danceKind: null,
+    danceBounces: 0,
     danceAlong: 0,
     danceAcross: 0,
     // 0595: and no jet.
@@ -1752,10 +1759,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const tier = DIFFICULTIES[state.settings.difficulty];
       // 0561: with the special tried on, so the dash counts what the run would open with if it were fitted.
       const arsenal = startingArsenal(ship, state.settings.difficulty, ownSpecial(seen().special[ship]));
-      chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], openingHealthFor(SHIPS[ship], tier)), tier.shellCap, stacksOf(arsenal));
+      // 0609: the pips the ship may carry, which is its own count where its row says one.
+      chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], openingHealthFor(SHIPS[ship], tier)), shellCapFor(SHIPS[ship], tier), stacksOf(arsenal));
       return;
     }
-    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf(state.run.arsenal));
+    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), stacksOf(state.run.arsenal));
     chrome.setTriggers(triggers());
   };
 
@@ -4765,7 +4773,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       a second answer that only the pickup ever updated.
 
       ⚠️ **Capped by the TIER, in `takeShield`, since 0355.** `MAX_SHIELDS` is the most the readout
-      can draw and the tier's `shellCap` is what the pilot may wear under it — none on Burn.
+      can draw and the tier's `shellCap` is what the pilot may wear under it — none on Burn — unless the
+      ship's row says its own (`shellCapFor`, 0609).
 
       ⚠️ **AND A SHIELD TAKEN AT A FULL SHELL SPILLS INTO A CHARGE — 0377**, which `takeShield` decides
       and this only routes, as it routes a capped ladder's `overflowOf`.

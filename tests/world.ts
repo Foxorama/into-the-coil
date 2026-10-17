@@ -182,7 +182,9 @@ export function inertLevel(): {
   killedBy: DeathCause;
   ramHeat: number;
   ramCoolIn: number;
-  ramBrokenFor: number;
+  regenIn: number;
+  regenSeen: number;
+  danceBounces: number;
   danceFor: number;
   danceKind: SpecialKind | null;
   danceAlong: number;
@@ -325,7 +327,9 @@ export function inertLevel(): {
     killedBy: 'fire',
     ramHeat: 0,
     ramCoolIn: 0,
-    ramBrokenFor: 0,
+    regenIn: 0,
+    regenSeen: 0,
+    danceBounces: 0,
     danceFor: 0,
     danceKind: null,
     danceAlong: 0,
@@ -511,10 +515,12 @@ export function playableWorld(
     aura,
     surgeFor: 0,
     surgeKind: null,
-    // 0593: a ram cool and whole, and no dance.
+    // 0593: a ram cool, and no dance; 0609: a shell resting.
     ramHeat: 0,
     ramCoolIn: 0,
-    ramBrokenFor: 0,
+    regenIn: 0,
+    regenSeen: 0,
+    danceBounces: 0,
     danceFor: 0,
     danceKind: null,
     danceAlong: 0,

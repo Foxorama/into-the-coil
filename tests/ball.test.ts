@@ -1,29 +1,38 @@
 /**
  * The Hamster Ball rolls — `docs/decisions/0593-the-hamster-ball-rolls.md`, item 2 of
- * [`the-secret-pilots-planned`](../reports/the-secret-pilots-planned-2026-10-11.md).
+ * [`the-secret-pilots-planned`](../reports/the-secret-pilots-planned-2026-10-11.md) — and takes its knocks,
+ * `docs/decisions/0609-the-ball-takes-its-knocks.md`.
  *
  * The page: *"Least Weasel Pilot — Hamster ball — flies into things to kill them — how to die? / challenge —
  * Unlock – 10 non-bullet deaths — "overheat" → need to let shields recharge. Hamster ball break + recharge."*
  * Answered while it was planned: *"No weapon change for hamster ball"*, and *"hints for unlocks is good"*.
+ * And after it was played: *"let's change it so it gets 3 shields on every difficulty and instead of the ball
+ * disappearing on ram, it has a shield regen rate - currently it's way too punishing with the bullets."*
  *
  * ⚠️ **THROUGH THE REAL STEP, NEVER BY WRITING INTO THE GAUGE.** What is under test is the ram landing
- * through the pairings that exist, the heat its landings raise, and what the ship is hurt by while the ball
- * is whole and while it is broken — a fixture that set `ramHeat` by hand could see none of it.
+ * through the pairings that exist, the heat its landings raise, what that heat costs, and the shell coming
+ * back — a fixture that set `ramHeat` or `health` by hand mid-flight could see none of it. The one place the
+ * gauge is held cool is said where it is, and it is there to take the heat OUT of a claim about bodies.
  *
- * ⚠️ **IN THE PLAYER'S UNITS WHERE THERE ARE ANY** — 0027: seconds broken, and which picture the ship and its
- * heat are drawn as on a given step.
+ * ⚠️ **IN THE PLAYER'S UNITS WHERE THERE ARE ANY** — 0027: seconds to a shield back, and which picture the
+ * ship and its heat are drawn as on a given step.
+ *
+ * 0593's claims about a broken ball — drawn bare, ramming nothing, hurt by bodies, mending after its
+ * `recharge` — went with the break, which 0609 took out. The decision says so.
  */
 
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, RAM_KIND, canThrow, launchSpecial, wearHull, type World } from '../src/app/frame.ts';
+import { GameFrame, RAM_KIND, canThrow, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { GOLFERS } from '../src/content/golfers.ts';
 import type { LevelRow } from '../src/content/levels.ts';
-import { BALL_RADIUS, SHIPS, SHIP_KINDS, fitted } from '../src/content/ships.ts';
+import { BALL_RADIUS, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, fullHealthFor, openingHealthFor, shieldsOf } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPECIALS } from '../src/content/specials.ts';
 import { SPRITE } from '../src/content/sprites.ts';
+import type { CueKind } from '../src/content/cues.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { reset } from '../src/sim/entity.ts';
@@ -35,15 +44,24 @@ import { NO_LEVEL, playableWorld } from './world.ts';
 
 const RAM = WEAPONS.ram.ram!;
 const DANCE = SPECIALS.warDance.dance!;
+const REGEN = SHIPS.ball.regen!;
+/** The ball's health with its whole shell on. */
+const FULL = SHIPS.ball.health + SHIPS.ball.shields!;
 
 /** A world flying the Hamster Ball, its gun held off nothing — there is nothing to hold off. */
-function inTheBall(level: LevelRow = NO_LEVEL): { world: World; frame: GameFrame; stick: { along: number; across: number } } {
+function inTheBall(level: LevelRow = NO_LEVEL): { world: World; frame: GameFrame; cues: CueKind[] } {
   const built = playableWorld(level);
   built.world.shipRow = fitted(SHIPS.ball, 'ram');
   built.world.weapon = weaponFor(built.world.shipRow, []);
   built.world.missileIn = Number.MAX_SAFE_INTEGER;
+  // A life in the ball, as the run would open it: its own shell, whatever the tier.
+  respawn(built.world);
   wearHull(built.world);
-  return { world: built.world, frame: new GameFrame(built.world), stick: built.stick };
+  const cues: CueKind[] = [];
+  built.world.onCue = (kind) => {
+    cues.push(kind);
+  };
+  return { world: built.world, frame: new GameFrame(built.world), cues };
 }
 
 /** A body planted on the ship, riding the camera and holding its fire — `health` of it. */
@@ -53,6 +71,13 @@ function bodyOn(world: World, health: number): void {
   enemy.health = health;
   enemy.fireIn = Number.MAX_SAFE_INTEGER;
   enemy.velAlong = world.scrollPerStep;
+}
+
+/** An enemy shot laid on the ship, so it lands on the next step. */
+function shotOn(world: World): void {
+  const shot = world.enemyShots.spawn()!;
+  reset(shot, world.ship.along, world.ship.across, SHOTS.spit);
+  shot.velAlong = world.scrollPerStep;
 }
 
 /** The ram's body, if the ship is ramming. */
@@ -97,63 +122,15 @@ describe('0593 — the ram lands on what the ball flies into', () => {
     }
     expect(killed, 'the ball sat on a body for half a second and it did not die').toBe(true);
     expect(world.ship.health, 'the body the ball rammed hurt the ship').toBe(health);
-    // And one that will not die, pressed on it with no window a hit gives, for as long as the ball is whole:
-    // the one above dies on its first landing, before it could have landed on the ship at all.
+    // And one that will not die, pressed on it with no window a hit gives. The gauge is held cool here and
+    // only here: what this asks is whether a BODY hurts the ball, and a burn is the heat's (below).
     bodyOn(world, 100000);
-    for (let i = 0; i < 30 && world.ramBrokenFor === 0; i++) {
+    for (let i = 0; i < 2 * STEPS_PER_SECOND; i++) {
       world.ship.invulnFor = 0;
+      world.ramHeat = 0;
       frame.step();
-      expect(world.ship.health, `a body hurt the whole ball ${i + 1} steps in`).toBe(health);
+      expect(world.ship.health, `a body hurt the ball ${i + 1} steps in`).toBe(health);
     }
-  });
-
-  it('every landing heats the ball, and a full gauge breaks it', () => {
-    const { world, frame } = inTheBall();
-    bodyOn(world, 100000);
-    let broken = -1;
-    for (let i = 0; i < 20 * STEPS_PER_SECOND && broken < 0; i++) {
-      frame.step();
-      if (world.ramBrokenFor > 0) broken = i;
-    }
-    expect(broken, 'pressed into a body that would not die, the ball never broke').toBeGreaterThan(0);
-    // At the ram's own clock: one landing every `landGap` steps (four owed at once), each `heat` of the gauge.
-    expect(broken / STEPS_PER_SECOND, 'broke sooner than its landings could have heated it').toBeGreaterThan(((1 / RAM.heat - 4) * (WEAPONS.ram.landGap ?? 0)) / STEPS_PER_SECOND);
-  });
-
-  it('broken, the ball is drawn without the ball, rams nothing, and a body hurts it', () => {
-    const { world, frame } = inTheBall();
-    bodyOn(world, 100000);
-    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ramBrokenFor === 0; i++) frame.step();
-    expect(world.ramBrokenFor).toBeGreaterThan(0);
-    // The picture says so (0036): the bare hull, and no heat under it.
-    expect(world.ship.spriteBase).toBe(SPRITE.ballBare);
-    frame.step();
-    expect(ramBody(world), 'a broken ball still rams').toBe(null);
-    // It blinks through the window a hit gives, so the body it broke inside does not land at once.
-    expect(world.ship.invulnFor, 'the ball broke inside a body with no window to get out').toBeGreaterThan(0);
-    expect(world.ship.health, 'the body the ball broke in landed on the step it broke').toBeGreaterThan(0);
-    // And then what it flies into lands on it: the body it was pressed into is still there.
-    world.ship.invulnFor = 0;
-    world.ship.health = 3;
-    frame.step();
-    expect(world.ship.health, 'a broken ball was not hurt by the body it sat in').toBeLessThan(3);
-  });
-
-  it('comes back whole and cool after its recharge — seconds broken, as the row says', () => {
-    const { world, frame } = inTheBall();
-    bodyOn(world, 100000);
-    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ramBrokenFor === 0; i++) frame.step();
-    world.enemies.clear();
-    let broken = 0;
-    while (world.ramBrokenFor > 0 && broken < 60 * STEPS_PER_SECOND) {
-      // Kept alive through it, so the clock is the ball's and not a death's.
-      world.ship.health = 3;
-      frame.step();
-      broken++;
-    }
-    expect(broken / STEPS_PER_SECOND).toBeCloseTo(RAM.recharge / STEPS_PER_SECOND, 1);
-    expect(world.ramHeat).toBe(0);
-    expect(world.ship.spriteBase).toBe(SPRITE.ball);
   });
 
   it('the heat cools once the ball has touched nothing for a while', () => {
@@ -179,7 +156,7 @@ describe('0593 — the ram lands on what the ball flies into', () => {
     expect(ramBody(world)?.sprite, `at ${world.ramHeat.toFixed(2)} of the gauge the heat under the ball is not drawn`).toBe(SPRITE.ramHeat3);
   });
 
-  it('fire still lands on a whole ball: it is only bodies the ball shrugs off', () => {
+  it('fire still lands on the ball: it is only bodies the ball shrugs off', () => {
     const { world, frame } = inTheBall();
     world.ship.invulnFor = 0;
     const health = world.ship.health;
@@ -187,7 +164,150 @@ describe('0593 — the ram lands on what the ball flies into', () => {
     reset(shot, world.ship.along + 6, world.ship.across, SHOTS.spit);
     shot.velAlong = -SHOTS.spit.speed + world.scrollPerStep;
     for (let i = 0; i < 12; i++) frame.step();
-    expect(world.ship.health, 'an enemy shot passed through a whole ball').toBeLessThan(health);
+    expect(world.ship.health, 'an enemy shot passed through the ball').toBeLessThan(health);
+  });
+});
+
+describe('0609 — a full gauge burns a shield off, and the ball rolls on', () => {
+  it('every landing heats the ball, and a full gauge costs one shield — the ball whole, cool and ramming after', () => {
+    const { world, frame, cues } = inTheBall();
+    world.ship.invulnFor = 0;
+    expect(world.ship.health, 'the ball did not open on its own shell').toBe(FULL);
+    bodyOn(world, 100000);
+    let burnt = -1;
+    for (let i = 0; i < 20 * STEPS_PER_SECOND && burnt < 0; i++) {
+      frame.step();
+      if (world.ship.health < FULL) burnt = i;
+    }
+    expect(burnt, 'pressed into a body that would not die, the heat never cost the ball anything').toBeGreaterThan(0);
+    // At the ram's own clock: one landing every `landGap` steps (four owed at once), each `heat` of the gauge.
+    expect(burnt / STEPS_PER_SECOND, 'burnt sooner than its landings could have heated it').toBeGreaterThan(((1 / RAM.heat - 4) * (WEAPONS.ram.landGap ?? 0)) / STEPS_PER_SECOND);
+    expect(world.ship.health, 'a burn took more than one shield').toBe(FULL - 1);
+    expect(world.ramHeat, 'the gauge did not go cool when it burnt').toBeLessThan(0.25);
+    expect(cues, 'a burn was not heard as itself').toContain('ballBurns');
+    // And the ball is still the ball, ramming, never the bare hull 0593 broke it to.
+    frame.step();
+    expect(world.ship.spriteBase).toBe(SPRITE.ball);
+    expect(ramBody(world), 'the ball stopped ramming when it burnt').not.toBe(null);
+  });
+
+  it('a burn waits out the window a hit gives, and then lands — one hit a step, as every hit is', () => {
+    const { world, frame } = inTheBall();
+    // As if a shot had just landed: the ship blinking for longer than the gauge takes to fill.
+    world.ship.invulnFor = 4 * STEPS_PER_SECOND;
+    bodyOn(world, 100000);
+    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ramHeat < 1; i++) frame.step();
+    expect(world.ramHeat, 'the gauge never filled').toBe(1);
+    while (world.ship.invulnFor > 1) {
+      frame.step();
+      expect(world.ship.health, 'a burn landed inside the window a hit gives').toBe(FULL);
+      expect(world.ramHeat, 'the gauge was not held full while it waited').toBe(1);
+    }
+    for (let i = 0; i < 3; i++) frame.step();
+    expect(world.ship.health, 'the window ran out and the full gauge never burnt').toBe(FULL - 1);
+  });
+
+  it('with no shield left, a burn is a death — and a crash, since it was the ball’s own', () => {
+    const { world, frame } = inTheBall();
+    world.ship.invulnFor = 0;
+    // Spend the shell the way the game spends it: three shots, each after the window the last one gave.
+    for (let k = 0; k < SHIPS.ball.shields!; k++) {
+      while (world.ship.invulnFor > 0) frame.step();
+      shotOn(world);
+      frame.step();
+    }
+    expect(shieldsOf(world.shipRow, world.ship.health), 'three shots did not spend three shields').toBe(0);
+    while (world.ship.invulnFor > 0) frame.step();
+    bodyOn(world, 100000);
+    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ship.health > 0; i++) frame.step();
+    expect(world.ship.health, 'a full gauge with no shield left did not kill the ball').toBeLessThanOrEqual(0);
+    expect(world.killedBy, 'a burn was counted as fire').toBe('body');
+  });
+});
+
+describe('0609 — three shields on every tier, and they come back', () => {
+  it('the ball opens every life on three and carries no more, on every tier — and every other ship on its tier’s', () => {
+    expect(SHIPS.ball.shields).toBe(3);
+    expect(SHIPS.ball.shields!).toBeLessThanOrEqual(MAX_SHIELDS);
+    for (const kind of DIFFICULTY_KINDS) {
+      const tier = DIFFICULTIES[kind];
+      expect(openingHealthFor(SHIPS.ball, tier), `the ball opens a life on ${kind} short of three`).toBe(FULL);
+      expect(fullHealthFor(SHIPS.ball, tier), `the ball may carry other than three on ${kind}`).toBe(FULL);
+      for (const ship of SHIP_KINDS) {
+        if (ship === 'ball') continue;
+        expect(openingHealthFor(SHIPS[ship], tier), `the ${ship} opens on ${kind} other than its tier says`).toBe(SHIPS[ship].health + tier.shellOpen);
+        expect(fullHealthFor(SHIPS[ship], tier), `the ${ship} may carry on ${kind} other than its tier says`).toBe(SHIPS[ship].health + tier.shellCap);
+      }
+    }
+    // Through the real life: Burn, which opens every other ship on its hull alone.
+    const { world } = playableWorld(NO_LEVEL, 'burn');
+    world.shipRow = fitted(SHIPS.ball, 'ram');
+    respawn(world);
+    expect(shieldsOf(world.shipRow, world.ship.health), 'a life in the ball on Burn opened short of three').toBe(3);
+  });
+
+  it('a spent shield comes back after its rest, and then one every `every`, until the shell is full — in seconds', () => {
+    const { world, frame, cues } = inTheBall();
+    world.ship.invulnFor = 0;
+    shotOn(world);
+    frame.step();
+    while (world.ship.invulnFor > 0) frame.step();
+    shotOn(world);
+    frame.step();
+    const low = world.ship.health;
+    expect(low, 'two shots did not spend two shields').toBe(FULL - 2);
+    const back: number[] = [];
+    for (let i = 1; i <= 20 * STEPS_PER_SECOND && world.ship.health < FULL; i++) {
+      const was = world.ship.health;
+      frame.step();
+      if (world.ship.health > was) back.push(i);
+    }
+    expect(back.length, 'the shell never came back').toBe(FULL - low);
+    expect(back[0]! / STEPS_PER_SECOND, 'the first shield came back at the wrong time').toBeCloseTo(REGEN.rest / STEPS_PER_SECOND, 1);
+    expect((back[1]! - back[0]!) / STEPS_PER_SECOND, 'the next came back at the wrong time').toBeCloseTo(REGEN.every / STEPS_PER_SECOND, 1);
+    expect(cues.filter((cue) => cue === 'shieldBack').length, 'a shield came back unheard').toBe(back.length);
+    // And never past the shell the ball may carry.
+    for (let i = 0; i < 2 * REGEN.every; i++) frame.step();
+    expect(world.ship.health, 'the shell grew past three').toBe(FULL);
+  });
+
+  it('a mark comes back on the shell on the step the shield does', () => {
+    const { world, frame } = inTheBall();
+    world.ship.invulnFor = 0;
+    shotOn(world);
+    frame.step();
+    expect(world.shieldOrbs.size).toBe(SHIPS.ball.shields! - 1);
+    let grew = false;
+    for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ship.health < FULL; i++) {
+      frame.step();
+      grew = world.ship.health === FULL;
+    }
+    expect(grew, 'the shield never came back').toBe(true);
+    expect(world.shieldOrbs.size, 'a shield came back and the shell did not show it').toBe(SHIPS.ball.shields!);
+  });
+
+  it('any hit puts the rest back, so a shield never comes back under fire', () => {
+    const { world, frame } = inTheBall();
+    world.ship.invulnFor = 0;
+    shotOn(world);
+    frame.step();
+    // Hit again just before the rest runs out: nothing may come back until a whole rest after it.
+    for (let i = 0; i < REGEN.rest - 10; i++) frame.step();
+    expect(world.ship.health, 'a shield came back before its rest').toBe(FULL - 1);
+    world.ship.invulnFor = 0;
+    shotOn(world);
+    frame.step();
+    expect(world.ship.health).toBe(FULL - 2);
+    let back = 0;
+    for (let i = 1; i <= 20 * STEPS_PER_SECOND && back === 0; i++) {
+      frame.step();
+      if (world.ship.health > FULL - 2) back = i;
+    }
+    expect(back / STEPS_PER_SECOND, 'the second hit did not put the rest back').toBeCloseTo(REGEN.rest / STEPS_PER_SECOND, 1);
+  });
+
+  it('no other ship regenerates', () => {
+    for (const ship of SHIP_KINDS) if (ship !== 'ball') expect(SHIPS[ship].regen, ship).toBe(null);
   });
 });
 
@@ -203,7 +323,6 @@ describe('0593 — the ram is the ball, and goes on no other ship', () => {
     expect(gunOpen(everyWin, 'ball', 'ball')).toBe(true);
     expect(gunWhy('ball', true, false)).toBe('The Hamster Ball flies nothing but its ram');
   });
-
 });
 
 describe('0593 — the War Dance', () => {
