@@ -26,8 +26,12 @@ import { PALETTES, DEFAULT_PALETTE } from '../src/content/palette.ts';
 import { drawKind } from '../src/render/bake.ts';
 import { paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
-import { viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_MARGIN, leadFor } from '../src/sim/flight.ts';
 import { makeRng } from '../src/sim/rng.ts';
+import { CUES, type CueKind } from '../src/content/cues.ts';
+import { cueSeconds } from '../src/app/sound.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { initialHangar, pilotRecord, specialOpen } from '../src/state/slices/hangar.ts';
 import { NO_LEVEL, NO_SECTIONS, playableWorld } from './world.ts';
 import { tracingPen } from './paths.ts';
@@ -40,6 +44,7 @@ import { tracingPen } from './paths.ts';
 const LOCKED = { ...pilotRecord(initialHangar), bought: GOLFERS.mmxxvi.opens.bought };
 const OPENED = { ...pilotRecord({ ...initialHangar, crashes: GOLFERS.unity.opens.crashes }), bought: GOLFERS.mmxxvi.opens.bought };
 const DANCE_FACE = BOMB_KINDS.indexOf('warDance');
+const DANCE = SPECIALS.warDance.dance!;
 
 /** A world flying `ship`, its own gun fitted. */
 function flying(ship: ShipKind, level: LevelRow = NO_LEVEL): { world: World; frame: GameFrame } {
@@ -201,6 +206,97 @@ describe('0594 — every ship dances in poses of its own', () => {
     paintScene(surface, viewOf(1280, 720), [world.playerShots, world.shipPool], world.cameraAlong, 0.5);
     expect(blitted.length, 'nothing was painted, so this measured nothing').toBeGreaterThan(0);
     expect(blitted, 'the unseen ram was blitted').not.toContain(UNSEEN);
+  });
+});
+
+/*
+  ── THE DANCE LOOKS AND SOUNDS LIKE ONE — `docs/decisions/0609-the-ball-takes-its-knocks.md` ─────────────────
+
+  *"The special also needs to look way cooler and bounce around the screen more, needs a flaring aura, noise and
+  impact sounds when it hits the walls."* Asked of every ship, since the special is every ship's (0594).
+*/
+describe('0609 — the War Dance bounces round the whole box, flares, hums, and is heard at every wall', () => {
+  /** A ship's whole dance, stepped, with every cue it struck and on which step. */
+  function danced(ship: ShipKind) {
+    const { world, frame } = flying(ship);
+    const cues: { kind: CueKind; across: number; step: number }[] = [];
+    let step = 0;
+    world.onCue = (kind, across) => {
+      cues.push({ kind, across: across ?? Number.NaN, step });
+    };
+    launchSpecial(world, 'warDance');
+    const across: number[] = [];
+    const along: number[] = [];
+    const headings = new Set<string>();
+    const flares: number[] = [];
+    const sparked: boolean[] = [];
+    for (step = 1; step < DANCE.steps; step++) {
+      const bounces = world.danceBounces;
+      const debris = world.debris.size;
+      frame.step();
+      if (world.danceBounces > bounces) sparked.push(world.debris.size > debris);
+      across.push(world.ship.across);
+      along.push(world.ship.along - world.cameraAlong);
+      headings.add(Math.atan2(Math.abs(world.danceAlong), Math.abs(world.danceAcross)).toFixed(3));
+      let flare = -1;
+      for (let i = 0; i < world.aura.size; i++) if (DANCE.flare.includes(world.aura.at(i).sprite)) flare = world.aura.at(i).sprite;
+      flares.push(flare);
+    }
+    for (let i = 0; i < 4; i++) frame.step();
+    let after = 0;
+    for (let i = 0; i < world.aura.size; i++) if (DANCE.flare.includes(world.aura.at(i).sprite)) after++;
+    return { world, cues, across, along, headings, flares, sparked, after };
+  }
+
+  it('meets a wall about every half second, off on a new heading each time, and crosses the whole box', () => {
+    const { world, across, along, headings } = danced('fighter');
+    const seconds = DANCE.steps / STEPS_PER_SECOND;
+    expect(world.danceBounces / seconds, `${world.danceBounces} walls in ${seconds} s`).toBeGreaterThanOrEqual(1.5);
+    expect(headings.size, 'every wall sent it off on the same heading').toBeGreaterThanOrEqual(3);
+    // As shares of the box the player flies in — the player's units (0027).
+    const lane = ACROSS_SPAN - 2 * PLAYER_MARGIN;
+    const box = leadFor(world.view.alongSpan) - PLAYER_ALONG_MARGIN;
+    expect((Math.max(...across) - Math.min(...across)) / lane, 'it danced across less than four fifths of the lane').toBeGreaterThan(0.8);
+    expect((Math.max(...along) - Math.min(...along)) / box, 'it danced along less than two thirds of its box').toBeGreaterThan(0.66);
+  });
+
+  it('every wall it meets is heard where it met it, and throws sparks there — on every ship', () => {
+    for (const ship of SHIP_KINDS) {
+      const { world, cues, sparked } = danced(ship);
+      const bounces = cues.filter((cue) => cue.kind === 'danceBounce');
+      expect(world.danceBounces, `the ${ship} met no wall`).toBeGreaterThan(0);
+      expect(bounces.length, `the ${ship} met ${world.danceBounces} walls and was heard at ${bounces.length}`).toBe(world.danceBounces);
+      expect(sparked.every((s) => s), `the ${ship} met a wall that threw no sparks`).toBe(true);
+      for (const cue of bounces) expect(Number.isFinite(cue.across), `the ${ship}'s bounce was heard nowhere`).toBe(true);
+    }
+  });
+
+  it('every dancing ship wears the flare for the whole dance, turning through its frames, and none after', () => {
+    for (const ship of SHIP_KINDS) {
+      const { flares, after } = danced(ship);
+      expect(flares.every((f) => f >= 0), `the ${ship} danced a step without its flare`).toBe(true);
+      expect(new Set(flares).size, `the ${ship}'s flare never turned`).toBe(DANCE.flare.length);
+      expect(after, `the ${ship}'s flare outlived its dance`).toBe(0);
+    }
+  });
+
+  it('the flare turns no faster than three times a second — 0024’s cap', () => {
+    expect((DANCE.flare.length * DANCE.flareHold) / STEPS_PER_SECOND, 'a whole turn of the flare is quicker than a third of a second').toBeGreaterThanOrEqual(1 / 3);
+  });
+
+  it('it hums from the throw to the end of the dance, each strike running into the next, and not after', () => {
+    const { cues } = danced('ball');
+    const hums = cues.filter((cue) => cue.kind === 'danceHum').map((cue) => cue.step);
+    expect(hums[0], 'the dance did not hum from its first step').toBe(1);
+    // Every hundredth of a second of the dance inside a hum it struck.
+    const length = cueSeconds(CUES.danceHum);
+    for (let t = hums[0]! / STEPS_PER_SECOND; t < DANCE.steps / STEPS_PER_SECOND; t += 0.01) {
+      expect(
+        hums.some((at) => t >= at / STEPS_PER_SECOND && t <= at / STEPS_PER_SECOND + length),
+        `the dance was silent ${t.toFixed(2)} s in`,
+      ).toBe(true);
+    }
+    expect(Math.max(...hums), 'it hummed after the dance had ended').toBeLessThan(DANCE.steps);
   });
 });
 

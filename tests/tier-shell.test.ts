@@ -4,7 +4,7 @@ import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { AUTHORED, BOSS_FIGHTS, DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind, type DifficultyRow } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
-import { MAX_SHIELDS, SHIPS, SHIP_KINDS, shieldsOf } from '../src/content/ships.ts';
+import { MAX_SHIELDS, SHIPS, SHIP_KINDS, shellOpenFor, shieldsOf } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { reset } from '../src/sim/entity.ts';
 import { initialState, reduce, type Action, type State } from '../src/state/root.ts';
@@ -70,6 +70,13 @@ describe('0355 — the rows', () => {
         `${name} may carry ${row.shellCap} shields and the shell pool in src/app/mount.ts holds ${MAX_SHIELDS} — the pool owns that number`,
       ).toBeLessThanOrEqual(MAX_SHIELDS);
     }
+    // And a ship's own count, where its row says one — 0609, on the same budget and the same owner.
+    for (const ship of SHIP_KINDS) {
+      const own = SHIPS[ship].shields;
+      if (own === null) continue;
+      expect(own, `the ${ship} opens a life on a negative shell`).toBeGreaterThanOrEqual(0);
+      expect(own, `the ${ship} may carry ${own} shields and the shell pool in src/app/mount.ts holds ${MAX_SHIELDS} — the pool owns that number`).toBeLessThanOrEqual(MAX_SHIELDS);
+    }
   });
 
   it('THE BASELINE: the fixtures stand on the content, which multiplies nothing and opens on the hull', () => {
@@ -104,9 +111,10 @@ describe('0355 — a life opens on its tier’s shell', () => {
 
   it('at the run’s start, after a death and after a continue — the number and the marks', () => {
     // In every ship — 0441: the shell is the tier's, and a ship whose row opened on its own would be
-    // a different answer here.
+    // a different answer here. 0609 is that row: the Hamster Ball opens on its own three on every tier,
+    // so what each ship opens on is `shellOpenFor`, which is the tier's wherever the row says nothing.
     for (const tier of DIFFICULTY_KINDS) for (const ship of SHIP_KINDS) {
-      const row = DIFFICULTIES[tier];
+      const row = { shellOpen: shellOpenFor(SHIPS[ship], DIFFICULTIES[tier]) };
       const run = shell(tier);
       const { world, frame } = run;
 

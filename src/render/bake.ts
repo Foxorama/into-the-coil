@@ -1000,19 +1000,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   thunderboltTubeHit: 'hazard',
   thunderboltTubes: 'player',
   thunderboltTubesHit: 'hazard',
-  // 0593: the Hamster Ball, whole and broken, the player's as every ship is, and flashing as every ship does.
+  // 0593: the Hamster Ball, the player's as every ship is, and flashing as every ship does.
   ball: 'player',
   ballHit: 'hazard',
   ballTube: 'player',
   ballTubeHit: 'hazard',
   ballTubes: 'player',
   ballTubesHit: 'hazard',
-  ballBare: 'player',
-  ballBareHit: 'hazard',
-  ballBareTube: 'player',
-  ballBareTubeHit: 'hazard',
-  ballBareTubes: 'player',
-  ballBareTubesHit: 'hazard',
   // 0595: the Aqua Duck, the player's as every ship is, and flashing as every ship does.
   duck: 'player',
   duckHit: 'hazard',
@@ -1063,6 +1057,11 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   duckTubeDance2: 'player',
   duckTubesDance1: 'player',
   duckTubesDance2: 'player',
+  // 0609: the War Dance's flare — the player's own light, as everything the ship wears is.
+  danceFlare0: 'player',
+  danceFlare1: 'player',
+  danceFlare2: 'player',
+  danceFlare3: 'player',
   // The ram's glyph and its heat — the player's, as everything the ship is.
   ram: 'player',
   ramHeat0: 'player',
@@ -3960,7 +3959,7 @@ export function drawPlayerShip(
       break;
     // Unity in their ball, which flies nothing but itself — 0593.
     case 'ball':
-      drawBall(ctx, f, palette, stage, false, art, livery, pose);
+      drawBall(ctx, f, palette, stage, art, livery, pose);
       break;
     // MMXXVI's bath-duck submarine, its marker under its chin — 0595.
     case 'duck':
@@ -4131,8 +4130,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   ── THE HAMSTER BALL — `docs/decisions/0593-the-hamster-ball-rolls.md` ──────────────────────────────
 
   Unity in a clear plastic ball, from above, running nose-first up the lane, with a thruster pack strapped
-  behind and, for each tube it carries, a cradle on a stub of axle out of the ball's side. Broken, the ball
-  is gone and the axle, the cradles and the pack are left on Unity's harness (`bare` on its row).
+  behind and, for each tube it carries, a cradle on a stub of axle out of the ball's side. It never breaks
+  since 0609, so it is never drawn without the ball.
 
   ⚠️ **THE PLASTIC IS TRANSLUCENT AND ITS RIM IS NOT.** The ball is filled at a low alpha so Unity and the
   heat under it (`ramHeat0`–`3`, laid by the frame under the ship) show through; what makes it read as a
@@ -4143,9 +4142,6 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
 const BALL_R = BALL_RADIUS / (SHIP_BOX * 0.42);
 /** Its cradles', out on the axle — `BALL_CRADLE` over the same. */
 const BALL_CRADLE_R = BALL_CRADLE / (SHIP_BOX * 0.42);
-/** Unity's harness, broken out of the ball: round a weasel's length and breadth, with the axle and the pack still on it. */
-const BALL_HARNESS_R = 0.74;
-const BALL_HARNESS_ACROSS = 0.4;
 /** How far behind the centre the thruster pack ends, in the box's frame — where the row's nozzle is. */
 const BALL_PACK_R = (BALL_RADIUS + 0.55) / (SHIP_BOX * 0.42);
 
@@ -4246,32 +4242,22 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, po
 }
 
 /**
- * The Hamster Ball at a stage — 0593. `bare` is it broken: Unity alone on their harness, the axle, the
- * cradles and the pack, and no ball. `art` is the plastic's look and `livery` its tint.
+ * The Hamster Ball at a stage — 0593. `art` is the plastic's look and `livery` its tint. 0593 drew it broken
+ * here too, Unity alone on their harness; 0609 took the break out.
  */
-function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boolean, art: ArtKind = 'clearBall', livery: string | null = null, pose: DancePose = 0): void {
+function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtKind = 'clearBall', livery: string | null = null, pose: DancePose = 0): void {
   const amber = art === 'amberTint';
   const plastic = livery ?? (amber ? palette.hazard : palette.player);
   const slate = palette.trim;
-  if (bare) {
-    // Unity on their own: the outline is the harness, the pack and the cradles, round a weasel's length.
-    // A shadow on the field rather than a body: Unity is what is there.
-    ctx.fillStyle = rgba(shade(slate, -0.5), 0.3);
-    trace(ctx, f, ballHull(stage, BALL_HARNESS_R, BALL_HARNESS_ACROSS));
-    seal(ctx);
-    if (stage >= 1) seam(ctx, f, shade(slate, 0.2), 0.12, [[0, -BALL_HARNESS_ACROSS], [0, -BALL_CRADLE_R]], 1);
-    if (stage >= 2) seam(ctx, f, shade(slate, 0.2), 0.12, [[0, BALL_HARNESS_ACROSS], [0, BALL_CRADLE_R]], 1);
-  } else {
-    ctx.fillStyle = rgba(plastic, 0.32);
-    trace(ctx, f, ballHull(stage, BALL_R, BALL_R));
-    seal(ctx);
-  }
+  ctx.fillStyle = rgba(plastic, 0.32);
+  trace(ctx, f, ballHull(stage, BALL_R, BALL_R));
+  seal(ctx);
   // The thruster pack behind, slate with its nozzle's dark mouth.
   shaded(ctx, f, [-0.95, -0.25], [-0.95, 0.25], shade(slate, 0.25), shade(slate, -0.4), [
-    [bare ? -0.45 : -BALL_R + 0.05, -0.24],
+    [-BALL_R + 0.05, -0.24],
     [-BALL_PACK_R + 0.02, -0.24],
     [-BALL_PACK_R + 0.02, 0.24],
-    [bare ? -0.45 : -BALL_R + 0.05, 0.24],
+    [-BALL_R + 0.05, 0.24],
   ]);
   disc(ctx, f, shade(slate, -0.65), -BALL_PACK_R + 0.12, 0, 0.12);
   // A cradle on each axle stub that carries a tube; the tube itself is the frame's (`stepLoaded`).
@@ -4279,7 +4265,6 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, bare: boo
     paintPylon(ctx, f, palette, [(place.along - SHIPS.ball.tubeLength / 2) / BOX_R, place.across / BOX_R]);
   }
   paintUnityAbove(ctx, f, palette, 1, pose);
-  if (bare) return;
   // The plastic over them: its tint, the look on it, and the rim and its light — what says *ball*.
   disc(ctx, f, plastic, 0, 0, BALL_R * 0.98, amber ? 0.22 : 0.12);
   // 0594: what is on the plastic turns with the ball as Unity dances in it; the light on it does not.
@@ -4360,6 +4345,56 @@ function drawRamHeat(ctx: Pen, f: Frame, palette: Palette, stage: number): void 
   const ink = inks[stage] ?? palette.fire;
   glow(ctx, f, ink, 0, 0, BALL_R * 0.95, [0.15, 0.35, 0.55, 0.8][stage] ?? 0.8);
   if (stage >= 3) disc(ctx, f, shade(palette.fire, 0.4), 0, 0, BALL_R * 0.35, 0.6);
+}
+
+/**
+ * How many tongues of flame the War Dance's flare throws round the ship — 0609. Odd, so no two stand
+ * straight across from each other and the corona never reads as a cross.
+ */
+const FLARE_TONGUES = 11;
+
+/**
+ * A frame of the War Dance's flaring aura — 0609: *"needs a flaring aura."* A corona of flame tongues round
+ * whatever ship dances, each its own length and curl, lit white at the root and the player's ink out to the
+ * tip, with sparks thrown off the longest; under them a thin hot ring at the ship's edge. The four frames
+ * turn the corona a quarter of a tongue each, and each tongue's length rides its own phase, so the flare
+ * licks and turns rather than pulsing as one disc — 0379's play said a basic circle round the ship looks
+ * terrible, and it was right.
+ *
+ * ⚠️ **NOTHING SOLID, AND IT IS LAID UNDER EVERY SHOT.** Every fill is at or under 0.6 and the aura's layer
+ * is below the hostile pool (0373), so a bullet crossing the flare is drawn over it. The ship is drawn over it
+ * too, and its tongues root outside the widest hull (seven units), so nothing of the ship is covered.
+ */
+function drawDanceFlare(ctx: Pen, f: Frame, palette: Palette, frame: number): void {
+  const ink = palette.player;
+  const hot = shade(palette.player, 0.55);
+  const white = palette.impact;
+  // The ship's widest edge, in this frame's unit (`r` is 0.42 of the tile, and the tile is the flare's).
+  const root = 3.6 / (SPRITE_EXTENT.danceFlare0 * 0.42);
+  const turn = (frame / 4) * ((Math.PI * 2) / FLARE_TONGUES);
+  // A wash close round the ship — faint, so it is a heat in the air and not a disc.
+  glow(ctx, f, ink, 0, 0, root * 1.6, 0.22);
+  band(ctx, f, hot, 0, 0, root * 1.08, root * 0.98, 0.5);
+  for (let i = 0; i < FLARE_TONGUES; i++) {
+    const a = turn + (i / FLARE_TONGUES) * Math.PI * 2;
+    // Each tongue's own reach: two sines on its own phase, so no frame is the last one swelled.
+    const lick = 0.5 + 0.3 * Math.sin(i * 2.39 + frame * 1.57) + 0.2 * Math.sin(i * 1.13 - frame * 0.79);
+    const tip = root * (1.35 + 0.9 * lick);
+    const curl = 0.22 * Math.sin(i * 0.9 + frame * 0.6);
+    const width = 0.17;
+    const at = (r: number, off: number): Pt => [Math.cos(a + off) * r, Math.sin(a + off) * r];
+    const mid = (root + tip) / 2;
+    const tongue: Pt[] = [at(root, -width), at(mid, curl * 0.5 - width * 0.55), at(tip, curl), at(mid, curl * 0.5 + width * 0.55), at(root, width)];
+    poly(ctx, f, ink, tongue, 0.5);
+    // Its hot core, shorter and narrower, so the flame is white where it leaves the ship.
+    const core = root + (tip - root) * 0.55;
+    poly(ctx, f, hot, [at(root, -width * 0.5), at((root + core) / 2, curl * 0.25 - width * 0.3), at(core, curl * 0.5), at((root + core) / 2, curl * 0.25 + width * 0.3), at(root, width * 0.5)], 0.6);
+    // A spark off the longest tongues, just past the tip.
+    if (lick > 0.6) {
+      const [sx, sy] = at(tip + 0.06, curl * 1.3);
+      disc(ctx, f, white, sx, sy, 0.035, 0.6);
+    }
+  }
 }
 
 /**
@@ -16257,7 +16292,7 @@ export function drawKind(
     case 'thunderboltTubesHit':
       drawPlayerShip(ctx, f, palette, 'thunderbolt', 2);
       return;
-    // 0593: Unity's ball at each stage, and broken.
+    // 0593: Unity's ball at each stage.
     case 'ball':
     case 'ballHit':
       drawPlayerShip(ctx, f, palette, 'ball', 0);
@@ -16269,18 +16304,6 @@ export function drawKind(
     case 'ballTubes':
     case 'ballTubesHit':
       drawPlayerShip(ctx, f, palette, 'ball', 2);
-      return;
-    case 'ballBare':
-    case 'ballBareHit':
-      drawBall(ctx, f, palette, 0, true);
-      return;
-    case 'ballBareTube':
-    case 'ballBareTubeHit':
-      drawBall(ctx, f, palette, 1, true);
-      return;
-    case 'ballBareTubes':
-    case 'ballBareTubesHit':
-      drawBall(ctx, f, palette, 2, true);
       return;
     // 0595: MMXXVI's Aqua Duck at each stage.
     case 'duck':
@@ -16349,6 +16372,13 @@ export function drawKind(
     case 'ramHeat2':
     case 'ramHeat3':
       drawRamHeat(ctx, f, palette, Number(kind.slice(-1)));
+      return;
+    // 0609: the War Dance's flare, a frame of it.
+    case 'danceFlare0':
+    case 'danceFlare1':
+    case 'danceFlare2':
+    case 'danceFlare3':
+      drawDanceFlare(ctx, f, palette, Number(kind.slice(-1)));
       return;
     // The ram's glyph — a ball, lit, with three speed lines behind it.
     case 'ram':

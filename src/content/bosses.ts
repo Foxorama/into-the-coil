@@ -3625,8 +3625,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0593: and the ram at 7, not its 8 — held against the skull at eight it took the serpent in 27.5 s,
       under the twenty-eight.
+
+      0609: 1.5 — the ball never breaks now, so a held ram lands all fight: at 7, 6.5 s. At 1.4, 33.9 s; at
+      1.5, 31.6 s, where 0593's seven had it at 31.1.
     */
-    gunWeights: { arc: 1, ray: 0.93, ram: 7 },
+    gunWeights: { arc: 1, ray: 0.93, ram: 1.5 },
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
       boss out of the player's half at the NEAR end of its swing, measured at `station − drift − rear
@@ -4880,8 +4883,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
       0595: and the paintball at 1.6, not its 1.1 — one ball a volley is the gun her jellies get in front of
       most: at one she took 90.4 s from its best place, against 48–66 for the paintball on every other boss.
       At 1.6, 48.7 s.
+
+      0609: the ram at 2.4 — it never breaks now, so it lands all fight and she is fed nothing between: at 9,
+      9.1 s; at 1.8, 68.5 s against 48–62 for the ram on every other boss; at 2.4, 44.4 s.
     */
-    gunWeights: { arc: 1.4, catherine: 0.5, ram: 9, paintball: 1.6 },
+    gunWeights: { arc: 1.4, catherine: 0.5, ram: 2.4, paintball: 1.6 },
     damage: 3,
     /*
       ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you

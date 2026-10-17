@@ -679,7 +679,24 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     nova: null,
     candle: null,
-    dance: { steps: 180, speed: 2.2, reach: 3, damage: 3, landGap: 6 },
+    /*
+      ⚠️ **FASTER, AND OFF THE WALLS AT A NEW ANGLE EVERY TIME — 0609.** *"The special also needs to look way
+      cooler and bounce around the screen more."* At 2.2 on one diagonal it met a wall two or three times in
+      its three seconds and drew the same X every time. At 3.4 it meets one every half second or so, and each
+      wall turns it onto the next of `angles` — so it covers the whole box rather than one line through it.
+      Play numbers, all of them.
+    */
+    dance: {
+      steps: 180,
+      speed: 3.4,
+      reach: 3,
+      damage: 3,
+      landGap: 6,
+      angles: [0.62, 1.05, 0.36, 0.86, 0.5, 1.2],
+      flare: [SPRITE.danceFlare0, SPRITE.danceFlare1, SPRITE.danceFlare2, SPRITE.danceFlare3],
+      flareHold: 6,
+      hum: 24,
+    },
     jet: null,
     opensWith: 'unity',
     face: SPRITE.pickupDance,
@@ -762,6 +779,18 @@ export interface Dance {
   readonly damage: number;
   /** Steps between one landing on a body and the next there — 0391's clock, as the ram's `landGap`. */
   readonly landGap: number;
+  /**
+   * The headings it flies, in radians off straight across the lane, taken in turn at each wall it meets —
+   * 0609. The first is the one it is thrown on; the signs are the walls', and these only say how steep.
+   * Each strictly between 0 and a right angle, so no heading runs along a wall it can never leave.
+   */
+  readonly angles: readonly number[];
+  /** Its flaring aura's frames, cycled round the ship for as long as it dances, under every shot — 0609. */
+  readonly flare: readonly number[];
+  /** Steps each frame of the flare is held. */
+  readonly flareHold: number;
+  /** Steps between one strike of its hum and the next, while it dances (`danceHum`) — 0609. */
+  readonly hum: number;
 }
 
 /**

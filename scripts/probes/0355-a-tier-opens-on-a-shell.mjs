@@ -14,8 +14,9 @@ export const PROBES = [
     guard: 'at the run’s start, after a death and after a continue',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  w.ship.health = openingHealthFor(w.shipRow, w.difficulty);\n  holdStation(w.ship, w.scrollPerStep);',
-      replace: '  holdStation(w.ship, w.scrollPerStep);',
+      // ⚠️ Re-anchored by 0609, which starts a regenerating shell's rest from the health set here.
+      find: '  w.ship.health = openingHealthFor(w.shipRow, w.difficulty);\n  // 0609:',
+      replace: '  // 0609:',
     },
   },
   {
@@ -68,7 +69,8 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0373, which counts the stack where `chargesOf` totalled the entries.
       // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
       // ⚠️ And by 0539: the stacks are read off the arsenal given.
-      find: 'shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf(state.run.arsenal)',
+      // ⚠️ And by 0609: the tier's cap through `shellCapFor`, which is the ship's own where its row says one.
+      find: 'shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), stacksOf(state.run.arsenal)',
       replace: 'shieldsOf(world.shipRow, world.ship.health), MAX_SHIELDS, stacksOf(state.run.arsenal)',
     },
   },

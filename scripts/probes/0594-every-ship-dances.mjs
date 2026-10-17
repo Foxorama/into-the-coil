@@ -52,7 +52,8 @@ export const PROBES = [
     suite: 'tests/dance.test.ts',
     broke: 'a dance that never puts the ship in its poses',
     guard: 'a ship that throws the War Dance cycles through its poses, and stands still again after',
-    edit: { path: 'src/app/frame.ts', find: '  if (w.danceFor > 0 && w.ramBrokenFor === 0) {', replace: '  if (false) {' },
+    // Re-anchored by 0609, which took out the broken ball this also asked about.
+    edit: { path: 'src/app/frame.ts', find: '  if (w.danceFor > 0) {\n    const cycle', replace: '  if (false) {\n    const cycle' },
   },
   {
     decision: '0594',
