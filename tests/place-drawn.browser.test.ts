@@ -104,7 +104,8 @@ describe.runIf(chromePath)('a place change re-bakes only what it changes — 060
           bake.bakeLandmark(leaving, theme.nebula[name], theme.glow[name], theme.space[name], ppu, from);
           const land = theme.ground;
           if (land !== null) bake.bakeGround(leaving, land[name], theme.space[name], theme.nebula[name], ppu, from, theme.land?.[name]);
-          for (const ship of SHIP_KINDS) bake.bakeShipFit(leaving, palette, ship, ownFit(SHIP_KINDS[(SHIP_KINDS.indexOf(ship) + 1) % SHIP_KINDS.length]!));
+          // Another ship's kit, ridden by this ship's own pilot: since 0612 a fit says who rides, and no pilot flies another's ship.
+          for (const ship of SHIP_KINDS) bake.bakeShipFit(leaving, palette, ship, { ...ownFit(SHIP_KINDS[(SHIP_KINDS.indexOf(ship) + 1) % SHIP_KINDS.length]!), rider: ownFit(ship).rider });
           bake.bakeFlame(leaving, palette, FLAME_KINDS[1]!);
           const lending = drain(bake.bakeAtlasStepwise(palette, 'side', ppu, to, leaving));
           const fresh = bake.bakeAtlas(palette, 'side', ppu, to);

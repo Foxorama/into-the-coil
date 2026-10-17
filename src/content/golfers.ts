@@ -440,6 +440,27 @@ export function pilotOpen(golfer: GolferKind, record: PilotRecord): boolean {
   return lockOpen(GOLFERS[golfer].opens, record);
 }
 
+/**
+ * What body a runner is drawn with, the golfer's own named — 0612, so a table can be keyed on it: a ship
+ * that shows its pilot aboard draws them by this (`src/render/bake.ts`, `RIDERS`).
+ */
+export type Figure = 'person' | NonNullable<RunnerRow['figure']>;
+
+/** `row`'s body — its `figure`, or a person's where the row names none (0546's default). */
+export function figureOf(row: RunnerRow): Figure {
+  return row.figure ?? 'person';
+}
+
+/**
+ * Who flies `ship` — 0441: one pilot each, read off the pilots' rows, which is where who flies what is
+ * said. 0612: the rider a ship that shows its pilot is drawn with when nothing else says who is aboard.
+ */
+export function pilotOf(ship: ShipKind): GolferKind {
+  const found = GOLFER_KINDS.find((kind) => GOLFERS[kind].ship === ship);
+  if (found === undefined) throw new Error(`nobody flies the ${ship}`);
+  return found;
+}
+
 /** Who flies if nobody has chosen — Bo, the pilot 0412 drew, for a player who skips straight past. */
 export const DEFAULT_GOLFER: GolferKind = 'bo';
 
