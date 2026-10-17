@@ -9,7 +9,8 @@ export const PROBES = [
     guard: 'is heard from the press to its last step, with no gap in it',
     edit: {
       path: 'src/app/frame.ts',
-      find: "  if (w.jetAt > 0 && w.jetAt % SPRAY_EVERY === 0) w.onCue('spray', rootAcross + Math.sin(angle) * jet.length);\n",
+      // Re-anchored by 0616, which strikes it from the end of the stream.
+      find: "  if (clock > 0 && clock < jet.steps && clock % SPRAY_EVERY === 0) w.onCue('spray', rootAcross + streamAcross(clock, oldest, jet.sweep, jet.period, speed));\n",
       replace: '',
     },
   },

@@ -692,7 +692,18 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       reach: 3,
       damage: 3,
       landGap: 6,
-      angles: [0.62, 1.05, 0.36, 0.86, 0.5, 1.2],
+      /*
+        ⚠️ **OFF A WALL AS A BALL COMES OFF ONE, AND ROUND AT WHAT IT IS DANCING AT — 0615.** *"It also doesn't have
+        good physics on the bounce."* 0609 turned it onto the next of six headings at every wall, which is a ball
+        that changes its mind at a wall; a wall reflects it now, and what keeps it off one line through the box
+        is what is in the box — every body it cannot break turns it as a bumper does and throws it off faster
+        (`kick`), and it bends back at the boss or the nearest body (`pull`). 0615 has the numbers; play numbers.
+      */
+      heading: 0.62,
+      pull: 0.12,
+      kick: 1.5,
+      kickSteps: 20,
+      free: 3,
       flare: [SPRITE.danceFlare0, SPRITE.danceFlare1, SPRITE.danceFlare2, SPRITE.danceFlare3],
       flareHold: 6,
       hum: 24,
@@ -738,8 +749,15 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       47 units off the nose where it was 38, so it sweeps 78% of the 120-unit lane where it swept 63%. It leaves the nozzle 2.8 across and opens to 8 at
       its tip, as a hose's spray does, and lands as wide as it is drawn the whole way (0250): half again the area
       the column landed on, on the same clock — a body takes it no more often, it is only in it longer.
+
+      ⚠️ **AND IT FLOWS — 0616.** *"Static and stiff and so doesn't feel like a water spray at all."* Its water takes
+      `flight` steps to reach its length, each parcel on the heading it left the nozzle on (`src/sim/stream.ts`): at
+      ten, a sixth of a swing, the tip trails the nozzle round by up to 0.55 of a radian at the middle of the
+      swing, so the spray bows as it sweeps; it reaches its length a sixth of a second after the press, and the
+      last of it flies on for a sixth of a second after the nozzle stops. Twelve was photographed first and curled
+      round at the ends of the swing like a whip. A play number.
     */
-    jet: { steps: 120, sweep: 0.55, period: 60, length: 90, width: 1.4, tipWidth: 4, damage: 2, landGap: 4 },
+    jet: { steps: 120, sweep: 0.55, period: 60, length: 90, flight: 10, width: 1.4, tipWidth: 4, damage: 2, landGap: 4 },
     opensWith: 'mmxxvi',
     face: SPRITE.pickupWater,
     cue: 'waterCannon',
@@ -756,11 +774,12 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
 export const JET_BOLT_KIND = 4;
 
 /**
- * The Water Cannon's jet — `docs/decisions/0595-the-aqua-duck-paints.md`. For `steps` a jet of water `length`
- * long plays from the gun's muzzle, turned `sweep` radians either side of straight ahead and back once every
- * `period` steps, so it swings across the lane ahead of the ship. It lands on whatever lies within `width` of
- * it at the muzzle and `tipWidth` at its end, straight between — a spray that opens (0610) — `damage` a landing,
- * and a body takes it only once every `landGap` steps — 0391's clock, as the blades'. Every number a play number.
+ * The Water Cannon's jet — `docs/decisions/0595-the-aqua-duck-paints.md`. For `steps` water leaves the gun's
+ * muzzle, the nozzle turned `sweep` radians either side of straight ahead and back once every `period` steps, so
+ * it swings across the lane ahead of the ship; each parcel flies on the heading it left on and is `length` out
+ * after `flight` steps (0616). It lands on whatever lies within `width` of the stream at the muzzle and
+ * `tipWidth` at its end, straight between — a spray that opens (0610) — `damage` a landing, and a body takes it
+ * only once every `landGap` steps — 0391's clock, as the blades'. Every number a play number.
  */
 export interface Jet {
   readonly steps: number;
@@ -770,6 +789,11 @@ export interface Jet {
   readonly period: number;
   /** How far it reaches from the muzzle, in world units. */
   readonly length: number;
+  /**
+   * Steps its water takes to fly from the muzzle to `length` — 0616: every parcel keeps the heading it left on,
+   * so the stream bows as it sweeps, opens outward from the press and flies on for this long after `steps`.
+   */
+  readonly flight: number;
   /** How far either side of its line it lands at the muzzle, in world units. */
   readonly width: number;
   /** And at its far end — 0610: the spray opens between the two, and is drawn exactly that wide. */
@@ -796,11 +820,29 @@ export interface Dance {
   /** Steps between one landing on a body and the next there — 0391's clock, as the ram's `landGap`. */
   readonly landGap: number;
   /**
-   * The headings it flies, in radians off straight across the lane, taken in turn at each wall it meets —
-   * 0609. The first is the one it is thrown on; the signs are the walls', and these only say how steep.
-   * Each strictly between 0 and a right angle, so no heading runs along a wall it can never leave.
+   * The heading it is thrown on, in radians off straight across the lane — strictly between 0 and a right
+   * angle, so it never runs along a wall it can never leave. After that its walls reflect it and its bodies
+   * turn it — 0615, where 0609 took the next of a list of headings at every wall.
    */
-  readonly angles: readonly number[];
+  readonly heading: number;
+  /**
+   * How far it turns toward what it is dancing at, in radians a step — 0615: the boss while one is up, and
+   * the nearest body in view otherwise. *"It spends most of its time bouncing … without doing a lot to enemies
+   * and barely touches a boss."* A bend and not an aim: a ball at `speed` turning this much a step rounds on a
+   * circle `speed / pull` across, so it curves back at its target off the walls rather than flying at it.
+   */
+  readonly pull: number;
+  /**
+   * How much faster it leaves a body it did not break, as a multiple of `speed` — 0615: a pinball's bumper,
+   * which throws the ball off harder than it arrived. Settles back to `speed` over `kickSteps`.
+   */
+  readonly kick: number;
+  readonly kickSteps: number;
+  /**
+   * Steps it flies straight off a wall or a body before it bends again — 0615, or a target past a wall would
+   * hold it against the wall, bouncing every step.
+   */
+  readonly free: number;
   /** Its flaring aura's frames, cycled round the ship for as long as it dances, under every shot — 0609. */
   readonly flare: readonly number[];
   /** Steps each frame of the flare is held. */

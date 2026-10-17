@@ -1224,6 +1224,9 @@ const HOT_FILES = [
   // ⚠️ Added with 0388: a jagged beam's path is derived every step by the painter AND the frame, from
   // the same hash, rather than stored — so this is called per beam per frame from both halves.
   'src/sim/jag.ts',
+  // ⚠️ Added with 0616, on 0388's terms: the Water Cannon's stream is derived every step by the frame that lands
+  // it and the painter that draws it, from the jet's clock, rather than stored.
+  'src/sim/stream.ts',
   'src/render/scene.ts',
   'src/render/surface.ts',
   'src/render/canvas.ts',

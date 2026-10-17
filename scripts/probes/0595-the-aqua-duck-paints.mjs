@@ -54,15 +54,15 @@ export const PROBES = [
     decision: '0595',
     suite: 'tests/duck.test.ts',
     broke: 'a jet held straight ahead, sweeping nothing',
-    guard: 'plays for two seconds from the gun, swinging both ways across the nose, and stops',
-    // Re-anchored by 0598, which asks the sweep at the step the jet was laid at.
-    edit: { path: 'src/app/frame.ts', find: '  return jet.sweep * Math.sin((Math.PI * 2 * at) / jet.period);', replace: '  return 0 * jet.sweep * at;' },
+    guard: 'plays for two seconds from the gun, swinging both ways across the nose, and its last water flies on after it',
+    // Re-anchored by 0598, which asks the sweep at the step the jet was laid at; and by 0616, which moved the sweep to the stream.
+    edit: { path: 'src/sim/stream.ts', find: '  return sweep * Math.sin((Math.PI * 2 * clock) / period);', replace: '  return 0 * sweep * clock * period;' },
   },
   {
     decision: '0595',
     suite: 'tests/duck.test.ts',
     broke: 'a second Water Cannon thrown over the first',
-    guard: 'plays for two seconds from the gun, swinging both ways across the nose, and stops',
+    guard: 'plays for two seconds from the gun, swinging both ways across the nose, and its last water flies on after it',
     edit: { path: 'src/app/frame.ts', find: '  if (row.jet !== null) return w.jetFor <= 0;\n', replace: '' },
   },
   {

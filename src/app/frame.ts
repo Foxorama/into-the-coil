@@ -46,6 +46,7 @@ import {
   overlaps,
   strike,
   tetherInto,
+  streamInto,
   wound,
   type Collected,
   type Deaths,
@@ -73,6 +74,7 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
+import { streamAcross, streamAlong, streamOldest, streamWidth, streamYoungest } from '../sim/stream.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBodyBolts, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { NO_HOP, paintPort, paintStand } from '../render/port.ts';
@@ -1213,13 +1215,17 @@ export interface World {
   /**
    * Steps of War Dance left, and which special it is — 0593. While it lasts the ship flies itself, bouncing
    * round its box at `danceAlong`/`danceAcross` in the camera's frame, rams everything it crosses and
-   * cannot be hurt. `danceBounces` is how many walls it has met, which picks its next heading (0609).
+   * cannot be hurt. `danceBounces` is how many walls it has met (0609), and `danceKickFor` the steps left of
+   * the kick a body it could not break threw it off with (0615).
    */
   danceFor: number;
   danceKind: SpecialKind | null;
   danceAlong: number;
   danceAcross: number;
   danceBounces: number;
+  danceKickFor: number;
+  /** Steps before the dance bends at what it is dancing at again, after a wall or a body turned it — 0615. */
+  dancePullIn: number;
   /**
    * Steps before the dance may send out its next shockwave — 0613: one at every wall and every body it lands
    * on, but never two inside its row's `wave.gap`.
@@ -2715,6 +2721,8 @@ export class GameFrame implements Frame {
     // A ram's landings are its own cue and not the blade's `hit` — 0593: read off what the ram body lost.
     const rammed = ramLanded(w);
     settleRam(w, rammed, rammed - ramOnBodies, ramKills);
+    // 0615: and off whatever it did not break — after the landings are settled, so a dance's wave rolls out from where it struck.
+    knockRam(w);
     // And every shockwave the dance has sent out, its edge landing on what it crosses — 0613.
     stepWaves(w);
     let bites = bladeHits === null ? 0 : w.hits.count - rammed - doused;
@@ -4188,7 +4196,8 @@ const READY_FLARE_STEPS = 24;
  */
 function settleRam(w: World, landed: number, onBoss: number, kills: number): void {
   if (landed > 0) {
-    w.onCue('ram', w.ship.across);
+    // 0615: a dancing ship's landing is a pinball's bumper, the ball's own the ram's knock.
+    w.onCue(w.danceFor > 0 ? 'danceBumper' : 'ram', w.ship.across);
     w.onFeel(kills > 0 || onBoss > 0 ? 'smash' : 'knock');
     w.punchFor = PUNCH_STEPS;
     const dance = danceOf(w);
@@ -4433,31 +4442,33 @@ function startDance(w: World, kind: SpecialKind, dance: Dance): void {
   w.danceKind = kind;
   w.danceFor = dance.steps;
   w.danceBounces = 0;
+  w.danceKickFor = 0;
+  w.dancePullIn = 0;
   // 0613: the flare that said the bar was full is the dance's own now.
   w.readyFor = 0;
   const toward = w.ship.across < ACROSS_SPAN / 2 ? 1 : -1;
-  headDance(w, dance, 1, toward);
+  w.danceAlong = dance.speed * Math.sin(dance.heading);
+  w.danceAcross = toward * dance.speed * Math.cos(dance.heading);
   // 0594: and it dances — its row's poses, from the first.
   w.ship.framePhase = 0;
   wearHull(w);
 }
 
-/** Put the dance on the heading its bounces have reached, going `along` and `across` (each ±1) — 0609. */
-function headDance(w: World, dance: Dance, along: number, across: number): void {
-  const angle = dance.angles[w.danceBounces % dance.angles.length] ?? Math.PI / 4;
-  w.danceAlong = along * dance.speed * Math.sin(angle);
-  w.danceAcross = across * dance.speed * Math.cos(angle);
-}
-
 /**
  * A dancing ship meets a wall — 0609: *"bounce around the screen more … impact sounds when it hits the
- * walls."* It turns off it onto the next of its row's headings, away from the wall, and the wall is seen
- * and heard where the ship met it: sparks off its rim on the wall's side, and `danceBounce` panned there.
- * `along` and `across` are the way back into the box, one of them zero.
+ * walls."* The wall is seen and heard where the ship met it: sparks off its rim on the wall's side, and
+ * `danceBounce` panned there. `along` and `across` are the way back into the box, one of them zero.
+ *
+ * ⚠️ **REFLECTED, AS A BALL IS — 0615**, where 0609 turned it onto the next of six headings: the one component
+ * into the wall turns round and the other is kept, so it leaves at the angle it arrived at. And it flies
+ * straight off for its `free` steps before it bends at its target again, or a target past the wall would hold it
+ * against the wall, bouncing every step.
  */
 function bounceDance(w: World, dance: Dance, along: number, across: number): void {
   w.danceBounces++;
-  headDance(w, dance, along !== 0 ? along : w.danceAlong < 0 ? -1 : 1, across !== 0 ? across : w.danceAcross < 0 ? -1 : 1);
+  if (along !== 0) w.danceAlong = along * Math.abs(w.danceAlong);
+  if (across !== 0) w.danceAcross = across * Math.abs(w.danceAcross);
+  w.dancePullIn = dance.free;
   const atAlong = w.ship.along - along * dance.reach;
   const atAcross = w.ship.across - across * dance.reach;
   burst(w, atAlong, atAcross, BURST.bounce);
@@ -4478,14 +4489,158 @@ function danceShip(w: World): void {
   const ship = w.ship;
   const minAlong = w.cameraAlong + PLAYER_ALONG_MARGIN;
   const maxAlong = w.cameraAlong + leadFor(w.view.alongSpan);
-  const nextAlong = ship.along + w.scrollPerStep + w.danceAlong;
+  // 0615: bent at what it dances at, and thrown faster for a while off a body it could not break.
+  pullDance(w, dance, minAlong, maxAlong);
+  const kick = 1 + ((dance.kick - 1) * w.danceKickFor) / dance.kickSteps;
+  if (w.danceKickFor > 0) w.danceKickFor--;
+  const nextAlong = ship.along + w.scrollPerStep + w.danceAlong * kick;
   if (nextAlong < minAlong && w.danceAlong < 0) bounceDance(w, dance, 1, 0);
   else if (nextAlong > maxAlong && w.danceAlong > 0) bounceDance(w, dance, -1, 0);
-  const nextAcross = ship.across + w.danceAcross;
+  const nextAcross = ship.across + w.danceAcross * kick;
   if (nextAcross < PLAYER_MARGIN && w.danceAcross < 0) bounceDance(w, dance, 0, 1);
   else if (nextAcross > ACROSS_SPAN - PLAYER_MARGIN && w.danceAcross > 0) bounceDance(w, dance, 0, -1);
-  ship.velAlong = w.scrollPerStep + w.danceAlong;
-  ship.velAcross = w.danceAcross;
+  ship.velAlong = w.scrollPerStep + w.danceAlong * kick;
+  ship.velAcross = w.danceAcross * kick;
+}
+
+/**
+ * Bend the dance at what it is dancing at — 0615: the boss while one is up and not beaten, and otherwise the
+ * nearest body inside the view; nothing, and it flies straight. At most the row's `pull` a step, its speed
+ * kept, and not for `free` steps after a wall or a body turned it (`dancePullIn`). The target is held inside
+ * the box the ship flies in, so a boss standing past its edge is danced at where the ship can reach it.
+ */
+function pullDance(w: World, dance: Dance, minAlong: number, maxAlong: number): void {
+  if (w.dancePullIn > 0) {
+    w.dancePullIn--;
+    return;
+  }
+  const ship = w.ship;
+  let toAlong = 0;
+  let toAcross = 0;
+  if (w.bossPool.size > 0 && !w.bossBeaten) {
+    toAlong = w.bossPool.at(0).along;
+    toAcross = w.bossPool.at(0).across;
+  } else {
+    let nearest = Number.POSITIVE_INFINITY;
+    const far = w.cameraAlong + w.view.alongSpan;
+    for (let i = 0; i < w.enemies.size; i++) {
+      const e = w.enemies.at(i);
+      if (e.along < w.cameraAlong || e.along > far) continue;
+      const d = (e.along - ship.along) * (e.along - ship.along) + (e.across - ship.across) * (e.across - ship.across);
+      if (d >= nearest) continue;
+      nearest = d;
+      toAlong = e.along;
+      toAcross = e.across;
+    }
+    if (nearest === Number.POSITIVE_INFINITY) return;
+  }
+  toAlong = (toAlong < minAlong ? minAlong : toAlong > maxAlong ? maxAlong : toAlong) - ship.along;
+  toAcross = (toAcross < PLAYER_MARGIN ? PLAYER_MARGIN : toAcross > ACROSS_SPAN - PLAYER_MARGIN ? ACROSS_SPAN - PLAYER_MARGIN : toAcross) - ship.across;
+  if (toAlong === 0 && toAcross === 0) return;
+  const heading = Math.atan2(w.danceAcross, w.danceAlong);
+  let turn = Math.atan2(toAcross, toAlong) - heading;
+  if (turn > Math.PI) turn -= 2 * Math.PI;
+  else if (turn < -Math.PI) turn += 2 * Math.PI;
+  if (turn > dance.pull) turn = dance.pull;
+  else if (turn < -dance.pull) turn = -dance.pull;
+  const speed = Math.hypot(w.danceAlong, w.danceAcross);
+  w.danceAlong = Math.cos(heading + turn) * speed;
+  w.danceAcross = Math.sin(heading + turn) * speed;
+}
+
+/*
+  ── THE BALL IS SOLID — `docs/decisions/0615-the-ball-is-solid.md` ─────────────────────────────────
+
+  *"There's no physicality when you hit something, you should bounce back off bosses and objects that don't
+  get immediately destroyed or take two or more hits. At the moment you just move right through them."* After
+  the ram has landed, whatever it is still inside — a body it did not break, the boss, a piece of the boss —
+  puts it back out to touching and sends it off. A body the ram broke is gone from its pool by then, so the
+  ball goes on through what it kills and comes off what it does not, which is the ask's line exactly.
+
+  ⚠️ **THE STEERED BALL COMES OFF AS A BALL OFF A BUMPER, AND THE STICK TAKES IT BACK.** Its velocity in the
+  body's frame is reflected about the line between their centres, keeping the ram row's `give` of it, and
+  leaves at no less than its `knock`; then `flyShip`'s mass hands the ship back to the stick over the next
+  steps. A dancing ship is reflected the same way, kicked faster for a while (`kick`), and heard as a bumper.
+
+  ⚠️ **THE DEEPEST BODY ONLY.** Two bodies at once would be two normals and a ship pushed into one by the
+  other; one is the ball's whole contact on any step it is pressed into a crowd, and the next step has the next.
+*/
+
+/** How far into the deepest body `deepest` has found the ram this step — scratch, read straight after. */
+let knockDepth = 0;
+
+/** The body in `pool` the ram at `(along, across)` with `reach` is furthest into, past any found before — 0615. */
+function deepest(pool: Pool<Entity>, along: number, across: number, reach: number, found: Entity | null): Entity | null {
+  let best = found;
+  for (let i = 0; i < pool.size; i++) {
+    const body = pool.at(i);
+    const depth = reach + body.radius - Math.hypot(body.along - along, body.across - across);
+    if (depth <= knockDepth) continue;
+    knockDepth = depth;
+    best = body;
+  }
+  return best;
+}
+
+/** Put the ram back out of the body it is still inside, and send the ship off it — 0615. */
+function knockRam(w: World): void {
+  if (!rams(w)) return;
+  const ship = w.ship;
+  const dance = danceOf(w);
+  const ram = WEAPONS[w.weapon.kind].ram;
+  const reach = dance !== null ? dance.reach : ram !== null ? ram.reach : 0;
+  knockDepth = 0;
+  let body = deepest(w.enemies, ship.along, ship.across, reach, null);
+  // A beaten boss does nothing back (0337), and nothing knocks off it.
+  if (!w.bossBeaten) body = deepest(w.bossBody, ship.along, ship.across, reach, deepest(w.bossPool, ship.along, ship.across, reach, body));
+  if (body === null) return;
+  let nAlong = ship.along - body.along;
+  let nAcross = ship.across - body.across;
+  const apart = Math.hypot(nAlong, nAcross);
+  if (apart > 0) {
+    nAlong /= apart;
+    nAcross /= apart;
+  } else {
+    // Dead centre: back down the lane, the way the ship came.
+    nAlong = -1;
+    nAcross = 0;
+  }
+  ship.along += nAlong * knockDepth;
+  ship.across += nAcross * knockDepth;
+  // Seen where they met (0036): sparks off the rim on the body's side.
+  const atAlong = ship.along - nAlong * reach;
+  const atAcross = ship.across - nAcross * reach;
+  flare(w, atAlong, atAcross, 'spark');
+  if (dance !== null) {
+    const into = w.danceAlong * nAlong + w.danceAcross * nAcross;
+    if (into < 0) {
+      w.danceAlong -= 2 * into * nAlong;
+      w.danceAcross -= 2 * into * nAcross;
+    }
+    if (w.danceKickFor === 0) burst(w, atAlong, atAcross, BURST.bounce);
+    w.danceKickFor = dance.kickSteps;
+    w.dancePullIn = dance.free;
+    w.onCue('danceBumper', atAcross);
+    return;
+  }
+  if (ram === null) return;
+  // In the body's frame, which moved this step as the ship did.
+  const bodyAlong = body.along - body.prevAlong;
+  const bodyAcross = body.across - body.prevAcross;
+  let vAlong = ship.velAlong - bodyAlong;
+  let vAcross = ship.velAcross - bodyAcross;
+  const into = vAlong * nAlong + vAcross * nAcross;
+  if (into < 0) {
+    vAlong -= (1 + ram.give) * into * nAlong;
+    vAcross -= (1 + ram.give) * into * nAcross;
+  }
+  const off = vAlong * nAlong + vAcross * nAcross;
+  if (off < ram.knock) {
+    vAlong += (ram.knock - off) * nAlong;
+    vAcross += (ram.knock - off) * nAcross;
+  }
+  ship.velAlong = bodyAlong + vAlong;
+  ship.velAcross = bodyAcross + vAcross;
 }
 
 /*
@@ -4748,15 +4903,28 @@ function jetOf(w: World): Jet | null {
   return w.jetKind === null || w.jetFor <= 0 ? null : SPECIALS[w.jetKind].jet;
 }
 
-/** Where the jet points `at` steps into its sweep, in radians off straight ahead: a sine across `sweep` and back once a `period`. */
-function jetAngle(at: number, jet: Jet): number {
-  return jet.sweep * Math.sin((Math.PI * 2 * at) / jet.period);
-}
+/*
+  ⚠️ **A STREAM OF WATER AND NOT A LINE AT THE NOZZLE'S ANGLE — 0616.** *"Static and stiff and so doesn't feel
+  like a water spray at all."* 0595 laid one straight line at the angle the nozzle had this step, so the spray
+  swung round its root as a rod does. Each step's water now flies on the heading it left on (`src/sim/stream.ts`),
+  so the line bows as the nozzle sweeps, its front runs out from the press, and the last of it flies on for the
+  row's `flight` after the nozzle has stopped — still landing, because it is still there. The link is laid at
+  the muzzle and carries the jet's clock, and the painter draws the same stream off it that `landJet` lands.
+*/
 
-/** Start the Water Cannon — 0595. */
+// @setup: the stream's points this step, nozzle first, and its half-width at each — the longest flight any jet has.
+const STREAM_POINTS = 1 + SPECIAL_KINDS.reduce((most, kind) => Math.max(most, SPECIALS[kind].jet?.flight ?? 0), 0);
+// @setup: one buffer each, refilled per landing.
+const STREAM_ALONG = new Float64Array(STREAM_POINTS);
+// @setup: the stream's points across the lane, for the module's lifetime, refilled per landing.
+const STREAM_ACROSS = new Float64Array(STREAM_POINTS);
+// @setup: and how far either side of it the water lands.
+const STREAM_REACH = new Float64Array(STREAM_POINTS);
+
+/** Start the Water Cannon — 0595: and play it until the last of its water has flown — 0616. */
 function startJet(w: World, kind: SpecialKind, jet: Jet): void {
   w.jetKind = kind;
-  w.jetFor = jet.steps;
+  w.jetFor = jet.steps + jet.flight;
   w.jetAt = 0;
 }
 
@@ -4772,23 +4940,23 @@ function stepJet(w: World): void {
     w.jetKind = null;
   }
   const jet = jetOf(w);
-  if (jet === null) return;
-  const angle = jetAngle(w.jetAt, jet);
-  // What `landJet` lands, later this step: this angle, not the next one.
+  if (jet === null || w.jetKind === null) return;
+  const clock = w.jetAt;
+  // What `landJet` lands, later this step: this clock's stream, not the next one's.
   w.jetLaid = w.jetKind;
-  w.jetLaidAt = w.jetAt;
+  w.jetLaidAt = clock;
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
+  const speed = jet.length / jet.flight;
+  const oldest = streamOldest(clock, jet.flight);
   /*
-    0599: and heard for as long as it plays — the cannon's own cue is its opening, and this is the water after it,
-    struck again every `SPRAY_EVERY` steps from where the jet's end is, so the field hears it sweep.
+    0599: and heard for as long as the nozzle plays — the cannon's own cue is its opening, and this is the water
+    after it, struck again every `SPRAY_EVERY` steps from where the stream's end is, so the field hears it sweep.
   */
-  if (w.jetAt > 0 && w.jetAt % SPRAY_EVERY === 0) w.onCue('spray', rootAcross + Math.sin(angle) * jet.length);
+  if (clock > 0 && clock < jet.steps && clock % SPRAY_EVERY === 0) w.onCue('spray', rootAcross + streamAcross(clock, oldest, jet.sweep, jet.period, speed));
   const link = w.bolts.spawn();
   if (link !== null) {
-    const endAlong = rootAlong + Math.cos(angle) * jet.length;
-    const endAcross = rootAcross + Math.sin(angle) * jet.length;
-    reset(link, endAlong, endAcross, JET_BODY, JET_BOLT_KIND);
+    reset(link, rootAlong, rootAcross, JET_BODY, JET_BOLT_KIND);
     // As wide as it lands, which is what the painter draws it at — a beam's rule (0250).
     link.radius = jet.width;
     // And how many times that it has opened to at its tip — 0610: the spray's cone, on `swell`'s terms, a size.
@@ -4798,16 +4966,19 @@ function stepJet(w: World): void {
       tether. The painter draws between the two, so a jet whose last place was its own would be drawn a step ahead
       of the muzzle it plays from at any display rate above the step's.
     */
-    link.prevAlong = w.ship.prevAlong + w.shipRow.muzzle.along + Math.cos(angle) * jet.length;
-    link.prevAcross = w.ship.prevAcross + w.shipRow.muzzle.across + Math.sin(angle) * jet.length;
+    link.prevAlong = w.ship.prevAlong + w.shipRow.muzzle.along;
+    link.prevAcross = w.ship.prevAcross + w.shipRow.muzzle.across;
     link.velAlong = 0;
-    link.fromAlong = rootAlong - endAlong;
-    link.fromAcross = rootAcross - endAcross;
+    // 0616: the oldest of its water, from the muzzle — where the stream ends this step, for whatever asks for one line.
+    link.fromAlong = streamAlong(clock, oldest, jet.sweep, jet.period, speed);
+    link.fromAcross = streamAcross(clock, oldest, jet.sweep, jet.period, speed);
     link.prevFromAlong = link.fromAlong;
     link.prevFromAcross = link.fromAcross;
     // One step: drawn, and released by the next step's `stepEntities` just before the next is laid.
     link.lifeFor = 1;
-    link.spin = w.steps;
+    // 0616: the jet's clock, which the stream is a function of, and whose jet it is.
+    link.spin = clock;
+    link.face = SPECIAL_KINDS.indexOf(w.jetKind);
     // The steps it has left, which the painter fades its last few over.
     link.holdFor = w.jetFor;
   }
@@ -4830,17 +5001,24 @@ function landJet(w: World, shootable: boolean, open: number, hull: Entity | null
   const jet = SPECIALS[w.jetLaid].jet;
   w.jetLaid = null;
   if (jet === null) return 0;
-  const angle = jetAngle(w.jetLaidAt, jet);
+  const clock = w.jetLaidAt;
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
-  const endAlong = rootAlong + Math.cos(angle) * jet.length;
-  const endAcross = rootAcross + Math.sin(angle) * jet.length;
+  const speed = jet.length / jet.flight;
+  // 0616: the stream the picture was laid on, parcel by parcel from the youngest out.
+  let count = 0;
+  for (let age = streamYoungest(clock, jet.steps); age <= streamOldest(clock, jet.flight) && count < STREAM_POINTS; age++) {
+    STREAM_ALONG[count] = rootAlong + streamAlong(clock, age, jet.sweep, jet.period, speed);
+    STREAM_ACROSS[count] = rootAcross + streamAcross(clock, age, jet.sweep, jet.period, speed);
+    // As wide as the spray is drawn the whole way: `width` at the muzzle, opening to `tipWidth` — 0610, on 0250's rule.
+    STREAM_REACH[count] = streamWidth(age, jet.flight, jet.width, jet.tipWidth);
+    count++;
+  }
   const landedBefore = w.hits.count;
-  // As wide as the spray is drawn the whole way: `width` at the muzzle, opening to `tipWidth` — 0610, on 0250's rule.
-  let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor, jet.tipWidth);
+  let destroyed = streamInto(w.enemies, STREAM_ALONG, STREAM_ACROSS, STREAM_REACH, count, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor);
   if (shootable) {
-    destroyed += tetherInto(w.bossPool, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, jet.landGap, hull, w.corridor, jet.tipWidth);
-    tetherInto(w.bossBody, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, open, IMPACT_FLASH_STEPS, null, w.hits, jet.landGap, hull, w.corridor, jet.tipWidth);
+    destroyed += streamInto(w.bossPool, STREAM_ALONG, STREAM_ACROSS, STREAM_REACH, count, jet.damage, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, jet.landGap, hull, w.corridor);
+    streamInto(w.bossBody, STREAM_ALONG, STREAM_ACROSS, STREAM_REACH, count, jet.damage, open, IMPACT_FLASH_STEPS, null, w.hits, jet.landGap, hull, w.corridor);
   }
   // 0599: heard where it landed, on every ship — as the tether's `sizzle` is, and never as the gun's `hit`.
   if (w.hits.count > landedBefore) w.onCue('douse', w.hits.across[landedBefore]!);
@@ -12436,6 +12614,8 @@ export function respawn(w: World): void {
   w.danceFor = 0;
   w.danceKind = null;
   w.danceBounces = 0;
+  w.danceKickFor = 0;
+  w.dancePullIn = 0;
   // 0613: its waves went with the blasts above; and a life opens on an empty bar, unpunched.
   w.waveIn = 0;
   w.charge = 0;

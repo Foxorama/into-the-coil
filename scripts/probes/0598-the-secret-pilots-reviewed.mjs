@@ -29,22 +29,16 @@ export const PROBES = [
     suite: 'tests/duck.test.ts',
     broke: 'the jet landed a step further round than it was drawn',
     guard: 'lands only where it is drawn, every step of it, the last included',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '  const angle = jetAngle(w.jetLaidAt, jet);',
-      replace: '  const angle = jetAngle(w.jetAt, jet);',
-    },
+    // Re-anchored by 0616: the landing asks the stream at the clock it was laid at.
+    edit: { path: 'src/app/frame.ts', find: '  const clock = w.jetLaidAt;', replace: '  const clock = w.jetAt;' },
   },
   {
     decision: '0598',
     suite: 'tests/duck.test.ts',
     broke: 'the jet’s root drawn where the muzzle is, not where it was',
     guard: 'between steps, its root is drawn on the muzzle where the ship is drawn',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    link.prevAcross = w.ship.prevAcross + w.shipRow.muzzle.across + Math.sin(angle) * jet.length;',
-      replace: '    link.prevAcross = endAcross;',
-    },
+    // Re-anchored by 0616, which lays the link at the root.
+    edit: { path: 'src/app/frame.ts', find: '    link.prevAcross = w.ship.prevAcross + w.shipRow.muzzle.across;', replace: '    link.prevAcross = rootAcross;' },
   },
   {
     decision: '0598',

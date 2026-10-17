@@ -131,10 +131,7 @@ export const PROBES = [
     // 0595's column: the same width from the nozzle to the tip, though the picture opens.
     broke: 'a spray that opens in the picture and lands as a column',
     guard: 'lands as wide as it is drawn, out to the edge of its spray near the tip',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '  let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor, jet.tipWidth);',
-      replace: '  let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, endAlong, endAcross, jet.width, jet.damage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, jet.landGap, null, w.corridor);',
-    },
+    // Re-anchored by 0616, which lands the stream point by point.
+    edit: { path: 'src/app/frame.ts', find: '    STREAM_REACH[count] = streamWidth(age, jet.flight, jet.width, jet.tipWidth);', replace: '    STREAM_REACH[count] = jet.width;' },
   },
 ];
