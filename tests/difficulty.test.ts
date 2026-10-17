@@ -330,6 +330,8 @@ describe('every tier is harder than the one before it', () => {
       expect(b.lives, `${harder} is more forgiving than ${easier}`).toBeLessThanOrEqual(a.lives);
       // 0355: the shell is two counts on the run, and a harder tier opens on no more and carries no more.
       expect(b.shellOpen, `${harder} opens a life on more shields than ${easier}`).toBeLessThanOrEqual(a.shellOpen);
+      // 0614: a level's opening shell is the third count.
+      expect(b.shellLevel, `${harder} opens a level on more shields than ${easier}`).toBeLessThanOrEqual(a.shellLevel);
       expect(b.shellCap, `${harder} may carry more shields than ${easier}`).toBeLessThanOrEqual(a.shellCap);
     }
   });
@@ -350,6 +352,7 @@ describe('every tier is harder than the one before it', () => {
         b.crowd !== a.crowd ||
         b.lives !== a.lives ||
         b.shellOpen !== a.shellOpen ||
+        b.shellLevel !== a.shellLevel ||
         b.shellCap !== a.shellCap;
       expect(moved, `${harder} plays exactly like ${easier}`).toBe(true);
     }

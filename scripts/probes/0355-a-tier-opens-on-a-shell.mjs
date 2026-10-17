@@ -70,8 +70,9 @@ export const PROBES = [
     guard: 'a tier opens on no more than it may carry',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: '    shellOpen: 3,\n    shellCap: 3,',
-      replace: '    shellOpen: 3,\n    shellCap: 4,',
+      // ⚠️ Re-anchored by 0614, which put a level's shell between the two.
+      find: '    shellOpen: 3,\n    shellLevel: 3,\n    shellCap: 3,',
+      replace: '    shellOpen: 3,\n    shellLevel: 3,\n    shellCap: 4,',
     },
   },
   {
@@ -82,8 +83,9 @@ export const PROBES = [
     guard: 'on every axis at once, and never softer on any of them',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: '    shellOpen: 3,\n    shellCap: 3,',
-      replace: '    shellOpen: 0,\n    shellCap: 2,',
+      // ⚠️ Re-anchored by 0614, which put a level's shell between the two.
+      find: '    shellOpen: 3,\n    shellLevel: 3,\n    shellCap: 3,',
+      replace: '    shellOpen: 0,\n    shellLevel: 0,\n    shellCap: 2,',
     },
   },
   {

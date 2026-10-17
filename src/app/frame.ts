@@ -90,7 +90,7 @@ import { ROWS_OF } from '../content/arms.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
-import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellCapFor, shellOrbit, fullHealthFor, hullFor, lampFrame, lampTurn, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
+import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellCapFor, shellOrbit, fullHealthFor, hullFor, lampFrame, lampTurn, levelHealthFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
@@ -9571,7 +9571,8 @@ function spawnPickup(w: World, index: number): void {
   /*
     ⚠️ **WHAT IT IS IS DRAWN HERE, AND IT WAS AUTHORED — 0575.** The level says where; the kind is
     drawn on the run's own stream, and a shield on a tier that wears none is offered as its `bare`, as
-    the drop's is — 0355, 0447: *"burn doesn't get shields still."*
+    the drop's is — 0355, 0447: *"burn doesn't get shields still."* Since 0614 no tier wears none, and
+    Burn draws the shield here too: *"add shields back into the random item drop pool for burn."*
   */
   const offered = offeredAs(w, drawKind(w.pickupRng));
   if (offered === null) return;
@@ -12483,11 +12484,11 @@ export function respawn(w: World): void {
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
   /*
     ⚠️ **A LIFE OPENS ON THE TIER'S SHELL, AFTER `reset` PUT THE HULL BACK** —
-    `docs/decisions/0355-a-tier-opens-on-a-shell.md`. One site for three events: a run's start (through
-    `resetScene`), a death the run survives, and a continue. Asked: *"start with full"*, so on Legend
-    every one of them opens on three shields. 0058's *a death takes the shell* still holds — the old
-    marks were cleared above without a burst — and what a life opens with is the tier's. At zero this
-    is the hull, which is 0050 exactly.
+    `docs/decisions/0355-a-tier-opens-on-a-shell.md`. A death the run survives and a continue; a run's
+    start comes through here too and `resetScene` then raises it to the LEVEL's shell — 0614, *"keep it
+    to once per start of level."* Asked of Legend: *"start with full"*, so there a life opens on three.
+    0058's *a death takes the shell* still holds — the old marks were cleared above without a burst —
+    and what a life opens with is the tier's. At zero this is the hull, which is 0050 exactly.
   */
   w.ship.health = openingHealthFor(w.shipRow, w.difficulty);
   // 0609: and a shell that regenerates starts resting from this health, not from the wreck's.
@@ -12796,7 +12797,8 @@ export function advanceLevel(w: World, level: LevelRow, levelIndex: number): voi
     behaviour"* by arithmetic rather than by a branch. A wreck is left a wreck: a boundary that
     handed health to a ship in its death beat would un-kill it.
   */
-  const opens = openingHealthFor(w.shipRow, w.difficulty);
+  // The LEVEL's shell since 0614, which a death's no longer is: *"once per start of level."*
+  const opens = levelHealthFor(w.shipRow, w.difficulty);
   if (w.ship.health > 0 && w.ship.health < opens) w.ship.health = opens;
 }
 
@@ -12951,4 +12953,10 @@ export function resetScene(w: World): void {
   */
   w.pickups.clear();
   respawn(w);
+  /*
+    ⚠️ **AND A RUN'S START IS LEVEL ONE'S START, SO IT OPENS ON THE LEVEL'S SHELL** — 0614. `respawn`
+    opened it on a life's, which since then is a death's: *"keep it to once per start of level."*
+  */
+  w.ship.health = levelHealthFor(w.shipRow, w.difficulty);
+  w.regenSeen = w.ship.health;
 }

@@ -4,7 +4,7 @@ import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { AUTHORED, BOSS_FIGHTS, DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind, type DifficultyRow } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
-import { MAX_SHIELDS, SHIPS, SHIP_KINDS, shellOpenFor, shieldsOf } from '../src/content/ships.ts';
+import { MAX_SHIELDS, SHIPS, SHIP_KINDS, shellLevelFor, shellOpenFor, shieldsOf } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { reset } from '../src/sim/entity.ts';
 import { initialState, reduce, type Action, type State } from '../src/state/root.ts';
@@ -52,8 +52,11 @@ describe('0355 — the rows', () => {
     // 0355 for Legend; 0614 for the other two: *"the game is quite hard"*.
     expect(DIFFICULTIES.legendary.shellOpen, 'a Legendary life does not open on a full shell').toBe(DIFFICULTIES.legendary.shellCap);
     expect(DIFFICULTIES.legendary.shellCap, 'a Legendary shell is not the whole readout').toBe(MAX_SHIELDS);
-    expect(DIFFICULTIES.savior.shellOpen, 'a Savior level does not start with one shield').toBe(1);
+    expect(DIFFICULTIES.legendary.shellLevel, 'a Legendary level is not renewed to full').toBe(DIFFICULTIES.legendary.shellCap);
+    expect(DIFFICULTIES.savior.shellLevel, 'a Savior level does not start with one shield').toBe(1);
+    expect(DIFFICULTIES.savior.shellOpen, 'a Savior life after a death opens wearing a shell').toBe(0);
     expect(DIFFICULTIES.savior.shellCap, 'Savior can no longer carry a full shell').toBe(MAX_SHIELDS);
+    expect(DIFFICULTIES.burn.shellLevel, 'a Burn level opens wearing a shell').toBe(0);
     expect(DIFFICULTIES.burn.shellOpen, 'a Burn life opens wearing a shell').toBe(0);
     expect(DIFFICULTIES.burn.shellCap, 'Burn cannot gain up to three shields').toBe(MAX_SHIELDS);
   });
@@ -67,6 +70,10 @@ describe('0355 — the rows', () => {
     for (const [name, row] of [...DIFFICULTY_KINDS.map((k) => [k, DIFFICULTIES[k]] as const), ['AUTHORED', AUTHORED] as const]) {
       expect(row.shellOpen, `${name} opens a life on a negative shell`).toBeGreaterThanOrEqual(0);
       expect(row.shellOpen, `${name} opens a life on more shields than it may carry`).toBeLessThanOrEqual(row.shellCap);
+      // 0614: and a level. Not against `shellOpen` — a tier that gave a shield on a death and none at a
+      // boundary would be a correct row.
+      expect(row.shellLevel, `${name} opens a level on more shields than it may carry`).toBeLessThanOrEqual(row.shellCap);
+      expect(row.shellLevel, `${name} opens a level on a negative shell`).toBeGreaterThanOrEqual(0);
       expect(
         row.shellCap,
         `${name} may carry ${row.shellCap} shields and the shell pool in src/app/mount.ts holds ${MAX_SHIELDS} — the pool owns that number`,
@@ -92,6 +99,7 @@ describe('0355 — the rows', () => {
       expect(AUTHORED.bossToughness[fight], `the baseline multiplies the ${fight} boss`).toBe(1);
     }
     expect(AUTHORED.shellOpen, 'the baseline opens a life wearing a shell').toBe(0);
+    expect(AUTHORED.shellLevel, 'the baseline opens a level wearing a shell').toBe(0);
     expect(AUTHORED.shellCap, 'the baseline cannot carry what a shield pickup gives').toBe(MAX_SHIELDS);
     expect(DIFFICULTY_KINDS as readonly string[], 'the baseline became a button').not.toContain('authored');
     const { world } = playableWorld(NO_LEVEL);
@@ -115,16 +123,17 @@ describe('0355 — a life opens on its tier’s shell', () => {
     // In every ship — 0441: the shell is the tier's, and a ship whose row opened on its own would be
     // a different answer here. 0609 is that row: the Hamster Ball opens on its own three on every tier,
     // so what each ship opens on is `shellOpenFor`, which is the tier's wherever the row says nothing.
+    // Since 0614 a run's start is a LEVEL's (`shellLevelFor`) and a death and a continue are a life's.
     for (const tier of DIFFICULTY_KINDS) for (const ship of SHIP_KINDS) {
-      const row = { shellOpen: shellOpenFor(SHIPS[ship], DIFFICULTIES[tier]) };
+      const row = { shellOpen: shellOpenFor(SHIPS[ship], DIFFICULTIES[tier]), shellLevel: shellLevelFor(SHIPS[ship], DIFFICULTIES[tier]) };
       const run = shell(tier);
       const { world, frame } = run;
 
       run.lifecycle.begin(tier, ship, 'free');
       expect(world.shipRow, `a ${tier} run begun in the ${ship} flies another ship`).toBe(SHIPS[ship]);
       frame.step();
-      expect(shields(world), `a ${tier} ${ship} run opens on the wrong shell`).toBe(row.shellOpen);
-      expect(world.shieldOrbs.size, `a ${tier} ${ship} run opens wearing the wrong number of marks`).toBe(row.shellOpen);
+      expect(shields(world), `a ${tier} ${ship} run opens on the wrong shell`).toBe(row.shellLevel);
+      expect(world.shieldOrbs.size, `a ${tier} ${ship} run opens wearing the wrong number of marks`).toBe(row.shellLevel);
 
       // A DEATH: the shell spent first, so the life ends on the hull and a respawn that kept what the
       // dead ship wore could not pass for one that opens on the tier's.
@@ -161,7 +170,8 @@ describe('0355 — a level boundary renews the shell and never lowers it', () =>
         const frame = new GameFrame(world);
         world.ship.health = world.shipRow.health + carried;
         advanceLevel(world, NO_LEVEL, 1);
-        const want = Math.max(carried, row.shellOpen);
+        // The LEVEL's shell since 0614 — a life's no longer reaches a boundary.
+        const want = Math.max(carried, row.shellLevel);
         expect(shields(world), `${tier}: a ship carrying ${carried} crossed a boundary with ${shields(world)}`).toBe(want);
         frame.step();
         expect(world.shieldOrbs.size, `${tier}: the renewed shell is a number with no marks`).toBe(want);
@@ -230,6 +240,38 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
     }
     // Otherwise the withholding half was never exercised and this is a copy of 0256's guard.
     expect(withheldSomewhere, 'no tier withholds anything, so the rule was never run').toBe(true);
+  });
+
+  /** Thirty authored pickups and nothing else — each drawn at random as it spawns (0575). */
+  const SCATTER: LevelRow = { ...NO_LEVEL, pickups: Array.from({ length: 30 }, (_, i) => ({ at: 150 + i * 40, lane: 50 })) };
+
+  it('the random pickups draw a shield on every tier that can carry one, and the ward only where none can', () => {
+    /*
+      0614: *"do add shields back into the random item drop pool for burn, not just for boss drops."*
+      The level's pickups are drawn by `drawKind` and offered through the same `offeredAs` as the
+      mid-boss's drop, so this drives the real frame through a level of them on every tier and on a
+      shell of zero, and reads what spawned.
+    */
+    const rows: [string, DifficultyKind, DifficultyRow][] = DIFFICULTY_KINDS.map((k) => [k, k, DIFFICULTIES[k]]);
+    for (const [tier, kind, row] of [...rows, ['a shell of zero', 'burn', SHELLESS] as [string, DifficultyKind, DifficultyRow]]) {
+      const { world } = playableWorld(SCATTER, kind);
+      world.difficulty = row;
+      const frame = new GameFrame(world);
+      const seen = new Set<string>();
+      for (let i = 0; i < 4000 && world.nextPickup < SCATTER.pickups.length; i++) {
+        world.ship.health = world.shipRow.health;
+        frame.step();
+        for (let p = 0; p < world.pickups.size; p++) seen.add(PICKUP_KINDS[world.pickups.at(p).kind]!);
+      }
+      expect(world.nextPickup, `${tier}: the level's pickups never all spawned`).toBe(SCATTER.pickups.length);
+      if (row.shellCap > 0) {
+        expect(seen.has('shield'), `${tier}: thirty random pickups and not one shield`).toBe(true);
+        expect(seen.has('ward'), `${tier}: a ward drawn on a tier that carries shields`).toBe(false);
+      } else {
+        expect(seen.has('shield'), `${tier}: a shield drawn on a shell of zero`).toBe(false);
+        expect(seen.has('ward'), `${tier}: thirty random pickups and the shield's place never offered`).toBe(true);
+      }
+    }
   });
 
   it('a shield never raises health past the tier’s full shell, and the marks agree', () => {

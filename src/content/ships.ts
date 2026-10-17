@@ -1142,7 +1142,7 @@ export function fullHealthFor(ship: ShipRow, tier: { readonly shellCap: number }
   return ship.health + shellCapFor(ship, tier);
 }
 
-/** The health a life opens with on a tier: its hull, plus the shell that tier opens every life on. */
+/** The health a life opens with on a tier after a death or a continue: its hull, plus the shell that tier opens it on. */
 export function openingHealthFor(ship: ShipRow, tier: { readonly shellOpen: number }): number {
   return ship.health + shellOpenFor(ship, tier);
 }
@@ -1159,6 +1159,16 @@ export function shellCapFor(ship: ShipRow, tier: { readonly shellCap: number }):
 /** The shields a life opens on: the row's own count where it says one, the tier's otherwise — 0609. */
 export function shellOpenFor(ship: ShipRow, tier: { readonly shellOpen: number }): number {
   return ship.shields ?? tier.shellOpen;
+}
+
+/** The shields a level opens on, a run's first included: the row's own count where it says one, the tier's otherwise — 0614. */
+export function shellLevelFor(ship: ShipRow, tier: { readonly shellLevel: number }): number {
+  return ship.shields ?? tier.shellLevel;
+}
+
+/** The health a level opens with on a tier — the least a boundary leaves the ship, and a run's start — 0614. */
+export function levelHealthFor(ship: ShipRow, tier: { readonly shellLevel: number }): number {
+  return ship.health + shellLevelFor(ship, tier);
 }
 
 /**

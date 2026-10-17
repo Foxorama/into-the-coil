@@ -92,8 +92,8 @@ export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
    */
   lives: number;
   /**
-   * Shields a life opens with — at the start of a run, after a death, and after a continue — and the
-   * least a level boundary leaves the ship carrying.
+   * Shields a life opens with after a death and after a continue. Until 0614 it was also a run's start
+   * and the least a level boundary leaves the ship carrying; those are `shellLevel` now.
    *
    * ⚠️ **A count and not a multiplier, like `lives`, and for the same reason: it is about the RUN.**
    * Asked for by tier: *"saviour — no change to behaviour; burn — no shields; legend — start with 3
@@ -102,10 +102,19 @@ export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
    * opens on the hull (0050) and a boundary carries what it had (0058) — so a tier at zero is not a
    * branch anywhere, it is arithmetic that adds nothing.
    *
-   * ⚠️ **Moved down a tier by 0614**: *"the game is quite hard"* — Savior opens on one, and Burn on
-   * the hull with Savior's old cap of three.
+   * ⚠️ **Since 0614 it is a LIFE's only — a death and a continue — and `shellLevel` is a level's.**
+   * *"Don't give saviour a shield on death — keep it to once per start of level."*
    */
   shellOpen: number;
+  /**
+   * Shields a level opens with — a run's start, which is level one's, and the least a level boundary
+   * leaves the ship carrying — `docs/decisions/0614-the-shields-come-down-a-tier.md`.
+   *
+   * ⚠️ **Split off `shellOpen` by the player's own line**: Savior *"start each level with 1 shield"*,
+   * then *"don't give saviour a shield on death — keep it to once per start of level."* A count, like
+   * the other two, and `tests/tier-shell.test.ts` holds it under `shellCap` as it does `shellOpen`.
+   */
+  shellLevel: number;
   /**
    * The most shields a ship may carry on this tier.
    *
@@ -469,6 +478,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     lives: 3,
     // Every life opens on a full shell and every level renews it — 0355, the player's words.
     shellOpen: 3,
+    shellLevel: 3,
     shellCap: 3,
     opensWith: [],
     ...multipliersFor('legendary'),
@@ -493,10 +503,14 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     short: 'Savior',
     hint: 'Be the hero you want to be',
     lives: 3,
-    // *"Start each level with 1 shield"* — 0614: a life opens on one, a boundary tops it up to one, and
-    // two more are flown for. It was the hull (0355's *"no change to behaviour"*) until the game was
-    // played as *"quite hard"*.
-    shellOpen: 1,
+    /*
+      *"Start each level with 1 shield"* and *"don't give saviour a shield on death — keep it to once
+      per start of level"* — 0614: a run's start and every boundary top the ship up to one, a death or a
+      continue opens on the hull, and the rest are flown for. It was the hull everywhere (0355's *"no
+      change to behaviour"*) until the game was played as *"quite hard"*.
+    */
+    shellOpen: 0,
+    shellLevel: 1,
     shellCap: 3,
     opensWith: [],
     ...multipliersFor('savior'),
@@ -538,6 +552,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
       `src/app/frame.ts`), and no tier has one now.
     */
     shellOpen: 0,
+    shellLevel: 0,
     shellCap: 3,
     // One void to open on — 0447 — unless the ship's own special is already the ward's.
     opensWith: ['voidMissile'],
@@ -573,6 +588,7 @@ export const AUTHORED: DifficultyRow = {
   // Read by nothing: a fixture has no run, and this row never begins one.
   lives: 5,
   shellOpen: 0,
+  shellLevel: 0,
   shellCap: 3,
   opensWith: [],
   toughness: 1,

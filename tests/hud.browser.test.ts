@@ -631,7 +631,7 @@ describe.runIf(chromePath)('the in-game readout', () => {
         expect(
           pips.filter((spent) => !spent).length,
           `a fresh ${tier} life does not light the shell it opens with`,
-        ).toBe(row.shellOpen);
+        ).toBe(row.shellLevel);
         await page.context().close();
       }),
     );
@@ -659,7 +659,8 @@ describe.runIf(chromePath)('the in-game readout', () => {
     const page = await open();
     // ⚠️ The first tier whose life opens on EMPTY sockets, by the row rather than by name — since 0355
     // a Legendary life opens full, so nothing on it would be spent to compare against.
-    const empty = DIFFICULTY_KINDS.findIndex((k) => DIFFICULTIES[k].shellOpen === 0 && DIFFICULTIES[k].shellCap > 0);
+    // 0614: a run opens on the LEVEL's shell, so that is the count that has to be empty.
+    const empty = DIFFICULTY_KINDS.findIndex((k) => DIFFICULTIES[k].shellLevel === 0 && DIFFICULTIES[k].shellCap > 0);
     await launch(page, DIFFICULTY_KINDS[empty]!);
     await page.waitForTimeout(200);
     /*

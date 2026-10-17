@@ -111,7 +111,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shelled, openingHealthFor, ownFit, ownRider, sameFit, shellCapFor, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shelled, levelHealthFor, ownFit, ownRider, sameFit, shellCapFor, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -1797,7 +1797,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // 0613: a ship that earns its special opens on none of it, and the readout shows what it will earn.
       const earned = SHIPS[ship].charge === null ? null : ownSpecial(ship);
       // 0609: the pips the ship may carry, which is its own count where its row says one.
-      chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], openingHealthFor(SHIPS[ship], tier)), shellCapFor(SHIPS[ship], tier), stacksOf(arsenal, earned));
+      // 0614: what the run's first level opens on, which is the level's shell and not a death's.
+      chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], levelHealthFor(SHIPS[ship], tier)), shellCapFor(SHIPS[ship], tier), stacksOf(arsenal, earned));
       return;
     }
     chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), shellCapFor(world.shipRow, world.difficulty), runStacks());
