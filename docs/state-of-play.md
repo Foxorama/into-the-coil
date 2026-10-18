@@ -1173,8 +1173,10 @@ ONE MESSAGE.**
 [0625](decisions/0625-the-lasers-are-heard.md) and [0626](decisions/0626-a-place-fires-more-than-one-colour.md) — each
 owes the play its *Owed* names, and 0624's reading of *"R + B"* is the player's to overturn. The queue's first item,
 the serpent's roots, is [0627](decisions/0627-the-roots-are-walls.md), owed a fight and an ear; its second, Hangin'
-Out's wall, is [0628](decisions/0628-the-monitor-hangs-on-a-wall.md), owed a look. **Next is the report's queue, item
-3: the guns and tubes**, then the mid-bosses, and the enemy art, which is planned with photographs before it is built.
+Out's wall, is [0628](decisions/0628-the-monitor-hangs-on-a-wall.md), owed a look; the missiles half of its third
+is [0629](decisions/0629-a-launcher-and-not-a-box.md), owed a look in play. **Next is the guns half of item 3** — the
+pulse rod, the shuriken launcher block and the paint box — then the mid-bosses, and the enemy art, which is planned
+with photographs before it is built.
 
 ### ⚠️ THE BALL IS SOLID AND THE WATER FLOWS — OWED A PLAY AND AN EAR — 2026-10-17
 

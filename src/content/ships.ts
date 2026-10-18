@@ -759,8 +759,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     view: 'side',
     hardpoint: { along: 3.08, across: -0.76 },
     mountScale: 1,
-    // The orange nose of the missile in each roof turret.
-    tubes: [[], [{ along: 0.76, across: -1.92 }], [{ along: 0.07, across: -1.92 }, { along: 1.05, across: -1.92 }]],
+    // The orange nose of each missile in its mouth in the roof launcher — 0629: two stacked in its face.
+    tubes: [[], [{ along: 0.86, across: -1.99 }], [{ along: 1.05, across: -2.17 }, { along: 1.05, across: -1.82 }]],
     // 0581: the warhead at each turret's front, as tall as the orange nose 0461 painted there.
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
@@ -820,8 +820,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     view: 'side',
     hardpoint: { along: 3.43, across: 0.11 },
     mountScale: 1,
-    // The orange nose of the missile in each turret on the roof rack.
-    tubes: [[], [{ along: -1.22, across: -2.04 }], [{ along: -2.18, across: -2.04 }, { along: -0.66, across: -2.04 }]],
+    // The orange nose of each missile in its mouth in the launcher on the roof rack — 0629: two stacked in its face.
+    tubes: [[], [{ along: -1.1, across: -2.12 }], [{ along: -0.66, across: -2.29 }, { along: -0.66, across: -1.94 }]],
     // 0581: the warhead at each turret's front, on the Firebird's terms.
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
@@ -886,8 +886,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     */
     hardpoint: wheelAt(14.4, -2.4, 0, 1),
     mountScale: 0.8,
-    // The orange nose of the missile in each pod on its rear fender.
-    tubes: [[], [wheelAt(-11.1, -0.1, 0, 1)], [wheelAt(-13.3, -0.1, 0, 1), wheelAt(-10.7, -0.1, 0, 1)]],
+    // The orange nose of each missile in its mouth in the launcher on its rear fender — 0629: two stacked in its face.
+    tubes: [[], [wheelAt(-10.9, -0.54, 0, 1)], [wheelAt(-10.7, -1.16, 0, 1), wheelAt(-10.7, 0.26, 0, 1)]],
     // 0581: the warhead at each pod's front, on the Firebird's terms.
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
@@ -1030,8 +1030,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // A borrowed gun stands on its back, ahead of the periscope, where a car's stands on its hood.
     hardpoint: wheelAt(0.2, -3.1, 0, 1),
     mountScale: 1,
-    // The orange nose of the missile in each pod on its back, between the tail and the periscope.
-    tubes: [[], [wheelAt(-7.1, -4.6, 0, 1)], [wheelAt(-9.1, -4.6, 0, 1), wheelAt(-5.7, -4.6, 0, 1)]],
+    // The orange nose of each missile in its mouth in the launcher on its back, between the tail and the
+    // periscope — 0629: two stacked in its face.
+    tubes: [[], [wheelAt(-6.3, -5.05, 0, 1)], [wheelAt(-5.7, -5.76, 0, 1), wheelAt(-5.7, -4.34, 0, 1)]],
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
     // One jet, low at the stern under the tail.

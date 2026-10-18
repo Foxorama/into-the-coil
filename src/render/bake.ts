@@ -2601,18 +2601,17 @@ export function carMounts(ship: 'firebird' | 'estate' | 'thunderbolt' | 'duck'):
   // 0545: the Thunderbolt's pods on its rear fender, and its lightning ball on the fork crown.
   // 0595: the Aqua Duck's pods on its back, and its marker's mouth under its chin.
   const spans = firebird ? FIREBIRD_TURRETS : ship === 'estate' ? ESTATE_TURRETS : ship === 'duck' ? DUCK_PODS : THUNDERBOLT_PODS;
-  const mid = firebird
-    ? (FIREBIRD_TURRET_TOP + FIREBIRD_TURRET_BASE) / 2
-    : ship === 'estate'
-      ? (ESTATE_TURRET_TOP + ESTATE_RACK) / 2
-      : ship === 'duck'
-        ? (DUCK_POD_TOP + DUCK_BACK) / 2
-        : (THUNDERBOLT_POD_TOP + THUNDERBOLT_FENDER) / 2;
+  const top = firebird ? FIREBIRD_TURRET_TOP : ship === 'estate' ? ESTATE_TURRET_TOP : ship === 'duck' ? DUCK_POD_TOP : THUNDERBOLT_POD_TOP;
   const muzzle = firebird ? FIREBIRD_HUB : ship === 'estate' ? ESTATE_STAR : ship === 'duck' ? DUCK_MUZZLE : THUNDERBOLT_BALL;
   return {
     muzzle: box(muzzle[0], muzzle[1]),
-    // The orange nose `paintTurrets` draws runs to a tenth short of the turret's front.
-    tubes: spans.map((stage) => stage.map(([, to]) => box(to - 0.1, mid))),
+    // Each missile's nose in its own mouth in the launcher's face, a tenth short of its front (0629).
+    tubes: spans.map((stage) => {
+      if (stage.length === 0) return [];
+      const [from, to] = launcherSpan(stage);
+      const pod = podOf(from, to, top);
+      return mouthsOf(pod.r, stage.length).map((dy) => box(to - 0.1, pod.mid + dy));
+    }),
   };
 }
 
@@ -3001,16 +3000,71 @@ function wheelUnder(x: number, y: number, radius: number, sill: number): Pt[] {
   return out;
 }
 
-/** Turret tops along a roof, as outline points from back to front: `[from, to]` spans at `top`. */
+/** Turret tops along a roof, as outline points from back to front: a stage's tubes, one launcher, at `top`. */
 function turretsOn(spans: readonly (readonly [number, number])[], roofAt: (x: number) => number, top: number): Pt[] {
-  const out: Pt[] = [];
-  for (const [from, to] of spans) out.push([from, roofAt(from)], [from, top], [to, top], [to, roofAt(to)]);
-  return out;
+  if (spans.length === 0) return [];
+  // 0629: one launcher on a pylon — up the pylon's back, round the launcher, down its front.
+  const [from, to] = launcherSpan(spans);
+  const pod = podOf(from, to, top);
+  return [[pod.pylon[0], roofAt(pod.pylon[0])], ...pod.round, [pod.pylon[1], roofAt(pod.pylon[1])]];
 }
 
-/** Where each car's roof turrets stand, in the predecessor's frame, at one tube and two. */
-const FIREBIRD_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[0.4, 4.2]], [[-1.6, 1.4], [2.4, 5.4]]];
-const ESTATE_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[-8.5, -4.9]], [[-12.4, -8.8], [-6.2, -2.6]]];
+/**
+ * A stage's launcher, from the back of its first tube's slot to the front of its last — 0629. The slots are one per
+ * tube, as they always were; the launcher is drawn over all of them.
+ */
+function launcherSpan(spans: readonly (readonly [number, number])[]): readonly [number, number] {
+  return [Math.min(...spans.map(([from]) => from)), Math.max(...spans.map(([, to]) => to))];
+}
+
+/**
+ * Where each tube's mouth is in a launcher's face, across, from its middle line — 0629: one in the middle, or two
+ * stacked, six tenths of its radius either side of it. A loaded nose is as tall as the launcher (`TURRET_NOSE`),
+ * so two noses overlap however they stand in it; at under half the radius apart the pair read as one nose on the
+ * pad, and this far apart they are two tips.
+ */
+function mouthsOf(r: number, tubes: number): readonly number[] {
+  return tubes === 1 ? [0] : [-0.62 * r, 0.62 * r];
+}
+
+/**
+ * A car's missile launcher — 0629: *"update boring blocky gun + missiles with nice art"*. Each tube was a box the
+ * turret's whole height, sat on the roof, and a pair of them was nine pixels of rectangle each at the fight's
+ * camera; drawn as two pods, they could only be drums or dots, two tubes' worth of roof being too short for one
+ * pod. Asked, the player chose one launcher: a sleek pod lying along the roof over every tube's slot, round at the
+ * tail, the mouths stacked in its face, held up off the roof on a pylon with the sky under it. In the
+ * predecessor's frame:
+ *
+ * - `round`: the outline from the pylon's back foot round the pod to its front foot, back to front;
+ * - `mid`: the line along its middle, which the mouths stand either side of (`mouthsOf`, `carMounts`);
+ * - `r`: its radius; `pylon`: the pylon's back and front.
+ */
+function podOf(from: number, to: number, top: number): { round: Pt[]; mid: number; r: number; pylon: readonly [number, number] } {
+  // Its girth off its length alone, so every caller — the outline, the painter, `carMounts` — draws one pod; and
+  // never so deep its pylon is lost, every car's turret having been about three units tall.
+  const r = Math.min((to - from) * 0.24, 1.15);
+  const mid = top + r;
+  const pylon = [from + (to - from) * 0.28, from + (to - from) * 0.72] as const;
+  const nose = Math.min(r * 0.7, 0.6);
+  const round: Pt[] = [
+    [pylon[0], mid + r],
+    // The tail, round from its belly over to its back.
+    ...roundel(from + r, mid, r, 8, Math.PI * 0.5, Math.PI * 1.5),
+    // Along its back to the mouth, the mouth's lip round, and back along its belly.
+    ...roundel(to - nose, mid, r, 5, -Math.PI * 0.5, 0).map(([x, y]): Pt => [to - nose + (x - (to - nose)) * (nose / r), y]),
+    ...roundel(to - nose, mid, r, 5, 0, Math.PI * 0.5).map(([x, y]): Pt => [to - nose + (x - (to - nose)) * (nose / r), y]),
+    [pylon[1], mid + r],
+  ];
+  return { round, mid, r, pylon };
+}
+
+/**
+ * Where each car's roof turrets stand, in the predecessor's frame, at one tube and two — a slot a tube, the launcher
+ * drawn over them all (0629). The one tube's slot is longer than it was (it was 3.8), so one tube is a pod and not a
+ * drum.
+ */
+const FIREBIRD_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[-0.6, 4.6]], [[-1.6, 1.4], [2.4, 5.4]]];
+const ESTATE_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[-10.2, -4.4]], [[-12.4, -8.8], [-6.2, -2.6]]];
 
 /**
  * How high each car's turrets stand, in the predecessor's frame: tall enough that the missile's orange
@@ -3167,7 +3221,8 @@ function estateBody(stage: number, own: boolean): Pt[] {
 */
 
 /** Where the Thunderbolt's pods stand on the rack over its rear fender, in the predecessor's frame, at one tube and two. */
-const THUNDERBOLT_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-14.6, -11]], [[-15.8, -13.2], [-12.8, -10.6]]];
+// 0629: the one tube's slot longer (it was −14.6 to −11), so one tube is a pod and not a drum.
+const THUNDERBOLT_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-15.2, -10.8]], [[-15.8, -13.2], [-12.8, -10.6]]];
 /** The rack's top over the rear fender, and how high a pod stands on it. */
 const THUNDERBOLT_FENDER = 1.4;
 const THUNDERBOLT_POD_TOP = -1.6;
@@ -3694,7 +3749,8 @@ function drawThunderboltRider(ctx: Pen, f: Frame, palette: Palette, rider: Figur
 const DUCK_BACK = -3;
 const DUCK_POD_TOP = -6.2;
 /** Where its pods stand on its back, at one tube and two, as `[back, front]` spans. */
-const DUCK_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-10.2, -7]], [[-12, -9], [-8.6, -5.6]]];
+// 0629: the one tube's slot longer (it was −10.2 to −7), so one tube is a pod and not a drum.
+const DUCK_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-11.2, -6.2]], [[-12, -9], [-8.6, -5.6]]];
 /** Its head: the centre and the radius. */
 const DUCK_HEAD: Pt = [9.5, -6.5];
 const DUCK_HEAD_R = 4.6;
@@ -4966,6 +5022,11 @@ function steelStar(x: number, y: number, reach: number): Pt[] {
  * the missile tubes thematically appropriate as well?"*, so the Firebird's are its black lacquer banded in
  * its phoenix's gold and the estate's its burl banded in gilt. Since 0581 the missile lying in each is the
  * frame's, in its kind's ink (`stepLoaded`); the turret is what holds it.
+ *
+ * ⚠️ **A LAUNCHER AND NOT A BOX SINCE 0629** — *"update boring blocky gun + missiles with nice art"*. One for
+ * every tube a stage has (`podOf`), still the livery's: a cylinder lying along the roof on a pylon, lit along its
+ * back and dark along its belly, a band in the livery's second ink, and a dark face at its front where the frame
+ * lays each missile's nose.
  */
 function paintTurrets(
   ctx: Pen,
@@ -4976,22 +5037,35 @@ function paintTurrets(
   box: (points: readonly Pt[]) => Pt[],
   livery: { readonly shell: string; readonly band: string },
 ): void {
-  for (const [from, to] of spans) {
-    shaded(ctx, f, box([[from, top]])[0]!, box([[from, base]])[0]!, shade(livery.shell, 0.5), shade(livery.shell, -0.25), box([
-      [from, top],
-      [to, top],
-      [to, base],
-      [from, base],
-    ]));
+  if (spans.length === 0) return;
+  {
+    const [from, to] = launcherSpan(spans);
+    const { round, mid, r } = podOf(from, to, top);
+    void base;
+    /*
+      ⚠️ **THREE MARKS, BECAUSE AT THE FIGHT'S CAMERA THE LAUNCHER IS EIGHT PIXELS BY THREE.** Every solid mark
+      clears 0106's 2.5 px or it is not drawn at all; drawn first with a pylon, a highlight, a tail cap and two
+      bands, each was a pixel or a pixel and a half. So the pylon is the outline's (the body's paint under it), and
+      on the pod there are a cylinder's shading, one band and one dark face.
+    */
+    // The pod, lit along its back and dark along its belly — a cylinder.
+    shaded(ctx, f, box([[from, mid - r]])[0]!, box([[from, mid + r]])[0]!, shade(livery.shell, 0.7), shade(livery.shell, -0.45), box(round.slice(1, -1)));
+    // The livery's band round it, a third of the way back from its face, 2.5 px wide at the fight's camera.
+    const band = to - r * 3.2;
     poly(ctx, f, livery.band, box([
-      [from + 0.2, top],
-      [from + 1.95, top],
-      [from + 1.95, base],
-      [from + 0.2, base],
+      [band, mid - r * 0.97],
+      [band + LAUNCHER_BAND, mid - r * 0.97],
+      [band + LAUNCHER_BAND, mid + r * 0.97],
+      [band, mid + r * 0.97],
     ]));
-    // 0581: the missile's orange nose was painted here; the loaded tube is the frame's, in its kind's ink.
+    // The face: dark, set back from the lip, which curves in; the frame lays each missile's nose in it (0581).
+    const face = Math.max(r * 0.8, 0.9);
+    disc(ctx, f, shade(livery.shell, -0.85), ...box([[to - face * 1.2, mid]])[0]!, face * 0.062);
   }
 }
+
+/** How wide a launcher's band is, in the predecessor's frame — 0629: 2.5 px at the fight's camera, 0106's floor. */
+const LAUNCHER_BAND = 1.75;
 
 /**
  * Backspin Bo's Firebird — *"a jet-black muscle-car cruiser, a golden phoenix blazing across the
