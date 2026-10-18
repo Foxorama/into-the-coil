@@ -1,7 +1,7 @@
 # 0618 — The spinners run with the engines
 
 **Accepted 2026-10-18.** From the play-test of 2026-10-18 —
-[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), item 3. Amends
+[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), item 4. Amends
 [0527](0527-the-wheels-turn.md) and [0557](0557-the-marmot-crackles.md): a rim's wheels run on a clock of their own.
 
 ## The ask

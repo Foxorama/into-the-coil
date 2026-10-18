@@ -1,7 +1,7 @@
 # 0626 — A place fires more than one colour
 
 **Accepted 2026-10-18.** From the play-test of 2026-10-18 —
-[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), item 15. Builds on
+[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), item 16. Builds on
 [0296](0296-a-bullet-belongs-to-its-place.md): a place still owns its raiders' fire, and now owns three inks of it.
 
 ## The ask

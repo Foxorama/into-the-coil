@@ -1,7 +1,7 @@
 # 0619 — Every flame is the largest
 
 **Accepted 2026-10-18.** From the play-test of 2026-10-18 —
-[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), item 4.
+[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), item 5.
 
 ## The ask
 

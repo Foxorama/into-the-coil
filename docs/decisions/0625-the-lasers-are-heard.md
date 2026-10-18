@@ -1,7 +1,7 @@
 # 0625 — The lasers are heard
 
 **Accepted 2026-10-18.** From the play-test of 2026-10-18 —
-[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), items 13 and 14. Amends
+[`the-play-test-of-2026-10-18`](../../reports/the-play-test-of-2026-10-18.md), items 14 and 15. Amends
 [0308](0308-the-attacks-are-heard.md)'s fallback for one kind of attack, and a guard of
 [0089](0089-a-cue-has-a-body.md)'s.
 
