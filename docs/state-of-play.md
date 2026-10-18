@@ -1175,8 +1175,9 @@ owes the play its *Owed* names, and 0624's reading of *"R + B"* is the player's 
 the serpent's roots, is [0627](decisions/0627-the-roots-are-walls.md), owed a fight and an ear; its second, Hangin'
 Out's wall, is [0628](decisions/0628-the-monitor-hangs-on-a-wall.md), owed a look; its third, the guns and
 missiles, is [0629](decisions/0629-a-launcher-and-not-a-box.md) and [0630](decisions/0630-the-guns-are-not-blocks.md),
-owed a look in play. **Next is the report's queue, item 4: the mid-bosses**, then the enemy art, which is planned with
-photographs before it is built.
+owed a look in play; its fourth, the mid-bosses, is [0631](decisions/0631-the-mid-bosses-are-drawn.md), owed a look
+in each place. **Next is the report's queue, item 5: the enemy art**, which is planned with photographs and shown to
+the player before it is built.
 
 ### ⚠️ THE BALL IS SOLID AND THE WATER FLOWS — OWED A PLAY AND AN EAR — 2026-10-17
 

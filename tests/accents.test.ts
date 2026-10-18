@@ -604,6 +604,40 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
     */
   }, 155_000);
 
+  it('0631: no sub-path of a hull straddles its outline, so a hole never fills ink outside the body', () => {
+    /*
+      ⚠️ **A HULL IS FILLED `evenodd`, AND A HOLE ACROSS THE EDGE IS INK OFF THE BODY.** A sub-path
+      wholly inside the outline is a hole; one wholly outside is a separate piece. One with points
+      both sides fills the part of itself OUTSIDE the outline: the redoubt's outer ports filled a
+      crescent of wall in the sky, and the chorus's overlapping lobes cancelled into lenses. Both read
+      as placeholders on the play-test of 2026-10-18 (*"remove placeholder graphics with miniboss
+      art"*), and neither is a mark the 0149 guard above can see — it measures paint against the
+      hull, and this is the hull disagreeing with itself.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const kind of BODIES) {
+        const { hull } = hullAndPaint(kind, theme);
+        if (hull.subpaths.length < 2) continue;
+        const outline = edgeIndex({ ...hull, subpaths: [hull.subpaths[0]!] });
+        hull.subpaths.slice(1).forEach((subpath, i) => {
+          let inside = 0;
+          let outside = 0;
+          // A point within half a pixel of the outline is on it, and is neither.
+          for (const point of subpath) {
+            if (outline.distance(point) < 0.5) continue;
+            if (outline.inside(point)) inside++;
+            else outside++;
+          }
+          expect(
+            Math.min(inside, outside),
+            `sub-path ${i + 2} of the ${kind}'s hull at ${theme} has ${inside} points more than half a pixel inside ` +
+              `its outline and ${outside} outside, so under evenodd it fills ink beyond the body`,
+          ).toBe(0);
+        });
+      }
+    }
+  });
+
   it('and a translucent mark — a plume, a halo — stays inside the sprite’s own box', () => {
     for (const theme of THEME_KINDS) {
       for (const kind of BODIES) {

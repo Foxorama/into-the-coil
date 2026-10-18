@@ -30,13 +30,17 @@ export const PROBES = [
       measurement (5.2 CSS pixels of clearance, the tightest of the seven). Two tenths further out and
       the eye is over the edge — and on the page, where a hand would check it, it looks like an eye
       near the edge of a lobe.
+
+      ⚠️ RE-AIMED BY 0631, which made the chorus one outline: its lobes no longer cancel, so an eye at
+      0.82 is inside its lobe and the edit applied and changed nothing a guard could see. The break is
+      the same — an eye moved out through the lobe — to where the lobe's edge now is.
     */
     broke: 'a boss’s eye moved out through its lobe, so the interior pokes out of the silhouette',
     guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
     edit: {
       path: 'src/render/bake.ts',
       find: 'const BOSS6_EYES: readonly Mark[] = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];',
-      replace: 'const BOSS6_EYES: readonly Mark[] = [dot(-0.46, -0.82, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.82, 0.095)];',
+      replace: 'const BOSS6_EYES: readonly Mark[] = [dot(-0.56, -0.92, 0.095), dot(-0.46, 0, 0.095), dot(-0.56, 0.92, 0.095)];',
     },
   },
   {
@@ -133,31 +137,10 @@ export const PROBES = [
     guard: 'THE 0081 ONE: no two boss hulls are the same drawing once the paint is taken off',
     edit: {
       path: 'src/render/bake.ts',
-      find:
-        '      // A SHOAL MOTHER: a blunt teardrop trailing four fins. Level four is about speed, and this is\n' +
-        '      // the only hull in the game that reads as moving while it is standing still.\n' +
-        '      ctx.moveTo(half - r, half);\n' +
-        '      ctx.lineTo(half - r * 0.3, half - r * 0.62);\n' +
-        '      ctx.lineTo(half + r * 0.55, half - r * 0.5);\n' +
-        '      ctx.lineTo(half + r * 0.95, half - r * 0.86);\n' +
-        '      ctx.lineTo(half + r * 0.8, half - r * 0.22);\n' +
-        '      ctx.lineTo(half + r, half);\n' +
-        '      ctx.lineTo(half + r * 0.8, half + r * 0.22);\n' +
-        '      ctx.lineTo(half + r * 0.95, half + r * 0.86);\n' +
-        '      ctx.lineTo(half + r * 0.55, half + r * 0.5);\n' +
-        '      ctx.lineTo(half - r * 0.3, half + r * 0.62);\n' +
-        '      ctx.closePath();\n',
-      replace:
-        '      ctx.moveTo(half - r, half);\n' +
-        '      ctx.lineTo(half, half - r * 0.85);\n' +
-        '      ctx.lineTo(half + r, half);\n' +
-        '      ctx.lineTo(half, half + r * 0.85);\n' +
-        '      ctx.closePath();\n' +
-        '      ctx.moveTo(half - r * 0.42, half);\n' +
-        '      ctx.lineTo(half, half - r * 0.36);\n' +
-        '      ctx.lineTo(half + r * 0.42, half);\n' +
-        '      ctx.lineTo(half, half + r * 0.36);\n' +
-        '      ctx.closePath();\n',
+      // ⚠️ Re-anchored by 0631, which drew the shoal mother's hull as a table (`SHOAL_HULL`); the break
+      // is the same — the shoal mother handed the lattice's frame, which its paint table also draws.
+      find: '      trace(ctx, f, SHOAL_HULL);\n',
+      replace: '      trace(ctx, f, LATTICE_OUTER);\n      trace(ctx, f, LATTICE_INNER);\n',
     },
   },
   {

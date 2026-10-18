@@ -153,9 +153,14 @@ together with their own decisions, as the play-test of 2026-10-10's six did. Aft
   three, asked because at the fight's size two pods could only be drums or dots.
 - **Item 3, the guns** — [0630](../docs/decisions/0630-the-guns-are-not-blocks.md): the estate's launcher is a drum,
   the duck's marker has a grip and tapers to its barrel, and the fighter's pulse has a muzzle brake.
+- **Item 2** — [0631](../docs/decisions/0631-the-mid-bosses-are-drawn.md): the seven mid-bosses are drawn as the end
+  bosses are, each keeping its one idea — the sentinel a frigate, the harrow three tines on a burning core, the
+  lattice a frame holding a field, the shoal mother a fish, the redoubt a crenellated wall, the chorus three lobes
+  that are one body, the axis a ringed eye. The sentinel was shown to the player first.
 
 ## Owed
 
 Each decision's *Owed* names its play. Across them: a play with a pad (items 1 and 6), an ear on the lasers (14), a
 look at the pad and the intro (5, 9), a run through the seven places (16), a fight with the serpent and an ear
-on its roots breaking (12, 13), and a look at Hangin' Out's wall, desktop and phone (10, 11).
+on its roots breaking (12, 13), a look at Hangin' Out's wall, desktop and phone (10, 11), a look in play at the guns
+and launchers (3), and each mid-boss met in its own place (2).
