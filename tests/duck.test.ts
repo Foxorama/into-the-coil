@@ -30,7 +30,8 @@ import { SHOTS } from '../src/content/shots.ts';
 import { JET_BOLT_KIND, SPECIALS } from '../src/content/specials.ts';
 import { CUES } from '../src/content/cues.ts';
 import { cueSeconds } from '../src/app/sound.ts';
-import { THEME_KINDS } from '../src/content/themes.ts';
+import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { sameInk } from './contrast.ts';
 import { SPRITE, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { INK_OF, drawKind, withFlame } from '../src/render/bake.ts';
@@ -195,6 +196,22 @@ describe('0595 — the paintball marker fires a scattered string of paint', () =
         expect(pictures.has(colour.ball), `${place}: ${colour.ink} ${colour.not.includes(place) ? 'came out where its bullets wear it' : 'never came out'}`).toBe(
           !colour.not.includes(place),
         );
+      }
+    }
+  });
+
+  it('0626 — no colour held in a place is the ink of a bullet that place fires', () => {
+    /*
+      Every place fires three inks since 0626, where 0595's review had one to weigh. A paintball of a bullet's colour
+      beside the bullets is the thing `not` exists to refuse; measured here, so a bullet recoloured into a held paint
+      is refused rather than left to a hand-kept list.
+    */
+    for (const place of THEME_KINDS) {
+      const foe = THEMES[place].foe;
+      const fired = [foe.shot!, ...Object.values(foe.shots ?? {})];
+      for (const colour of PAINT.colours) {
+        if (colour.not.includes(place)) continue;
+        for (const ink of fired) expect(sameInk(colour.ink, ink), `${place} holds ${colour.ink} and fires ${ink}`).toBe(false);
       }
     }
   });

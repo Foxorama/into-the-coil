@@ -22,7 +22,7 @@
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { THEMES, foeOf, lordOf, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
 import { BOSSES, type BossKind } from '../content/bosses.ts';
-import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
+import { SHOTS, SHOT_KINDS, type ShotKind } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, LIGHT_KINDS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
@@ -1451,6 +1451,11 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
  */
 const PLACE_SHOTS: ReadonlySet<SpriteKind> = new Set(
   SHOT_KINDS.map((k) => SPRITE_KINDS[SHOTS[k].sprite]!).filter((sprite) => INK_OF[sprite] === 'enemy'),
+);
+
+/** Which shot each place-inked picture is — 0626, to read a place's `shots` by. Derived, as the set above is. */
+const SHOT_OF_SPRITE: ReadonlyMap<SpriteKind, ShotKind> = new Map(
+  SHOT_KINDS.filter((k) => PLACE_SHOTS.has(SPRITE_KINDS[SHOTS[k].sprite]!)).map((k) => [SPRITE_KINDS[SHOTS[k].sprite]!, k] as const),
 );
 
 /**
@@ -16469,7 +16474,12 @@ export function drawKind(
     place, because a skin is decoration and that palette has none. Both land on the ink the game had
     before this, in one line, which is why neither needs a branch of its own.
   */
-  const ink = (skin !== null && PLACE_SHOTS.has(kind) ? skin.shot : undefined) ?? palette[INK_OF[kind]];
+  /*
+    0626: and each bullet its own ink where the place names one — `shots` by the shot that wears this picture —
+    with `shot` the default for every kind it does not.
+  */
+  const placed = skin !== null && PLACE_SHOTS.has(kind) ? (skin.shots?.[SHOT_OF_SPRITE.get(kind)!] ?? skin.shot) : undefined;
+  const ink = placed ?? palette[INK_OF[kind]];
   ctx.fillStyle = ink;
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.04);

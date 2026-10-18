@@ -194,7 +194,15 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
       for (const name of Object.keys(PALETTES) as PaletteName[]) {
         const glowBackdrop = over(THEMES[theme].space[name], loudest(theme, name), cover);
         const backdrops = [glowBackdrop, over(glowBackdrop, THEMES[theme].nebula[name], gas)];
-        for (const [ink, colour] of Object.entries(PALETTES[name])) {
+        /*
+          ⚠️ **AND WHAT THE PLACE ITSELF FIRES — 0626.** A place's bullet inks (`foe.shot` and `foe.shots`, 0296) are
+          drawn on this sky in place of `enemy` and were never put to this floor: The Saurian Belt's fired at 2.84:1
+          and Rime Shelf's at 2.85, both under it, and both shipped. On the palette that wears a place's skin.
+        */
+        const foe = name === 'vivid' ? THEMES[theme].foe : null;
+        const fired = foe === null ? [] : [foe.shot, ...Object.values(foe.shots ?? {})].filter((c): c is string => c !== undefined);
+        const inks: [string, string][] = [...Object.entries(PALETTES[name]), ...fired.map((c, i): [string, string] => [`${theme}'s bullet ${i}`, c])];
+        for (const [ink, colour] of inks) {
           if (ink === 'space' || ink === 'sky') continue;
           if ((DECOR_INKS as readonly string[]).includes(ink)) continue;
           for (const backdrop of backdrops) {

@@ -8,7 +8,8 @@ import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { THEMES, THEME_KINDS, foeOf, lordOf, type ThemeKind } from '../src/content/themes.ts';
 import { viewOf } from '../src/sim/camera.ts';
-import { GAMEPLAY_FLOOR, contrast, luminance } from './contrast.ts';
+import { GAMEPLAY_FLOOR, contrast, luminance, sameInk } from './contrast.ts';
+import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { tracingPen } from './paths.ts';
 
 /**
@@ -186,6 +187,78 @@ describe('0264 — the lord wears its own skin', () => {
       const second = tracingPen();
       drawKind(second.pen, kind, PALETTES.vivid, SPRITE_EXTENT[kind] * DESKTOP.scale, theme);
       expect(second.trace.passes[0]!.colour, `${level}'s mid-boss wears the lord's skin`).toBe(THEMES[theme].foe.hull);
+    }
+  });
+});
+
+describe('0626 — a place fires more than one colour', () => {
+  /** The three bullets every place's raiders fire. */
+  const RAIDERS: readonly ShotKind[] = ['spit', 'lance', 'flak'];
+  /** What `kind` is drawn in, in `theme` on the vivid palette — the bake's own reading of the row. */
+  const inkOf = (theme: ThemeKind, kind: ShotKind): string => {
+    const sprite = SPRITE_KINDS[SHOTS[kind].sprite]!;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, sprite, PALETTES.vivid, SPRITE_EXTENT[sprite] * DESKTOP.scale, theme);
+    return trace.passes[0]!.colour;
+  };
+
+  it('THE ASK, AS DRAWN: in every place its spit, its lance and its flak are three different inks', () => {
+    /*
+      Played: *"colour is too same across each level — different bullets need some variation in each level"*. Read
+      off the bake, as the player sees them: no two of a place's three raider bullets are one ink at a glance
+      (`sameInk`), and each is the ink its place authors for it.
+    */
+    for (const theme of THEME_KINDS) {
+      const inks = RAIDERS.map((kind) => inkOf(theme, kind));
+      const foe = THEMES[theme].foe;
+      RAIDERS.forEach((kind, i) => expect(inks[i], `${theme}'s ${kind} is not the ink its place says`).toBe(foe.shots?.[kind] ?? foe.shot));
+      for (let i = 0; i < inks.length; i++) {
+        for (let j = i + 1; j < inks.length; j++) {
+          expect(sameInk(inks[i]!, inks[j]!), `${theme}'s ${RAIDERS[i]} ${inks[i]} and ${RAIDERS[j]} ${inks[j]} are one colour`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('THE ASK, ACROSS LEVELS: no place fires the same main colour as the place before it in the run', () => {
+    for (let i = 1; i < LEVEL_KINDS.length; i++) {
+      const was = LEVELS[LEVEL_KINDS[i - 1]!].theme;
+      const now = LEVELS[LEVEL_KINDS[i]!].theme;
+      const [a, b] = [inkOf(was, 'spit'), inkOf(now, 'spit')];
+      expect(sameInk(a, b), `${was} and ${now}, one after the other, both mostly fire ${a} and ${b}`).toBe(false);
+    }
+  });
+
+  it('and no bullet a place fires is the ink of the ship firing it, of the player’s things, or of a thing that is always itself', () => {
+    /*
+      0296's own defect, The Approach's bullets the colour of its lit strips, asked of every ink every place fires;
+      and 0295's *a flame is the same red everywhere*: a raider's bullet that was the fire ink, the acid, the void
+      or the frost would teach the player something untrue. And nothing the player owns — the ship, the ally, the
+      missiles, the water, a pickup, a flash — may be fired at them.
+    */
+    const v = PALETTES.vivid;
+    const fixed: Record<string, string> = {
+      player: v.player,
+      ally: v.ally,
+      missile: v.bullet,
+      water: v.water,
+      pickup: v.pickup,
+      impact: v.impact,
+      hazard: v.hazard,
+      fire: v.fire,
+      acid: v.acid,
+      void: v.void,
+      frost: v.frost,
+    };
+    for (const theme of THEME_KINDS) {
+      const foe = THEMES[theme].foe;
+      const fired = [foe.shot!, ...Object.values(foe.shots ?? {})];
+      const near: Record<string, string> = { ...fixed, hull: foe.hull, plate: foe.plate, lit: foe.lit };
+      for (const ink of fired) {
+        for (const [name, other] of Object.entries(near)) {
+          expect(sameInk(ink, other), `${theme} fires ${ink}, which is its ${name}'s ${other}`).toBe(false);
+        }
+      }
     }
   });
 });
