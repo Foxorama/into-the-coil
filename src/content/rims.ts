@@ -14,6 +14,7 @@
  * (0522). The frame turns a spinner's picture; nothing about the run depends on which rim is on.
  */
 
+import type { ThrustKind } from './exhaust.ts';
 import type { ShipKind } from './ships.ts';
 import type { SpriteKind } from './sprites.ts';
 import { priced } from './prices.ts';
@@ -46,7 +47,20 @@ export interface RimWheel {
   readonly turn: readonly [number, number] | null;
   /** Radians each new picture stands round from the last, so a strike never lands where one just did. */
   readonly jump: number;
+  /**
+   * How fast its clock runs against the run's, by what the engines are doing — 0618: *"spinny wheels should
+   * be faster/slower like the thruster when moving."* Read off the same ask the flame is (`thrustOf` in
+   * `src/app/frame.ts`), and eased toward, so a wheel winds up and runs down rather than switching. `idle`
+   * is the pace the pad shows, where nothing is asked.
+   */
+  readonly pace: Readonly<Record<ThrustKind, number>>;
 }
+
+/**
+ * The share of the gap to the pace asked for that a wheel closes each step — 0618. A tenth a step is most of
+ * the way in a third of a second: as quick as the flame grows, and slow enough to be seen winding up.
+ */
+export const WHEEL_PACE_EASE = 0.1;
 
 /** Which of `wheel`'s pictures wheel `i` of a car shows `seconds` in: the back runs a picture behind the front. */
 export function wheelFrame(wheel: RimWheel, i: number, seconds: number): number {
@@ -95,7 +109,11 @@ export const RIMS: Record<RimKind, RimRow> = {
     hint: 'Silver spokes that never stop turning',
     from: null,
     price: priced(1000),
-    wheel: { frames: [{ base: 'spinnerWheel', hit: 'spinnerWheelHit' }], hold: 0, turn: [0.7, 0.8], jump: 0 },
+    /*
+      0618: and they wind up with the burn and run down with the brake, as the flame grows and shrinks — two
+      and a half times the Mothership's pace at full burn, a third of it easing off.
+    */
+    wheel: { frames: [{ base: 'spinnerWheel', hit: 'spinnerWheelHit' }], hold: 0, turn: [0.7, 0.8], jump: 0, pace: { idle: 1, burn: 2.5, ease: 0.35 } },
   },
   /*
     The Thunderbolt's — 0545: the predecessor's chopper wore bright rims; these are its lightning. 0557:
@@ -117,6 +135,8 @@ export const RIMS: Record<RimKind, RimRow> = {
       hold: 1 / 16,
       turn: null,
       jump: 2.4,
+      // 0618: lightning does not roll, so it does not wind up either; a strike a sixteenth whatever is asked.
+      pace: { idle: 1, burn: 1, ease: 1 },
     },
   },
   /*

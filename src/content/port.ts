@@ -36,7 +36,7 @@
  */
 
 import { SHIP_BOX, SPRITE_EXTENT } from './sprites.ts';
-import { SHELL_SPAN } from './ships.ts';
+import { SHELL_SPAN, SHIPS, SHIP_KINDS, type ShipKind } from './ships.ts';
 import type { KeeperKind } from './keepers.ts';
 
 /**
@@ -99,6 +99,11 @@ export const PORT_KINDS = [
     they have boarded. The pictures above are the ship with nobody aboard, as the pad shows it.
   */
   'blueRider',
+  /*
+    0621: the side-on tubes of a ship with hangar art of its own, alone, in the ship's box — laid after the
+    ship's lights, so the saucer's ring of bulbs runs behind its missiles and not across them.
+  */
+  'blueTubes',
   'viper',
   'viperIdle',
   'viperBurn',
@@ -207,6 +212,7 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   blueTopSurge: HANGAR_SHIP * 3,
   // 0612: in the ship's own box, so laid where the ship is it sits where the fight draws it.
   blueRider: HANGAR_SHIP,
+  blueTubes: HANGAR_SHIP,
   // A tenth smaller since 0461, beside a pilot's ship a fifth smaller (`HANGAR_SCALE`); her flames with her.
   viper: VIPER_BOX,
   viperIdle: VIPER_BOX * 2,
@@ -319,6 +325,20 @@ export const DOCK = {
  * The flames are baked in a box twice as big, at the SAME radius, and blitted at the ship's centre.
  */
 export const FLAME_BOX = 2;
+
+/**
+ * How much bigger than its own box's a ship's flames are drawn in the port, so every ship burns the same
+ * flame on the screen — 0619: *"all thrusters should be at the same size -> set to max current size."* A
+ * flame is baked in its ship's box and blitted at the ship's size (`intro` on its row), so the saucer, the
+ * one ship drawn larger, burned the largest flame; every other ship's grows to it. Only the length, the
+ * width and the bloom grow — the root stays on the ship's own nozzle. `view` is which of the two sizes the
+ * picture is blitted at: the hangar's, for the side-on set, or the chase's, for the set seen from above.
+ */
+export function jetGrow(ship: ShipKind, view: 'hangar' | 'outside'): number {
+  let largest = 0;
+  for (const kind of SHIP_KINDS) largest = Math.max(largest, SHIPS[kind].intro[view]);
+  return largest / SHIPS[ship].intro[view];
+}
 
 /**
  * A surge's box against its ship's — 0416. The surge is the burn at the moment a launch is heard, near

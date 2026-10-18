@@ -14,9 +14,9 @@ export const PROBES = [
     guard: 'stands every tab in the room with the Viper gone',
     edit: {
       path: 'src/render/port.ts',
-      // 0568: on the stand's own pad.
-      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);',
-      replace: '  paintBlue(surface, view, t, pad, across, BEATS.blueLit, Number.POSITIVE_INFINITY, size);',
+      // 0568: on the stand's own pad. 0621: which lays the tubes itself.
+      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false);',
+      replace: '  paintBlue(surface, view, t, pad, across, BEATS.blueLit, Number.POSITIVE_INFINITY, size, 0, false);',
     },
   },
   {

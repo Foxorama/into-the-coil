@@ -550,12 +550,22 @@ const JET_DROPS = 14;
 const JET_DROP_FROM = 0.35;
 const JET_DROP_LIFE = 0.85;
 const JET_DROP_FLING = 1.8;
-const JET_MISTS = 3;
+// 0622: five where there were three, and each swelling bigger — *"end needs to be a bit wider + splashier"*.
+const JET_MISTS = 5;
 const JET_MIST_STEPS = 16;
+/**
+ * The splash its front throws — 0622: drops burst off the tip in a crown, fanned `JET_SPLASH_FAN` radians either
+ * side of the way the water was going, each flying out to `JET_SPLASH_REACH` of the tip's width past it over
+ * `JET_SPLASH_STEPS` and then the next, a drop leaving every step or so, so the end is always breaking up.
+ */
+const JET_SPLASHES = 10;
+const JET_SPLASH_STEPS = 12;
+const JET_SPLASH_FAN = 1.4;
+const JET_SPLASH_REACH = 2.6;
 /** How many `bolt` calls one jet costs: one per strand. */
 export const STROKES_PER_JET = JET_STRANDS;
-/** And how many blits of a baked bitmap: its drops and its mist. */
-export const BLITS_PER_JET = JET_DROPS + JET_MISTS;
+/** And how many blits of a baked bitmap: its drops, its mist and its splash. */
+export const BLITS_PER_JET = JET_DROPS + JET_MISTS + JET_SPLASHES;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
 const BOLT_JAG = 0.16;
 /** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
@@ -821,7 +831,7 @@ export function paintBolts(
           const between = fired - from;
           const ripple = jag(s * 131 + 7, from, 0) * (1 - between) + jag(s * 131 + 7, from + 1, 0) * between;
           const churn = ripple * JET_CHURN * root * (age / jet.flight);
-          const opens = streamWidth(age, jet.flight, jet.width, jet.tipWidth) - root;
+          const opens = streamWidth(age, jet.flight, jet.width, jet.tipWidth, jet.flare) - root;
           // An edge strand churns only inward, so the spray is never drawn wider than it lands.
           const off = share * opens + (edge ? -share * Math.abs(churn) : churn);
           const nA = JET_NORMAL[i0 * 2]! * (1 - f) + JET_NORMAL[i1 * 2]! * f;
@@ -852,7 +862,7 @@ export function paintBolts(
         const tA = streamAlong(clock, age + 0.5, jet.sweep, jet.period, speed) - streamAlong(clock, age - 0.5, jet.sweep, jet.period, speed);
         const tC = streamAcross(clock, age + 0.5, jet.sweep, jet.period, speed) - streamAcross(clock, age - 0.5, jet.sweep, jet.period, speed);
         const run = Math.sqrt(tA * tA + tC * tC);
-        const off = side * (streamWidth(age < jet.flight ? age : jet.flight, jet.flight, jet.width, jet.tipWidth) + (0.3 + JET_DROP_FLING * u * flung) * root);
+        const off = side * (streamWidth(age < jet.flight ? age : jet.flight, jet.flight, jet.width, jet.tipWidth, jet.flare) + (0.3 + JET_DROP_FLING * u * flung) * root);
         const along = endAlong + cA + (run > 0 ? -tC / run : 0) * off;
         const across = endAcross + cC + (run > 0 ? tA / run : 1) * off;
         surface.blit(SPRITE.sprayDrop, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (1 - 0.35 * u), 0, held * (1 - 0.7 * u));
@@ -860,7 +870,7 @@ export function paintBolts(
       // And the mist its front breaks into, swelling and thinning as it hangs there.
       const fA = JET_LINE[last * 2]!;
       const fC = JET_LINE[last * 2 + 1]!;
-      const fWidth = streamWidth(old, jet.flight, jet.width, jet.tipWidth);
+      const fWidth = streamWidth(old, jet.flight, jet.width, jet.tipWidth, jet.flare);
       for (let m = 0; m < JET_MISTS; m++) {
         const turn = e.spin + m * 5;
         const u = (turn % JET_MIST_STEPS) / JET_MIST_STEPS;
@@ -870,7 +880,29 @@ export function paintBolts(
         const run = Math.sqrt(fA * fA + fC * fC);
         const along = endAlong + fA + (run > 0 ? (fA / run) * ahead : 0) + JET_NORMAL[last * 2]! * off;
         const across = endAcross + fC + (run > 0 ? (fC / run) * ahead : 0) + JET_NORMAL[last * 2 + 1]! * off;
-        surface.blit(SPRITE.sprayMist, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (0.55 + 0.5 * u), 0, held * 0.7 * (1 - u));
+        surface.blit(SPRITE.sprayMist, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (0.9 + 1.0 * u), 0, held * 0.75 * (1 - u));
+      }
+      /*
+        0622: and the splash its front throws — a crown of drops bursting off the tip, out to the sides and ahead,
+        each a little smaller and fainter as it flies, and the next leaving behind it. Only off water that reached
+        the front: none before the spray has flown its length.
+      */
+      const frontRun = Math.sqrt(fA * fA + fC * fC);
+      const hA = frontRun > 0 ? fA / frontRun : 1;
+      const hC = frontRun > 0 ? fC / frontRun : 0;
+      const reach = old / jet.flight;
+      for (let d = 0; d < JET_SPLASHES; d++) {
+        const turn = e.spin + (d * JET_SPLASH_STEPS) / JET_SPLASHES;
+        const u = (turn % JET_SPLASH_STEPS) / JET_SPLASH_STEPS;
+        const burst = Math.floor(turn / JET_SPLASH_STEPS);
+        // Each drop on its own heading, fanned either side of the water's own and re-thrown every burst.
+        const angle = jag(d * 71 + 5, burst, 0) * JET_SPLASH_FAN;
+        const out = u * fWidth * JET_SPLASH_REACH * (0.6 + 0.4 * Math.abs(jag(d * 29 + 1, burst, 0)));
+        const dA = hA * Math.cos(angle) - hC * Math.sin(angle);
+        const dC = hA * Math.sin(angle) + hC * Math.cos(angle);
+        const along = endAlong + fA + dA * out;
+        const across = endAcross + fC + dC * out;
+        surface.blit(SPRITE.sprayDrop, screenX(view, along - cameraAlong, across), screenY(view, along - cameraAlong, across), view.scale * (2.4 - 1.2 * u), 0, held * reach * (1 - 0.8 * u));
       }
       continue;
     }

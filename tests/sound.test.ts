@@ -1489,6 +1489,18 @@ describe('the synthesiser', () => {
       const quarter = Math.floor(samples.length / 4);
       const early = meanOver(0, quarter);
       const late = meanOver(samples.length - quarter, samples.length);
+      /*
+        ⚠️ **EXCEPT A WARNING, WHICH BUILDS — 0625.** *"Lazers need a chargin hum for their line appearance."* A
+        charge is the one sound in the table that is MEANT to be louder at the end than the start: it is the
+        line filling up toward the step the beam fires, and a hum that decayed through its warning would be the
+        laser losing power before it shot. Derived from the twin, as the duck rule above derives *fired* — a cue
+        whose picture is a warning line — so it is a kind of sound and not a name let off. It is held to the
+        opposite instead, and to ending at zero above, which its release does.
+      */
+      if (CUES[kind].twin === 'warning-appears') {
+        expect(late, `${kind} is a warning and does not build toward the step it warns of`).toBeGreaterThan(early);
+        continue;
+      }
       expect(late, `${kind} is as loud at its end as at its start — nothing is decaying`).toBeLessThan(early * 0.5);
     }
   });
@@ -1741,7 +1753,10 @@ describe('the synthesiser', () => {
             ? heads.reduce((sum, head) => sum + heldBy(head.attack, gap) + (head.gap ?? 0), 0)
             : heldBy(attack, gap);
           // How often each cue in this phase comes back: a cue two heads share sounds twice a round.
-          const sounds = heads ? heads.map((head) => head.cue ?? 'bossShot') : [phase.cue ?? 'bossShot'];
+          // 0625: a beam's fallback is its charge, and every beam zaps as it burns — once a volley, as the charge is.
+          const voice = (a: BossAttack, cue: CueKind | undefined): CueKind[] =>
+            a.kind === 'beam' ? [cue ?? 'laserCharge', 'laserZap'] : [cue ?? 'bossShot'];
+          const sounds = heads ? heads.flatMap((head) => voice(head.attack, head.cue)) : voice(attack, phase.cue);
           for (const cue of new Set(sounds)) {
             const turns = sounds.filter((k) => k === cue).length;
             const seconds = round / turns / STEPS_PER_SECOND;

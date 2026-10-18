@@ -90,6 +90,11 @@ export interface CatherineWheel {
    * wheel is towed after the ship.
    */
   leash: number;
+  /**
+   * What share of the way to where the right stick points it the place it hangs swings each step, while the
+   * stick is pushed and its tether holds — 0623. The gun's `aim` is how far round that may be.
+   */
+  swing: number;
   /** Radians the wheel turns each step. */
   spin: number;
   /** How far from the hub the embers leave, in world units — the rim of the drawn wheel. */
@@ -166,7 +171,7 @@ export interface PaintColour {
   readonly dry: number;
   /**
    * The places this colour is left out of the hopper in — the review of 0595: where the place's own hostile shot
-   * (`foe.shot` on its theme) is this colour's hue, so a ball of it would be a round dot of the bullet's colour
+   * (`foe.shot` on its theme, and since 0626 any of its `shots`) is this colour's hue, so a ball of it would be a round dot of the bullet's colour
    * beside the bullets, and a splat of it would lie under them for two-thirds of a second. A rule on the colour's
    * own row and not a threshold, on 0295's terms: which hues are *the same* is argued per colour, here.
    */
@@ -529,7 +534,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    */
   catherine: {
     label: 'Catherine wheel',
-    hint: 'A fire wheel on a tether',
+    hint: 'A fire wheel on a tether — swing it with the right stick',
     shot: 'catherine',
     glyph: SPRITE.catherine,
     flight: 'tether',
@@ -608,6 +613,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
         the lane, and leaves the 128 of a throw free, as 170 left 160.
       */
       leash: 0.65,
+      // 0623: a tenth a step is most of the way in a third of a second — a swing, not a jump.
+      swing: 0.1,
       spin: 0.32,
       // 0549: half of 0545's 5.4, with the wheel drawn half the size — *"a lot smaller"*.
       rim: 2.7,
@@ -633,7 +640,11 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     ram: null,
     paint: null,
     lends: true,
-    aim: 0,
+    /*
+      0623: *"weapons need right control stick — catherine wheel, paint gun"*. The ray's arc (0588), 22.5° either
+      side of the nose: at the wheel's reach that is 49 units across the 120-unit lane either way from the ship.
+    */
+    aim: Math.PI / 8,
   },
   /**
    * Unity's ram — 0593: the Hamster Ball flown into things. Nothing leaves the ship; one body rides the
@@ -721,7 +732,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    */
   paintball: {
     label: 'Paintball',
-    hint: 'A scattered string of paint that splats',
+    hint: 'A scattered string of paint that splats — aim it with the right stick',
     shot: 'paintball',
     // The marker and its hopper, which the hangar shows; what flies is a ball of one of its colours.
     glyph: SPRITE.paintball,
@@ -757,15 +768,21 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
         place's `foe.shot`, not the palette's red: The Approach's `#ff2e4d`, Ember Nebula's `#ff2f8f` and The
         Toxic Mire's `#ff2e6b` are this pink's hue, and The Labyrinth's `#ffd12e` is this yellow's. Each is left
         out where its place's bullets wear it; the blue and the grape are no place's bullet and go everywhere.
+
+        ⚠️ **AND SINCE 0626 EVERY PLACE FIRES THREE INKS, NOT ONE.** The pinks and magentas of six places are this
+        pink's, and the lime five fire is this yellow's: the pink is held in The Labyrinth alone and the yellow in
+        The Approach and The Toxic Mire. `tests/duck.test.ts` measures each held colour against every ink its place
+        fires, so a bullet recoloured into a held colour is refused rather than missed.
       */
       colours: [
-        { ink: '#ff5fb4', ball: SPRITE.paintballPink, splat: SPRITE.splatPink, dry: SPRITE.splatPinkDry, not: ['approach', 'nebula', 'mire'] },
-        { ink: '#ffe14d', ball: SPRITE.paintballYellow, splat: SPRITE.splatYellow, dry: SPRITE.splatYellowDry, not: ['labyrinth'] },
+        { ink: '#ff5fb4', ball: SPRITE.paintballPink, splat: SPRITE.splatPink, dry: SPRITE.splatPinkDry, not: ['approach', 'nebula', 'saurian', 'rime', 'mire', 'core'] },
+        { ink: '#ffe14d', ball: SPRITE.paintballYellow, splat: SPRITE.splatYellow, dry: SPRITE.splatYellowDry, not: ['nebula', 'saurian', 'labyrinth', 'rime', 'core'] },
         { ink: '#4fc3ff', ball: SPRITE.paintballBlue, splat: SPRITE.splatBlue, dry: SPRITE.splatBlueDry, not: [] },
         { ink: '#a46bff', ball: SPRITE.paintballGrape, splat: SPRITE.splatGrape, dry: SPRITE.splatGrapeDry, not: [] },
       ],
     },
     lends: true,
-    aim: 0,
+    // 0623: the ray's arc, as the wheel's — the string scattered about where the right stick points it.
+    aim: Math.PI / 8,
   },
 };

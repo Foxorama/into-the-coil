@@ -27,6 +27,7 @@ import {
   SURGE_STEPS,
   TILT,
   TRACK_DELAY,
+  jetGrow,
   type IntroCue,
   type PortKind,
 } from '../src/content/port.ts';
@@ -393,6 +394,60 @@ describe('the chase is a chase — 0414', () => {
     const lit = drawAt(BEATS.outside + TILT.from + TILT.steps + 10, NARROW, 'caddie').blits.map((b) => b.sprite);
     expect(lit.includes(PORT_SPRITE.blueTopFlare) || lit.includes(PORT_SPRITE.blueTopBurn), 'the chase burns the hangar’s flames').toBe(true);
     expect(lit.includes(PORT_SPRITE.blueFlare) || lit.includes(PORT_SPRITE.blueBurn), 'the hangar’s flames are still lit in the chase').toBe(false);
+  });
+
+  it('lays the saucer’s side-on tubes over its ring of lights on the pad, and on it in the hangar — 0621', () => {
+    /*
+      Played: *"sideview of the Lil Caddie has the spinning lights playing in front of missiles."* The ring's
+      bulbs run along the rim's near edge on the pad (0586), and the tubes sit on that rim: what is drawn later
+      is what the player sees in front. Over a whole turn of the ring, every bulb is laid before the tubes.
+    */
+    const view = viewOf(NARROW.width, NARROW.height);
+    const bulbs = new Set([SPRITE.ufoBulb0, SPRITE.ufoBulb1, SPRITE.ufoBulb2, SPRITE.ufoBulb3].map((s) => GAME_BASE + s));
+    for (let t = 0; t < 120; t += 7) {
+      const stand = new RecordingSurface();
+      paintStand(stand, view, t, SKY, SHIPS.caddie, null);
+      const tubes = stand.blits.findIndex((b) => b.sprite === PORT_SPRITE.blueTubes);
+      const lastBulb = stand.blits.reduce((last, b, i) => (bulbs.has(b.sprite) ? i : last), -1);
+      expect(lastBulb, `no bulbs on the saucer at step ${t}`).toBeGreaterThanOrEqual(0);
+      expect(tubes, `the saucer’s tubes were laid under a bulb at step ${t}`).toBeGreaterThan(lastBulb);
+    }
+    // And in the intro's hangar, where it has no lights laid, they are on it as they always were.
+    const { blits } = drawAt(BEATS.pilotIn, NARROW, 'caddie');
+    const side = blits.findIndex((b) => b.sprite === PORT_SPRITE.blueSide);
+    expect(blits.findIndex((b) => b.sprite === PORT_SPRITE.blueTubes), 'the hangar’s saucer lost its tubes').toBeGreaterThan(side);
+  });
+
+  it('burns every ship’s flame on the pad and in the chase as big as the largest ship’s — 0619', () => {
+    /*
+      ⚠️ **IN PIXELS.** Played: *"all thrusters should be at the same size -> set to max current size."* A
+      flame is baked in its ship's box at its length times `jetGrow`, and blitted at the ship's size, so how
+      long it is on the screen is that blit's scale times its grow. The saucer is the ship drawn largest, so
+      its flame was; every ship's is held to it, on the pad and from above in the chase.
+    */
+    const view = viewOf(NARROW.width, NARROW.height);
+    // The scale the pad blits a ship's flame at — what its flame was on the screen before 0619 grew it.
+    const padBlit = (ship: ShipKind): number => {
+      const stand = new RecordingSurface();
+      paintStand(stand, view, 0, SKY, SHIPS[ship], null);
+      const b = of(stand.blits, 'blueIdle');
+      expect(b, `${ship}: no flame on the pad`).toBeDefined();
+      return b!.scale / view.scale;
+    };
+    const onPad = (ship: ShipKind): number => padBlit(ship) * jetGrow(ship, 'hangar');
+    const late = BEATS.outside + TILT.from + TILT.steps + 10;
+    const inChase = (ship: ShipKind): number => {
+      const { blits } = drawAt(late, NARROW, ship);
+      const b = of(blits, 'blueTopFlare') ?? of(blits, 'blueTopBurn');
+      expect(b, `${ship}: no flame in the chase`).toBeDefined();
+      return (b!.scale * jetGrow(ship, 'outside')) / view.scale;
+    };
+    const padMost = Math.max(...SHIP_KINDS.map(padBlit));
+    for (const ship of SHIP_KINDS) {
+      expect(onPad(ship), `${ship}: its flame on the pad is not the largest ship’s`).toBeCloseTo(onPad('caddie'), 6);
+      expect(inChase(ship), `${ship}: its flame in the chase is not the largest ship’s`).toBeCloseTo(inChase('caddie'), 6);
+      expect(onPad(ship), `${ship}: its flame on the pad shrank below the largest it was`).toBeGreaterThanOrEqual(padMost - 1e-9);
+    }
   });
 
   it('draws no trail before a ship jets off, and trails off its wingtips after', () => {

@@ -47,3 +47,32 @@ export const AA_FLOOR = 4.5;
  * ground.
  */
 export const GAMEPLAY_FLOOR = 3;
+
+/** Hue in degrees, and how far from grey, of a six-digit hex — 0626. */
+function hueOf(hex: string): { hue: number; chroma: number } {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+  const top = Math.max(r, g, b);
+  const chroma = top - Math.min(r, g, b);
+  if (chroma === 0) return { hue: 0, chroma };
+  const sector = top === r ? ((g - b) / chroma + 6) % 6 : top === g ? (b - r) / chroma + 2 : (r - g) / chroma + 4;
+  return { hue: sector * 60, chroma };
+}
+
+/**
+ * Whether two inks read as ONE ink at a glance — 0626, for a bullet against everything it could be taken for.
+ *
+ * ⚠️ **NEAR IN HUE AND NEAR IN LIGHTNESS, AND BOTH.** Two saturated inks within 20° of hue are one colour only if
+ * they are also within 1.35:1 of each other; a pale pink beside a deep one is two. Two near-greys are one colour
+ * if they are near in lightness, whatever their hue says, because a pastel's hue is not what the eye reads. The
+ * 1.35 is the line 0296 already drew: The Approach's `#ff2e4d` against its own lit strips' `#ff7286`, which it
+ * judged apart, is 1.40.
+ */
+export function sameInk(a: string, b: string): boolean {
+  const [x, y] = [hueOf(a), hueOf(b)];
+  const SATURATED = 0.25;
+  const near =
+    x.chroma >= SATURATED && y.chroma >= SATURATED
+      ? Math.min(Math.abs(x.hue - y.hue), 360 - Math.abs(x.hue - y.hue)) < 20
+      : x.chroma < SATURATED && y.chroma < SATURATED;
+  return near && contrast(a, b) < 1.35;
+}

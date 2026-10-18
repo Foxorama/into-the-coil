@@ -8,6 +8,7 @@ import {
   MENU_REPEAT_AFTER,
   MENU_REPEAT_EVERY,
   MENU_REVERSE,
+  MENU_PILOT_BUTTONS,
   MENU_TAB_BUTTONS,
   attachMenuPad,
   makeMenuAsk,
@@ -63,7 +64,7 @@ function drive(frames: readonly (Gamepad | null)[][]): MenuAsk[] {
     // ⚠️ COPIED rather than pushed by reference — `read` overwrites one caller-owned object, so a
     // list of references is a list of the LAST frame repeated. 0214 added `axis` to what is copied,
     // and 0458 `back` and `tab`.
-    out.push({ move: ask.move, axis: ask.axis, confirm: ask.confirm, back: ask.back, tab: ask.tab });
+    out.push({ move: ask.move, axis: ask.axis, confirm: ask.confirm, back: ask.back, tab: ask.tab, pilot: ask.pilot });
   }
   return out;
 }
@@ -305,7 +306,7 @@ describe('a disconnected or absent pad asks for nothing', () => {
       the axis of a pad it decided to ignore. `y` is the resting value, and this pad is pushing `y`;
       the assertion that matters is `move`, and this one holds the shape around it.
     */
-    expect(drive([[gone]])[0]).toEqual({ move: 0, axis: 'y', confirm: false, back: false, tab: 0 });
+    expect(drive([[gone]])[0]).toEqual({ move: 0, axis: 'y', confirm: false, back: false, tab: 0, pilot: 0 });
   });
 });
 
@@ -631,6 +632,15 @@ describe('Back and the tabs are presses — 0458', () => {
     const lb = [pad(AXES(0, 0), [MENU_TAB_BUTTONS.previous])];
     const rb = [pad(AXES(0, 0), [MENU_TAB_BUTTONS.next])];
     expect(drive([rb, rb, [pad(AXES(0, 0))], lb, lb]).map((a) => a.tab)).toEqual([1, 0, 0, -1, 0]);
+  });
+
+  it('0624 — steps the pilot one press at a time, each trigger its own way, and never a tab', () => {
+    const lt = [pad(AXES(0, 0), [MENU_PILOT_BUTTONS.previous])];
+    const rt = [pad(AXES(0, 0), [MENU_PILOT_BUTTONS.next])];
+    const asks = drive([rt, rt, [pad(AXES(0, 0))], lt, lt]);
+    expect(asks.map((a) => a.pilot)).toEqual([1, 0, 0, -1, 0]);
+    expect(asks.map((a) => a.tab), 'a trigger turned a tab').toEqual([0, 0, 0, 0, 0]);
+    expect(Object.values(MENU_TAB_BUTTONS), 'a trigger is also a shoulder').not.toContain(MENU_PILOT_BUTTONS.next);
   });
 });
 

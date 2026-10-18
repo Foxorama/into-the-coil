@@ -240,7 +240,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     0569 stood a keeper at the ship here, riding its bob — a bust over its roof from behind, or Unity on it.
     0611: *"kinda floating in mid air"*. They stand on the deck round it, before the cradle and after the ship.
   */
-  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);
+  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false);
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
     picture over each tyre its row names, swelled to that tyre — the spinners rolling front and back at
@@ -296,6 +296,11 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
       put(surface, view, GAME_BASE + UFO_BULB[(b + chase) % UFO_BULB.length]!, at + Math.cos(a) * UFO_RIM * unit, down, 0.35 + 0.65 * near, 0, unit);
     }
   }
+  /*
+    0621: and the side-on tubes over the lights — *"sideview of the Lil Caddie has the spinning lights playing
+    in front of missiles"*. The ring runs round the rim's near edge, and a missile on the rim is nearer still.
+  */
+  put(surface, view, PORT_SPRITE.blueTubes, pad, across, 1, 0, size);
   // 0611: and whoever stands on the deck nearer the player than the ship, after it.
   paintOnDeck(surface, view, spots, 'over');
   // The bay's edge at the dock's end of the room.
@@ -758,12 +763,14 @@ function paintViper(surface: Surface, view: View, t: number, along: number, acro
  * rides it, laid over it at `rider`'s share of the way aboard — nought on the pad, and in the intro until
  * the pilot's leap lands.
  */
-function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number, size: number, rider = 0): void {
+function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number, size: number, rider = 0, tubes = true): void {
   const flame = flameOf(t, lit, go, PORT_SPRITE.blueIdle, PORT_SPRITE.blueBurn, PORT_SPRITE.blueFlare);
   if (flame >= 0) put(surface, view, flame, along, across, 1, 0, size);
   const surge = surgeAt(t, go);
   if (surge > 0) put(surface, view, PORT_SPRITE.blueSurge, along, across, surge, 0, size);
   put(surface, view, PORT_SPRITE.blueSide, along, across, 1, 0, size);
+  // 0621: its side-on tubes on it — unless the caller lays its lights first, as the pad does.
+  if (tubes) put(surface, view, PORT_SPRITE.blueTubes, along, across, 1, 0, size);
   if (rider > 0) put(surface, view, PORT_SPRITE.blueRider, along, across, rider, 0, size);
   if (t >= go && t < go + FLASH_STEPS) {
     put(surface, view, PORT_SPRITE.flash, along - 12, across, 0.8 * (1 - (t - go) / FLASH_STEPS), 0, FLASH_GROW);
@@ -923,6 +930,8 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip
     if (blueSurge > 0) putOut(surface, view, PORT_SPRITE.blueTopSurge, blueAlong, blueAcross, blueSurge * over, blueTurn, size);
   }
   putOut(surface, view, PORT_SPRITE.blueSide + frame, blueAlong, blueAcross, 1, blueTurn, size);
+  // 0621: side-on, the tubes are their own picture; every frame of the tilt after it carries its own.
+  if (frame === 0) putOut(surface, view, PORT_SPRITE.blueTubes, blueAlong, blueAcross, 1, blueTurn, size);
   if (tilt > frame) putOut(surface, view, PORT_SPRITE.blueSide + frame + 1, blueAlong, blueAcross, tilt - frame, blueTurn, size);
   /*
     0612: and its pilot aboard it, on a ship that shows them. Every such ship is drawn the same in every frame

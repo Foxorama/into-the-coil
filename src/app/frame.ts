@@ -69,6 +69,7 @@ import {
   THRUST,
   WARP_FLAME,
   WARP_SCROLL,
+  type ThrustKind,
 } from '../content/exhaust.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
@@ -91,7 +92,7 @@ import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import { ROWS_OF } from '../content/arms.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
+import { RIMS, WHEEL_PACE_EASE, wheelFrame, wheelTurn } from '../content/rims.ts';
 import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellCapFor, shellOrbit, fullHealthFor, hullFor, lampFrame, lampTurn, levelHealthFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
@@ -1184,6 +1185,13 @@ export interface World {
    * (the Mothership's spinners), and none otherwise. A pool for the exhaust's reason, drawn over the ship.
    */
   wheels: Pool<Entity>;
+  /**
+   * The wheels' own clock in seconds, where it stood a step ago, and how fast it is running against the
+   * run's — 0618: a spinner winds up with the burn and runs down with the brake (`stepWheels`).
+   */
+  wheelClock: number;
+  wheelWas: number;
+  wheelPace: number;
   /**
    * The ship's loaded tubes — 0581: one picture at each tube place the ship's row names for the tubes it
    * carries, in that tube's kind's ink, so a rack of one of each reads as one of each and a tube is drawn
@@ -3584,9 +3592,13 @@ function pulseChill(w: World): void {
 
 function pinBeams(w: World): void {
   const alive = w.bossPool.size > 0;
+  // 0625: where a laser burned this step, if one did — heard once, however many beams the volley has.
+  let ignited = Number.NaN;
   for (let i = 0; i < w.bolts.size; i++) {
     const b = w.bolts.at(i);
     if (b.kind !== BEAM_BOLT_KIND) continue;
+    // Its first step of burning: `lifeFor` has just counted down onto the hold (`strikeShip` reads the same line).
+    if (alive && b.lifeFor === b.holdFor && b.holdFor > 0 && Number.isNaN(ignited)) ignited = b.across;
     if (alive) {
       /*
         Rooted in the muzzle that fired it — the mouth of the head that did, on a boss with many (0384),
@@ -3603,6 +3615,8 @@ function pinBeams(w: World): void {
       b.lifeFor = BOLT_STEPS;
     }
   }
+  // 0625: *"then a lazer zap + hiss for the hit"* — on the step the line becomes the beam.
+  if (!Number.isNaN(ignited)) w.onCue('laserZap', ignited);
 }
 
 /** The level-local distance at which the current fight's boss arrives — 0247. */
@@ -4773,9 +4787,11 @@ function throwWheel(w: World): void {
   disc.damage = w.weapon.damage;
   disc.lifeFor = wheel.life;
   // Where it is going to hang, in the world: `reach` of the screen ahead of the muzzle, carried with
-  // the camera, and held short of the no-fly wall by `steerWheels` — 0549.
-  disc.fromAlong = disc.along + wheel.reach * w.view.alongSpan;
-  disc.fromAcross = disc.across;
+  // the camera, and held short of the no-fly wall by `steerWheels` — 0549. 0623: and off the nose by as
+  // much as the right stick turns it, as the ray's rings are thrown.
+  const aim = w.weapon.aim * w.intent.aim;
+  disc.fromAlong = disc.along + Math.cos(aim) * wheel.reach * w.view.alongSpan;
+  disc.fromAcross = disc.across + Math.sin(aim) * wheel.reach * w.view.alongSpan;
 }
 
 /**
@@ -4814,6 +4830,17 @@ function steerWheels(w: World): void {
     if (b.kind !== WHEEL_KIND) continue;
     // Where it hangs rides the camera: the wheel is a place on the screen, and the ship the moving end.
     b.fromAlong += w.scrollPerStep;
+    /*
+      0623: *"weapons need right control stick — catherine wheel"*. While its tether holds and the right stick
+      is pushed, the place it hangs swings round the muzzle toward where the stick points, at its reach —
+      `swing` of the way a step. Let go, and it stays where it was put: a place on the screen, as it was.
+    */
+    if (w.intent.aim !== 0 && w.weapon.aim !== 0 && b.lifeFor > wheel.fade) {
+      const aim = w.weapon.aim * w.intent.aim;
+      const reach = wheel.reach * w.view.alongSpan;
+      b.fromAlong += (rootAlong + Math.cos(aim) * reach - b.fromAlong) * wheel.swing;
+      b.fromAcross += (rootAcross + Math.sin(aim) * reach - b.fromAcross) * wheel.swing;
+    }
     if (b.fromAlong > far) b.fromAlong = far;
     if (b.fromAcross < WHEEL_EDGE_MARGIN) b.fromAcross = WHEEL_EDGE_MARGIN;
     if (b.fromAcross > ACROSS_SPAN - WHEEL_EDGE_MARGIN) b.fromAcross = ACROSS_SPAN - WHEEL_EDGE_MARGIN;
@@ -5096,7 +5123,7 @@ function landJet(w: World, shootable: boolean, open: number, hull: Entity | null
     STREAM_ALONG[count] = rootAlong + streamAlong(clock, age, jet.sweep, jet.period, speed);
     STREAM_ACROSS[count] = rootAcross + streamAcross(clock, age, jet.sweep, jet.period, speed);
     // As wide as the spray is drawn the whole way: `width` at the muzzle, opening to `tipWidth` — 0610, on 0250's rule.
-    STREAM_REACH[count] = streamWidth(age, jet.flight, jet.width, jet.tipWidth);
+    STREAM_REACH[count] = streamWidth(age, jet.flight, jet.width, jet.tipWidth, jet.flare);
     count++;
   }
   const landedBefore = w.hits.count;
@@ -5424,7 +5451,8 @@ function firePaint(w: World): void {
       break;
     }
   }
-  const angle = w.paintRng.range(-paint.scatter, paint.scatter);
+  // 0623: scattered about where the right stick points it, as the ray's rings are thrown (0588).
+  const angle = w.weapon.aim * w.intent.aim + w.paintRng.range(-paint.scatter, paint.scatter);
   const muzzle = w.shipRow.muzzle;
   reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, PAINT_KIND + colour);
   const ball = paint.colours[colour]!.ball;
@@ -6660,11 +6688,24 @@ function stepWheels(w: World): void {
   */
   const now = (w.steps * STEP_MS) / 1000;
   const was = ((w.steps - 1) * STEP_MS) / 1000;
+  /*
+    0618: the wheels on a clock of their own, which runs at the rim's pace for what the engines are doing —
+    eased toward a step at a time, so a spinner winds up under the burn and runs down under the brake. A
+    clock and not a rate on the turn, so the pace can change without the wheel jumping to where a faster
+    one would have been all along.
+  */
+  if (row !== null) {
+    w.wheelPace += (row.pace[thrustOf(w.warp, w.intent.along)] - w.wheelPace) * WHEEL_PACE_EASE;
+    w.wheelWas = w.wheelClock;
+    w.wheelClock += (STEP_MS / 1000) * w.wheelPace;
+  }
+  const rolled = w.wheelClock;
+  const rolledWas = w.wheelWas;
   for (let i = 0; i < turning && i < w.wheels.size; i++) {
     if (wheels === null || row === null) break;
     const wheel = w.wheels.at(i);
     const at = i === 0 ? wheels.at[0] : wheels.at[1];
-    const frame = row.frames[wheelFrame(row, i, now)]!;
+    const frame = row.frames[wheelFrame(row, i, rolled)]!;
     const sprite = SPRITE[hurt ? frame.hit : frame.base];
     wheel.sprite = sprite;
     wheel.spriteBase = sprite;
@@ -6674,9 +6715,9 @@ function stepWheels(w: World): void {
     wheel.prevAcross = wheel.across;
     wheel.along = w.ship.along + at.along;
     wheel.across = w.ship.across + at.across;
-    const turn = wheelTurn(row, i, now);
-    const struck = row.hold > 0 && Math.floor(now / row.hold) !== Math.floor(was / row.hold);
-    wheel.prevTurn = struck ? turn : wheelTurn(row, i, was);
+    const turn = wheelTurn(row, i, rolled);
+    const struck = row.hold > 0 && Math.floor(rolled / row.hold) !== Math.floor(rolledWas / row.hold);
+    wheel.prevTurn = struck ? turn : wheelTurn(row, i, rolledWas);
     wheel.turn = turn;
   }
   for (let k = 0; k < lamps.length && turning + k < w.wheels.size; k++) {
@@ -6753,6 +6794,15 @@ function stepLoaded(w: World): void {
  * interpolates from `prevAlong`. Nothing allocates — a row lookup, an integer divide and eight writes a
  * nozzle.
  */
+/**
+ * What the engines are doing: burning while the ship crosses between places or the stick is pushed past
+ * `BURN_ASK`, easing past `EASE_ASK` back, idling between. The flame's state since 0230, and since 0618
+ * the wheels' pace too, read in one place so the two never disagree.
+ */
+export function thrustOf(warp: number, ask: number): ThrustKind {
+  return warp > 0 || ask > BURN_ASK ? 'burn' : ask < EASE_ASK ? 'ease' : 'idle';
+}
+
 function stepExhaust(w: World): void {
   const flying = w.shipPool.size > 0;
   /*
@@ -6778,7 +6828,7 @@ function stepExhaust(w: World): void {
     because the player let go of the stick at twelve times the speed of the level would be the
     picture contradicting the sky behind it.
   */
-  const row = w.warp > 0 || ask > BURN_ASK ? THRUST.burn : ask < EASE_ASK ? THRUST.ease : THRUST.idle;
+  const row = THRUST[thrustOf(w.warp, ask)];
   /*
     ⚠️ **THE LEAN IS THE VELOCITY, AND IT PICKS A BITMAP RATHER THAN MOVING ONE — 0241.** 0230 slid
     the flame across the tail against the across velocity, and it played as *"they move up and down
@@ -13181,6 +13231,10 @@ export function closeRun(w: World): void {
     if (layer !== w.shipPool) layer.clear();
   }
   w.steps = 0;
+  // 0618: and the wheels' own clock, which is the run's at its own pace.
+  w.wheelClock = 0;
+  w.wheelWas = 0;
+  w.wheelPace = 1;
   w.intent.along = 0;
   w.intent.across = 0;
   w.intent.specials.fill(0);

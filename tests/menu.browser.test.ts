@@ -9,7 +9,7 @@ import { CANVAS_MS, pastIntro } from './intro.ts';
 import { EVERY_TIER_FINISHED, credit, launch, openRoom, shown as shownScreen } from './title.ts';
 import { seeded } from './seed.ts';
 import { HANGAR_KEY } from '../src/save/hangar.ts';
-import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS, MENU_REPEAT_AFTER } from '../src/app/menu.ts';
+import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS, MENU_PILOT_BUTTONS, MENU_REPEAT_AFTER } from '../src/app/menu.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
@@ -637,6 +637,44 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
       SCREENS.title.actions[2]!.label,
     );
     expect(await shown(page, '.itc-playing-hud'), 'a press on the title started a run').toBe(false);
+    await page.context().close();
+  });
+
+  it('0624 — the triggers step the pilot on the title and in the hangar, wherever the cursor is, and never fly', async () => {
+    /*
+      Played: *"R + B buttons for pilots on all screens"*, read as a pair of buttons that step the pilot on every
+      screen that shows the pilots — the triggers, since the shoulders already turn the tabs. In what the
+      player sees: the face marked on the band, and the screen still up.
+    */
+    const page = await open();
+    await afterFrames(page, 8);
+    const filled = (screen: 'title' | 'hangar'): Promise<string> =>
+      page.evaluate(
+        ({ attr, panel }: { attr: string; panel: string }) => {
+          const on = document.querySelector(`.${panel} [${attr}="pilot"] [aria-pressed="true"]`);
+          return (on?.getAttribute('aria-label') ?? on?.textContent ?? '').trim();
+        },
+        { attr: SETTING_ATTR, panel: prefixFor(screen) + 'shown' },
+      );
+    const pilots = SCREENS.title.choices.find((c) => c.name === 'pilot')!.options.map((o) => o.label);
+    const was = await filled('title');
+    expect(pilots, `the title marks no pilot (${was})`).toContain(was);
+    await nudge(page, MENU_PILOT_BUTTONS.next);
+    const next = await filled('title');
+    expect(next, 'RT on the title did not step the pilot').not.toBe(was);
+    // Forward, round the end, past any pilot still shut — this store has won nothing, so the three secret ones are.
+    expect(pilots, `RT stepped onto ${next}`).toContain(next);
+    expect(await shown(page, shownScreen('title')), 'RT on the title flew').toBe(true);
+    await nudge(page, MENU_PILOT_BUTTONS.previous);
+    expect(await filled('title'), 'LT on the title did not step back').toBe(was);
+
+    await page.locator(`${shownScreen('title')} .${prefixFor('title')}action`, { hasText: 'Hangin' }).first().click();
+    await page.waitForSelector(shownScreen('hangar'));
+    await afterFrames(page, 4);
+    const there = await filled('hangar');
+    await nudge(page, MENU_PILOT_BUTTONS.next);
+    expect(await filled('hangar'), 'RT in the hangar did not step the pilot').not.toBe(there);
+    expect(await shown(page, shownScreen('hangar')), 'RT in the hangar turned the tab').toBe(true);
     await page.context().close();
   });
 

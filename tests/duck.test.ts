@@ -30,7 +30,8 @@ import { SHOTS } from '../src/content/shots.ts';
 import { JET_BOLT_KIND, SPECIALS } from '../src/content/specials.ts';
 import { CUES } from '../src/content/cues.ts';
 import { cueSeconds } from '../src/app/sound.ts';
-import { THEME_KINDS } from '../src/content/themes.ts';
+import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { sameInk } from './contrast.ts';
 import { SPRITE, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { INK_OF, drawKind, withFlame } from '../src/render/bake.ts';
@@ -67,7 +68,7 @@ function streamOf(link: Entity, fine = 4): { along: number; across: number; widt
     points.push({
       along: link.along + streamAlong(clock, age, JET.sweep, JET.period, SPEED),
       across: link.across + streamAcross(clock, age, JET.sweep, JET.period, SPEED),
-      width: streamWidth(age, JET.flight, JET.width, JET.tipWidth),
+      width: streamWidth(age, JET.flight, JET.width, JET.tipWidth, JET.flare),
       age,
     });
   }
@@ -199,6 +200,22 @@ describe('0595 — the paintball marker fires a scattered string of paint', () =
     }
   });
 
+  it('0626 — no colour held in a place is the ink of a bullet that place fires', () => {
+    /*
+      Every place fires three inks since 0626, where 0595's review had one to weigh. A paintball of a bullet's colour
+      beside the bullets is the thing `not` exists to refuse; measured here, so a bullet recoloured into a held paint
+      is refused rather than left to a hand-kept list.
+    */
+    for (const place of THEME_KINDS) {
+      const foe = THEMES[place].foe;
+      const fired = [foe.shot!, ...Object.values(foe.shots ?? {})];
+      for (const colour of PAINT.colours) {
+        if (colour.not.includes(place)) continue;
+        for (const ink of fired) expect(sameInk(colour.ink, ink), `${place} holds ${colour.ink} and fires ${ink}`).toBe(false);
+      }
+    }
+  });
+
   it('a ball that lands splats there, in its own colour, and the splat lands on a body beside the one it hit', () => {
     const { world, frame } = inTheDuck();
     // A body straight ahead for the ball, and one tucked behind it inside the splat's reach.
@@ -306,7 +323,7 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     // Where the stream will be on the next step, nine tenths of the way out, and just inside its edge there.
     const clock = JET.flight;
     const age = JET.flight * 0.9;
-    const edge = streamWidth(age, JET.flight, JET.width, JET.tipWidth);
+    const edge = streamWidth(age, JET.flight, JET.width, JET.tipWidth, JET.flare);
     const tA = streamAlong(clock, age + 0.5, JET.sweep, JET.period, SPEED) - streamAlong(clock, age - 0.5, JET.sweep, JET.period, SPEED);
     const tC = streamAcross(clock, age + 0.5, JET.sweep, JET.period, SPEED) - streamAcross(clock, age - 0.5, JET.sweep, JET.period, SPEED);
     const run = Math.hypot(tA, tC);
@@ -607,6 +624,46 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
   the nozzle cannot do and water does: bow as it sweeps, run out from the nozzle when it opens, fly on off it when
   it stops, and carry its ripples out with it.
 */
+describe('0622 — the Water Cannon’s end is wider and splashier', () => {
+  it('bells out at its end, a third wider there than 0610’s cone, and as narrow as it was half way out', () => {
+    /*
+      Played: *"water gun special -> end needs to be a bit wider + splashier"*. In world units, which the painter
+      draws and the frame lands on through one function (0250, held above): at its tip it opens past the 4 it
+      opened to, and half way out it is within a tenth of the 2.7 it was, so the run of it is the stream it was.
+    */
+    expect(streamWidth(JET.flight, JET.flight, JET.width, JET.tipWidth, JET.flare), 'the end is no wider than 0610’s').toBeGreaterThanOrEqual(4 * 1.3);
+    const half = streamWidth(JET.flight / 2, JET.flight, JET.width, JET.tipWidth, JET.flare);
+    expect(Math.abs(half - 2.7), `half way out it is ${half.toFixed(2)} either side, where it was 2.7`).toBeLessThan(0.27);
+  });
+
+  it('throws a crown of splash off its tip, out to the sides and past it, in pixels', () => {
+    const { world, frame } = inTheDuck();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    launchSpecial(world, 'waterCannon');
+    for (let i = 0; i < 20; i++) frame.step();
+    const drops: { x: number; y: number }[] = [];
+    const surface: Surface = {
+      clear(): void {},
+      blit(sprite: number, x: number, y: number): void {
+        if (sprite === SPRITE.sprayDrop) drops.push({ x, y });
+      },
+      bolt(): void {},
+    };
+    paintBolts(surface, world.view, world.bolts, world.cameraAlong, 1);
+    const link = jetLink(world)!;
+    const middle = streamOf(link, 4);
+    const tip = middle[middle.length - 1]!;
+    const tipX = screenX(world.view, tip.along - world.cameraAlong, tip.across);
+    const tipY = screenY(world.view, tip.along - world.cameraAlong, tip.across);
+    const tipWidth = tip.width * world.view.scale;
+    // A drop near the tip — within twice its width of it — and how many of those are out past the spray's own edge.
+    const near = drops.filter((d) => Math.hypot(d.x - tipX, d.y - tipY) < tipWidth * 2.6);
+    const flung = near.filter((d) => Math.hypot(d.x - tipX, d.y - tipY) > tipWidth * 0.5);
+    expect(near.length, `${near.length} drops at the spray’s end`).toBeGreaterThanOrEqual(8);
+    expect(flung.length, `${flung.length} drops thrown out from its end`).toBeGreaterThanOrEqual(4);
+  });
+});
+
 describe('0616 — the Water Cannon’s water flows', () => {
   /** The strokes the painter lays for the jet after `steps` steps of it, at the end of the last. */
   function paintedAfter(steps: number) {

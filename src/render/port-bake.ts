@@ -18,7 +18,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { FLAME_BOX, HANGAR_SCALE, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
+import { FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import { figureOf, type GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
 import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, shade, trace, withFit, type Atlas, type Frame, type Pt } from './bake.ts';
@@ -28,6 +28,7 @@ import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
 /** A flame's length and width against the fight's box, where they were against the fighter's hull. */
 const JET = FIGHTER_HULL / SHIP_BOX;
+
 
 /**
  * Where a ship's engines burn, in its box's radius — its row's `nozzles`, which the fight's flames burn
@@ -136,6 +137,9 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
   const surge: Frame = { half: size / 2, r: (size * 0.42) / SURGE_BOX };
   // 0530: the pilot's ship burns the flame the hangar fitted it, as it does in the fight.
   const jets = flameInks(palette, fitNow(pilot.ship).flame);
+  // 0619: and every ship's flames as big on the screen as the largest's, side-on and from above.
+  const side = jetGrow(pilot.ship, 'hangar');
+  const top = jetGrow(pilot.ship, 'outside');
   switch (kind) {
     /*
       ⚠️ **THE PILOT'S OWN SHIP SINCE 0441**, and its own nozzles. Its frame is the fight's box rather
@@ -149,6 +153,15 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     */
     case 'blue':
       nobodyAboard(pilot.ship, () => paintBlue(ctx, f, palette, size, pilot.ship));
+      return canvas;
+    /*
+      0621: *"sideview of the Lil Caddie has the spinning lights playing in front of missiles."* A ship with
+      hangar art of its own carries its tubes on the outside of that art, side-on; they are their own picture so
+      the pad can lay its lights between the hull and them. A ship drawn as the fight draws it has its tubes in
+      its own picture, under no lights of its own, and this is empty.
+    */
+    case 'blueTubes':
+      if (HANGAR_ART[pilot.ship] !== null) paintLoadedTubes(ctx, f, palette, pilot.ship, fitNow(pilot.ship).tubes, 0);
       return canvas;
     case 'blueRider':
       if (SHIPS[pilot.ship].seat !== null) {
@@ -171,8 +184,11 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       if (art === null) nobodyAboard(pilot.ship, () => paintBlue(ctx, f, palette, size, pilot.ship));
       else {
         art.paint(ctx, f, palette, size, LEAN[kind]);
-        // 0582: and its tubes, their places leaning in toward the rim as the picture leans side-on.
-        paintLoadedTubes(ctx, f, palette, pilot.ship, fitNow(pilot.ship).tubes, Math.sin((LEAN[kind] * Math.PI) / 2));
+        /*
+          0582: and its tubes, their places leaning in toward the rim as the picture leans side-on. 0621: but not
+          side-on itself, where they are `blueTubes`, laid over the ship's lights.
+        */
+        if (kind !== 'blueSide') paintLoadedTubes(ctx, f, palette, pilot.ship, fitNow(pilot.ship).tubes, Math.sin((LEAN[kind] * Math.PI) / 2));
       }
       return canvas;
     }
@@ -185,22 +201,22 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       to the other as the ship tilts.
     */
     case 'blueIdle':
-      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 0.4 * JET, 0.07 * JET, 0.22 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 0.4 * JET * side, 0.07 * JET * side, 0.22 * JET * side);
       return canvas;
     case 'blueBurn':
-      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 0.95 * JET * side, 0.09 * JET * side, 0.4 * JET * side);
       return canvas;
     case 'blueFlare':
-      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 1.35 * JET * side, 0.115 * JET * side, 0.55 * JET * side);
       return canvas;
     case 'blueTopBurn':
-      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, jetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, jetsOf(pilot.ship), 0.95 * JET * top, 0.09 * JET * top, 0.4 * JET * top);
       return canvas;
     case 'blueTopFlare':
-      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, jetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, jetsOf(pilot.ship), 1.35 * JET * top, 0.115 * JET * top, 0.55 * JET * top);
       return canvas;
     case 'blueTopSurge':
-      paintJets(ctx, surge, jets.outer, jets.inner, '#ffffff', jetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
+      paintJets(ctx, surge, jets.outer, jets.inner, '#ffffff', jetsOf(pilot.ship), 2.3 * JET * top, 0.17 * JET * top, 0.95 * JET * top);
       return canvas;
     /*
       ⚠️ **THE SURGE: THE FLAME THE LAUNCH IS HEARD IN — 0416.** Near twice a flare's length, half as wide
@@ -209,7 +225,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       and lets it die back into it (`SURGE_STEPS`).
     */
     case 'blueSurge':
-      paintJets(ctx, surge, jets.outer, jets.inner, '#ffffff', hangarJetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
+      paintJets(ctx, surge, jets.outer, jets.inner, '#ffffff', hangarJetsOf(pilot.ship), 2.3 * JET * side, 0.17 * JET * side, 0.95 * JET * side);
       return canvas;
     case 'viperSurge':
       paintJets(ctx, surge, VIPER.flame, VIPER.core, '#ffffff', VIPER_JETS, 2.4, 0.14, 1.0);
@@ -624,6 +640,7 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'blueTopFlare':
     case 'blueTopSurge':
     case 'blueRider':
+    case 'blueTubes':
     case 'viper':
     case 'viperIdle':
     case 'viperBurn':

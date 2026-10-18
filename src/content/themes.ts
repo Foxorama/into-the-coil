@@ -84,6 +84,7 @@ import {
 import { APPROACH_VOICES } from './approach.ts';
 import { NEBULA_PAN, NEBULA_VOICES } from './nebula.ts';
 import type { Palette, PaletteName } from './palette.ts';
+import type { ShotKind } from './shots.ts';
 import { RIME_VOICES } from './rime.ts';
 import { SAURIAN_CUES, SAURIAN_VOICES, cascadeOver } from './saurian.ts';
 
@@ -690,6 +691,13 @@ export interface FoeSkin {
    * place; a flame is the same red everywhere, because fire is fire. Both are correct here.
    */
   shot?: string;
+  /**
+   * And what each of its other bullets is, where it is not `shot` — 0626: *"colour is too same across each level
+   * … different bullets need some variation in each level."* Every place's raiders fire `spit`, `lance` and `flak`
+   * and all three were the one `shot`; a place now says a different ink for the ones it wants told apart, and
+   * `shot` stays the default for every kind it does not name — the mid-bosses' and the bosses' own included.
+   */
+  shots?: Readonly<Partial<Record<ShotKind, string>>>;
 }
 
 export const THEMES: Record<ThemeKind, ThemeRow> = {
@@ -721,7 +729,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // ⚠️ The `lit` here is `palette.enemy` exactly, which is what made this the place the report
     // came from. Left alone on purpose: whether hot red is separation enough is a question for the
     // screen, and the answer may be where a weaver arrives rather than what colour anything is.
-    foe: { hull: '#9a9a9a', plate: '#4c4c56', lit: '#ff7286', eye: '#ff4040', shot: '#ff2e4d' },
+    // 0626: crimson, magenta and green — the serpent's place, so no lime beside its acid.
+    foe: { hull: '#9a9a9a', plate: '#4c4c56', lit: '#ff7286', eye: '#ff4040', shot: '#ff2e4d', shots: { lance: '#ff3dd0', flak: '#5aff6a' } },
     // The serpent: a venom-green leviathan with its light running down its scales and a gold eye.
     lord: { hull: '#2f8a5a', plate: '#123d2a', lit: '#b8ff9a', eye: '#ffc030' },
     bolt: null,
@@ -887,7 +896,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ground: null, // In space, and the Pillars are the proof: they are a thing you fly PAST.
     // Moths in an ember cloud: the ember's own orange, scorched dark underneath, a black eye, embers.
     // The hulls are ORANGE here, so orange fire would be a raider shooting itself — rose instead.
-    foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14', shot: '#ff2f8f' },
+    /*
+      0626: green, hot pink and lime — cold against the embers. Its raiders mostly fire green: the hot pink they all
+      fired was one colour with The Approach's crimson at a glance, and the two places are one after the other.
+    */
+    foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14', shot: '#5aff6a', shots: { lance: '#ff2f8f', flak: '#e8ff40' } },
     // The fish: a darker, redder fire than its horde, with a pale burning eye.
     lord: { hull: '#c8401a', plate: '#5a1608', lit: '#ffd24a', eye: '#fff2a0' },
     bolt: null,
@@ -1055,7 +1068,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     },
     // Reptiles: olive hide, bone along the edges, an amber eye, and scales for the motif.
     // Olive hulls on the one BLUE sky in the game, which is where a warm shot has the most room.
-    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4d2e' },
+    /*
+      0626: magenta, lime and a pink-red. The red-orange it fired was 2.84:1 on its own sky, under the game's floor,
+      and a step from the volcano's fire.
+    */
+    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4fd8', shots: { lance: '#e8ff40', flak: '#ff6b8a' } },
     // The pterodactyl: leathery olive, bone-pale crest and beak, an amber eye.
     lord: { hull: '#7c962c', plate: '#2e3a12', lit: '#ffe9a8', eye: '#ffb020' },
     bolt: null,
@@ -1268,7 +1285,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // Machines in a lit corridor: verdigris, oiled dark in the seams, the corridor's own violet on
     // the traces, a red eye, and circuitry for the motif.
     // Teal hulls with magenta lamps: both ends of the cold half are spoken for, so the fire is gold.
-    foe: { hull: '#3aa08a', plate: '#1c5a4c', lit: '#e070f0', eye: '#ff3030', shot: '#ffd12e' },
+    // 0626: red, green and lime. The gold it fired was the hazard ink, the Catherine wheel's own embers.
+    foe: { hull: '#3aa08a', plate: '#1c5a4c', lit: '#e070f0', eye: '#ff3030', shot: '#ff3b5c', shots: { lance: '#5aff6a', flak: '#e8ff40' } },
     // The gyre: the lattice's teal gone dark and hot-pink in the traces, a red core.
     lord: { hull: '#2a8a78', plate: '#0f3f36', lit: '#ff7af0', eye: '#ff3030' },
     bolt: null,
@@ -1395,7 +1413,11 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // Cut ice: blue through the block, frost on the facets, a warm eye in a cold thing.
     // Everything in this place is cold — hulls, sky and all — so an ember is the loudest thing that
     // can happen on it. The tightest sky in the game (`scripts/weigh-sky.mjs`) and the biggest win.
-    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#ff5a1e' },
+    /*
+      0626: lime, pink and green on the ice. The orange it fired was 2.85:1 on its own sky, under the game's floor,
+      and as near the fire ink as a bullet can be.
+    */
+    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#e8ff40', shots: { lance: '#ff5ab0', flak: '#6aff7a' } },
     // The frost ship: paler ice than the shards it sends, its facets near white, a cold red eye.
     lord: { hull: '#4a92da', plate: '#1e3a70', lit: '#eefcff', eye: '#ff5a7a' },
     bolt: null,
@@ -1535,7 +1557,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       with it for no reason"* — which is `CLAUDE.md`'s *consider the screen* asked and answered by
       the screen rather than by a rule. `scripts/threat-sheet.mjs --theme=mire` is the picture.
     */
-    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b' },
+    // 0626: rose, magenta and a pale pink, on the swamp's green — no lime, which is its own lit strips.
+    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b', shots: { lance: '#ff40d8', flak: '#ff9ac8' } },
     // The hydra: a deeper, bruised violet than the spores, acid-yellow in the maws, white eyes.
     lord: { hull: '#9a48b8', plate: '#3f1a52', lit: '#d8ff3a', eye: '#ffffff' },
     bolt: null,
@@ -1636,7 +1659,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       stands 50 ΔE off the player's fire, 36 off the player's hull and 41 off the bell's cold glass.
       Near the acid's lime and the frost's teal, neither of which is thrown here.
     */
-    foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f', shot: '#5aff8c' },
+    // 0626: the heart's green, magenta and lime.
+    foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f', shot: '#5aff8c', shots: { lance: '#ff4dd0', flak: '#e8ff40' } },
     // The jellyfish: a darker blood than the gaze, the bell's rim in a cold light, the heart gold.
     // Its glass is that cold light since 0459, so it stands off a sky that is the blood.
     lord: { hull: '#b8202e', plate: '#40060e', lit: '#9ad0f0', eye: '#ffd23f' },

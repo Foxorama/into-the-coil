@@ -110,8 +110,9 @@ export const PROBES = [
     guard: 'EVERY CUE THE GAME FIRES SAYS WHERE IT HAPPENED, and the one that cannot is named',
     edit: {
       path: 'src/app/boss.ts',
-      find: "  if (attack.kind !== 'heads') onCue(cue ?? 'bossShot', boss.across);",
-      replace: "  if (attack.kind !== 'heads') onCue(cue ?? 'bossShot');",
+      // 0625: re-anchored; a beam's fallback is its charge.
+      find: "  if (attack.kind !== 'heads') onCue(cue ?? (attack.kind === 'beam' ? 'laserCharge' : 'bossShot'), boss.across);",
+      replace: "  if (attack.kind !== 'heads') onCue(cue ?? (attack.kind === 'beam' ? 'laserCharge' : 'bossShot'));",
     },
   },
   {

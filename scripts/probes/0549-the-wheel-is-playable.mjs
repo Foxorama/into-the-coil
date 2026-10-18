@@ -34,7 +34,8 @@ export const PROBES = [
     suite: 'tests/wheel.test.ts',
     broke: 'a wheel thrown half the screen',
     guard: 'it reaches 60% of the screen, or the no-fly wall',
-    edit: { path: 'src/app/frame.ts', find: '  disc.fromAlong = disc.along + wheel.reach * w.view.alongSpan;', replace: '  disc.fromAlong = disc.along + 0.5 * w.view.alongSpan;' },
+    // 0623: re-anchored; the throw turns by the right stick, straight ahead at rest.
+    edit: { path: 'src/app/frame.ts', find: '  disc.fromAlong = disc.along + Math.cos(aim) * wheel.reach * w.view.alongSpan;', replace: '  disc.fromAlong = disc.along + Math.cos(aim) * 0.5 * w.view.alongSpan;' },
   },
   {
     decision: '0549',

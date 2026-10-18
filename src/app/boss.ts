@@ -1062,7 +1062,11 @@ function throwAttack(
     gate used to hold it: a cue after a `break` would be a second statement about the same event.
     `heads` is the one arm that does not reach here, because its own recursion does.
   */
-  if (attack.kind !== 'heads') onCue(cue ?? 'bossShot', boss.across);
+  /*
+    0625: and a laser's own fallback, the charge, as its line is drawn — every beam's unless its row names another,
+    so *"needs to apply to all lazers"* is the default and never a list. Its zap is `pinBeams`', when it burns.
+  */
+  if (attack.kind !== 'heads') onCue(cue ?? (attack.kind === 'beam' ? 'laserCharge' : 'bossShot'), boss.across);
   /*
     ⚠️ **THE MOUTH, OR THE CENTRE WHERE A ROW DOES NOT NAME ONE.** `null` is not a placeholder — a
     gyre throws from its own axis and a jellyfish from its bell, and the centre is where those belong.

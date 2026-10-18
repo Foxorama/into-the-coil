@@ -1163,6 +1163,18 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE PLAY-TEST OF 2026-10-18 IS A QUEUE, AND ITS FIRST NINE ARE BUILT — 2026-10-18
+
+[`the-play-test-of-2026-10-18`](../reports/the-play-test-of-2026-10-18.md) is three handwritten pages read in, and
+**holds the order, so this file does not.** Built in one PR: [0618](decisions/0618-the-spinners-run-with-the-engines.md),
+[0619](decisions/0619-every-flame-is-the-largest.md), [0620](decisions/0620-the-weasel-keeps-its-overalls.md),
+[0621](decisions/0621-the-tubes-ride-over-the-lights.md), [0622](decisions/0622-the-water-breaks-at-its-end.md),
+[0623](decisions/0623-the-wheel-and-the-paint-take-the-stick.md), [0624](decisions/0624-the-triggers-step-the-pilot.md),
+[0625](decisions/0625-the-lasers-are-heard.md) and [0626](decisions/0626-a-place-fires-more-than-one-colour.md) — each
+owes the play its *Owed* names, and 0624's reading of *"R + B"* is the player's to overturn. **Next is the report's
+queue, item 1: the serpent's roots**, then Hangin' Out's wall, the guns and tubes, the mid-bosses, and the enemy art,
+which is planned with photographs before it is built.
+
 ### ⚠️ THE BALL IS SOLID AND THE WATER FLOWS — OWED A PLAY AND AN EAR — 2026-10-17
 
 [0615](decisions/0615-the-ball-is-solid.md): the Hamster Ball comes back off whatever it does not break, the War

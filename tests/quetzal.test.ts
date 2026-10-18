@@ -905,3 +905,55 @@ describe('0485 — the pterodactyl is plumed', () => {
     expect(raised - bottom, `the body is ${(raised - bottom).toFixed(2)} units higher at the bottom of the downstroke`).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe('0625 — every laser is heard charging and firing', () => {
+  it('THE ASK, IN SECONDS: the charge sounds as the line appears, the zap as it burns, once a volley — and nothing else sounds for it', () => {
+    /*
+      Played: *"Lazers need a chargin hum for their line appearance, then a lazer zap + hiss for the hit … needs to
+      apply to all lazers."* Driven on the quetzal at each of its three laser phases: the step a volley's line is
+      drawn hears the charge, and the step its beams first burn — the warning's length later, as `strikeShip`
+      reads it — hears the zap. One of each, however many beams the volley has.
+    */
+    for (const fraction of [0.7, 0.45, 0.2]) {
+      const d = quetzalAt(fraction);
+      const heard: { kind: string; at: number }[] = [];
+      let step = 0;
+      d.world.onCue = (kind): void => {
+        heard.push({ kind, at: step });
+      };
+      const attack = phaseFor(BOSSES.quetzal, d.world.bossPool.at(0).health, d.world.bossFullHealth).attack!;
+      expect(attack.kind, `the quetzal at ${fraction} fires no laser`).toBe('beam');
+      if (attack.kind !== 'beam') continue;
+      d.world.bossPool.at(0).fireIn = 1;
+      for (step = 0; step < attack.warning + attack.hold; step++) {
+        d.world.ship.health = d.world.shipRow.health;
+        d.world.ship.invulnFor = 999;
+        d.frame.step();
+      }
+      const charges = heard.filter((h) => h.kind === 'laserCharge');
+      const zaps = heard.filter((h) => h.kind === 'laserZap');
+      expect(charges.length, `at ${fraction}: ${charges.length} charges for one volley`).toBe(1);
+      expect(zaps.length, `at ${fraction}: ${zaps.length} zaps for one volley of ${attack.from.length}`).toBe(1);
+      expect(heard.some((h) => h.kind === 'bossShot'), `at ${fraction}: the laser still crashes as a shot does`).toBe(false);
+      const gap = (zaps[0]!.at - charges[0]!.at) / STEPS_PER_SECOND;
+      expect(gap, `at ${fraction}: the zap came ${gap.toFixed(2)} s after the charge, not when the beam burned`).toBeCloseTo(attack.warning / STEPS_PER_SECOND, 1);
+      /*
+        And on the very step it starts to hurt — the first step `strikeShip` would take a ship in it, which is the
+        warning less one after the throw, because the step it is thrown on steps the bolt too (*THE WARNING AND THE
+        HOLD*, above, holds the hurt to the same count).
+      */
+      expect(zaps[0]!.at - charges[0]!.at, `at ${fraction}: the zap is not on the step the beam starts to hurt`).toBe(attack.warning - 1);
+    }
+  });
+
+  it('and it is every laser’s: no row names another sound for a beam, so the fallback is what all of them play', () => {
+    for (const kind of ['quetzal', 'hydra', 'medusa'] as const) {
+      expect(beams(kind).length, `${kind} fires no laser`).toBeGreaterThan(0);
+      for (const phase of BOSSES[kind].phases) {
+        const attack = phase.attack ?? BOSSES[kind].attack;
+        if (attack.kind === 'beam') expect(phase.cue ?? 'laserCharge', `${kind}'s laser at ${phase.upTo} names its own sound`).toBe('laserCharge');
+        if (attack.kind === 'heads') for (const head of attack.heads) if (head.attack.kind === 'beam') expect(head.cue ?? 'laserCharge', `${kind}'s laser head names its own sound`).toBe('laserCharge');
+      }
+    }
+  });
+});

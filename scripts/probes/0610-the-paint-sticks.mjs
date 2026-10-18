@@ -132,6 +132,6 @@ export const PROBES = [
     broke: 'a spray that opens in the picture and lands as a column',
     guard: 'lands as wide as it is drawn, out to the edge of its spray near the tip',
     // Re-anchored by 0616, which lands the stream point by point.
-    edit: { path: 'src/app/frame.ts', find: '    STREAM_REACH[count] = streamWidth(age, jet.flight, jet.width, jet.tipWidth);', replace: '    STREAM_REACH[count] = jet.width;' },
+    edit: { path: 'src/app/frame.ts', find: '    STREAM_REACH[count] = streamWidth(age, jet.flight, jet.width, jet.tipWidth, jet.flare);', replace: '    STREAM_REACH[count] = jet.width;' },
   },
 ];

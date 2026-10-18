@@ -157,6 +157,60 @@ describe('the run', () => {
   });
 });
 
+describe('0618 — the spinners run with the engines', () => {
+  it('turn faster under the burn and slower under the brake, in turns a second, and wind between rather than jump', () => {
+    /*
+      Played: *"spinny wheels should be faster/slower like the thruster when moving."* In the player's units:
+      how many times round the front spinner goes in a second, held at each ask once it has wound to it.
+    */
+    const { world, frame } = flying('firebird', 'spinner');
+    const ask = { along: 0 };
+    world.input = {
+      contribute(intent): void {
+        intent.along = ask.along;
+      },
+      spend(): void {},
+      release(): void {},
+    };
+    const second = Math.round(1000 / STEP_MS);
+    const turnsASecond = (along: number): { turns: number; biggest: number } => {
+      ask.along = along;
+      for (let s = 0; s < second; s++) frame.step();
+      let sum = 0;
+      let biggest = 0;
+      for (let s = 0; s < second; s++) {
+        const was = world.wheels.at(0).turn;
+        frame.step();
+        const d = wrap(world.wheels.at(0).turn - was);
+        sum += d;
+        biggest = Math.max(biggest, Math.abs(d));
+      }
+      return { turns: sum / (2 * Math.PI), biggest };
+    };
+    frame.step();
+    const idle = turnsASecond(0);
+    const burn = turnsASecond(1);
+    const ease = turnsASecond(-1);
+    const pace = RIMS.spinner.wheel!.pace;
+    expect(idle.turns, 'at rest the spinner left the Mothership’s 0.7 s').toBeCloseTo(1 / 0.7, 1);
+    expect(burn.turns, `under the burn the spinner went round ${burn.turns.toFixed(2)} times a second`).toBeGreaterThan(idle.turns * 2);
+    expect(ease.turns, `under the brake the spinner went round ${ease.turns.toFixed(2)} times a second`).toBeLessThan(idle.turns / 2);
+    expect(ease.turns, 'the brake turned the spinner backward').toBeGreaterThan(0);
+    expect(pace.idle, 'the pad shows the idle pace, and it is no longer the Mothership’s').toBe(1);
+    // No step turns further than a step at the burn's full pace: the change of pace is a wind, never a jump.
+    const most = (2 * Math.PI * (STEP_MS / 1000) * pace.burn) / RIMS.spinner.wheel!.turn![0];
+    expect(burn.biggest, 'the spinner jumped round rather than winding up').toBeLessThanOrEqual(most + 1e-9);
+  });
+
+  it('every rim that moves authors its own pace for each thing the engines do', () => {
+    for (const rim of RIM_KINDS) {
+      const wheel = RIMS[rim].wheel;
+      if (wheel === null) continue;
+      for (const kind of ['idle', 'burn', 'ease'] as const) expect(wheel.pace[kind], `${rim} at ${kind}`).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe('0557 — the lightning crackles', () => {
   it('strikes a new crack over each wheel every sixteenth of a second, somewhere new, and never sweeps between two', () => {
     /*
