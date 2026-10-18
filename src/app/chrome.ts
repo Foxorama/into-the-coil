@@ -7669,7 +7669,14 @@ export function makeChrome(
       swing.classList.add(next);
     },
     setHud(lives: number, health: number, maxHealth: number, stacks: readonly { label: string; sprite: number; charges: number }[]): void {
-      livesCount.textContent = '×' + String(Math.max(0, lives));
+      /*
+        ⚠️ **THE SHIPS LEFT BEHIND THE ONE FLOWN — 0636**: *"life counter isn't correct, it should show
+        remaining lives not total lives. ie, start at 2, 1, 0 not 3, 2, 1."* The icon is the ship in the
+        air (0430) and the count was every life including it, so the last ship flew at ×1 and a death
+        there was the run's end. `lives` is still the run's whole count; what is drawn is the spares.
+      */
+      const spare = Math.max(0, lives - 1);
+      livesCount.textContent = '×' + String(spare);
       stackGroups.forEach((slot, i) => {
         const stack = stacks[i];
         slot.group.hidden = stack === undefined;
@@ -7685,7 +7692,7 @@ export function makeChrome(
         slot.said = String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + stack.label;
         slot.group.setAttribute('aria-label', slot.said + chargeSaid(charges[i] ?? -1));
       });
-      livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives, ' + livesGun + livesTubes);
+      livesGroup.setAttribute('aria-label', 'lives left: ' + String(spare) + ', ' + livesGun + livesTubes);
       // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
       // maximum is a table edit, not a rewrite of this.
       while (pips.length < maxHealth) {

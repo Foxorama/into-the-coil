@@ -24,7 +24,7 @@ first flight of a visit plays the intro with that pilot in it, and the intro end
 | **the pilot screen** | the title: the badge and name, the top five, the pilot band of cards (face and first name), the pilot card, the difficulty band, *Fly* and *Settings* |
 | **the pilot card** | the ship drawn large from the sheet's own bake (`bakeGlyph`, twice the readout's icons), the full name, pronouns and home, the line about them (`bio`, moved from a code comment onto `GolferRow`), the craft, and the gun with its hint. All read off `GOLFERS`, `SHIPS` and `WEAPONS` |
 | **flying** | *Fly*; A or Enter with the cursor on the pilot band (`press: 'takes'` on the choice); a click or tap on the highlighted card once a pointer has chosen on this screen or a run has been flown. A pointer's first landing on a card highlights it |
-| **the intro** | the first flight of a visit. It runs out, or is skipped, into the run (`then: 'playing'`); the skip's key is spent there, so Space throws no special and Escape does not pause the run (0511) |
+| **the intro** | ~~the first flight of a visit~~ — **amended by [0635](0635-every-flight-plays-the-intro.md)**: every flight. It runs out, or is skipped, into the run (`then: 'playing'`); the skip's key is spent there, so Space throws no special and Escape does not pause the run (0511) |
 
 ## Why a tap looks first
 

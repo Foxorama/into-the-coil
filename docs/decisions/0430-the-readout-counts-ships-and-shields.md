@@ -19,7 +19,7 @@ deflector.**
 
 | | was | is |
 |---|---|---|
-| **lives** | a green plus, then `×N` | the ship being flown, then `×N` — `chrome.setShip(shipRow.sprite)` in `src/app/mount.ts` |
+| **lives** | a green plus, then `×N` | the ship being flown, then `×N` — `chrome.setShip(shipRow.sprite)` in `src/app/mount.ts`. **`N` amended by [0636](0636-the-counter-is-the-ships-left.md)**: the ships left behind the one flown, not every life |
 | **shields in the readout** | a filled disc against a hollow one | a filled shield against a hollow one: rim always in the ink, core filled only while held |
 | **the shell on the ship** | a ring per shield, orbiting at 5.6, turning with the camera | a plate per shield: a curved strip of energy honeycomb at 5.6 with a bright outer rim, standing still, with a light running through its cells as the camera travels |
 

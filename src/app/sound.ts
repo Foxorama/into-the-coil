@@ -1215,6 +1215,18 @@ export function makeSpeaker(out: AudioOut): Speaker {
   return {
     step(beatStep?: number): void {
       clock++;
+      /*
+        ── A BEAT THAT STANDS STILL HOLDS NOTHING — 0633 ────────────────────────────────────────────
+
+        ⚠️ **REPORTED FROM PLAY**: *"finishing a run with lives you hear a death noise when changing
+        screens"*. The world's count only moves on a screen that steps, so after a win it froze on
+        whatever step the fight ended on — five times in six off the grid. The finale's explosions
+        are gridded, so they waited there for a sixteenth that never came, unheard through the whole
+        outro, and went off together on the title when `closeRun` set the count back to 0: a burst of
+        explosions on a screen change. A world that is not stepping has no bar to land on; what waits
+        sounds now.
+      */
+      const still = beatStep !== undefined && beatStep === beat;
       // The world's own count when there is a world, and the speaker's own when there is not.
       beat = beatStep ?? beat + 1;
       /*
@@ -1222,7 +1234,7 @@ export function makeSpeaker(out: AudioOut): Speaker {
         losing its slot to one that arrived later. A cue that waited a sixteenth has already paid for
         its place in the bar; the cap is a budget for the step, and the thing that waited goes first.
       */
-      if (beat % FIRE_GRID !== 0) return;
+      if (!still && beat % FIRE_GRID !== 0) return;
       for (let i = 0; i < waiting.length; i++) {
         if (waiting[i] === 0) continue;
         waiting[i] = 0;

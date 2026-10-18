@@ -1163,6 +1163,15 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ A RUN DOES NOT REACH INTO THE NEXT — OWED A PLAY — 2026-10-18
+
+[`the-run-resets`](../reports/the-run-resets-2026-10-18.md) is one more page, five notes, read in and built in one
+PR: [0633](decisions/0633-a-beat-that-stands-still-holds-nothing.md),
+[0634](decisions/0634-the-boss-bar-goes-with-the-run.md), [0635](decisions/0635-every-flight-plays-the-intro.md)
+and [0636](decisions/0636-the-counter-is-the-ships-left.md). Its note that a run's end *"should essentially be a
+cache clear"* is read as a fresh run, not a wiped save, and that reading is the player's to overturn. **Next is the
+play both pages owe.**
+
 ### ⚠️ THE PLAY-TEST OF 2026-10-18 IS A QUEUE, AND ALL OF IT IS BUILT — OWED A PLAY — 2026-10-18
 
 [`the-play-test-of-2026-10-18`](../reports/the-play-test-of-2026-10-18.md) is three handwritten pages read in, and

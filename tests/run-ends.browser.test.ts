@@ -90,6 +90,38 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
     await context.close();
   });
 
+  it('0635 — and the next flight plays the intro, as the first flight after a page load does', async () => {
+    /*
+      ⚠️ **REPORTED FROM PLAY**: *"new run w/out cache clear doesn't play the intro cinematic"* and *"end of
+      run after all deaths should essentially be a cache clear for the next run."* The intro was the first
+      flight of a VISIT (0513), held by a flag the page kept, so it came back only on a reload — which a
+      cache clear is. Held in what the player sees: the intro's skip is up after the second Fly.
+    */
+    browser ??= await launchChromium({ headless: true });
+    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(dist);
+    await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+    await pastIntro(page);
+    await fly(page);
+    await page.waitForTimeout(1000);
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(shown('paused'), { state: 'attached' });
+    await page.locator(`${shown('paused')} .${prefixFor('paused')}action`, { hasText: 'Quit' }).click();
+    await page.waitForSelector(shown('quit'), { state: 'attached' });
+    await page.locator(`${shown('quit')} .${prefixFor('quit')}action`, { hasText: 'Quit' }).click();
+    await page.waitForSelector(shown('title'), { state: 'attached' });
+    await page.locator(`${shown('title')} .${prefixFor('title')}action`, { hasText: SCREENS.title.actions[0]!.label }).first().click();
+    const where = await page.waitForFunction(
+      ([skip, hud]: [string, string]) =>
+        document.querySelector(skip) !== null ? 'intro' : document.querySelector(hud) !== null ? 'run' : null,
+      [`.${prefixFor('intro')}skip-shown`, '.itc-playing-hud-shown'] as [string, string],
+      { timeout: 30_000 },
+    );
+    expect(await where.jsonValue(), 'the second flight of the visit went straight into the run, with no intro').toBe('intro');
+    await context.close();
+  });
+
   it('a continue left to run out goes on the table, written before the title ends the run', async () => {
     /*
       ⚠️ **MOVED BY THIS DECISION, AND IT HAD NO GUARD.** A run over whose offer runs out onto the title

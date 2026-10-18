@@ -142,4 +142,23 @@ describe('0559 — a run ends whole', () => {
     flown.lifecycle.end();
     expect(differences(snapshot(flown.built.world), snapshot(untouched.built.world)), 'the run ended and this was still in the world').toEqual([]);
   });
+
+  it('0634 — and a boss bar standing when it ended is taken down, not only forgotten', () => {
+    /*
+      ⚠️ **REPORTED FROM PLAY**: *"ending a run on a boss → boss's remaining health shows on next run."*
+      The world's latch was put back to "no boss" and the chrome never heard: it kept the fraction, and
+      the next run's "no boss" equalled the latch, so nothing ever told it again — the dead boss's health
+      stood over the next run until the next end boss arrived. 0559's own warning about latches, on the
+      one latch nothing re-sends. The world is the whole model the chrome draws from; what it is told
+      last is what the player sees.
+    */
+    const flown = shell();
+    flown.lifecycle.begin(TIER, 'firebird', DEFAULT_CREDIT, undefined, undefined, 'spinner');
+    const world = flown.built.world;
+    const told: number[] = [];
+    world.onBoss = (fraction) => told.push(fraction);
+    world.shownBoss = 0.4;
+    flown.lifecycle.end();
+    expect(told.at(-1), 'the run ended with a boss bar up and the chrome was never told it was gone').toBe(-1);
+  });
 });

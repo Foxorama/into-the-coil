@@ -13444,6 +13444,13 @@ export function closeRun(w: World): void {
   w.collected.kind.fill(0);
   w.collected.face.fill(0);
   w.shownHealth = w.ship.health;
+  /*
+    ⚠️ **AND THE CHROME IS TOLD — 0634**: *"ending a run on a boss → boss's remaining health shows on next
+    run."* Put back alone, the latch equalled the next run's "no boss", so nothing ever sent it again and
+    the chrome kept the dead run's fraction over the next run. Health and the score are re-sent when the
+    shell syncs a new run; the bar has only this.
+  */
+  if (w.shownBoss !== -1) w.onBoss(-1);
   w.shownBoss = -1;
   w.shownPoints = 0;
   w.shownStreak = 0;

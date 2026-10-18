@@ -2020,6 +2020,28 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     }
   });
 
+  it('0633 — a gridded cue asked for while the world stands still sounds on the next step, not when the run closes', () => {
+    /*
+      ⚠️ **THE REPORTED ONE: *"finishing a run with lives you hear a death noise when changing
+      screens."*** After a win every screen stops the world, so the count the speaker is handed
+      stands still — on step 7 here, off the grid. The finale's explosions were asked for there and
+      waited for a sixteenth that never came; `closeRun` then set the count to 0, which is on the
+      grid, and they went off together on the title. Asserted in steps, which at 60 a second is what
+      the player hears: one step, not the length of the outro and the victory sheet.
+    */
+    const { out, heard } = recorder();
+    const speaker = makeSpeaker(out);
+    speaker.step(7);
+    speaker.step(7);
+    speaker.play('kill');
+    speaker.play('bossDown');
+    speaker.step(7);
+    expect(heard.length, 'the finale’s explosions waited on a frozen beat, unheard').toBe(2);
+    for (let i = 0; i < 300; i++) speaker.step(7);
+    speaker.step(0);
+    expect(heard.length, 'something held went off when the run closed and the count went back to 0').toBe(2);
+  });
+
   it('0104 — ducks the music for a cue that SOUNDED, and never for one the cap refused', () => {
     /*
       ⚠️ **THE FAILURE THIS IS WRITTEN FROM: ducking on the ASK.** A cue the hold or the voice cap
