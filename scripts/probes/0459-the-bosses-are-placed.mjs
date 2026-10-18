@@ -13,8 +13,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // Re-anchored by 0488, which placed the roots as pieces: the nearest brought to the near side of the screen.
-      find: '        { sprite: SPRITE.rootTrunk, along: 150, across: -3.5, turn: 0, far: false },',
-      replace: '        { sprite: SPRITE.rootTrunk, along: 40, across: -3.5, turn: 0, far: false },',
+      // 0627: re-anchored on the row as it is now.
+      find: '        { sprite: SPRITE.rootTrunk, along: 150, across: -4, turn: 0, far: false, solid: true, breaks: false },',
+      replace: '        { sprite: SPRITE.rootTrunk, along: 40, across: -4, turn: 0, far: false, solid: true, breaks: false },',
     },
   },
   {

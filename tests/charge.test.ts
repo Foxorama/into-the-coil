@@ -256,8 +256,14 @@ describe('0613 — a ball that keeps ramming fills its bar in the ask’s window
       if (world.ramHeat >= 0.85) backing = true;
       if (world.ramHeat <= 0) backing = false;
       if (backing) {
+        // Straight down its box — 0627. It backed off sideways, away from the target, until the serpent's room had
+        // walls: away from a skull in the top of the lane is into the bottom root, and a ball held against a root is
+        // scraped hot every step it is there, as against stone, so it never cooled and never rammed again. In play
+        // the burn would take a shield and cool it; here the ship is untouchable, so nothing did. Measured with the
+        // roots out, the sideways pilot read 11.4 s a bar in the level and 13.75 s against the boss; this one, with
+        // them in, reads 10.0 s and 13.3 s.
         stick.along = -1;
-        stick.across = tC > world.ship.across ? -1 : 1;
+        stick.across = 0;
       } else if (tA !== null) {
         stick.along = Math.max(-1, Math.min(1, (tA - world.ship.along) / 4));
         stick.across = Math.max(-1, Math.min(1, (tC - world.ship.across) / 4));

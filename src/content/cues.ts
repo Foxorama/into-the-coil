@@ -130,6 +130,8 @@ export const CUE_KINDS = [
   // A laser charging while its line is drawn, and its zap and hiss when it fires — 0625, every beam's.
   'laserCharge',
   'laserZap',
+  // A root of the serpent's room breaking as its body falls through it — 0627.
+  'rootsBreak',
   // The fish going through the edge of the lane on its entrance — 0313.
   'bossBreach',
   'bossSpit',
@@ -280,6 +282,8 @@ export const TWIN_KINDS = [
   'warning-appears',
   /** The line becomes the beam, blooming out from the warning's width as it ignites — `beamBloom` in `src/render/scene.ts`, 0470. */
   'beam-appears',
+  /** A root a falling body went through bursts into splinters and is gone from the room — `breakRoot`, 0627. */
+  'roots-break',
   /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
   'breach-appears',
   /** A horde leaves the boss's open mouth in a spray of embers — 0373. */
@@ -1849,6 +1853,30 @@ export const CUES: Record<CueKind, CueRow> = {
       */
       { wave: 'noise', from: 0, to: 0, at: 0.01, seconds: 0.5, gain: 0.16, attack: 0.01, curve: 1.6, lowFrom: 11000, lowTo: 5200, highFrom: 3200, highTo: 2400, q: 0.7, pan: -0.45, panTo: -0.2, release: 0.08 },
       { wave: 'noise', from: 0, to: 0, at: 0.01, seconds: 0.5, gain: 0.16, attack: 0.01, curve: 1.6, lowFrom: 11000, lowTo: 5200, highFrom: 3200, highTo: 2400, q: 0.7, pan: 0.45, panTo: 0.2, release: 0.08 },
+    ],
+  },
+  /*
+    ⚠️ **THE ROOTS BREAK — 0627.** A trunk of the world tree snapping as the serpent's body falls through it: once or
+    twice a level, so it may take the bar over for a moment and duck the bed under it. Wood, not an explosion — a
+    crack, the splinters of it in a stutter of bright noise, and a low thud of the wall giving way, on the root.
+  */
+  rootsBreak: {
+    twin: 'roots-break',
+    air: 0.35,
+    hold: 6,
+    gain: 0.44,
+    glue: 0.18,
+    duck: 0.25,
+    layers: [
+      // THE CRACK — a few milliseconds, bright and hard.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.6, attack: 0.0003, curve: 9, lowFrom: 9000, lowTo: 4000, highFrom: 900 },
+      // THE SPLINTERS — a stutter of short bright noise either side, as the fibres give one after another.
+      { wave: 'noise', from: 900, to: 400, at: 0.02, seconds: 0.22, gain: 0.3, attack: 0.002, curve: 3, lowFrom: 6000, lowTo: 2400, highFrom: 700, pan: -0.4, panTo: -0.1 },
+      { wave: 'noise', from: 700, to: 300, at: 0.06, seconds: 0.22, gain: 0.26, attack: 0.002, curve: 3, lowFrom: 5200, lowTo: 2000, highFrom: 600, pan: 0.4, panTo: 0.1 },
+      // THE THUD — the wall giving way, a fifth falling to the root, driven a little.
+      { wave: 'sine', from: inKey(11), to: inKey(7), seconds: 0.5, gain: 0.5, attack: 0.004, curve: 3.2, drive: 0.25 },
+      // And the groan of the wood under it, low and short.
+      { wave: 'saw', from: inKey(7), to: inKey(4), at: 0.01, seconds: 0.34, gain: 0.14, attack: 0.01, curve: 2.6, lowFrom: 700, lowTo: 300, highFrom: 50 },
     ],
   },
   bossBolt: {

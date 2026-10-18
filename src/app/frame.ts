@@ -98,7 +98,9 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, FORK_WAY, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
+import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type RoomPiece, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
+import { ROOTS, ROOT_KINDS, rootLineInto, rootWidth, type RootKind } from '../content/roots.ts';
+import { ROOT_HOLD_PIECES, ROOT_HOLD_SEGMENTS, clearRootHold, rootContact, type RootHold } from '../sim/roots.ts';
 import { type BossFight, type DifficultyRow, bossToughnessFor, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, VOLLEY_CYCLE, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
 import {
@@ -1192,6 +1194,13 @@ export interface World {
   wheelClock: number;
   wheelWas: number;
   wheelPace: number;
+  /**
+   * The fight's roots as walls — 0627: each solid or breakable piece's strands as capsules, laid by `layRoom`, and
+   * which of them a falling body has broken. Empty in every fight without roots.
+   */
+  roots: RootHold;
+  /** Steps since a chain's body began to come down, or −1 when none is — 0627's slump. */
+  slumpFor: number;
   /**
    * The ship's loaded tubes — 0581: one picture at each tube place the ship's row names for the tubes it
    * carries, in that tube's kind's ink, so a rack of one of each reads as one of each and a tube is drawn
@@ -2567,8 +2576,9 @@ export class GameFrame implements Frame {
     stepRift(w);
     // And a nova's edge, on the rift's terms: what it pops never lands — 0447.
     stepNova(w);
-    // The stone first, so nothing it stopped goes on to land — 0349.
+    // The stone first, so nothing it stopped goes on to land — 0349. And the roots, on its terms — 0627.
     stoneStops(w);
+    rootsStop(w);
     // A body that fell from the boss and drifted back into it feeds it, before anything can shoot it — 0404.
     feedBoss(w);
     /*
@@ -2866,7 +2876,8 @@ export class GameFrame implements Frame {
       if (!w.bossBeaten && !shelled) collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       // Flying into a serpent's flank is flying into the serpent — 0283. Not consumed, as the hull
       // is not: a body the player rammed is still there afterwards.
-      if (!shelled) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      // 0627: and not once it is beaten — a serpent's body slumping off the screen is a body falling, not a wall.
+      if (!shelled && !w.bossBeaten) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       /*
         ⚠️ **THE PLAYER'S OWN BLASTS ARE NOT IN THIS LIST, AND THEY WERE — 0574.** 0053 paired them
         with the ship: *"and the blast hurts the player, which is the skill in it."* By 2026-10-07 two
@@ -2878,6 +2889,8 @@ export class GameFrame implements Frame {
       // The player's own blasts are not paired with the ship — 0574.
       // And the stone, inside the same one-hit cap as everything above — 0349.
       stoneStrikesShip(w, shelled);
+      // And the roots, on the stone's terms — 0627.
+      rootsStrikeShip(w, shelled);
       // And a ram at full heat, which burns a shield off as a body would have — 0609. Last, so it is a body's.
       burnRam(w);
       if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
@@ -3217,6 +3230,8 @@ export class GameFrame implements Frame {
         layWreck(w);
       } else {
         w.clearedIn = BOSS_DEATH_STEPS;
+        // 0627: and a body that slumps begins to come down, through whatever it was coiled into.
+        if (w.bossRow.slump !== undefined && w.bossBody.size > 0) w.slumpFor = 0;
       }
     }
     stepWreck(w);
@@ -3400,6 +3415,181 @@ function feedBoss(w: World): void {
     burst(w, along, across, BURST.belch);
     flare(w, along, across, 'burst');
   }
+}
+
+/*
+  ── THE ROOTS ARE WALLS — `docs/decisions/0627-the-roots-are-walls.md` ──────────────────────────────
+
+  *"Roots are walls."* A room's solid pieces are stone to the ship and to every shot, on 0349's terms — the ship
+  is put back out and hurt as by stone, a shot stops at them in a spark — and their shape is the strands the
+  painter draws (`src/content/roots.ts`), laid into `w.roots` once a fight and asked by `rootContact`.
+  ⚠️ **A NO-OP IN EVERY FIGHT WITHOUT ROOTS**, which is every fight but the serpent's: `pieces` is nought.
+*/
+
+/** How many capsules a strand is laid in for the wall — coarser than the picture's line, and inside its outline. */
+const ROOT_HOLD_POINTS = 8;
+
+// @setup: one strand's line, written into while a fight's roots are laid and never in the frame.
+const ROOT_LINE = new Float64Array((ROOT_HOLD_POINTS + 1) * 2);
+
+// @setup: what `rootContact` answers, overwritten every ask.
+const ROOT_TOUCH = new Float64Array(4);
+
+/**
+ * Lay a fight's root pieces into `w.roots`: each solid or breakable piece's strands as capsules round its
+ * centre, turned and sized as the painter blits it. A far piece withdraws (0337) and is never a wall.
+ */
+function layRoots(w: World, pieces: readonly RoomPiece[] | null): void {
+  const hold = w.roots;
+  hold.pieces = 0;
+  hold.segments = 0;
+  if (pieces === null) return;
+  // One slot a piece, in the row's order, so a piece broken here is the piece the painter leaves out.
+  for (let i = 0; i < pieces.length && i < ROOT_HOLD_PIECES; i++) {
+    const piece = pieces[i]!;
+    const p = hold.pieces++;
+    hold.broken[p] = 0;
+    hold.first[p] = hold.segments;
+    hold.end[p] = hold.segments;
+    hold.reach[p] = 0;
+    const kind = rootKindOf(piece.sprite);
+    hold.solid[p] = kind !== null && piece.solid && !piece.far ? 1 : 0;
+    hold.breaks[p] = kind !== null && piece.breaks && !piece.far ? 1 : 0;
+    if (kind === null || (hold.solid[p] === 0 && hold.breaks[p] === 0)) continue;
+    const r = SPRITE_EXTENT[kind] * 0.42;
+    const cos = Math.cos(piece.turn);
+    const sin = Math.sin(piece.turn);
+    hold.along[p] = piece.along;
+    hold.across[p] = piece.across;
+    let reach = 0;
+    const strands = ROOTS[kind];
+    for (let j = 0; j < strands.length; j++) {
+      const strand = strands[j]!;
+      rootLineInto(strand, ROOT_LINE, ROOT_HOLD_POINTS);
+      for (let k = 0; k < ROOT_HOLD_POINTS && hold.segments < ROOT_HOLD_SEGMENTS; k++) {
+        const s = hold.segments++;
+        const x0 = ROOT_LINE[k * 2]!;
+        const y0 = ROOT_LINE[k * 2 + 1]!;
+        const x1 = ROOT_LINE[k * 2 + 2]!;
+        const y1 = ROOT_LINE[k * 2 + 3]!;
+        hold.a0[s] = (x0 * cos - y0 * sin) * r;
+        hold.c0[s] = (x0 * sin + y0 * cos) * r;
+        hold.a1[s] = (x1 * cos - y1 * sin) * r;
+        hold.c1[s] = (x1 * sin + y1 * cos) * r;
+        hold.h0[s] = (rootWidth(strand, k / ROOT_HOLD_POINTS) / 2) * r;
+        hold.h1[s] = (rootWidth(strand, (k + 1) / ROOT_HOLD_POINTS) / 2) * r;
+        const far0 = Math.sqrt(hold.a0[s]! * hold.a0[s]! + hold.c0[s]! * hold.c0[s]!) + hold.h0[s]!;
+        const far1 = Math.sqrt(hold.a1[s]! * hold.a1[s]! + hold.c1[s]! * hold.c1[s]!) + hold.h1[s]!;
+        if (far0 > reach) reach = far0;
+        if (far1 > reach) reach = far1;
+      }
+    }
+    hold.end[p] = hold.segments;
+    hold.reach[p] = reach;
+  }
+}
+
+/** Which root a piece's picture is, or `null` for a piece that is not one. */
+function rootKindOf(sprite: number): RootKind | null {
+  for (let i = 0; i < ROOT_KINDS.length; i++) if (SPRITE[ROOT_KINDS[i]!] === sprite) return ROOT_KINDS[i]!;
+  return null;
+}
+
+/** Where the room's pieces are measured from on this view — its rest, moved on as the painter moves them (0498). */
+function rootOrigin(w: World): number {
+  return w.room === null ? 0 : w.room.rest + boxPastFor(w.view.alongSpan);
+}
+
+/**
+ * The ship against the roots — 0627, on the stone's terms (`stoneStrikesShip`): put back out of the root it is
+ * in along the way out of it, its speed into it taken away, and one hit at the tier's `terrainDamage` — so at the
+ * assist's `solid` the roots only push. The ball is scraped hot rather than hurt, and a dance comes off them.
+ */
+function rootsStrikeShip(w: World, shelled: boolean): void {
+  if (w.roots.pieces === 0 || w.room === null) return;
+  const ship = w.ship;
+  rootContact(w.roots, rootOrigin(w), ship.along, ship.across, ship.radius * w.tuning.hurtbox, true, ROOT_TOUCH);
+  const depth = ROOT_TOUCH[0]!;
+  if (depth <= 0) return;
+  const nAlong = ROOT_TOUCH[1]!;
+  const nAcross = ROOT_TOUCH[2]!;
+  ship.along += nAlong * depth;
+  ship.across += nAcross * depth;
+  const into = ship.velAlong * nAlong + ship.velAcross * nAcross;
+  if (into < 0) {
+    ship.velAlong -= into * nAlong;
+    ship.velAcross -= into * nAcross;
+  }
+  const dance = danceOf(w);
+  if (dance !== null) bounceDance(w, dance, Math.abs(nAlong) > 0.5 ? Math.sign(nAlong) : 0, Math.abs(nAcross) > 0.5 ? Math.sign(nAcross) : 0);
+  if (shelled) {
+    scrapeRam(w);
+    return;
+  }
+  // The stone's own cost, and its assist: at `solid` a root only pushes.
+  if (w.tuning.terrainDamage <= 0 || ship.invulnFor > 0) return;
+  wound(w.ship, w.tuning.terrainDamage, INVULN_STEPS, IMPACT_FLASH_STEPS);
+}
+
+/** Every shot that reaches a solid root stops there in a spark — 0627. Not the wheel or the ram, which ride the ship. */
+function rootsStop(w: World): void {
+  if (w.roots.pieces === 0 || w.room === null) return;
+  const origin = rootOrigin(w);
+  breakInRoots(w, origin, w.playerShots);
+  breakInRoots(w, origin, w.missiles);
+  breakInRoots(w, origin, w.enemyShots);
+}
+
+function breakInRoots(w: World, origin: number, pool: Pool<Entity>): void {
+  for (let i = pool.size - 1; i >= 0; i--) {
+    const shot = pool.at(i);
+    if (pool === w.playerShots && (shot.kind === WHEEL_KIND || shot.kind === RAM_KIND)) continue;
+    rootContact(w.roots, origin, shot.along, shot.across, 0, true, ROOT_TOUCH);
+    if (ROOT_TOUCH[0]! <= 0) continue;
+    flare(w, shot.along, shot.across, 'spark');
+    pool.releaseAt(i);
+  }
+}
+
+/**
+ * A chain's body coming down — 0627: *"Serpent boss dies + takes out a section of roots as it falls off screen
+ * clearing a path for the player."* The head has gone in its burst; every node falls on its own, the neck first
+ * and each further one `stagger` steps after, drifting `slide` on into the roots, and every piece that `breaks`
+ * which a node falls through breaks. Once every node is below the lane the body is gone.
+ */
+function slumpChain(w: World): void {
+  const slump = w.bossRow.slump;
+  if (slump === undefined) {
+    w.bossBody.clear();
+    w.slumpFor = -1;
+    return;
+  }
+  w.slumpFor++;
+  const n = w.bossBody.size;
+  const origin = rootOrigin(w);
+  let showing = false;
+  for (let i = 0; i < n; i++) {
+    const node = w.bossBody.at(i);
+    // Spawned tail-first (`layChain`), so the neck is the last node and falls first.
+    if (w.slumpFor > (n - 1 - i) * slump.stagger) node.velAcross += slump.gravity;
+    node.velAlong = slump.slide;
+    if (node.across - node.radius < ACROSS_SPAN) showing = true;
+    if (w.roots.pieces === 0) continue;
+    rootContact(w.roots, origin, node.along, node.across, node.radius, false, ROOT_TOUCH);
+    if (ROOT_TOUCH[3]! >= 0) breakRoot(w, ROOT_TOUCH[3]!, node.along, node.across);
+  }
+  if (!showing) {
+    w.bossBody.clear();
+    w.slumpFor = -1;
+  }
+}
+
+/** A root piece broken where a falling body went through it — 0627: gone from the wall and the picture, in splinters. */
+function breakRoot(w: World, piece: number, along: number, across: number): void {
+  w.roots.broken[piece] = 1;
+  burst(w, along, across, BURST.boss);
+  flare(w, along, across, 'burst');
+  w.onCue('rootsBreak', across);
 }
 
 function stoneStops(w: World): void {
@@ -3686,7 +3876,10 @@ export function layRoom(w: World): void {
     open: 0,
     pieces,
     rest,
+    broken: pieces === null ? null : w.roots.broken,
   };
+  // 0627: and the roots that are walls, laid where the painter draws them.
+  layRoots(w, w.room === null ? null : pieces);
 }
 
 /**
@@ -11438,7 +11631,9 @@ function layChain(w: World): void {
   const chain = w.bossRow.chain;
   if (chain === null) return;
   if (w.bossPool.size === 0) {
-    w.bossBody.clear();
+    // 0627: a body that slumps comes down on its own once the head has gone; any other goes with it.
+    if (w.slumpFor >= 0) slumpChain(w);
+    else w.bossBody.clear();
     return;
   }
   const head = w.bossPool.at(0);
@@ -13235,6 +13430,9 @@ export function closeRun(w: World): void {
   w.wheelClock = 0;
   w.wheelWas = 0;
   w.wheelPace = 1;
+  // 0627: and no roots stand and no body is coming down.
+  clearRootHold(w.roots);
+  w.slumpFor = -1;
   w.intent.along = 0;
   w.intent.across = 0;
   w.intent.specials.fill(0);

@@ -25,15 +25,16 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX, SHOT_KINDS } from '../src/content/shots.ts';
 import { weaponFor } from '../src/content/pickups.ts';
-import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
+import { SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { FLARE_SWELL, INK_OF, drawKind } from '../src/render/bake.ts';
-import { tracingPen } from './paths.ts';
+import { inside, tracingPen } from './paths.ts';
 import { BOLT_STEPS, paintBodyBolts, paintScene } from '../src/render/scene.ts';
 import { BOLT_HOSTILE, screenX, screenY, type BoltTone, type Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, MIN_ASPECT, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN } from '../src/sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, boxPastFor } from '../src/sim/flight.ts';
+import { rootContact } from '../src/sim/roots.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
@@ -328,6 +329,10 @@ describe('0248 — the serpent strikes', () => {
     */
     // ⚠️ Half rather than 0.6: the hurt phase runs from 0.55 of the bar since 0322 split the opening.
     const { world, frame } = serpentAt(0.5);
+    // ⚠️ **THE AIM, NOT THE WALL — 0627.** The roots are walls and stop the serpent's acid as stone does, so a globe
+    // thrown up into the top trunks is gone the step it is born and the spray's last quarter is never seen. What
+    // the roots do to a globe is 0627's claim; this one is which way the mouth throws them, so the wall is taken out.
+    world.roots.pieces = 0;
     const boss = world.bossPool.at(0);
     boss.headAt = 0;
     world.enemyShots.clear();
@@ -966,6 +971,24 @@ function spine(world: ReturnType<typeof playableWorld>['world']): { along: numbe
   return out;
 }
 
+/**
+ * The body node furthest up-lane of the skull that a player's shot can reach: inside the cull, and since 0627 not
+ * behind a root. The roots are walls, and nothing goes through a wall — a node at the far trunks is drawn behind
+ * one, so a shot placed on it stops at the root and never touches the flank. Which node was never the claim.
+ */
+function shootable(world: ReturnType<typeof playableWorld>['world']): { along: number; across: number; girth: number } | undefined {
+  const s = spine(world);
+  const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
+  const origin = world.room === null ? 0 : world.room.rest + boxPastFor(world.view.alongSpan);
+  const touch = new Float64Array(4);
+  const found = [...s].reverse().find((n) => {
+    if (n.along > reachable) return false;
+    rootContact(world.roots, origin, n.along, n.across, 0, true, touch);
+    return touch[0]! <= 0;
+  });
+  return found === s[0] ? undefined : found;
+}
+
 describe('0283 — the serpent is a chain', () => {
   it('THE REPORTED ONE: the body moves, and it moves differently from the head', () => {
     /*
@@ -1286,10 +1309,8 @@ describe('0283 — the serpent is a chain', () => {
       fixture asks for the furthest one inside the player's reach rather than the furthest one there
       is.
     */
-    const s = spine(world);
-    const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
-    const tail = [...s].reverse().find((n) => n.along <= reachable);
-    if (tail === undefined || tail === s[0]) throw new Error('no body node is inside the player’s reach');
+    const tail = shootable(world);
+    if (tail === undefined) throw new Error('no body node is inside the player’s reach');
     world.fireIn = Number.MAX_SAFE_INTEGER;
     world.missileIn = Number.MAX_SAFE_INTEGER;
     world.playerShots.clear();
@@ -1324,10 +1345,8 @@ describe('0283 — the serpent is a chain', () => {
     world.bossRow = { ...BOSSES.jormungandr, chain: { ...chain, hurt: 0 } };
     for (let i = 0; i < 60 && world.bossBody.size === 0; i++) frame.step();
     const before = world.bossPool.at(0).health;
-    const s = spine(world);
-    const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
-    const tail = [...s].reverse().find((n) => n.along <= reachable);
-    if (tail === undefined || tail === s[0]) throw new Error('no body node is inside the player’s reach');
+    const tail = shootable(world);
+    if (tail === undefined) throw new Error('no body node is inside the player’s reach');
     world.fireIn = Number.MAX_SAFE_INTEGER;
     world.missileIn = Number.MAX_SAFE_INTEGER;
     world.playerShots.clear();
@@ -1360,10 +1379,8 @@ describe('0283 — the serpent is a chain', () => {
     const chain = BOSSES.jormungandr.chain!;
     world.bossRow = { ...BOSSES.jormungandr, chain: { ...chain, hurt: 0.5 } };
     for (let i = 0; i < 60 && world.bossBody.size === 0; i++) frame.step();
-    const s = spine(world);
-    const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
-    const tail = [...s].reverse().find((n) => n.along <= reachable);
-    if (tail === undefined || tail === s[0]) throw new Error('no body node is inside the player’s reach');
+    const tail = shootable(world);
+    if (tail === undefined) throw new Error('no body node is inside the player’s reach');
     world.fireIn = Number.MAX_SAFE_INTEGER;
     world.missileIn = Number.MAX_SAFE_INTEGER;
     world.playerShots.clear();
@@ -3221,11 +3238,168 @@ describe('0488 — the roots are roots', () => {
       behind one and nothing they cannot fly into looks like something they can. The pieces keep that, every
       vertex of every one, at the resting camera.
     */
+    /*
+      ⚠️ **AMENDED BY 0627: A PIECE THAT IS A WALL MAY.** *"Roots are walls"* — a solid piece reaches into the box
+      because the ship meets it there (held below, *0627*). What still may not is scenery: a piece nothing stops
+      is never drawn where the ship can fly, or the player is shown a wall that is not one.
+    */
     for (const piece of roots) {
+      if (piece.solid) continue;
       for (const [along, across] of drawn(piece)) {
         const inside = along > PLAYER_ALONG_MARGIN && along < PLAYER_LEAD && across > PLAYER_MARGIN && across < ACROSS_SPAN - PLAYER_MARGIN;
         expect(inside, `${SPRITE_KINDS[piece.sprite]} draws at along ${along.toFixed(1)}, across ${across.toFixed(1)}, inside the ship's box`).toBe(false);
       }
+    }
+  });
+});
+
+describe('0627 — the roots are walls, and the serpent breaks a way through them', () => {
+  const ROOM = BOSSES.jormungandr.room!;
+
+  it('THE ASK: every piece of the serpent’s room is a wall, the far wall breaks, and some of each reaches into the box', () => {
+    const pieces = ROOM.pieces ?? [];
+    expect(pieces.every((p) => p.solid), 'a piece of the serpent’s room is scenery').toBe(true);
+    expect(pieces.filter((p) => p.breaks).length, 'nothing in the room breaks').toBeGreaterThanOrEqual(2);
+    expect(pieces.some((p) => p.solid && p.far), 'a wall withdraws, so the camera carries the ship through it').toBe(false);
+  });
+
+  it('WHAT IS MET IS WHAT IS DRAWN: every point of every wall’s strands is inside the picture of its piece', () => {
+    const { world } = serpentAt(1);
+    const hold = world.roots;
+    expect(hold.pieces, 'no roots were laid for the fight').toBe(ROOM.pieces!.length);
+    let checked = 0;
+    for (let p = 0; p < hold.pieces; p++) {
+      const piece = ROOM.pieces![p]!;
+      const kind = SPRITE_KINDS[piece.sprite]!;
+      const extent = SPRITE_EXTENT[kind];
+      const size = extent * 10;
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
+      const c = Math.cos(-piece.turn);
+      const s = Math.sin(-piece.turn);
+      for (let k = hold.first[p]!; k < hold.end[p]!; k++) {
+        // The middle of each capsule — its ends sit on a strand's cut end, which is the picture's own edge.
+        for (const [a, b] of [[(hold.a0[k]! + hold.a1[k]!) / 2, (hold.c0[k]! + hold.c1[k]!) / 2]] as const) {
+          // Back into the piece's own picture: unturned, and in the bitmap's pixels.
+          const x = (a * c - b * s) / extent;
+          const y = (a * s + b * c) / extent;
+          const px: [number, number] = [size / 2 + x * size, size / 2 + y * size];
+          checked++;
+          expect(trace.passes.some((pass) => inside(pass, px)), `${kind} is met at (${a.toFixed(1)}, ${b.toFixed(1)}) where nothing of it is drawn`).toBe(true);
+        }
+      }
+    }
+    expect(checked, 'no strand was laid, so this asked nothing').toBeGreaterThan(100);
+  });
+
+  /** A point on the line of one of piece `p`'s roots where the ship's box reaches, in the world — the deepest in. */
+  const onRoot = (world: ReturnType<typeof serpentAt>['world'], p: number): [number, number] => {
+    const hold = world.roots;
+    const origin = world.room!.rest;
+    let best: [number, number] = [0, 0];
+    let deepest = -Infinity;
+    for (let k = hold.first[p]!; k < hold.end[p]!; k++) {
+      const along = origin + hold.along[p]! + (hold.a0[k]! + hold.a1[k]!) / 2;
+      const across = hold.across[p]! + (hold.c0[k]! + hold.c1[k]!) / 2;
+      const into = Math.min(across - PLAYER_MARGIN, ACROSS_SPAN - PLAYER_MARGIN - across);
+      if (into > deepest) {
+        deepest = into;
+        best = [along, across];
+      }
+    }
+    expect(deepest, `no root of piece ${p} reaches into the box`).toBeGreaterThan(4);
+    return best;
+  };
+
+  it('THE ASK, IN LANE UNITS: a ship flown into a root is put back out of it and hurt, as stone hurts', () => {
+    const { world, frame } = serpentAt(1);
+    world.bossPool.at(0).fireIn = 999;
+    world.ship.invulnFor = 0;
+    // The top trunk's own hanging root, in the open half of the room.
+    const [along, across] = onRoot(world, 0);
+    world.ship.along = along;
+    world.ship.across = across;
+    world.ship.prevAlong = along;
+    world.ship.prevAcross = across;
+    frame.step();
+    const moved = Math.hypot(world.ship.along - along, world.ship.across - across);
+    expect(moved, 'a ship inside a root was left there').toBeGreaterThan(1);
+    // A hit opens the window every hit opens, whether a shield or the hull took it.
+    expect(world.ship.invulnFor, 'a ship flown into a root was not hit').toBeGreaterThan(0);
+  });
+
+  it('and a shot stops at a root, in a spark, rather than flying on through it', () => {
+    const { world, frame } = serpentAt(1);
+    const [along, across] = onRoot(world, 1);
+    const shot = world.playerShots.spawn()!;
+    reset(shot, along, across, SHOTS.pulse);
+    shot.velAlong = 0;
+    shot.velAcross = 0;
+    const before = world.playerShots.size;
+    frame.step();
+    expect(world.playerShots.size, 'a shot inside a root flew on').toBeLessThan(before);
+  });
+
+  /** The widest gap across the lane the far wall's unbroken trunks leave, from their capsules, in world units. */
+  const widestThrough = (world: ReturnType<typeof serpentAt>['world']): number => {
+    const hold = world.roots;
+    const covered: [number, number][] = [];
+    ROOM.pieces!.forEach((p, i) => {
+      if (!p.breaks || hold.broken[i] === 1) return;
+      for (let k = hold.first[i]!; k < hold.end[i]!; k++) {
+        const top = Math.min(hold.c0[k]! - hold.h0[k]!, hold.c1[k]! - hold.h1[k]!) + hold.across[i]!;
+        const bottom = Math.max(hold.c0[k]! + hold.h0[k]!, hold.c1[k]! + hold.h1[k]!) + hold.across[i]!;
+        covered.push([top, bottom]);
+      }
+    });
+    covered.sort((a, b) => a[0] - b[0]);
+    let widest = 0;
+    let reached = PLAYER_MARGIN;
+    for (const [top, bottom] of covered) {
+      if (top > reached) widest = Math.max(widest, top - reached);
+      reached = Math.max(reached, bottom);
+    }
+    return Math.max(widest, ACROSS_SPAN - PLAYER_MARGIN - reached);
+  };
+
+  it('THE ASK, IN LANE UNITS: wherever it dies, its body falls through the far wall, breaks it, leaves a way through wider than the ship, and is gone', () => {
+    /*
+      *"Serpent boss dies + takes out a section of roots as it falls off screen clearing a path for the player."*
+      Killed at several moments of its patrol, so at several places across the lane: standing, the far wall leaves no
+      way through the ship fits; after, at least one far trunk is broken and gone from the picture, the widest gap the unbroken far trunks leave across the lane is over four
+      ship-widths, and the body is off the screen inside three seconds.
+    */
+    for (const wait of [0, 90, 200, 330]) {
+      const { world, frame } = serpentAt(1);
+      for (let i = 0; i < wait; i++) {
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 2;
+        world.bossPool.at(0).fireIn = 999;
+        frame.step();
+      }
+      // Standing, it is a wall: no way through it the ship fits.
+      expect(widestThrough(world), `before it dies the far wall leaves a way through ${widestThrough(world).toFixed(1)} units wide`).toBeLessThan(world.ship.radius * 2);
+      world.bossPool.at(0).health = 0;
+      let gone = -1;
+      for (let i = 0; i < 3 * STEPS_PER_SECOND && gone < 0; i++) {
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 2;
+        frame.step();
+        if (i > 2 && world.bossBody.size === 0) gone = i;
+      }
+      expect(gone, `killed after ${wait} steps, its body was still on the screen three seconds on`).toBeGreaterThan(0);
+      const hold = world.roots;
+      const far = ROOM.pieces!.map((p, i) => ({ p, i })).filter(({ p }) => p.breaks);
+      const broken = far.filter(({ i }) => hold.broken[i] === 1);
+      expect(broken.length, `killed after ${wait} steps, its body broke no far root`).toBeGreaterThan(0);
+      const widest = widestThrough(world);
+      expect(widest, `killed after ${wait} steps, the way through the far wall is ${widest.toFixed(1)} units`).toBeGreaterThan(world.ship.radius * 8);
+      // And the picture leaves the broken trunks out.
+      const surface = { blits: [] as number[], clear(): void {}, blit(sprite: number): void { this.blits.push(sprite); }, bolt(): void {} };
+      paintScene(surface, world.view, [], world.cameraAlong, 0, [], null, [], 0, world.room);
+      const trunks = surface.blits.filter((s) => s === SPRITE.rootTrunk).length;
+      const standing = ROOM.pieces!.filter((p, i) => p.sprite === SPRITE.rootTrunk && hold.broken[i] !== 1).length;
+      expect(trunks, `killed after ${wait} steps, a broken trunk is still drawn`).toBeLessThanOrEqual(standing);
     }
   });
 });

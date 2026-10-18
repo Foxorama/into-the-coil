@@ -141,8 +141,11 @@ together with their own decisions, as the play-test of 2026-10-10's six did. Aft
   drawn and zaps and hisses as it burns.
 - **Item 16** — [0626](../docs/decisions/0626-a-place-fires-more-than-one-colour.md): three inks a place, every one over
   the floor on its sky.
+- **Items 12 and 13** — [0627](../docs/decisions/0627-the-roots-are-walls.md): the serpent's roots are rootier and
+  are walls to the ship and to every shot, and its body falls through the far wall when it dies, breaking a way on.
 
 ## Owed
 
 Each decision's *Owed* names its play. Across them: a play with a pad (items 1 and 6), an ear on the lasers (14), a
-look at the pad and the intro (5, 9) and a run through the seven places (16).
+look at the pad and the intro (5, 9), a run through the seven places (16), and a fight with the serpent and an ear
+on its roots breaking (12, 13).

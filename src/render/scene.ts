@@ -229,6 +229,8 @@ export interface Room {
   pieces: readonly RoomPiece[] | null;
   /** Where the camera rests, in world units along: the pieces are placed from it. */
   rest: number;
+  /** Which pieces, by their index in `pieces`, a falling body has broken — 0627 — or `null` for a room none can be. */
+  broken: Uint8Array | null;
 }
 
 /*
@@ -1181,6 +1183,8 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
     const past = boxPastFor(view.alongSpan);
     for (let i = 0; i < pieces.length; i++) {
       const piece = pieces[i]!;
+      // 0627: a piece the serpent's body broke on its way down is gone from the picture as from the wall.
+      if (room.broken !== null && room.broken[i] === 1) continue;
       const along = room.rest + piece.along + past + (piece.far ? room.open * ROOT_WITHDRAW : 0) - cameraAlong;
       surface.blit(piece.sprite, screenX(view, along, piece.across), screenY(view, along, piece.across), view.scale, piece.turn);
     }
