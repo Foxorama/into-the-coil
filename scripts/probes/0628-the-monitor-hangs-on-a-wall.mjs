@@ -49,4 +49,33 @@ export const PROBES = [
       replace: '    width: auto;\n    max-width: min(24rem, 60%);',
     },
   },
+  {
+    decision: '0628',
+    suite: 'tests/workshop.browser.test.ts',
+    broke: 'the monitor’s type the floor’s whatever the wall’s width, so its foot comes down over the bench’s tools',
+    guard: 'hangs under the wall’s header and no wider than it',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '    font-size: min(0.85rem, calc(var(--itc-hang-w, 13.6rem) * 0.069));',
+      replace: '    font-size: 0.85rem;',
+    },
+  },
+  {
+    decision: '0628',
+    suite: 'tests/stand.test.ts',
+    broke: 'the ship back at 124, its flame at the wall’s post — the played *flat against the wall*',
+    guard: 'leaves about as much deck between its hull and the workshop wall as between its hull and the bay',
+    edit: { path: 'src/content/port.ts', find: '  ship: 131,', replace: '  ship: 124,' },
+  },
+  {
+    decision: '0628',
+    suite: 'tests/stand.test.ts',
+    broke: 'a phone’s camera not slid to keep the ship whole, so its nose runs past the column at 480x320',
+    guard: 'puts the ship on its pad in the stand’s part of the screen',
+    edit: {
+      path: 'src/render/port.ts',
+      find: '  out.x = Math.min(out.x, (box.left + box.width - nose) / width);',
+      replace: '  void nose;',
+    },
+  },
 ];

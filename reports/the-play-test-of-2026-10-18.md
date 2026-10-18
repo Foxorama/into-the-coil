@@ -146,7 +146,8 @@ together with their own decisions, as the play-test of 2026-10-10's six did. Aft
 - **Items 10 and 11** — [0628](../docs/decisions/0628-the-monitor-hangs-on-a-wall.md): the cockpit monitor hangs on a
   workshop wall between the lift and the ship, over two tool benches, and the keepers have a place in front of the
   benches and one beside the wall. The layout was the player's choice of two, asked because neither fitted the room
-  as it stood; the ship moved six units toward the bay for it.
+  as it stood. Played before it merged: the monitor's foot no longer comes over the bench's tools, and the ship
+  stands in the middle of the open deck rather than against the wall.
 
 ## Owed
 

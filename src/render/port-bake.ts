@@ -1357,36 +1357,38 @@ function paintWorkBenches(ctx: CanvasRenderingContext2D, palette: Palette): void
     ctx.fillStyle = shade(tins[i]!, 0.1);
     ctx.fillRect(2.2 + i * 2.4, top + 2.6, 1.7, 0.35);
   }
-  // On it: a rack of parts bins, three by two, each a different ink with a part showing.
+  // On it: a rack of parts bins, three by two, each a different ink with a part showing — the tallest thing on
+  // either bench, its top on `toolsTop`.
+  const tools = shop.toolsTop - middle;
   ctx.fillStyle = shade(steel, 0.1);
-  ctx.fillRect(1.6, top - 4.2, 6.4, 4);
+  ctx.fillRect(1.6, tools, 6.4, top - 0.2 - tools);
   const bins = [palette.player, palette.hazard, palette.acid, palette.ally, palette.enemy, palette.void];
   for (let i = 0; i < bins.length; i++) {
     const x = 1.9 + (i % 3) * 2;
-    const y = top - 3.9 + Math.floor(i / 3) * 1.9;
+    const y = tools + 0.3 + Math.floor(i / 3) * 1.9;
     ctx.fillStyle = shade(bins[i]!, -0.3);
     ctx.fillRect(x, y, 1.7, 1.6);
     ctx.fillStyle = shade(bins[i]!, 0.15);
     ctx.fillRect(x, y + 1.1, 1.7, 0.5);
   }
-  // A lamp on a jointed arm, lit, throwing its pool on the top.
+  // A lamp on a jointed arm, lit, throwing its pool on the top — its head under the rack's top.
   ctx.strokeStyle = iron;
   ctx.lineWidth = 0.35;
   ctx.beginPath();
   ctx.moveTo(13.4, top - 0.2);
-  ctx.lineTo(12.6, top - 4.4);
-  ctx.lineTo(10, top - 5.4);
+  ctx.lineTo(12.8, top - 3);
+  ctx.lineTo(10.8, tools + 0.6);
   ctx.stroke();
   ctx.fillStyle = iron;
   ctx.beginPath();
-  ctx.moveTo(9.2, top - 5.8);
-  ctx.lineTo(11, top - 5.6);
-  ctx.lineTo(10.4, top - 4.2);
-  ctx.lineTo(8.8, top - 4.6);
+  ctx.moveTo(9.4, tools + 0.3);
+  ctx.lineTo(11, tools + 0.5);
+  ctx.lineTo(10.5, top - 2.2);
+  ctx.lineTo(9, top - 2.5);
   ctx.closePath();
   ctx.fill();
   radialEllipse(ctx, 9.6, top - 0.2, 3, 0.8, PORT_INK.lamp, 0.55);
-  radial(ctx, 9.9, top - 4.6, 1.2, PORT_INK.lamp, 0.8);
+  radial(ctx, 9.8, top - 2.6, 0.9, PORT_INK.lamp, 0.8);
   // A drill lying on the top.
   ctx.fillStyle = shade(palette.ally, -0.1);
   ctx.fillRect(8.6, top - 1.4, 3, 1.1);

@@ -24,11 +24,17 @@ vi.setConfig({ testTimeout: 180_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
-/** The desktops: the two the layout guard holds that hang the monitor, and a 1080p one. */
+/**
+ * The desktops: the two the layout guard holds that hang the monitor, a 1080p one, the common laptops, a 1080p
+ * screen scaled to 125% (1536x864 CSS pixels), and a short window — the smallest stand that still hangs it.
+ */
 const SIZES = [
   [1024, 768],
   [1280, 720],
+  [1366, 768],
+  [1536, 864],
   [1920, 1080],
+  [1280, 600],
 ] as const;
 
 let browser: Browser | undefined;
@@ -57,7 +63,7 @@ function rgb(hex: string): [number, number, number] {
  * each fifth of its width hold the hazard's ink; and in the strip from its foot down to the deck, the share of its
  * columns holding the benches' timber. A world unit in pixels is read off a shop door, the alcove's width.
  */
-async function around(page: Page, p: string, above: number): Promise<{ fifths: number[]; timber: number }> {
+async function around(page: Page, p: string, above: number): Promise<{ fifths: number[]; timber: number; tall: number }> {
   return page.evaluate(
     ({ prefix, above, alcove, hang, deck, hazard, woods }) => {
       const dash = document.querySelector<HTMLElement>('.' + prefix + 'dash')!.getBoundingClientRect();
@@ -87,7 +93,7 @@ async function around(page: Page, p: string, above: number): Promise<{ fifths: n
       // The deck's top edge is `deck - hang` units under the line the monitor hangs from.
       const floor = dash.top + (deck - hang) * unit;
       const under = columns(dash.bottom + 1, floor, woods, 45);
-      return { fifths, timber: under.filter(Boolean).length / under.length };
+      return { fifths, timber: under.filter(Boolean).length / under.length, tall: dash.height / unit };
     },
     {
       prefix: p,
@@ -115,6 +121,12 @@ describe.runIf(chromePath)('0628 — the cockpit monitor hangs on the workshop w
         if (i === 0 || i === 4) expect(n, `${at}: no header over the ${i === 0 ? 'left' : 'right'} end of the monitor — it is not hung from the wall, or is wider than it`).toBeGreaterThan(0);
       });
       expect(seen.timber, `${at}: the benches are not seen under the monitor — ${(seen.timber * 100).toFixed(0)}% of its width shows timber`).toBeGreaterThan(0.3);
+      /*
+        Played: *"don't have the cockpit overlay the tools on the tool bench."* The monitor's foot, its dangle's room
+        and all, over the top of the tallest thing on the benches — in world units, off the door's ruler.
+      */
+      const room = DOCK.workshop.toolsTop - DOCK.workshop.hang;
+      expect(seen.tall, `${at}: the monitor is ${seen.tall.toFixed(1)} units tall and hangs over the bench's tools, which stand ${room.toFixed(1)} under its top`).toBeLessThan(room);
       await page.context().close();
     }
   });

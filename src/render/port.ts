@@ -50,7 +50,7 @@ import {
   TRAIL_SAMPLES,
 } from '../content/port.ts';
 import { DOCK_PLACES, KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
-import { UFO_BULBS, UFO_RING, lampFrame, lampTurn, type ShipRow } from '../content/ships.ts';
+import { SHIPS, SHIP_KINDS, UFO_BULBS, UFO_RING, lampFrame, lampTurn, type ShipRow } from '../content/ships.ts';
 import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
@@ -510,7 +510,22 @@ export function fitStand(
   const foot = (box.top ?? 0) + (box.height ?? 0);
   const fills = (screenHeight > 0 && screenHeight - foot < screenHeight * 0.05 ? screenHeight : foot) / (ACROSS_SPAN * base.scale);
   out.zoom = Math.max(fills, Math.min(camera.zoom, keepsLeft));
+  /*
+    0628: and the ship's hull whole in the column on the right, as the lift is kept on the left. The ship stands in
+    the middle of the open deck past the workshop wall, and a phone's column — a third of the screen — is narrower
+    than a desktop's: at 480x320 its nose ran past the column's edge. The room is slid left until it is in; on a
+    desktop's column it already is, and this asks nothing.
+  */
+  const nose = (DOCK.ship + SHIP_REACH - out.along) * base.scale * out.zoom;
+  out.x = Math.min(out.x, (box.left + box.width - nose) / width);
 }
+
+/**
+ * How far ahead of its centre the widest ship's hull reaches on the pad, in world units — 0628: its hull's radius,
+ * 0.42 of its box, at the pad's size (`intro.hangar` grown by `DOCK.shipGrow`).
+ */
+// @setup: read once off the ship table when the module loads, never in a frame.
+const SHIP_REACH = Math.max(...SHIP_KINDS.map((kind) => PORT_EXTENT.blueSide * 0.42 * SHIPS[kind].intro.hangar * DOCK.shipGrow));
 
 /**
  * Cover the whole canvas in the palette's space at `alpha` — one blit of a one-unit square, scaled past

@@ -134,10 +134,12 @@ export const DOCK_PLACES: Record<DockPlaceKind, DockPlace> = {
     left-hand bench, and beside its right-hand post, both down at the front of the deck: low enough that a head,
     and the bubble over it, stand under the cockpit monitor's readout. 0611's `left` was where the benches are.
   */
-  bench: { floor: 'deck', along: -42, across: 16, drawn: 'over' },
-  wall: { floor: 'deck', along: -23, across: 16, drawn: 'over' },
-  // Beside the cradle, half way down the deck.
-  right: { floor: 'deck', along: 27, across: 7, drawn: 'over' },
+  // From the ship at 131 (`DOCK.ship`): the bench place at 82 and the wall's at 106, in the gap between its post
+  // and the cradle.
+  bench: { floor: 'deck', along: -49, across: 16, drawn: 'over' },
+  wall: { floor: 'deck', along: -25, across: 16, drawn: 'over' },
+  // Beside the cradle, half way down the deck. 0628: three units nearer it (it was 27), clear of the bay's edge.
+  right: { floor: 'deck', along: 24, across: 7, drawn: 'over' },
 };
 
 /** Whether a spot is one of the dock's places, which a keeper shares with the others one at a time. */
