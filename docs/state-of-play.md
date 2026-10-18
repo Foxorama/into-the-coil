@@ -1163,7 +1163,7 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE PLAY-TEST OF 2026-10-18 IS A QUEUE, AND ITS FIRST TWELVE ARE BUILT — 2026-10-18
+### ⚠️ THE PLAY-TEST OF 2026-10-18 IS A QUEUE, AND ALL OF IT IS BUILT — OWED A PLAY — 2026-10-18
 
 [`the-play-test-of-2026-10-18`](../reports/the-play-test-of-2026-10-18.md) is three handwritten pages read in, and
 **holds the order, so this file does not.** Built in one PR: [0618](decisions/0618-the-spinners-run-with-the-engines.md),
@@ -1176,8 +1176,10 @@ the serpent's roots, is [0627](decisions/0627-the-roots-are-walls.md), owed a fi
 Out's wall, is [0628](decisions/0628-the-monitor-hangs-on-a-wall.md), owed a look; its third, the guns and
 missiles, is [0629](decisions/0629-a-launcher-and-not-a-box.md) and [0630](decisions/0630-the-guns-are-not-blocks.md),
 owed a look in play; its fourth, the mid-bosses, is [0631](decisions/0631-the-mid-bosses-are-drawn.md), owed a look
-in each place. **Next is the report's queue, item 5: the enemy art**, which is planned with photographs and shown to
-the player before it is built.
+in each place; its fifth, the enemy art, has its overall half in
+[0632](decisions/0632-the-enemies-are-finished.md), a finish over every body, owed a run through the seven places.
+**The queue is built. Next is the play it owes**, and whether any one body needs its own redraw is that play's to
+say.
 
 ### ⚠️ THE BALL IS SOLID AND THE WATER FLOWS — OWED A PLAY AND AN EAR — 2026-10-17
 

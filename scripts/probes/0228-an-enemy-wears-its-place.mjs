@@ -23,8 +23,8 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0296, which gave every `foe` a `shot` — the break is unchanged: the
       // Saurian Belt handed Rime Shelf's skin, so two places send enemies painted alike.
       // 0626: re-anchored on the places' three bullet inks.
-      find: "    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4fd8', shots: { lance: '#e8ff40', flak: '#ff6b8a' } },",
-      replace: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#e8ff40', shots: { lance: '#ff5ab0', flak: '#6aff7a' } },",
+      find: "    foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4fd8', shots: { lance: '#e8ff40', flak: '#ff6b8a' },",
+      replace: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#e8ff40', shots: { lance: '#ff5ab0', flak: '#6aff7a' },",
     },
   },
   {
@@ -41,8 +41,8 @@ export const PROBES = [
       path: 'src/content/themes.ts',
       // ⚠️ Re-anchored by 0296. The hull is still the break; the `shot` rides along untouched.
       // 0626: re-anchored on the places' three bullet inks.
-      find: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#e8ff40', shots: { lance: '#ff5ab0', flak: '#6aff7a' } },",
-      replace: "    foe: { hull: '#2a4a68', plate: '#1a2a48', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#e8ff40', shots: { lance: '#ff5ab0', flak: '#6aff7a' } },",
+      find: "    foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#e8ff40', shots: { lance: '#ff5ab0', flak: '#6aff7a' },",
+      replace: "    foe: { hull: '#2a4a68', plate: '#1a2a48', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#e8ff40', shots: { lance: '#ff5ab0', flak: '#6aff7a' },",
     },
   },
   {
@@ -59,8 +59,8 @@ export const PROBES = [
       path: 'src/content/themes.ts',
       // ⚠️ Re-anchored by 0296. The hull is still the break; the `shot` rides along untouched.
       // 0626: re-anchored on the places' three bullet inks.
-      find: "    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b', shots: { lance: '#ff40d8', flak: '#ff9ac8' } },",
-      replace: "    foe: { hull: '#c8f0c0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b', shots: { lance: '#ff40d8', flak: '#ff9ac8' } },",
+      find: "    foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b', shots: { lance: '#ff40d8', flak: '#ff9ac8' },",
+      replace: "    foe: { hull: '#c8f0c0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b', shots: { lance: '#ff40d8', flak: '#ff9ac8' },",
     },
   },
   {

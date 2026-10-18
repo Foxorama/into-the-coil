@@ -61,7 +61,15 @@ const FOES: readonly SpriteKind[] = [
 function passesOf(kind: SpriteKind, palette: PaletteName, theme: ThemeKind): number {
   const { pen, trace } = tracingPen();
   drawKind(pen, kind, PALETTES[palette], SPRITE_EXTENT[kind] * DESKTOP.scale, theme);
-  return trace.passes.length;
+  /*
+    ⚠️ **THE FINISH IS NOT PAINT — 0632.** Every enemy is given a form-shade, a gradient laid on its hull's own
+    path, over whatever it is painted with. Counted, a body sealed and given no paint at all is two passes, and
+    the claim below — *not one flat ink* — reads it as painted: 0228's own probe stayed green.
+  */
+  const hull = trace.passes[0];
+  const finish = (pass: (typeof trace.passes)[number]): boolean =>
+    pass.colour === 'gradient' && hull !== undefined && JSON.stringify(pass.subpaths) === JSON.stringify(hull.subpaths);
+  return trace.passes.filter((pass, i) => i === 0 || !finish(pass)).length;
 }
 
 describe('0228 — an enemy wears its place', () => {

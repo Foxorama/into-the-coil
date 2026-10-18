@@ -34,7 +34,7 @@ import { SHIPS, SHIP_KINDS, ownFit } from '../src/content/ships.ts';
 */
 vi.setConfig({ testTimeout: 150_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
-import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { ENEMIES, ENEMY_KINDS, type EnemyKind } from '../src/content/enemies.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
@@ -1110,6 +1110,48 @@ describe('paint costs nothing to draw', () => {
             `stroke ${i} on the ${kind} at ${theme} reaches ${over.toFixed(2)}px past its hull — a mark painted ` +
               'with a stroke is held to the silhouette exactly as a mark painted with a fill is',
           ).toBe(0);
+        }
+      }
+    }
+  });
+
+  it('0632: every enemy in every place is finished — a form-shade on its own hull, and a rim wide enough to be drawn', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"still look overall a lot like placeholders, can we do something overall with the
+      enemy art"*. The bodies were flat cut-outs; `finishBody` gives each the place's form-shade and rim
+      light. What is held is that every body the place sends has both — a body drawn some other way
+      would quietly be the one placeholder left — and that the rim clears 0106's 2.5 px at the fight's
+      camera, where a small enemy's radius is about fourteen pixels and the rim's share of it alone is
+      under one. The strengths are each place's to author and are not held: a place may want its
+      raiders flatter, and that is correct.
+    */
+    const same = (a: readonly (readonly Point[])[], b: readonly (readonly Point[])[]): boolean =>
+      a.length === b.length &&
+      a.every((s, i) => s.length === b[i]!.length && s.every(([x, y], j) => Math.abs(x - b[i]![j]![0]) < 1e-9 && Math.abs(y - b[i]![j]![1]) < 1e-9));
+    /*
+      ⚠️ **THE MOON JELLY IS NOT FINISHED, ON PURPOSE.** It is its own light, glowing through a hull laid
+      at a third of its ink, and a form-shade is light falling on a solid body from outside it. Named
+      here rather than skipped by a rule, so the next body that is not finished has to be named too.
+    */
+    const unfinished: readonly EnemyKind[] = ['moonJelly'];
+    const enemies = new Set(
+      ENEMY_KINDS.filter((k) => !unfinished.includes(k))
+        .flatMap((k) => ENEMIES[k].cycle.frames)
+        .map((i) => SPRITE_KINDS[i]!),
+    );
+    for (const theme of THEME_KINDS) {
+      for (const kind of enemies) {
+        const traced = trace(kind, theme);
+        const hull = traced.passes[0]!;
+        const shaded = traced.passes.slice(1).filter((pass) => pass.colour === 'gradient' && same(pass.subpaths, hull.subpaths));
+        expect(shaded.length, `the ${kind} at ${theme} has no form-shade laid on its own hull`).toBeGreaterThan(0);
+        const rims = traced.inks.filter((ink) => ink.composite === 'source-atop' && ink.colour === 'gradient');
+        expect(rims.length, `the ${kind} at ${theme} has no rim light`).toBeGreaterThan(0);
+        for (const rim of rims) {
+          expect(
+            rim.width,
+            `the ${kind}'s rim light at ${theme} is ${rim.width.toFixed(2)}px wide on a 1280×720 screen, under 0106's floor, so it is not drawn`,
+          ).toBeGreaterThanOrEqual(2.5);
         }
       }
     }

@@ -20,7 +20,7 @@
  */
 
 import type { Palette, PaletteName } from '../content/palette.ts';
-import { THEMES, foeOf, lordOf, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
+import { THEMES, foeOf, lordOf, type FoeFinish, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
 import { BOSSES, type BossKind } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS, type ShotKind } from '../content/shots.ts';
 import { ROOTS, ROOT_POINTS, rootLineInto, rootWidth, type RootStrand as RootRow } from '../content/roots.ts';
@@ -9042,7 +9042,129 @@ function drawBody(ctx: Pen, f: Frame, skin: FoeSkin | null, hull: readonly Pt[],
   trace(ctx, f, hull);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) paint(skin);
+  if (skin === null) return;
+  paint(skin);
+  finishBody(ctx, f, skin, (pen) => trace(pen, f, hull));
+}
+
+/**
+ * What a place's raiders are finished with when its row says nothing — 0632. The one fallback, in shared code;
+ * each of the seven places authors its own on its `foe` row (`src/content/themes.ts`).
+ */
+const FINISH: FoeFinish = { light: 0.4, shadow: 0.6, rim: 0.8 };
+
+/** How wide the rim light is, as a share of the box's radius. */
+const RIM_WIDTH = 0.07;
+
+/**
+ * And never narrower than this, in the pixels it is baked at: 0106's floor, under which a mark is not drawn. A
+ * small enemy's radius is about fourteen pixels at the fight's camera, where its share alone is under one.
+ */
+const RIM_FLOOR = 2.5;
+
+/**
+ * The rim's alpha: under 0.9, so `tests/accents.test.ts` reads it as light rather than ink. It is laid
+ * `source-atop`, so it lands only on what the body already covers and cannot widen its silhouette.
+ */
+const RIM_ALPHA = 0.85;
+
+/** The path calls a lowered pen moves, by name; everything else goes straight through. */
+type PathCall = 'moveTo' | 'lineTo' | 'arc' | 'quadraticCurveTo' | 'bezierCurveTo' | 'rect';
+
+/**
+ * A pen that moves every path point it is given `dy` pixels down — 0632's rim, which is the body's own outline laid
+ * a little lower so that it falls inside every edge that faces up.
+ */
+function lowered(ctx: Pen, dy: number): Pen {
+  const moved: Pick<Pen, PathCall> = {
+    moveTo: (x, y) => ctx.moveTo(x, y + dy),
+    lineTo: (x, y) => ctx.lineTo(x, y + dy),
+    arc: (x, y, radius, a0, a1, ccw) => ctx.arc(x, y + dy, radius, a0, a1, ccw),
+    quadraticCurveTo: (cx, cy, x, y) => ctx.quadraticCurveTo(cx, cy + dy, x, y + dy),
+    bezierCurveTo: (c1x, c1y, c2x, c2y, x, y) => ctx.bezierCurveTo(c1x, c1y + dy, c2x, c2y + dy, x, y + dy),
+    rect: (x, y, w, h) => ctx.rect(x, y + dy, w, h),
+  };
+  return new Proxy(ctx, {
+    get: (target, key) => {
+      if (Object.hasOwn(moved, key)) return Reflect.get(moved, key);
+      const value: unknown = Reflect.get(target, key);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+}
+
+/**
+ * How far up and down a body's outline reaches, in pixels: the outline traced through a pen that only notes where
+ * it goes. An arc counts its whole circle, which is never less than the arc.
+ */
+function heightOf(ctx: Pen, outline: (pen: Pen) => void): [number, number] {
+  let top = Number.POSITIVE_INFINITY;
+  let bottom = Number.NEGATIVE_INFINITY;
+  const note = (...ys: number[]): void => {
+    for (const y of ys) {
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    }
+  };
+  const noted: Pick<Pen, PathCall | 'closePath'> = {
+    moveTo: (_x, y) => note(y),
+    lineTo: (_x, y) => note(y),
+    arc: (_x, y, radius) => note(y - radius, y + radius),
+    quadraticCurveTo: (_cx, cy, _x, y) => note(cy, y),
+    bezierCurveTo: (_c1x, c1y, _c2x, c2y, _x, y) => note(c1y, c2y, y),
+    rect: (_x, y, _w, h) => note(y, y + h),
+    closePath: () => undefined,
+  };
+  outline(
+    new Proxy(ctx, {
+      get: (target, key) => (Object.hasOwn(noted, key) ? Reflect.get(noted, key) : Reflect.get(target, key)),
+    }),
+  );
+  return [top, bottom];
+}
+
+/**
+ * The finish every body a place sends is given over its own paint — 0632: *"still look overall a lot like
+ * placeholders, can we do something overall with the enemy art"*. The bodies were flat cut-outs, and two things
+ * turn one into a form, each at the place's own strength (`FoeSkin.finish`):
+ *
+ * - **a form-shade** on the hull's own path: the lit ink along the top, fading out by the middle, and the plate
+ *   darkened along the bottom;
+ * - **a rim light**: the outline lowered by half the seal's width and half its own, stroked `source-atop` in the
+ *   lit ink brightened, fading out by the middle — so it lies just inside every edge that faces up, and nowhere
+ *   the body is not.
+ *
+ * `outline` re-traces the body's own path; the outline `seal` laid is the one outline, untouched (0276).
+ */
+function finishBody(ctx: Pen, f: Frame, skin: FoeSkin, outline: (pen: Pen) => void): void {
+  const look = skin.finish ?? FINISH;
+  // Over the body's own height and not the box's: a body a third of its box tall got only the middle of the light.
+  const [top, bottom] = heightOf(ctx, outline);
+  const form = ctx.createLinearGradient(f.half, top, f.half, bottom);
+  form.addColorStop(0, rgba(skin.lit, look.light));
+  form.addColorStop(0.45, rgba(skin.lit, 0));
+  form.addColorStop(0.55, rgba(skin.plate, 0));
+  form.addColorStop(1, rgba(shade(skin.plate, -0.3), look.shadow));
+  ctx.fillStyle = form;
+  ctx.beginPath();
+  outline(ctx);
+  ctx.fill('evenodd');
+  const sealWidth = ctx.lineWidth;
+  const width = Math.max(RIM_WIDTH * f.r, RIM_FLOOR);
+  const rim = ctx.createLinearGradient(f.half, top, f.half, bottom);
+  rim.addColorStop(0, rgba(mix(skin.lit, '#ffffff', 0.4), look.rim));
+  rim.addColorStop(0.5, rgba(skin.lit, 0));
+  rim.addColorStop(1, rgba(skin.lit, 0));
+  ctx.globalCompositeOperation = 'source-atop';
+  ctx.globalAlpha = RIM_ALPHA;
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  outline(lowered(ctx, sealWidth / 2 + width / 2));
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.lineWidth = sealWidth;
 }
 
 /*
@@ -9087,7 +9209,9 @@ function drawShared(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, 
   body.outline(ctx, f, n);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) body.paint(ctx, f, skin, theme, n);
+  if (skin === null) return;
+  body.paint(ctx, f, skin, theme, n);
+  finishBody(ctx, f, skin, (pen) => body.outline(pen, f, n));
 }
 
 function drawDrifter(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
@@ -16860,10 +16984,13 @@ function drawKite(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
     tells this from the minnow by (`KITE_HULL`'s note), and a densified side that a pose bends is a
     curve — `tests/volans.test.ts` counted it as one. The corners move; the sides stay straight.
   */
-  trace(ctx, f, posed(KITE_HULL, KITE_POSES[n]!));
+  const hull = posed(KITE_HULL, KITE_POSES[n]!);
+  trace(ctx, f, hull);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) paintKite(ctx, f, skin, n);
+  if (skin === null) return;
+  paintKite(ctx, f, skin, n);
+  finishBody(ctx, f, skin, (pen) => trace(pen, f, hull));
 }
 
 function drawSwift(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
@@ -16872,10 +16999,13 @@ function drawSwift(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n
 
 function drawMinnow(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
   // A curve through its points, so posed and not densified — `MINNOW_POSES` has why.
-  curveLoop(ctx, f, posed(MINNOW_HULL, MINNOW_POSES[n]!));
+  const hull = posed(MINNOW_HULL, MINNOW_POSES[n]!);
+  curveLoop(ctx, f, hull);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) paintMinnow(ctx, f, skin, n);
+  if (skin === null) return;
+  paintMinnow(ctx, f, skin, n);
+  finishBody(ctx, f, skin, (pen) => curveLoop(pen, f, hull));
 }
 export function drawKind(
   ctx: Pen,
@@ -18805,6 +18935,8 @@ export function drawKind(
       curveLoop(ctx, f, posed(MOON_JELLY_HULL, JELLY_POSES[n]!));
       ctx.fillStyle = rgba(light, 0.35);
       seal(ctx);
+      // Not finished (0632): it is its own light, glowing through a hull at a third of its ink, and a
+      // form-shade is light falling on a solid body from outside it.
       if (skin !== null) paintMoonJelly(ctx, f, skin, light, n);
       return;
     }

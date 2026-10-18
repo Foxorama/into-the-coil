@@ -24,8 +24,8 @@ export const PROBES = [
     guard: 'THE ASK, ACROSS LEVELS',
     edit: {
       path: 'src/content/themes.ts',
-      find: "shot: '#5aff6a', shots: { lance: '#ff2f8f', flak: '#e8ff40' } },",
-      replace: "shot: '#ff2f8f', shots: { lance: '#5aff6a', flak: '#e8ff40' } },",
+      find: "shot: '#5aff6a', shots: { lance: '#ff2f8f', flak: '#e8ff40' },",
+      replace: "shot: '#ff2f8f', shots: { lance: '#5aff6a', flak: '#e8ff40' },",
     },
   },
   {
@@ -35,8 +35,8 @@ export const PROBES = [
     guard: 'every ink clears the floor against the backdrop WITH EVERYTHING THE SKY DRAWS ON IT',
     edit: {
       path: 'src/content/themes.ts',
-      find: "shot: '#ff4fd8', shots: { lance: '#e8ff40', flak: '#ff6b8a' } },",
-      replace: "shot: '#ff4d2e', shots: { lance: '#e8ff40', flak: '#ff6b8a' } },",
+      find: "shot: '#ff4fd8', shots: { lance: '#e8ff40', flak: '#ff6b8a' },",
+      replace: "shot: '#ff4d2e', shots: { lance: '#e8ff40', flak: '#ff6b8a' },",
     },
   },
   {
@@ -46,8 +46,8 @@ export const PROBES = [
     guard: 'and no bullet a place fires is the ink of the ship firing it',
     edit: {
       path: 'src/content/themes.ts',
-      find: "shots: { lance: '#ff40d8', flak: '#ff9ac8' } },",
-      replace: "shots: { lance: '#ff40d8', flak: '#e6ff4a' } },",
+      find: "shots: { lance: '#ff40d8', flak: '#ff9ac8' },",
+      replace: "shots: { lance: '#ff40d8', flak: '#e6ff4a' },",
     },
   },
   {
