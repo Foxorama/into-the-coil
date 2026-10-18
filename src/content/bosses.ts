@@ -1834,6 +1834,17 @@ export interface Wreck {
   health: number;
 }
 
+/**
+ * A body coming down — 0627. Each node falls on its own: `gravity` across units a step per step, starting
+ * `stagger` steps after the node nearer the head, and drifts `slide` along units a step into the roots; it
+ * stops being part of the fight the step it starts — nothing in it hurts or is hurt.
+ */
+export interface Slump {
+  gravity: number;
+  stagger: number;
+  slide: number;
+}
+
 /** A row's wreck's health in points over the fight's `full`, and nought for a row with none — 0475. */
 export function wreckHealth(row: { wreck: Wreck | null }, full: number): number {
   return row.wreck === null ? 0 : row.wreck.health * full;
@@ -2127,6 +2138,12 @@ export interface BossRow extends Body {
    */
   wreck: Wreck | null;
   /**
+   * How a chain's body comes down when its head dies, or absent for a body that goes with the head — 0627: the
+   * serpent's slumps down through the roots it was coiled into, breaking each piece it touches that `breaks`,
+   * and falls off the screen. Absent is the default every other boss has, which is the shape 0282 asks for.
+   */
+  slump?: Slump;
+  /**
    * The fragment it sheds when a hit lands, or `null` for none — 0480.
    *
    * ⚠️ **ASKED FOR, THREE TIMES IN ONE PLAY**: *"no damage shows on the boss."* The flash says a hit
@@ -2201,9 +2218,10 @@ export function reachDownLane(boss: BossRow): number {
  */
 /**
  * A piece of scenery laid in a room — `docs/decisions/0488-the-roots-are-roots.md`, where it was first the
- * world tree's roots, and any room's since: the heart's chamber is one (0489). Scenery: it
- * collides with nothing (0335's walls are the picture of a bound the ship already has), and it is drawn
- * under every body (0459: nothing the player has to see is behind scenery).
+ * world tree's roots, and any room's since: the heart's chamber is one (0489). Scenery until 0627: it
+ * collided with nothing (0335's walls are the picture of a bound the ship already has). Since, a piece says
+ * whether it is a wall (`solid`). It is drawn under every body either way (0459: nothing the player has to
+ * see is behind scenery).
  */
 export interface RoomPiece {
   /** The piece's drawing. */
@@ -2215,6 +2233,14 @@ export interface RoomPiece {
   turn: number;
   /** Whether it is the far wall, which withdraws off the screen once the fight is over (0337). */
   far: boolean;
+  /**
+   * Whether it is a wall — 0627: *"Roots are walls."* A solid piece is stone to the ship and to every shot, as the
+   * Labyrinth's is (0349): it is put back out of it and hurt, and a shot stops at it. Its shape is its strands'
+   * (`src/content/roots.ts`), so what is drawn is what is met.
+   */
+  solid: boolean;
+  /** Whether a body falling through it breaks it — 0627, the serpent's slump. */
+  breaks: boolean;
 }
 
 export interface Room {
@@ -3442,22 +3468,35 @@ export const BOSSES: Record<BossKind, BossRow> = {
       a root in the middle of the open screen that fades for no reason the player can see. The frame is
       the roots round the edges, and the serpent coils round nothing.
     */
+    /*
+      ⚠️ **AND THE ROOTS ARE WALLS — 0627.** *"Roots need to be Rootier — Roots are walls — Serpent boss dies + takes out
+      a section of roots as it falls off screen clearing a path for the player."* Every piece is solid: the trunks
+      along the top and the bottom reach their roots out into the fight, and the far side is a wall of two
+      upright trunks along the screen's far edge, where the body runs off it into them, their roots reaching back
+      into the ship's box — met by the ship
+      as stone and stopping every shot. Nothing withdraws. When the serpent dies its body slumps down through the
+      far wall it was coiled into (`slump`), breaking every trunk it touches, and falls off the screen; it always
+      falls through the lower trunk, so the way on is at least the lower half of the lane, and the whole of it
+      when it died high.
+    */
     room: {
       stand: 60,
       settle: 150,
       mouth: -100,
       wall: null,
       pieces: [
-        { sprite: SPRITE.rootTrunk, along: 150, across: -3.5, turn: 0, far: false },
-        { sprite: SPRITE.rootTip, along: 118, across: 128, turn: Math.PI, far: false },
-        { sprite: SPRITE.rootTrunk, along: 185, across: 123.5, turn: Math.PI, far: false },
-        { sprite: SPRITE.rootFork, along: 232, across: 58, turn: Math.PI, far: true },
-        { sprite: SPRITE.rootTrunk, along: 216, across: 98, turn: Math.PI / 2, far: true },
+        { sprite: SPRITE.rootTrunk, along: 150, across: -4, turn: 0, far: false, solid: true, breaks: false },
+        { sprite: SPRITE.rootTrunk, along: 208, across: -7, turn: 0, far: false, solid: true, breaks: false },
+        { sprite: SPRITE.rootTip, along: 112, across: 126, turn: Math.PI, far: false, solid: true, breaks: false },
+        { sprite: SPRITE.rootTrunk, along: 172, across: 124, turn: Math.PI, far: false, solid: true, breaks: false },
+        { sprite: SPRITE.rootTrunk, along: 207, across: 28, turn: Math.PI / 2, far: false, solid: true, breaks: true },
+        { sprite: SPRITE.rootTrunk, along: 207, across: 92, turn: Math.PI / 2, far: false, solid: true, breaks: true },
       ],
       opens: 90,
     },
     burn: null,
     wreck: null,
+    slump: { gravity: 0.045, stagger: 1, slide: 0.12 },
     shed: { sprite: SPRITE.shedScale, from: 'facing' },
     chain: {
       sprite: SPRITE.serpentBody,

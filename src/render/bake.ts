@@ -23,6 +23,7 @@ import type { Palette, PaletteName } from '../content/palette.ts';
 import { THEMES, foeOf, lordOf, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
 import { BOSSES, type BossKind } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS, type ShotKind } from '../content/shots.ts';
+import { ROOTS, ROOT_POINTS, rootLineInto, rootWidth, type RootStrand as RootRow } from '../content/roots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, LIGHT_KINDS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
@@ -12701,64 +12702,23 @@ function paintChillHaze(ctx: Pen, size: number, palette: Palette): void {
   so it can taper, which a stroke of one width cannot. Shadow under it, bark, and a lit flank.
 */
 
-/** One root of a piece: its line in the tile's own `r`, and how wide it is along it, `t` from 0 to 1. */
+/**
+ * One root of a piece, as the painter holds it: its line in the tile's own `r`, and how wide it is along it,
+ * `t` from 0 to 1 — 0627: read off `ROOTS` in `src/content/roots.ts`, the list the simulation meets too.
+ */
 interface RootStrand {
   line: readonly Pt[];
   width: (t: number) => number;
 }
 
-/** A root's line from `a` to `b`, bowed `bend` to its left at the middle and wandering `wave` over `waves` swings. */
-function rootLine(a: Pt, b: Pt, bend: number, wave = 0, waves = 2, n = 28): Pt[] {
-  const dx = b[0] - a[0];
-  const dy = b[1] - a[1];
-  const length = Math.hypot(dx, dy) || 1;
-  const nx = -dy / length;
-  const ny = dx / length;
-  const out: Pt[] = [];
-  for (let i = 0; i <= n; i++) {
-    const t = i / n;
-    const off = bend * Math.sin(Math.PI * t) + wave * Math.sin(2 * Math.PI * waves * t) * Math.sin(Math.PI * t);
-    out.push([a[0] + dx * t + nx * off, a[1] + dy * t + ny * off]);
-  }
-  return out;
+/** A content strand as the painter draws it — its line laid out once, at bake time. */
+function strandOf(row: RootRow): RootStrand {
+  const flat = new Float64Array((ROOT_POINTS + 1) * 2);
+  rootLineInto(row, flat);
+  const line: Pt[] = [];
+  for (let i = 0; i <= ROOT_POINTS; i++) line.push([flat[i * 2]!, flat[i * 2 + 1]!]);
+  return { line, width: (t) => rootWidth(row, t) };
 }
-
-/** Thick at its root and tapering to a point: from `from` to `to`, faster toward the tip. */
-const taper =
-  (from: number, to: number) =>
-  (t: number): number =>
-    to + (from - to) * Math.pow(1 - t, 0.7);
-
-/** Thick in the middle and thinner at both ends, as a root lying across the ground between two places. */
-const lying =
-  (most: number, ends: number) =>
-  (t: number): number =>
-    ends + (most - ends) * Math.sqrt(Math.sin(Math.PI * t));
-
-/**
- * Each piece's roots, in its own `r` — 0488. Drawn lying along `+x`; the room turns them into place.
- * A piece's rootlets go to its `−y`, which is the side a room puts off the lane.
- */
-const ROOT_PIECES: Record<'rootTrunk' | 'rootFork' | 'rootTip', readonly RootStrand[]> = {
-  rootTrunk: [
-    { line: rootLine([-1.1, 0.04], [1.1, -0.04], 0.06, 0.05), width: lying(0.3, 0.1) },
-    { line: rootLine([-0.35, -0.02], [-0.8, -0.62], -0.1), width: taper(0.13, 0.025) },
-    { line: rootLine([0.3, -0.04], [0.92, -0.58], 0.12), width: taper(0.11, 0.02) },
-    { line: rootLine([-0.02, -0.06], [0.2, -0.7], 0.08), width: taper(0.08, 0.02) },
-  ],
-  rootFork: [
-    { line: rootLine([-1.1, 0], [-0.08, 0.01], 0.04), width: taper(0.32, 0.24) },
-    { line: rootLine([-0.12, 0.01], [1.02, -0.56], 0.1, 0.04), width: taper(0.23, 0.035) },
-    { line: rootLine([-0.12, 0.01], [0.98, 0.5], -0.08, 0.04), width: taper(0.19, 0.03) },
-    { line: rootLine([0.44, -0.27], [0.78, -0.84], 0.06), width: taper(0.07, 0.02) },
-  ],
-  rootTip: [
-    // One line bowed hard, so the curl is the root's own turn and not a second root joined on.
-    { line: rootLine([-1.1, 0.12], [0.62, -0.58], 0.42, 0.03), width: taper(0.3, 0.04) },
-    // Off to the curl's side, which is the side a room puts off the lane.
-    { line: rootLine([-0.45, -0.04], [-0.15, -0.6], -0.08), width: taper(0.1, 0.02) },
-  ],
-};
 
 /** A strand's outline: its line swung `scale` of its width to each side, there and back. */
 function strandOutline(strand: RootStrand, scale: number): Pt[] {
@@ -12779,17 +12739,71 @@ function strandOutline(strand: RootStrand, scale: number): Pt[] {
   return [...left, ...right.reverse()];
 }
 
-/** One piece of the world tree's roots — 0488: every strand's shadow first, then the bark, then the light. */
-function paintRootPiece(ctx: Pen, f: Frame, palette: Palette, strands: readonly RootStrand[]): void {
+/** A line along a strand, `offset` of its half-width off its middle — positive to its left — from `t0` to `t1`. */
+function alongStrand(strand: RootStrand, offset: number, t0: number, t1: number): Pt[] {
+  const { line } = strand;
+  const last = line.length - 1;
+  const out: Pt[] = [];
+  for (let i = Math.round(t0 * last); i <= Math.round(t1 * last); i++) {
+    const a = line[Math.max(0, i - 1)]!;
+    const b = line[Math.min(last, i + 1)]!;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const half = strand.width(i / last) / 2;
+    out.push([line[i]![0] - ((b[1] - a[1]) / length) * half * offset, line[i]![1] + ((b[0] - a[0]) / length) * half * offset]);
+  }
+  return out;
+}
+
+/**
+ * One piece of the world tree's roots — 0488, and rootier since 0627: *"Roots need to be Rootier."* What made
+ * them read as a few brown strokes was flat bark on every strand at one value. Each strand now turns: a
+ * shadow under it, the bark, a dark underside along the far flank and a lit band along the near one, so it
+ * reads as a round thing; bark ridges running its length in broken lines, which is what a root's skin is;
+ * and knots where the thick ones gnarl. Every mark inside the strand's own outline, so what is drawn is what
+ * the ship meets.
+ */
+function paintRootPiece(ctx: Pen, f: Frame, palette: Palette, rows: readonly RootRow[]): void {
+  const strands = rows.map(strandOf);
   const bark = mix(palette.sky, '#5e3e26', 0.62);
-  const under = shade(bark, -0.35);
+  const under = shade(bark, -0.45);
+  const dark = shade(bark, -0.3);
   const lit = shade(bark, 0.4);
-  for (const strand of strands) poly(ctx, f, under, strandOutline(strand, 1.35));
+  const ridge = shade(bark, -0.55);
+  // The ridges and knots fall where a stream of the piece's own says, so a piece is the same root every bake.
+  const rng = makeRng('roots').stream(`${rows.length}:${rows[0]!.from.join(',')}`);
+  for (const strand of strands) poly(ctx, f, under, strandOutline(strand, 1.3));
   for (const strand of strands) {
     poly(ctx, f, bark, strandOutline(strand, 1));
-    // The flank toward the light: a thin band along the strand's upper edge.
-    const band: RootStrand = { line: strand.line.map(([x, y], i) => [x, y - (strand.width(i / (strand.line.length - 1)) / 2) * 0.55] as const), width: (t) => strand.width(t) * 0.25 };
-    poly(ctx, f, lit, strandOutline(band, 1), 0.6);
+    // The flank away from the light in shadow and the one toward it lit (`−y`, up the piece, as every lit edge in
+    // the game is): a third of the width each, so the middle is the bark.
+    const shadowSide: RootStrand = { line: alongStrand(strand, 0.55, 0, 1), width: (t) => strand.width(t) * 0.38 };
+    poly(ctx, f, dark, strandOutline(shadowSide, 1), 0.85);
+    const litSide: RootStrand = { line: alongStrand(strand, -0.6, 0, 1), width: (t) => strand.width(t) * 0.22 };
+    poly(ctx, f, lit, strandOutline(litSide, 1), 0.32);
+    // Ridges along the bark, broken where the bark is, on anything thick enough to carry them.
+    const thick = strand.width(0.5);
+    if (thick >= 0.1) {
+      for (const offset of [-0.25, 0.15]) {
+        let t = rng.range(0, 0.15);
+        while (t < 0.9) {
+          const run = rng.range(0.12, 0.26);
+          const line = alongStrand(strand, offset, t, Math.min(0.95, t + run));
+          if (line.length > 1) seam(ctx, f, ridge, Math.max(0.012, thick * 0.07), line, 0.55, true);
+          t += run + rng.range(0.04, 0.1);
+        }
+      }
+    }
+    // A knot or two on the thick ones: a dark eye with a lit lip on its near side.
+    if (thick >= 0.2) {
+      const knots = thick >= 0.3 ? 2 : 1;
+      for (let k = 0; k < knots; k++) {
+        const t = rng.range(0.2, 0.8);
+        const at = alongStrand(strand, rng.range(-0.2, 0.2), t, t)[0]!;
+        const r = strand.width(t) * 0.09;
+        disc(ctx, f, lit, at[0], at[1] - r * 0.3, r * 1.25, 0.45);
+        disc(ctx, f, ridge, at[0], at[1], r, 0.8);
+      }
+    }
   }
 }
 
@@ -17463,7 +17477,7 @@ export function drawKind(
     case 'rootFork':
     case 'rootTip':
       // THE WORLD TREE'S ROOTS AS ROOTS — 0488: one piece, placed by its room.
-      paintRootPiece(ctx, f, palette, ROOT_PIECES[kind]);
+      paintRootPiece(ctx, f, palette, ROOTS[kind]);
       return;
     case 'wallRise0':
     case 'wallRise1':

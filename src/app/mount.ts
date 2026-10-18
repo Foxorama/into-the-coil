@@ -15,6 +15,7 @@ import { THEMES, THEME_KINDS, type ThemeKind } from '../content/themes.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN, type View, viewOf } from '../sim/camera.ts';
 import { animate, type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
+import { makeRootHold } from '../sim/roots.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeAtlasStepwise, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
@@ -1198,6 +1199,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     wheelClock: 0,
     wheelWas: 0,
     wheelPace: 1,
+    roots: makeRootHold(),
+    slumpFor: -1,
     danceThrust: 0,
     dancePullIn: 0,
     danceAlong: 0,

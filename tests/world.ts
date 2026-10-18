@@ -16,6 +16,7 @@ import type { CueKind } from '../src/content/cues.ts';
 import type { FeelKind } from '../src/content/feels.ts';
 import { AUTHORED, DIFFICULTIES, type DifficultyKind } from '../src/content/difficulty.ts';
 import { Pool } from '../src/sim/pool.ts';
+import { makeRootHold, type RootHold } from '../src/sim/roots.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES } from '../src/content/bosses.ts';
 import {
@@ -190,6 +191,8 @@ export function inertLevel(): {
   wheelClock: number;
   wheelWas: number;
   wheelPace: number;
+  roots: RootHold;
+  slumpFor: number;
   danceThrust: number;
   dancePullIn: number;
   danceFor: number;
@@ -350,6 +353,8 @@ export function inertLevel(): {
     wheelClock: 0,
     wheelWas: 0,
     wheelPace: 1,
+    roots: makeRootHold(),
+    slumpFor: -1,
     danceThrust: 0,
     dancePullIn: 0,
     danceFor: 0,
@@ -564,6 +569,8 @@ export function playableWorld(
     wheelClock: 0,
     wheelWas: 0,
     wheelPace: 1,
+    roots: makeRootHold(),
+    slumpFor: -1,
     danceThrust: 0,
     dancePullIn: 0,
     danceFor: 0,

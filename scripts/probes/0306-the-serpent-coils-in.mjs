@@ -95,9 +95,10 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // Re-anchored by 0593, which skips the body for a ship a whole ball shells.
-      find: '      if (!shelled) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
+      // And by 0627, which leaves a beaten serpent's falling body harmless.
+      find: '      if (!shelled && !w.bossBeaten) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
       replace:
-        '      if (!shelled && w.bossEntering < 0) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
+        '      if (!shelled && !w.bossBeaten && w.bossEntering < 0) collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
     },
   },
   {
