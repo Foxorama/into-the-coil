@@ -82,8 +82,18 @@ game's canvas round the monitor, with a world unit in pixels taken from a shop d
 Probes are in `scripts/probes/0628-the-monitor-hangs-on-a-wall.mjs`, all four seen red: the wall not drawn, the
 benches not drawn, the monitor back on the floor, and the monitor at its old width. 0611's guards hold the new
 places: soles on the deck, no two pictures meeting, every place reached. 0572's
-*stands the cockpit monitor under the ship* now reads *on its wall*, still in the stand's middle at 1920×1080,
-and its probe moves to the line that places it.
+*stands the cockpit monitor under the ship* now reads *on its wall*, and its probe moves to the line that places
+it.
+
+Two guards went red, and each was answered on its own terms:
+
+- **0572's lower bound came down from 0.3 to 0.2 of the stand's width.** The guard was changed, with the reason
+  written beside it. At 1920×1080 the monitor's middle is now 0.29 across, left of the ship, where the player chose
+  to put it. The corner the guard exists for is under 0.05, and its probe still reads 0.09 and goes red.
+- **0539's *the dash runs out of its stand* at 812×375 was a real defect, fixed.** On a phone the strip is centred
+  under the ship and clamped to the stand. With the ship six units on, the clamp binds at that size. It measured
+  the strip with `offsetWidth`, a whole number of pixels, and rounded its `x`, so the edge stood a fraction of a
+  pixel past the stand's. It now measures the strip's true width and rounds `x` down.
 
 ## Owed
 

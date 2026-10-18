@@ -5794,8 +5794,14 @@ export function makeChrome(
     const at = standMarks[screen];
     const dash = panel.dash!;
     if (Number.isFinite(at.shipX)) {
-      const x = Math.min(Math.max(at.shipX - box.left - dash.offsetWidth / 2, 0), Math.max(0, box.width - dash.offsetWidth));
-      stand.style.setProperty('--itc-dash-x', String(Math.round(x)) + 'px');
+      /*
+        0628: measured to the fraction and floored. `offsetWidth` is a whole pixel and the strip is not, so once the
+        ship stood far enough right for this to clamp — six units on, at 812x375 — a rounded `x` put its edge a
+        fraction of a pixel past the stand's.
+      */
+      const wide = dash.getBoundingClientRect().width;
+      const x = Math.min(Math.max(at.shipX - box.left - wide / 2, 0), Math.max(0, box.width - wide));
+      stand.style.setProperty('--itc-dash-x', String(Math.floor(x)) + 'px');
       stand.style.setProperty('--itc-dash-y', String(Math.round(at.shipY - box.top)) + 'px');
     }
     // 0628: and where it hangs on the workshop wall, which a desktop's layout reads — a phone's keeps the strip above.
