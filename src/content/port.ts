@@ -161,6 +161,13 @@ export const PORT_KINDS = [
   'liftCar',
   'hoverRing',
   'moon',
+  /*
+    0628: the workshop wall the cockpit monitor hangs from — *"need a wall section for the cockpit to hang from
+    + some tool/work benches beneath it"* — standing on the deck between the lift and the cradle, and the tool
+    benches at its foot.
+  */
+  'workWall',
+  'workBenches',
 ] as const;
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
@@ -263,6 +270,9 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   liftCar: 14,
   hoverRing: 32,
   moon: 12,
+  // 0628: the wall from the catwalk's girder to the deck, in a box as tall; the benches as wide as the wall.
+  workWall: 44,
+  workBenches: 34,
 };
 
 /**
@@ -300,7 +310,8 @@ export const DOCK = {
    * 0572: higher off the cradle — *"move the car slightly higher and hover it a bit more"* — and bobbing
    * deeper than the intro's (`bob`, world units either way), on the field's rising rings.
    */
-  ship: 118,
+  // 0628: six units on toward the bay, for the workshop wall (`workshop`); it was at 118.
+  ship: 124,
   ride: 82,
   bob: 1.3,
   shipGrow: 1.35,
@@ -314,6 +325,16 @@ export const DOCK = {
   moon: { reach: 14, grow: 0.55 },
   /** The lamps under the truss. */
   lamps: [70, 124] as readonly number[],
+  /**
+   * 0628: the workshop wall the cockpit monitor hangs from, between the lift and the cradle — its centre along,
+   * `half` its width either side to the outside of its posts, the top of its header beam, the line the monitor
+   * hangs from (the foot of the brackets under the header), and where its posts stand on the deck. And the
+   * benches at its foot, nearer the player than the wall: where their legs stand, and the top they work on.
+   *
+   * ⚠️ **THE SHIP MOVED SIX UNITS TOWARD THE BAY FOR IT** (it was at 118): the monitor in two rows at 1280x720
+   * is thirty units wide and the deck between the lift and the ship's flame was twenty-seven.
+   */
+  workshop: { along: 86.5, half: 15.5, top: 61.5, hang: 65, foot: 101.5, benchFoot: 104, benchTop: 95.5 },
 } as const;
 
 /**

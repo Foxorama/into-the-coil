@@ -143,9 +143,13 @@ together with their own decisions, as the play-test of 2026-10-10's six did. Aft
   the floor on its sky.
 - **Items 12 and 13** — [0627](../docs/decisions/0627-the-roots-are-walls.md): the serpent's roots are rootier and
   are walls to the ship and to every shot, and its body falls through the far wall when it dies, breaking a way on.
+- **Items 10 and 11** — [0628](../docs/decisions/0628-the-monitor-hangs-on-a-wall.md): the cockpit monitor hangs on a
+  workshop wall between the lift and the ship, over two tool benches, and the keepers have a place in front of the
+  benches and one beside the wall. The layout was the player's choice of two, asked because neither fitted the room
+  as it stood; the ship moved six units toward the bay for it.
 
 ## Owed
 
 Each decision's *Owed* names its play. Across them: a play with a pad (items 1 and 6), an ear on the lasers (14), a
-look at the pad and the intro (5, 9), a run through the seven places (16), and a fight with the serpent and an ear
-on its roots breaking (12, 13).
+look at the pad and the intro (5, 9), a run through the seven places (16), a fight with the serpent and an ear
+on its roots breaking (12, 13), and a look at Hangin' Out's wall, desktop and phone (10, 11).

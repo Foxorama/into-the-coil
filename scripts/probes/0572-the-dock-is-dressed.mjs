@@ -31,11 +31,12 @@ export const PROBES = [
     decision: '0572',
     suite: 'tests/dressed.browser.test.ts',
     broke: 'the monitor back in the stand’s corner',
-    guard: 'stands the cockpit monitor under the ship',
+    guard: 'stands the cockpit monitor on its wall',
+    // 0628: re-anchored on where a desktop hangs it — the ship-centred `x` above it is the phone's strip's now.
     edit: {
       path: 'src/app/chrome.ts',
-      find: '      const x = Math.min(Math.max(at.shipX - box.left - dash.offsetWidth / 2, 0), Math.max(0, box.width - dash.offsetWidth));',
-      replace: '      const x = 0 * Math.min(Math.max(at.shipX - box.left - dash.offsetWidth / 2, 0), Math.max(0, box.width - dash.offsetWidth));',
+      find: "      stand.style.setProperty('--itc-hang-x', String(Math.round(at.hang.left - box.left)) + 'px');",
+      replace: "      stand.style.setProperty('--itc-hang-x', '0px');",
     },
   },
   {

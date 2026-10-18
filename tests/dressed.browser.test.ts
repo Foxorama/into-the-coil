@@ -178,7 +178,8 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
     }
   });
 
-  it('stands the cockpit monitor under the ship, in the stand’s middle, not its corner', async () => {
+  // 0628: on the workshop wall between the lift and the ship since, which is still the stand's middle.
+  it('stands the cockpit monitor on its wall, in the stand’s middle, not its corner', async () => {
     const page = await opened(1920, 1080);
     const stand = await box(page, `${shown('hangar')} .${HANGAR}stand`);
     const dash = await box(page, `${shown('hangar')} .${HANGAR}dash`);
