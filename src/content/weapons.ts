@@ -90,6 +90,11 @@ export interface CatherineWheel {
    * wheel is towed after the ship.
    */
   leash: number;
+  /**
+   * What share of the way to where the right stick points it the place it hangs swings each step, while the
+   * stick is pushed and its tether holds — 0623. The gun's `aim` is how far round that may be.
+   */
+  swing: number;
   /** Radians the wheel turns each step. */
   spin: number;
   /** How far from the hub the embers leave, in world units — the rim of the drawn wheel. */
@@ -529,7 +534,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    */
   catherine: {
     label: 'Catherine wheel',
-    hint: 'A fire wheel on a tether',
+    hint: 'A fire wheel on a tether — swing it with the right stick',
     shot: 'catherine',
     glyph: SPRITE.catherine,
     flight: 'tether',
@@ -608,6 +613,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
         the lane, and leaves the 128 of a throw free, as 170 left 160.
       */
       leash: 0.65,
+      // 0623: a tenth a step is most of the way in a third of a second — a swing, not a jump.
+      swing: 0.1,
       spin: 0.32,
       // 0549: half of 0545's 5.4, with the wheel drawn half the size — *"a lot smaller"*.
       rim: 2.7,
@@ -633,7 +640,11 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     ram: null,
     paint: null,
     lends: true,
-    aim: 0,
+    /*
+      0623: *"weapons need right control stick — catherine wheel, paint gun"*. The ray's arc (0588), 22.5° either
+      side of the nose: at the wheel's reach that is 49 units across the 120-unit lane either way from the ship.
+    */
+    aim: Math.PI / 8,
   },
   /**
    * Unity's ram — 0593: the Hamster Ball flown into things. Nothing leaves the ship; one body rides the
@@ -721,7 +732,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    */
   paintball: {
     label: 'Paintball',
-    hint: 'A scattered string of paint that splats',
+    hint: 'A scattered string of paint that splats — aim it with the right stick',
     shot: 'paintball',
     // The marker and its hopper, which the hangar shows; what flies is a ball of one of its colours.
     glyph: SPRITE.paintball,
@@ -766,6 +777,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       ],
     },
     lends: true,
-    aim: 0,
+    // 0623: the ray's arc, as the wheel's — the string scattered about where the right stick points it.
+    aim: Math.PI / 8,
   },
 };

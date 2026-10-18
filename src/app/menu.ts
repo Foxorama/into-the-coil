@@ -65,6 +65,12 @@ export const MENU_BACK_BUTTONS: readonly number[] = [1];
 export const MENU_TAB_BUTTONS = { previous: 4, next: 5 } as const;
 
 /**
+ * The triggers, by standard-mapping index: the previous pilot and the next — 0624, on every screen that shows
+ * the pilots. The shoulders were already the tabs, and the triggers were read by nothing in a menu.
+ */
+export const MENU_PILOT_BUTTONS = { previous: 6, next: 7 } as const;
+
+/**
  * How long a direction is held before the menu repeats it, and how often after that — 0458, in
  * reads, which are fixed steps: two-fifths of a second, then seven and a half a second. The D-pad
  * repeats as the stick does; a held button is still an edge until then.
@@ -141,12 +147,14 @@ export interface MenuAsk {
   back: boolean;
   /** A tab asked for: −1 the previous, 1 the next, 0 none — 0458. An edge. */
   tab: number;
+  /** A pilot asked for: −1 the previous, 1 the next, 0 none — 0624. An edge, on `tab`'s terms. */
+  pilot: number;
 }
 
 /** The one allocation a caller makes. Built at boot, overwritten every step forever after. */
 export function makeMenuAsk(): MenuAsk {
   // @setup: one ask, built when the shell wires the chrome.
-  return { move: 0, axis: 'y', confirm: false, back: false, tab: 0 };
+  return { move: 0, axis: 'y', confirm: false, back: false, tab: 0, pilot: 0 };
 }
 
 export interface MenuSource {
@@ -203,6 +211,8 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
   // @setup: 0458 — Back and the shoulders, held, so each is an edge as confirm is.
   let heldBack = false;
   let heldTab = 0;
+  // @setup: 0624 — the triggers, held, so a pilot is a press and not a scroll.
+  let heldPilot = 0;
   // @setup: 0458 — how many reads the held direction has been held for, for the repeat.
   let heldFor = 0;
   // @setup: whether the next read is only learning what is already held. See `spend`.
@@ -227,6 +237,7 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
       let confirm = false;
       let back = false;
       let tab = 0;
+      let pilot = 0;
 
       for (let p = 0; p < pads.length; p++) {
         const pad = pads[p];
@@ -292,6 +303,8 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
         }
         if (down(pad, MENU_TAB_BUTTONS.previous)) tab = -1;
         else if (down(pad, MENU_TAB_BUTTONS.next)) tab = 1;
+        if (down(pad, MENU_PILOT_BUTTONS.previous)) pilot = -1;
+        else if (down(pad, MENU_PILOT_BUTTONS.next)) pilot = 1;
       }
 
       /*
@@ -330,6 +343,7 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
       ask.confirm = confirm && !heldConfirm && !spending;
       ask.back = back && !heldBack && !spending;
       ask.tab = tab !== 0 && tab !== heldTab && !spending ? tab : 0;
+      ask.pilot = pilot !== 0 && pilot !== heldPilot && !spending ? pilot : 0;
       /*
         ⚠️ **`heldMove` is cleared by the RELEASE THRESHOLD ABOVE AND BY NOTHING ELSE.** Clearing it
         here whenever the direction reads zero is the obvious-looking line, and it silently undoes
@@ -349,6 +363,7 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
       heldConfirm = confirm;
       heldBack = back;
       heldTab = tab;
+      heldPilot = pilot;
       spending = false;
     },
     /*
@@ -366,6 +381,7 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
       heldConfirm = false;
       heldBack = false;
       heldTab = 0;
+      heldPilot = 0;
       heldFor = 0;
     },
   };

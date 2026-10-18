@@ -16,7 +16,8 @@ export const PROBES = [
     suite: 'tests/duck.test.ts',
     broke: 'every ball straight ahead, a string that never scatters',
     guard: 'one ball a volley, a little off straight ahead and never all the same way, in every colour in the hopper',
-    edit: { path: 'src/app/frame.ts', find: '  const angle = w.paintRng.range(-paint.scatter, paint.scatter);', replace: '  const angle = 0;' },
+    // 0623: re-anchored; the scatter is about where the right stick points.
+    edit: { path: 'src/app/frame.ts', find: '  const angle = w.weapon.aim * w.intent.aim + w.paintRng.range(-paint.scatter, paint.scatter);', replace: '  const angle = w.weapon.aim * w.intent.aim;' },
   },
   {
     decision: '0595',

@@ -49,7 +49,11 @@ export function streamAcross(clock: number, age: number, sweep: number, period: 
   return Math.sin(streamAngle(clock - age, sweep, period)) * speed * age;
 }
 
-/** The half-width of the stream at `age`, opening from `width` at the nozzle to `tipWidth` at `flight` — 0610's cone. */
-export function streamWidth(age: number, flight: number, width: number, tipWidth: number): number {
-  return width + ((tipWidth - width) * age) / flight;
+/**
+ * The half-width of the stream at `age`, opening from `width` at the nozzle to `tipWidth` at `flight` — 0610's
+ * cone. 0622: opening as `flare` says — one is 0610's straight cone, and more holds the stream narrow along its
+ * run and throws it open at its end, as spray off a hose bells out where it breaks up.
+ */
+export function streamWidth(age: number, flight: number, width: number, tipWidth: number, flare: number): number {
+  return width + (tipWidth - width) * (age / flight) ** flare;
 }

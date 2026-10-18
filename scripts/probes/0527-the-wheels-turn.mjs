@@ -44,11 +44,11 @@ export const PROBES = [
     suite: 'tests/wheels.test.ts',
     broke: 'a spinner standing still over its wheel',
     guard: 'a spinner stands over each wheel and TURNS',
-    // ⚠️ Re-pointed by 0557: the turn is read off the rim's row now, as the pad reads it.
+    // ⚠️ Re-pointed by 0557: the turn is read off the rim's row now, as the pad reads it. 0618: off the wheels' own clock.
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const turn = wheelTurn(row, i, now);',
-      replace: '    const turn = 0 * now;',
+      find: '    const turn = wheelTurn(row, i, rolled);',
+      replace: '    const turn = 0 * rolled;',
     },
   },
   {

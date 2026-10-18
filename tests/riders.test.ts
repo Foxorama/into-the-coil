@@ -17,7 +17,7 @@ import { SHIPS, SHIP_KINDS, BALL_RADIUS, ownFit, ownRider, sameFit, type ShipKin
 import { SHIP_BOX, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { BEATS, INTRO_STEPS, PORT_SPRITE } from '../src/content/port.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
-import { drawPlayerShip, drawRider, riderDrawn, withFit } from '../src/render/bake.ts';
+import { drawPlayerShip, drawRider, riderDrawn, shade, withFit } from '../src/render/bake.ts';
 import { paintPort, paintStand } from '../src/render/port.ts';
 import { SKY } from '../src/app/mount.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -125,6 +125,23 @@ describe('0612 — the riders get off', () => {
     const empty = paintedInBall(traceShip('ball', null), 'ball');
     expect(empty, `${empty.toFixed(1)} px² of solid paint in the middle of an empty ball`).toBe(0);
     expect(ridden, `Unity covers ${ridden.toFixed(1)} px² of the middle of the ball, so is hardly there`).toBeGreaterThan(20);
+  });
+
+  it('0620 — Unity keeps their overalls on in the ball: the seat over the haunches, in the overalls’ navy', () => {
+    /*
+      Played: *"why does the weasel take off its pants when it gets into the hamster ball"*. Standing, at the
+      bench and on the bust, Unity wears navy overalls (`unityInks` in keeper-art.ts); in the ball they were a
+      bare weasel in a vest. In CSS pixels of the fight: solid navy paint behind the middle of the body, where
+      the haunches are — Unity runs nose-first, so behind is toward the left of the drawing.
+    */
+    const navy = shade(INK.player, -0.66);
+    const size = cssSize('ball');
+    const half = size / 2;
+    const seat = traceShip('ball', 'weasel').filter((p) => p.colour === navy && p.alpha >= 0.9);
+    const behind = seat.reduce((sum, p) => sum + area(p, (x) => x < half), 0);
+    const ahead = seat.reduce((sum, p) => sum + area(p, (x) => x > half + size * 0.04), 0);
+    expect(behind, `${behind.toFixed(1)} px² of navy over Unity’s haunches`).toBeGreaterThan(12);
+    expect(ahead, `${ahead.toFixed(1)} px² of navy over Unity’s head and shoulders, where the vest is`).toBeLessThan(behind * 0.25);
   });
 
   it('the pad shows every ship with nobody aboard', () => {

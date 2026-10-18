@@ -4332,6 +4332,8 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, po
   const fur = shade(palette.bullet, -0.42);
   const furDark = shade(palette.bullet, -0.6);
   const cream = shade(mix(palette.impact, palette.hazard, 0.18), -0.04);
+  // 0620: the navy of their overalls, the bust's and the standing figure's (`unityInks` in keeper-art.ts).
+  const navy = shade(palette.player, -0.66);
   const side = pose === 1 ? -1 : 1;
   const turn = pose === 0 ? 0 : side * 0.5;
   const gather = pose === 0 ? 1 : 0.86;
@@ -4353,7 +4355,8 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, po
   ] as const) {
     const root = p(x * 0.92, Math.sign(y) * 0.06);
     const paw = p(x, y * legsIn);
-    seam(ctx, f, furDark, 0.09 * k, [root, paw], 1, true);
+    // 0620: the hind legs in the overalls' navy, as they are standing; the paws out of the cuffs.
+    seam(ctx, f, x < 0 ? navy : furDark, (x < 0 ? 0.11 : 0.09) * k, [root, paw], 1, true);
     disc(ctx, f, fur, paw[0], paw[1], 0.056 * k);
   }
   // The tail, thin and brown, out behind the rump — flicked out against the turn while it dances.
@@ -4375,6 +4378,22 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, po
   }
   const back = ps([...edge.map(([x, y]) => [x, -y] as Pt), ...edge.reverse()]);
   shaded(ctx, f, p(0, -0.1), p(0, 0.1), shade(fur, 0.15), furDark, back);
+  /*
+    0620: *"why does the weasel take off its pants when it gets into the hamster ball"* — the overalls Unity
+    wears at the bench, at the ship and on the bust, seen from above: the seat over the haunches, wrapped
+    round the flanks as trousers are, the tail out through it, a waistband across the small of the back, and
+    the two straps running up the back to the shoulders, under the vest.
+  */
+  const seat: Pt[] = [];
+  for (let i = 0; i <= 12; i++) {
+    const x = -0.43 + (0.39 * i) / 12;
+    seat.push([x, 0.131 * Math.sqrt(Math.max(0, 1 - ((x + 0.08) / 0.385) ** 2))]);
+  }
+  poly(ctx, f, navy, ps([...seat.map(([x, y]) => [x, -y] as Pt), ...[...seat].reverse()]));
+  // The light along the top of the seat, where the cloth stretches over the haunches.
+  poly(ctx, f, shade(navy, 0.22), ps([...seat.map(([x, y]) => [x, -y * 0.55] as Pt), ...[...seat].reverse().map(([x, y]) => [x, -y * 0.1] as Pt)]), 0.8);
+  seam(ctx, f, shade(navy, 0.4), 0.035 * k, [p(-0.045, -0.115), p(-0.045, 0.115)], 0.9);
+  for (const strap of [-1, 1] as const) seam(ctx, f, navy, 0.045 * k, [p(-0.05, strap * 0.07), p(0.08, strap * 0.06)], 0.95, true);
   // A short hi-vis vest over the shoulders, with its silver tape — Unity's shop clothes, on the back alone.
   poly(ctx, f, palette.bullet, ps([[0.06, -0.082], [0.22, -0.068], [0.22, 0.068], [0.06, 0.082]]));
   poly(ctx, f, shade(palette.trim, 0.7), ps([[0.12, -0.078], [0.16, -0.075], [0.16, 0.075], [0.12, 0.078]]), 0.8);

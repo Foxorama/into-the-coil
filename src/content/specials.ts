@@ -771,7 +771,13 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       last of it flies on for a sixth of a second after the nozzle stops. Twelve was photographed first and curled
       round at the ends of the swing like a whip. A play number.
     */
-    jet: { steps: 120, sweep: 0.55, period: 60, length: 90, flight: 10, width: 1.4, tipWidth: 4, damage: 2, landGap: 4 },
+    /*
+      ⚠️ **AND ITS END BELLS OUT — 0622.** *"End needs to be a bit wider + splashier."* The tip opens to 5.5 either side
+      where it opened to 4, and on a curve rather than a straight cone (`flare`), so the stream is as narrow as it was
+      along most of its run — 2.7 half way out, as before — and throws open over its last third. It lands as wide as
+      it is drawn, so the end lands a third wider too.
+    */
+    jet: { steps: 120, sweep: 0.55, period: 60, length: 90, flight: 10, width: 1.4, tipWidth: 5.5, flare: 1.7, damage: 2, landGap: 4 },
     opensWith: 'mmxxvi',
     face: SPRITE.pickupWater,
     cue: 'waterCannon',
@@ -812,6 +818,8 @@ export interface Jet {
   readonly width: number;
   /** And at its far end — 0610: the spray opens between the two, and is drawn exactly that wide. */
   readonly tipWidth: number;
+  /** How it opens between the two — 0622: one is a straight cone; more keeps it narrow and bells it out at the end. */
+  readonly flare: number;
   readonly damage: number;
   readonly landGap: number;
 }

@@ -187,6 +187,9 @@ export function inertLevel(): {
   regenSeen: number;
   danceBounces: number;
   danceSpeed: number;
+  wheelClock: number;
+  wheelWas: number;
+  wheelPace: number;
   danceThrust: number;
   dancePullIn: number;
   danceFor: number;
@@ -344,6 +347,9 @@ export function inertLevel(): {
     regenSeen: 0,
     danceBounces: 0,
     danceSpeed: 0,
+    wheelClock: 0,
+    wheelWas: 0,
+    wheelPace: 1,
     danceThrust: 0,
     dancePullIn: 0,
     danceFor: 0,
@@ -555,6 +561,9 @@ export function playableWorld(
     regenSeen: 0,
     danceBounces: 0,
     danceSpeed: 0,
+    wheelClock: 0,
+    wheelWas: 0,
+    wheelPace: 1,
     danceThrust: 0,
     dancePullIn: 0,
     danceFor: 0,

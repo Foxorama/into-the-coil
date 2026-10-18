@@ -4716,6 +4716,8 @@ export interface Chrome {
   activate(): void;
   /** Open the tab `delta` along from the shown one, round the ends — 0458: LB and RB on a pad. */
   tab(delta: number): void;
+  /** Step the shown screen's pilot band `delta` open pilots along, round the ends — 0624: LT and RT on a pad. */
+  pilot(delta: number): void;
   /** Light the device in hand on How to play's controls — 0458. */
   setDevice(device: GuideDevice): void;
   /**
@@ -5036,7 +5038,7 @@ const FITS: Record<GuideDevice, string> = { keyboard: 'Enter or a click fits it'
 /** The keys that do things on a plate, in the hand's words — 0562. Touch has none to name. */
 const GLYPHS: Record<GuideDevice, string> = {
   keyboard: '← → try · Enter {verb} · Esc back · Q E tabs',
-  pad: '◀ ▶ try · Ⓐ {verb} · Ⓑ back · LB RB tabs',
+  pad: '◀ ▶ try · Ⓐ {verb} · Ⓑ back · LB RB tabs · LT RT pilots',
   touch: '',
 };
 const GUIDE_DEVICE_LABELS: Record<GuideDevice, string> = { keyboard: 'Keyboard', pad: 'Pad', touch: 'Touch' };
@@ -8088,6 +8090,12 @@ export function makeChrome(
         onChoice(band.name, look, false);
       } else if (band !== undefined) stepBand(band, 1, true);
       else atCursor()?.click();
+    },
+    pilot(delta: number): void {
+      // 0624: the shown screen's pilot band, stepped round to the next open pilot — on any screen that has one.
+      const panel = shownScreen === null ? undefined : panels[shownScreen];
+      const band = panel?.bands.find((b) => b.name === 'pilot');
+      if (band !== undefined) stepBand(band, delta, true);
     },
     tab(delta: number): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];

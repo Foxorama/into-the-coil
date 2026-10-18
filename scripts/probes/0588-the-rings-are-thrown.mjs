@@ -15,7 +15,8 @@ export const PROBES = [
     suite: 'tests/aim.test.ts',
     broke: 'the volley fired straight ahead whatever the stick says',
     guard: 'THE ASK: the ray’s pulses go where the stick points',
-    edit: { path: 'src/app/frame.ts', find: '  const aim = w.weapon.aim * w.intent.aim;', replace: '  const aim = 0 * w.intent.aim;' },
+    // 0623: re-anchored on the pulse's own line; the wheel and the paint gun read the stick too.
+    edit: { path: 'src/app/frame.ts', find: '  const aim = w.weapon.aim * w.intent.aim;\n  const first', replace: '  const aim = 0 * w.intent.aim;\n  const first' },
   },
   {
     decision: '0588',

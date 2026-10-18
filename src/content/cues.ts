@@ -127,6 +127,9 @@ export const CUE_KINDS = [
   'bossAcid',
   'bossVoid',
   'bossBolt',
+  // A laser charging while its line is drawn, and its zap and hiss when it fires — 0625, every beam's.
+  'laserCharge',
+  'laserZap',
   // The fish going through the edge of the lane on its entrance — 0313.
   'bossBreach',
   'bossSpit',
@@ -273,6 +276,10 @@ export const TWIN_KINDS = [
   'splat-lands',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
+  /** A boss's laser draws its warning line, thin and faint, where it is about to fire — `src/render/scene.ts`, 0250. */
+  'warning-appears',
+  /** The line becomes the beam, blooming out from the warning's width as it ignites — `beamBloom` in `src/render/scene.ts`, 0470. */
+  'beam-appears',
   /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
   'breach-appears',
   /** A horde leaves the boss's open mouth in a spray of embers — 0373. */
@@ -1792,6 +1799,58 @@ export const CUES: Record<CueKind, CueRow> = {
    * change the lightning attack it's really good"* is about the attack: the column, the 45-step warning
    * and the strike are 0248's and are untouched.
    */
+  /*
+    ⚠️ **THE LASERS ARE HEARD TWICE — 0625.** *"Lazers need a chargin hum for their line appearance, then a lazer
+    zap + hiss for the hit … needs to apply to all lazers."* A beam was the crash every boss volley shares
+    (`bossShot`) on the step its warning line appeared, and nothing at all on the step it burned — the one moment
+    in the attack that hurts. Now the line is the charge, the burn is the zap, and both are every beam's: the
+    fallback for a `beam` in `src/app/boss.ts` and the ignition in `pinBeams`, so a laser added to any row is
+    heard without a row saying so.
+  */
+  laserCharge: {
+    // The warning line drawn — `throwAttack`'s `beam`, on the step the volley leaves.
+    twin: 'warning-appears',
+    air: 0.25,
+    hold: 8,
+    // Under the crash it replaces: a hum that builds, not a strike.
+    gain: 0.36,
+    glue: 0.12,
+    layers: [
+      /*
+        THE HUM — a sine climbing two octaves, A to A, swelling as it goes: the capacitor filling. Its attack is
+        most of it and its decay is slight, so it is loudest at the top, on the step before the beam fires.
+      */
+      { wave: 'sine', from: inKey(14), to: inKey(28), seconds: 0.42, gain: 0.5, attack: 0.3, curve: 0.4, release: 0.06, vibrato: 18 },
+      // The whine over it, a saw an octave under, opening through a sweeping lowpass — the charge you can hear rising.
+      { wave: 'saw', from: inKey(7), to: inKey(21), seconds: 0.42, gain: 0.22, attack: 0.28, curve: 0.5, lowFrom: 500, lowTo: 3800, highFrom: 120, q: 2.2, release: 0.06 },
+      // And the crackle of it gathering, a thin band of noise pulled upward, either side.
+      { wave: 'noise', from: 0, to: 0, at: 0.08, seconds: 0.32, gain: 0.08, attack: 0.2, curve: 0.8, lowFrom: 5000, lowTo: 10000, highFrom: 2400, highTo: 5200, pan: -0.35, panTo: 0.35, release: 0.05 },
+    ],
+  },
+  laserZap: {
+    // The beam ignites — `pinBeams`, on the first step its line burns.
+    twin: 'beam-appears',
+    air: 0.3,
+    hold: 10,
+    gain: 0.42,
+    glue: 0.16,
+    figure: [1, 0.86, 0.94, 0.82],
+    layers: [
+      // THE CRACK — the discharge, a few milliseconds of bright noise so it starts rather than fades in.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.025, gain: 0.5, attack: 0.0003, curve: 8, lowFrom: 12000, lowTo: 6000, highFrom: 1800 },
+      // THE ZAP — a square diving three octaves in a tenth of a second, driven: the laser's own voice.
+      { wave: 'square', from: inKey(35), to: inKey(14), seconds: 0.12, gain: 0.34, attack: 0.001, curve: 3, lowFrom: 7000, lowTo: 1800, drive: 0.4 },
+      // THE BODY under it, on the root, so the shot lands in the music.
+      { wave: 'saw', from: inKey(14), to: inKey(7), seconds: 0.22, gain: 0.24, attack: 0.002, curve: 3.5, lowFrom: 1600, lowTo: 400, highFrom: 50, drive: 0.3 },
+      /*
+        THE HISS — the beam burning: high noise held most of the length of a beam's burn, either side and wide,
+        closing as it goes out. Lasers last 0.3 to 0.5 s; this is half a second, so it outlasts the shortest
+        by a breath, which is the burn's afterglow.
+      */
+      { wave: 'noise', from: 0, to: 0, at: 0.01, seconds: 0.5, gain: 0.16, attack: 0.01, curve: 1.6, lowFrom: 11000, lowTo: 5200, highFrom: 3200, highTo: 2400, q: 0.7, pan: -0.45, panTo: -0.2, release: 0.08 },
+      { wave: 'noise', from: 0, to: 0, at: 0.01, seconds: 0.5, gain: 0.16, attack: 0.01, curve: 1.6, lowFrom: 11000, lowTo: 5200, highFrom: 3200, highTo: 2400, q: 0.7, pan: 0.45, panTo: 0.2, release: 0.08 },
+    ],
+  },
   bossBolt: {
     twin: 'bolt-appears',
     // Some room, because lightning happens outdoors — but under the first draft's 0.45, which smeared

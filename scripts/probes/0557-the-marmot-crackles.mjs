@@ -15,8 +15,9 @@ export const PROBES = [
     guard: 'strikes a new crack over each wheel every sixteenth of a second',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    wheel.prevTurn = struck ? turn : wheelTurn(row, i, was);',
-      replace: '    wheel.prevTurn = struck ? wheelTurn(row, i, was) : wheelTurn(row, i, was);',
+      // 0618: re-anchored on the wheels' own clock.
+      find: '    wheel.prevTurn = struck ? turn : wheelTurn(row, i, rolledWas);',
+      replace: '    wheel.prevTurn = struck ? wheelTurn(row, i, rolledWas) : wheelTurn(row, i, rolledWas);',
     },
   },
   {
@@ -26,8 +27,9 @@ export const PROBES = [
     guard: 'strikes a new crack over each wheel every sixteenth of a second',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const frame = row.frames[wheelFrame(row, i, now)]!;',
-      replace: '    const frame = row.frames[0 * wheelFrame(row, i, now)]!;',
+      // 0618: re-anchored on the wheels' own clock.
+      find: '    const frame = row.frames[wheelFrame(row, i, rolled)]!;',
+      replace: '    const frame = row.frames[0 * wheelFrame(row, i, rolled)]!;',
     },
   },
   {

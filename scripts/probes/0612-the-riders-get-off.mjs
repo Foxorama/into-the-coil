@@ -42,8 +42,9 @@ export const PROBES = [
     guard: 'the pad shows every ship with nobody aboard',
     edit: {
       path: 'src/render/port.ts',
-      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);',
-      replace: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 1);',
+      // 0621: re-anchored; the pad lays the tubes itself.
+      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false);',
+      replace: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 1, false);',
     },
   },
   {

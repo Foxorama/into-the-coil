@@ -1195,6 +1195,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     danceKind: null,
     danceBounces: 0,
     danceSpeed: 0,
+    wheelClock: 0,
+    wheelWas: 0,
+    wheelPace: 1,
     danceThrust: 0,
     dancePullIn: 0,
     danceAlong: 0,
@@ -4581,7 +4584,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0458: B is Back, and the shoulders turn the tabs — on a screen that has either.
     if (menuAsk.back) goBack();
     if (menuAsk.tab !== 0) chrome.tab(menuAsk.tab);
-    if (menuAsk.move !== 0 || menuAsk.confirm || menuAsk.back || menuAsk.tab !== 0) chrome.setDevice('pad');
+    // 0624: and the triggers step the pilot, on a screen that shows the pilots.
+    if (menuAsk.pilot !== 0) chrome.pilot(menuAsk.pilot);
+    if (menuAsk.move !== 0 || menuAsk.confirm || menuAsk.back || menuAsk.tab !== 0 || menuAsk.pilot !== 0) chrome.setDevice('pad');
   };
 
   /**
