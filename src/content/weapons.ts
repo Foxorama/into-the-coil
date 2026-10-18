@@ -125,6 +125,13 @@ export interface Ram {
   readonly reach: number;
   /** What one landing adds to the gauge, which burns a shield off at 1 — 0609. */
   readonly heat: number;
+  /**
+   * What one landing on a boss adds, in place of `heat` — 0639: *"the boss damage for the hamster ball also needs
+   * to be buffed slightly, took all the power ups and still a very long time to kill bosses 1, 2 and 3."* A pilot
+   * who minds the gauge lands a fraction of what the boss fixture does (0615), and the fixture already flies at the
+   * fight's floor; what makes a real fight long is the cooling, so a boss's hull heats the ball less.
+   */
+  readonly bossHeat: number;
   /** What a step against the stone adds — scraping a wall heats the ball as a landing does, slower. */
   readonly scrape: number;
   /** Steps after the last landing before the gauge starts to cool. */
@@ -693,6 +700,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     ram: {
       reach: 3,
       heat: 0.15,
+      // 0639: eight landings on a boss before a burn, where it was six or seven.
+      bossHeat: 0.11,
       scrape: 0.01,
       cool: 30,
       drain: 0.01,

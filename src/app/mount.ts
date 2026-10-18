@@ -1191,6 +1191,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ramCoolIn: 0,
     // 0609: a shell resting, its regen not yet counting.
     regenIn: 0,
+    regenSpan: 0,
     regenSeen: 0,
     danceFor: 0,
     danceKind: null,
@@ -1477,6 +1478,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     onScore: (): void => {},
     // No bar drawn at mount, and replaced below with the chrome — 0613; and the hands, below, with the pad.
     shownCharge: -1,
+    shownHeat: -1,
+    shownMend: -1,
+    onHeat: (): void => {},
+    onMend: (): void => {},
     onCharge: (): void => {},
     onFeel: (): void => {},
     // Standing still at mount, and replaced below with the chrome — 0461, held once per swing by 0466.
@@ -4504,6 +4509,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
   // A lurch along the lane swings the dice on the estate's dash — 0461; on any other ship's plate there are none.
   world.onJolt = chrome.swayDice;
+  // 0638: the ball's heat and the shield it is mending, in the readout; every other ship sends −1 for both.
+  world.onHeat = chrome.setHeat;
+  world.onMend = chrome.setMend;
   // And the table the title rolls, as this browser kept it — 0429.
   chrome.setBoard(boardLines(scoreTable), -1);
 

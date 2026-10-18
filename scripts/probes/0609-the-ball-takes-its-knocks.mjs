@@ -10,7 +10,7 @@ export const PROBES = [
     // 0593's own break, moved here with its guard: what the heat costs is 0609's now.
     broke: 'a landing that heats nothing',
     guard: 'every landing heats the ball, and a full gauge costs one shield',
-    edit: { path: 'src/app/frame.ts', find: '    w.ramHeat += landed * ram.heat;', replace: '    w.ramHeat += 0;' },
+    edit: { path: 'src/app/frame.ts', find: '    w.ramHeat += (landed - onBoss) * ram.heat + onBoss * ram.bossHeat;', replace: '    w.ramHeat += 0;' },
   },
   {
     decision: '0609',
@@ -64,14 +64,14 @@ export const PROBES = [
     suite: 'tests/ball.test.ts',
     broke: 'a shell that never comes back',
     guard: 'a spent shield comes back after its rest, and then one every `every`',
-    edit: { path: 'src/app/frame.ts', find: '      ship.health += 1;\n      w.regenIn = regen.every;', replace: '      w.regenIn = regen.every;' },
+    edit: { path: 'src/app/frame.ts', find: '      ship.health += 1;\n      w.regenIn = w.regenSpan = regen.every;', replace: '      w.regenIn = w.regenSpan = regen.every;' },
   },
   {
     decision: '0609',
     suite: 'tests/ball.test.ts',
     broke: 'every shield after the first coming back on the rest’s clock',
     guard: 'a spent shield comes back after its rest, and then one every `every`',
-    edit: { path: 'src/app/frame.ts', find: '      ship.health += 1;\n      w.regenIn = regen.every;', replace: '      ship.health += 1;\n      w.regenIn = regen.rest;' },
+    edit: { path: 'src/app/frame.ts', find: '      ship.health += 1;\n      w.regenIn = w.regenSpan = regen.every;', replace: '      ship.health += 1;\n      w.regenIn = w.regenSpan = regen.rest;' },
   },
   {
     decision: '0609',
@@ -87,8 +87,8 @@ export const PROBES = [
     guard: 'any hit puts the rest back',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (ship.health < w.regenSeen || ship.health >= fullHealthFor(w.shipRow, w.difficulty)) w.regenIn = regen.rest;',
-      replace: '    if (ship.health >= fullHealthFor(w.shipRow, w.difficulty)) w.regenIn = regen.rest;',
+      find: '    if (ship.health < w.regenSeen || ship.health >= fullHealthFor(w.shipRow, w.difficulty)) w.regenIn = w.regenSpan = regen.rest;',
+      replace: '    if (ship.health >= fullHealthFor(w.shipRow, w.difficulty)) w.regenIn = w.regenSpan = regen.rest;',
     },
   },
   // 0615 took the six headings out — a wall reflects the dance now — and its own probe file holds the reflection.

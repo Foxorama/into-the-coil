@@ -1227,6 +1227,8 @@ export interface World {
    * `rest` by any hit, and to its `every` by each shield that returns.
    */
   regenIn: number;
+  /** 0638: what `regenIn` was last set to — `rest` or `every` — so the readout can say how far along it is. */
+  regenSpan: number;
   /** The ship's health when the regen last looked, so a hit from anywhere is seen as one — 0609. */
   regenSeen: number;
   /**
@@ -1653,6 +1655,16 @@ export interface World {
   shownCharge: number;
   /** The bar moved — a new quantum, full, spent, or the bar coming or going. Fired on a change only. */
   onCharge: (fraction: number) => void;
+  /**
+   * What the readout's heat gauge and its mending shield last said — 0638, `shownCharge`'s terms: a share in
+   * `CHARGE_BAR_STEPS`, or a negative number for a ship that does not heat, or no shield coming back.
+   */
+  shownHeat: number;
+  shownMend: number;
+  /** The heat gauge moved. Fired on a change only. */
+  onHeat: (fraction: number) => void;
+  /** The shield coming back moved. Fired on a change only. */
+  onMend: (fraction: number) => void;
   /**
    * The ship's speed along the lane in the camera's frame at the last step, whether it has burst
    * past the dice's mark and not yet braked under it, how many steps of the last swing are left to
@@ -3056,6 +3068,17 @@ export class GameFrame implements Frame {
       w.shownCharge = chargeShown;
       w.onCharge(chargeShown);
     }
+    // And the ball's heat and the shield it is mending, on the same terms — 0638.
+    const heatShown = heatShare(w);
+    if (heatShown !== w.shownHeat) {
+      w.shownHeat = heatShown;
+      w.onHeat(heatShown);
+    }
+    const mendShown = mendShare(w);
+    if (mendShown !== w.shownMend) {
+      w.shownMend = mendShown;
+      w.onMend(mendShown);
+    }
 
     // ⚠️ `flying &&`, or the wreck reports its own death again on every step of the beat. Nothing
     // takes health off a released ship any more, so this is the belt to that gate's braces — and it
@@ -4424,7 +4447,8 @@ function settleRam(w: World, landed: number, onBoss: number, kills: number): voi
   const ram = WEAPONS[w.weapon.kind].ram;
   if (ram === null || w.shipPool.size === 0 || w.danceFor > 0) return;
   if (landed > 0) {
-    w.ramHeat += landed * ram.heat;
+    // 0639: a landing on a boss heats the ball less than one on a body.
+    w.ramHeat += (landed - onBoss) * ram.heat + onBoss * ram.bossHeat;
     w.ramCoolIn = ram.cool;
   } else if (w.ramCoolIn > 0) w.ramCoolIn--;
   else if (w.ramHeat > 0) w.ramHeat = Math.max(0, w.ramHeat - ram.drain);
@@ -4479,6 +4503,27 @@ export function throwEarned(w: World, side: Side): 'none' | 'refused' | 'thrown'
 
 /** Steps the readout's bar is drawn in — 0613: twenty, a twentieth of the bar each, so it moves on a landing or two. */
 export const CHARGE_BAR_STEPS = 20;
+
+/**
+ * What the readout's heat gauge says — 0638: the ram's gauge in `CHARGE_BAR_STEPS`, or `-1` for a ship that does
+ * not ram. Rounded up, so a gauge with any heat in it is never drawn empty.
+ */
+export function heatShare(w: World): number {
+  if (WEAPONS[w.weapon.kind].ram === null) return -1;
+  return Math.min(1, Math.ceil(w.ramHeat * CHARGE_BAR_STEPS) / CHARGE_BAR_STEPS);
+}
+
+/**
+ * How far the next shield is back — 0638: from 0 as its countdown starts to 1 as it returns, in
+ * `CHARGE_BAR_STEPS`, or `-1` for a ship that does not regenerate, a full shell, or no ship flying.
+ */
+export function mendShare(w: World): number {
+  const regen = w.shipRow.regen;
+  if (regen === null || w.shipPool.size === 0 || w.ship.health <= 0) return -1;
+  if (w.ship.health >= fullHealthFor(w.shipRow, w.difficulty) || w.regenSpan <= 0) return -1;
+  const done = 1 - Math.max(0, w.regenIn) / w.regenSpan;
+  return Math.floor(Math.max(0, Math.min(1, done)) * CHARGE_BAR_STEPS) / CHARGE_BAR_STEPS;
+}
 
 /** What the readout's bar says: a share of the fill in `CHARGE_BAR_STEPS`, or `-1` for a ship that earns nothing. */
 function chargeShare(w: World): number {
@@ -4632,10 +4677,10 @@ function regenShell(w: World): void {
   const ship = w.ship;
   // A wreck mends nothing: the death beat is the ship's, and a life opens on its own shell (`respawn`).
   if (w.shipPool.size > 0 && ship.health > 0) {
-    if (ship.health < w.regenSeen || ship.health >= fullHealthFor(w.shipRow, w.difficulty)) w.regenIn = regen.rest;
+    if (ship.health < w.regenSeen || ship.health >= fullHealthFor(w.shipRow, w.difficulty)) w.regenIn = w.regenSpan = regen.rest;
     else if (--w.regenIn <= 0) {
       ship.health += 1;
-      w.regenIn = regen.every;
+      w.regenIn = w.regenSpan = regen.every;
       w.onCue('shieldBack', ship.across);
     }
   }
@@ -13004,7 +13049,7 @@ export function respawn(w: World): void {
   w.ship.health = openingHealthFor(w.shipRow, w.difficulty);
   // 0609: and a shell that regenerates starts resting from this health, not from the wreck's.
   w.regenSeen = w.ship.health;
-  w.regenIn = w.shipRow.regen?.rest ?? 0;
+  w.regenIn = w.regenSpan = w.shipRow.regen?.rest ?? 0;
   holdStation(w.ship, w.scrollPerStep);
   /*
     ⚠️ **A RESPAWN'S INVULNERABILITY IS NOT A HIT'S, and it stopped being the same number the moment
@@ -13452,6 +13497,11 @@ export function closeRun(w: World): void {
   */
   if (w.shownBoss !== -1) w.onBoss(-1);
   w.shownBoss = -1;
+  // 0638: and the ball's gauge and its mending shield, on 0634's terms — told, not only forgotten.
+  if (w.shownHeat !== -1) w.onHeat(-1);
+  w.shownHeat = -1;
+  if (w.shownMend !== -1) w.onMend(-1);
+  w.shownMend = -1;
   w.shownPoints = 0;
   w.shownStreak = 0;
   w.bossEntryAt = 0;

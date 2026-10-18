@@ -26,6 +26,7 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame, RAM_KIND, canThrow, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
+import { BOSSES } from '../src/content/bosses.ts';
 import { GOLFERS } from '../src/content/golfers.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { BALL_RADIUS, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, fullHealthFor, openingHealthFor, shieldsOf } from '../src/content/ships.ts';
@@ -183,6 +184,68 @@ describe('0593 — the ram lands on what the ball flies into', () => {
 });
 
 describe('0609 — a full gauge burns a shield off, and the ball rolls on', () => {
+  it('0638 — the readout is told the gauge and how far the next shield is back, and nothing for a full shell', () => {
+    const { world, frame } = inTheBall();
+    const heat: number[] = [];
+    const mend: number[] = [];
+    world.onHeat = (f) => heat.push(f);
+    world.onMend = (f) => mend.push(f);
+    frame.step();
+    expect(heat.at(-1), 'the ball flew and the readout was told no gauge').toBe(0);
+    expect(mend.at(-1) ?? -1, 'a full shell was told a shield is coming back').toBe(-1);
+    world.ramHeat = 0.5;
+    world.ramCoolIn = 1000;
+    frame.step();
+    expect(heat.at(-1), 'half a gauge was not drawn as half').toBe(0.5);
+    // A shield down: the countdown starts, and the readout climbs from nothing to all but whole before it lands.
+    world.ship.health = FULL - 1;
+    world.ship.invulnFor = 1e9;
+    const told: number[] = [];
+    for (let i = 0; i < REGEN.rest + 2 && world.ship.health < FULL; i++) {
+      frame.step();
+      told.push(world.shownMend);
+    }
+    expect(world.ship.health, 'the shield never came back').toBe(FULL);
+    expect(Math.min(...told.slice(0, 3)), 'the countdown opened part way along').toBeLessThanOrEqual(0.05);
+    expect(Math.max(...told), 'the readout never neared a whole shield before it landed').toBeGreaterThanOrEqual(0.9);
+    expect(mend.at(-1), 'the shield came back and the readout still says one is coming').toBe(-1);
+  });
+
+  it('0639 — a boss takes more landings before the ball burns than a body does', () => {
+    /*
+      Played: *"the boss damage for the hamster ball also needs to be buffed slightly, took all the power ups and
+      still a very long time to kill bosses 1, 2 and 3."* Counted in what the player does: landings, from a cool
+      gauge to the burn, pressed into a body and then into a boss.
+    */
+    const landingsToBurn = (on: 'body' | 'boss'): number => {
+      const { world, frame } = inTheBall();
+      world.ship.invulnFor = 0;
+      world.enemies.clear();
+      const target = on === 'body' ? bodyOn(world, 1e9) : world.bossPool.spawn()!;
+      if (on === 'boss') {
+        reset(target, world.ship.along, world.ship.across, BOSSES.sentinel);
+        target.health = 1e9;
+        world.bossFullHealth = 1e9;
+        target.fireIn = Number.MAX_SAFE_INTEGER;
+        target.velAlong = world.scrollPerStep;
+      }
+      let landings = 0;
+      for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ship.health === FULL; i++) {
+        const was = world.ramHeat;
+        target.along = target.prevAlong = world.ship.along;
+        target.across = target.prevAcross = world.ship.across;
+        frame.step();
+        if (world.ramHeat > was) landings++;
+      }
+      expect(world.ship.health, `pressed into a ${on}, the ball never burnt`).toBeLessThan(FULL);
+      return landings;
+    };
+    const body = landingsToBurn('body');
+    const boss = landingsToBurn('boss');
+    expect(boss, `the boss burnt the ball in ${boss} landings, the body in ${body}`).toBeGreaterThan(body);
+    expect(boss, 'a boss burns the ball sooner than its row says').toBeGreaterThanOrEqual(Math.ceil(1 / RAM.bossHeat) - 1);
+  });
+
   it('every landing heats the ball, and a full gauge costs one shield — the ball whole, cool and ramming after', () => {
     const { world, frame, cues } = inTheBall();
     world.ship.invulnFor = 0;
