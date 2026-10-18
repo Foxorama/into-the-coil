@@ -13231,6 +13231,10 @@ export function closeRun(w: World): void {
     if (layer !== w.shipPool) layer.clear();
   }
   w.steps = 0;
+  // 0618: and the wheels' own clock, which is the run's at its own pace.
+  w.wheelClock = 0;
+  w.wheelWas = 0;
+  w.wheelPace = 1;
   w.intent.along = 0;
   w.intent.across = 0;
   w.intent.specials.fill(0);
