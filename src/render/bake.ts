@@ -2097,7 +2097,30 @@ function carve(ctx: Pen, f: Frame, colour: string, marks: readonly Mark[]): void
 }
 
 /** A cockpit behind the notched prow, then a keel back to the stern. The hull's own solidity. */
-const BOSS_KEEL: readonly Mark[] = [dot(-0.3, 0, 0.14), box(-0.1, -0.1, 0.78, 0.1)];
+/**
+ * The Approach's mid-boss from above, in the box's radius — 0631: a raider guard frigate, its ram prow at −x where
+ * the volley leaves (`muzzle` on its row), stepping out to a turret sponson on each shoulder and an engine nacelle
+ * either side of its stern, the main drive between them. Its upper half, prow to stern, mirrored for the lower.
+ * It reaches no further from its centre than the hexagon did (1.07 of the radius).
+ */
+const SENTINEL_TOP: readonly Pt[] = [
+  [-1, 0],
+  [-0.78, -0.12],
+  [-0.62, -0.26],
+  [-0.34, -0.32],
+  [-0.22, -0.56],
+  [0.1, -0.6],
+  [0.2, -0.42],
+  [0.42, -0.42],
+  [0.5, -0.74],
+  [0.66, -0.8],
+  [0.86, -0.6],
+  [0.86, -0.44],
+  [0.74, -0.34],
+  [0.92, -0.22],
+  [0.92, 0],
+];
+const SENTINEL_HULL: readonly Pt[] = [...SENTINEL_TOP, ...SENTINEL_TOP.slice(1, -1).reverse().map(([x, y]): Pt => [x, -y])];
 
 /** The spine, and the roots of the two outer prongs sitting on it. The hull's own openness. */
 const BOSS2_SPINE: readonly Mark[] = [box(-0.15, -0.09, 0.85, 0.09), dot(-0.05, -0.45, 0.11), dot(-0.05, 0.45, 0.11)];
@@ -9028,39 +9051,88 @@ function drawSower(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n
   place's own light.
 */
 
-function paintBoss(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The hexagonal hull: its lower half in shadow, its prow lit, rivets or scales across the back.
+/**
+ * The Approach's frigate, painted — 0631, in the end bosses' manner (0264): a form-shade over the whole hull from its
+ * lit upper side to its shadowed lower, The Approach's rivets down its flanks, armour seams, a superstructure down the
+ * spine with the bridge glowing in it, a turret on each sponson with its barrel on the lane, and its drives burning
+ * at the stern. Every solid mark clears 0106's floor at the fight's camera; the seams are lines.
+ */
+function paintBoss(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  // The form-shade, under everything: what turns the cut-out into a hull.
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.25), rgba(skin.plate, 0.6), SENTINEL_HULL);
+  // The lower half's armour in shadow, and the prow's upper face lit.
   plate(ctx, f, skin, [
-    [-0.4, 0.08],
-    [0.94, 0.42],
-    [0.48, 0.9],
-    [-0.52, 0.76],
-    [-0.42, 0.44],
+    [-0.56, 0.21],
+    [0.42, 0.34],
+    [0.7, 0.31],
+    [0.8, 0.44],
+    [0.81, 0.58],
+    [0.65, 0.74],
+    [0.54, 0.7],
+    [0.47, 0.44],
+    [0.44, 0.39],
+    [0.2, 0.39],
+    [0.16, 0.44],
+    [0.08, 0.56],
+    [-0.2, 0.53],
+    [-0.3, 0.31],
   ]);
   lit(ctx, f, skin, [
-    [-0.94, 0],
-    [-0.44, -0.42],
-    [-0.5, -0.74],
-    [-0.36, -0.66],
-    [-0.34, -0.4],
-    [-0.8, 0],
+    [-0.92, -0.01],
+    [-0.76, -0.08],
+    [-0.62, -0.2],
+    [-0.52, -0.2],
+    [-0.74, -0.04],
   ]);
-  // Either side of the keel, which is a carved hole and stays one — 0149's mark is not painted over.
-  motif(ctx, f, skin, theme, [
-    [0.05, -0.85],
-    [0.5, -0.85],
-    [0.9, -0.42],
-    [0.9, -0.2],
-    [0.05, -0.2],
-  ], 'boss');
-  motif(ctx, f, skin, theme, [
-    [0.05, 0.2],
-    [0.9, 0.2],
-    [0.9, 0.42],
-    [0.5, 0.85],
-    [0.05, 0.85],
-  ], 'boss-low');
-  disc(ctx, f, skin.eye, -0.32, 0, 0.09);
+  // A row of rivets down each flank between the seam's ribs: The Approach's motif, laid by hand because
+  // the seeded grid has no room for a stud beside the spine.
+  for (const side of [-1, 1]) {
+    for (const x of [-0.4, -0.08, 0.36, 0.62]) disc(ctx, f, shade(skin.plate, -0.3), x, 0.24 * side, 0.05);
+  }
+  // Armour seams along the flanks and across the hull.
+  for (const side of [-1, 1]) {
+    seam(ctx, f, shade(skin.plate, -0.35), 0.022, [[-0.62, 0.22 * side], [0.4, 0.36 * side], [0.78, 0.27 * side]], 0.8);
+    for (const x of [-0.34, 0.2, 0.5]) seam(ctx, f, shade(skin.plate, -0.35), 0.018, [[x, 0.18 * side], [x + 0.04, 0.4 * side]], 0.7);
+  }
+  // The superstructure down the spine: a raised deck, lit along its top and shadowed under.
+  shaded(ctx, f, [0, -0.18], [0, 0.18], shade(skin.lit, 0.15), shade(skin.plate, -0.1), [
+    [-0.66, 0],
+    [-0.5, -0.14],
+    [0.5, -0.17],
+    [0.66, -0.1],
+    [0.66, 0.1],
+    [0.5, 0.17],
+    [-0.5, 0.14],
+  ]);
+  seam(ctx, f, shade(skin.lit, 0.35), 0.02, [[-0.48, -0.1], [0.52, -0.13]], 0.85);
+  // The bridge, glowing in the eye's ink, a little back from the prow.
+  glow(ctx, f, skin.eye, -0.36, 0, 0.2, 0.45);
+  disc(ctx, f, skin.eye, -0.36, 0, 0.085);
+  // A turret on each sponson: its ring, its dome, and its barrels on the lane.
+  for (const side of [-1, 1]) {
+    disc(ctx, f, shade(skin.plate, -0.2), -0.04, 0.44 * side, 0.1);
+    disc(ctx, f, shade(skin.hull, 0.25), -0.04, 0.44 * side, 0.065);
+    poly(ctx, f, shade(skin.plate, -0.3), [
+      [-0.22, 0.41 * side],
+      [-0.06, 0.41 * side],
+      [-0.06, 0.47 * side],
+      [-0.22, 0.47 * side],
+    ]);
+  }
+  // The drives at the stern, burning in the eye's ink: the main one between the nacelles, and one in each.
+  for (const [x, y, rr] of [
+    [0.92, 0, 0.16],
+    [0.86, -0.52, 0.07],
+    [0.86, 0.52, 0.07],
+  ] as const) {
+    glow(ctx, f, skin.eye, x + 0.02, y, rr * 1.2, 0.5);
+    poly(ctx, f, skin.eye, [
+      [x - 0.08, y - rr],
+      [x - 0.02, y - rr],
+      [x - 0.02, y + rr],
+      [x - 0.08, y + rr],
+    ]);
+  }
 }
 
 function paintBoss2(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
@@ -17048,21 +17120,16 @@ export function drawKind(
         size of anything else on screen, so detail survives that would be mush on an enemy.
 
         The notch is what makes it read as facing the player rather than as a lump.
+
+        ⚠️ **A FRIGATE SINCE 0631** — *"remove placeholder graphics with miniboss art"*. The hexagon and its
+        carved keel were the placeholder: a raider guard frigate from above, its ram prow at −x, a
+        superstructure down its spine, a turret on each shoulder, and two engine nacelles at its stern
+        (`SENTINEL_HULL`).
       */
-      ctx.moveTo(half - r, half);
-      ctx.lineTo(half - r * 0.45, half - r * 0.45);
-      ctx.lineTo(half - r * 0.55, half - r * 0.8);
-      ctx.lineTo(half + r * 0.5, half - r * 0.95);
-      ctx.lineTo(half + r, half - r * 0.4);
-      ctx.lineTo(half + r, half + r * 0.4);
-      ctx.lineTo(half + r * 0.5, half + r * 0.95);
-      ctx.lineTo(half - r * 0.55, half + r * 0.8);
-      ctx.lineTo(half - r * 0.45, half + r * 0.45);
-      ctx.closePath();
+      trace(ctx, f, SENTINEL_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      carve(ctx, f, palette.space, BOSS_KEEL);
-      if (skin !== null) paintBoss(ctx, f, skin, theme);
+      if (skin !== null) paintBoss(ctx, f, skin);
       return;
     }
     case 'spinner':
