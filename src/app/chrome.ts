@@ -4101,7 +4101,7 @@ ${each('-action[hidden]')} { display: none; }
     /*
       Played: *"don't have the cockpit overlay the tools on the tool bench."* Its type is the wall's: no bigger
       than a fourteen-and-a-half-th of the wall's width, about two world units, so the readout wraps to three rows
-      at most and its foot, dangle and all, stays over the tallest tool on the benches (DOCK.workshop.toolsTop)
+      at most and its foot, dangle and all, stays over the tallest tool on the benches (the dock's workshop row, its toolsTop)
       at any size — a desktop scaled to 125% or 150% included. The floor's 0.85rem is the most it is.
     */
     font-size: min(0.85rem, calc(var(--itc-hang-w, 13.6rem) * 0.069));
