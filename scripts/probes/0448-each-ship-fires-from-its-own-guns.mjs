@@ -60,8 +60,9 @@ export const PROBES = [
     guard: 'THE ROWS ARE THE DRAWING',
     edit: {
       path: 'src/content/ships.ts',
-      find: "    tubes: [[], [{ along: 0.76, across: -1.92 }],",
-      replace: "    tubes: [[], [{ along: 1.76, across: -1.92 }],",
+      // 0629: re-anchored on the launcher's mouth, which the row moved to.
+      find: "    tubes: [[], [{ along: 0.86, across: -1.99 }],",
+      replace: "    tubes: [[], [{ along: 1.86, across: -1.99 }],",
     },
   },
   {
