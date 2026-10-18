@@ -10,7 +10,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { carMounts, drawKind } from '../src/render/bake.ts';
-import { SPRITE_EXTENT, type SpriteKind } from '../src/content/sprites.ts';
+import { SHIP_BOX, SPRITE_EXTENT, type SpriteKind } from '../src/content/sprites.ts';
+import { SHIPS } from '../src/content/ships.ts';
+import { WEAPONS } from '../src/content/weapons.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { edgeIndex, tracingPen, type Point } from './paths.ts';
@@ -57,6 +59,47 @@ describe('0629 — each car’s tubes are a launcher, not a box', () => {
           expect(roof, `${at}: nothing under the launcher at ${(x - tail).toFixed(1)} px from its tail`).toBeLessThan(size);
         }
       }
+    }
+  });
+});
+
+/*
+  ── 0630: THE GUNS ARE NOT BLOCKS ──────────────────────────────────────────────────────────────────
+
+  `docs/decisions/0630-the-guns-are-not-blocks.md` — the guns half of the same line. Each gun's new shape held in
+  its ship's drawn silhouette at the fight's camera, at points where the block it was and the shape it is disagree:
+  the estate's launcher a drum (the block's top corners are sky, its crown is not); the duck's marker with a grip
+  under it and its box's front corner taken in; the fighter's pulse with a brake wider than the barrels behind it.
+*/
+describe('0630 — the guns are not blocks', () => {
+  /** A ship's drawn hull at the fight's camera, asked whether a point in its frame is on it. */
+  function hullOf(kind: SpriteKind): { solid: (x: number, y: number) => boolean } {
+    const size = SPRITE_EXTENT[kind] * DESKTOP.scale;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
+    const hull = edgeIndex(trace.passes[0]!);
+    // `x`, `y` in the box's radius, as the ship's frame draws.
+    return { solid: (x, y) => hull.inside([size / 2 + x * size * 0.42, size / 2 + y * size * 0.42]) };
+  }
+  /** A point in the cars' side-on frame (`inBox` about (0, 1), 0.062 a unit) in the box's radius. */
+  const side = (x: number, y: number): [number, number] => [x * 0.062, (y - 1) * 0.062];
+
+  it('draws the estate’s launcher as a drum, the duck’s marker with a grip, and the fighter’s pulse with a brake', () => {
+    const estate = hullOf('estate');
+    expect(estate.solid(...side(14.2, -1.7)), 'the estate has no drum over its star').toBe(true);
+    for (const x of [12.75, 15.75]) expect(estate.solid(...side(x, -1.5)), `the estate's launcher is a block — its corner at ${x} is solid`).toBe(false);
+    const duck = hullOf('duck');
+    expect(duck.solid(...side(13.55, 3.5)), 'the duck’s marker has no grip under it').toBe(true);
+    expect(duck.solid(...side(15.95, 2.35)), 'the duck’s marker is a box — its front corner under the barrel is solid').toBe(false);
+    const fighter = hullOf('fighter');
+    const row = SHIPS.fighter;
+    const r = SHIP_BOX * 0.42;
+    const mouth = row.hardpoint.along / r + (WEAPONS.pulse.mount.top.along / r) * row.mountScale;
+    const flare = 0.125 * row.mountScale;
+    for (const y of [-flare, flare]) {
+      expect(fighter.solid(mouth - 0.09 * row.mountScale, y), 'the fighter’s pulse has no brake at its mouth').toBe(true);
+      // Just behind the brake, over the bare barrels: further back is the gun's pad and the nose, both wider.
+      expect(fighter.solid(mouth - 0.22 * row.mountScale, y), 'the fighter’s pulse is as wide behind its brake as at it — a block').toBe(false);
     }
   });
 });

@@ -150,7 +150,9 @@ together with their own decisions, as the play-test of 2026-10-10's six did. Aft
   stands in the middle of the open deck rather than against the wall.
 - **Item 3, the missiles** — [0629](../docs/decisions/0629-a-launcher-and-not-a-box.md): each car's tubes are one
   sleek launcher on a pylon instead of boxes on the roof, its missiles stacked in its face — the player's choice of
-  three, asked because at the fight's size two pods could only be drums or dots. The guns are still to come.
+  three, asked because at the fight's size two pods could only be drums or dots.
+- **Item 3, the guns** — [0630](../docs/decisions/0630-the-guns-are-not-blocks.md): the estate's launcher is a drum,
+  the duck's marker has a grip and tapers to its barrel, and the fighter's pulse has a muzzle brake.
 
 ## Owed
 

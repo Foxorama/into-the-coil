@@ -3085,6 +3085,8 @@ const FIREBIRD_TURRET_BASE = -4.9;
 const FIREBIRD_HUB: Pt = [13.6, -5.4];
 const FIREBIRD_HUB_R = 2;
 const ESTATE_STAR: Pt = [14.2, -0.1];
+/** The estate's launcher drum's radius about its star, in the predecessor's frame — 0629: the block it was, rounded. */
+const ESTATE_DRUM = 1.8;
 
 /** The Firebird's roof, a straight line from the back of the greenhouse to its front. */
 const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
@@ -3196,9 +3198,10 @@ function estateBody(stage: number, own: boolean): Pt[] {
     [0.5, -4.76],
     [4, -5],
     [11, 1],
-    // The shuriken launcher on the bonnet, a block with the steel star in its face — 0545, where the
-    // lightning rod stood — and with another ship's gun, the bonnet running straight on to the nose (0525).
-    ...(own ? ([[12.6, 1.22], [12.6, -1.6], [15.9, -1.6], [15.9, 1.7]] as Pt[]) : []),
+    // The shuriken launcher on the bonnet, with the steel star in its face — 0545, where the lightning rod
+    // stood — and with another ship's gun, the bonnet running straight on to the nose (0525). 0629: a drum and
+    // not a block, round the star, on the bonnet.
+    ...(own ? ([[12.6, 1.22], ...roundel(ESTATE_STAR[0], ESTATE_STAR[1], ESTATE_DRUM, 16, Math.PI * 0.74, Math.PI * 2.26), [15.9, 1.7]] as Pt[]) : []),
     [18, 2],
     [18, 6],
   ];
@@ -3756,6 +3759,20 @@ const DUCK_HEAD: Pt = [9.5, -6.5];
 const DUCK_HEAD_R = 4.6;
 /** The marker's mouth under its chin, where the paintballs leave; `DUCK_MUZZLE` on its row. */
 const DUCK_MUZZLE: Pt = [17.2, 1.2];
+
+/**
+ * The marker's underside from under its barrel back to the chest, in the predecessor's frame — 0629: *"update boring
+ * blocky gun"*. It was a box's square corner; it tapers in under the barrel, and a grip hangs under it, so it reads
+ * as a paint marker. The outline (`duckOutline`) and the paint (`drawDuck`) are both this.
+ */
+const DUCK_MARKER_BELOW: readonly Pt[] = [
+  [15.8, 2.1],
+  [14.5, 2.4],
+  [14.2, 3.9],
+  [12.9, 3.9],
+  [13.1, 2.4],
+  [11.6, 2.4],
+];
 /** Half the marker barrel's height: two units of chrome across, over 0106's floor at the shipped camera. */
 const DUCK_BORE = 0.95;
 /** The hopper on the marker, feeding it. */
@@ -3805,8 +3822,8 @@ function duckOutline(stage: number, own = true): Pt[] {
         [DUCK_MUZZLE[0] + 0.1, DUCK_MUZZLE[1] - DUCK_BORE],
         [DUCK_MUZZLE[0] + 0.1, DUCK_MUZZLE[1] + DUCK_BORE],
         [16.3, DUCK_MUZZLE[1] + DUCK_BORE],
-        [16, 2.4],
-        [11.6, 2.4],
+        // 0629: tapering in under the barrel, and a grip hanging under it — a marker and not a box.
+        ...DUCK_MARKER_BELOW,
       ]
     : [
         [12.2, 0.6],
@@ -4011,13 +4028,9 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
     [-1.6, -9.9],
   ]), 0.85);
   // The marker under its chin: a dark body, a chrome barrel, and the hopper over it in the paint's pink.
+  // 0629: the body tapering in under the barrel with a grip under it, where it was a box (`DUCK_MARKER_BELOW`).
   if (own) {
-    poly(ctx, f, shade(palette.space, 0.2), box([
-      [11.4, -0.4],
-      [16.2, 0.1],
-      [16, 2.4],
-      [11.6, 2.4],
-    ]));
+    poly(ctx, f, shade(palette.space, 0.2), box([[11.4, -0.4], [16.2, 0.1], [16.3, DUCK_MUZZLE[1] + DUCK_BORE], ...DUCK_MARKER_BELOW]));
     // The barrel, run back into the marker's body so it is two units of chrome either way — 0106's floor.
     poly(ctx, f, chrome, box([
       [15.3, DUCK_MUZZLE[1] - DUCK_BORE],
@@ -5525,20 +5538,14 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   // Its turrets on the rack, in its own burl banded in gilt.
   paintTurrets(ctx, f, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
   /*
-    The shuriken launcher on the bonnet — 0545: a slate block with a gilt lip along its top and the steel
-    star in its face, where the blades leave. It was the lightning rod, which the arc's mount draws now.
+    The shuriken launcher on the bonnet — 0545: the steel star in its face, where the blades leave. It was the
+    lightning rod, which the arc's mount draws now. 0629: *"update boring blocky gun"* — a slate block with a gilt
+    lip, it is a drum: lit along its top, and a dark aperture round the star. A gilt collar where it met the bonnet was
+    a pixel tall at the fight's camera, under 0106's floor, and went.
   */
   if (own) {
-    shaded(ctx, f, at(0, -1.6), at(0, 1.6), shade(palette.trim, 0.3), shade(palette.trim, -0.3), box([
-      [12.6, -1.6],
-      [15.9, -1.6],
-      [15.9, 1.6],
-      [12.6, 1.6],
-    ]));
-    seam(ctx, f, shade(gilt, 0.3), 0.04, box([
-      [13.1, -1.2],
-      [15.4, -1.2],
-    ]), 0.9);
+    shaded(ctx, f, at(0, ESTATE_STAR[1] - ESTATE_DRUM), at(0, ESTATE_STAR[1] + ESTATE_DRUM), shade(palette.trim, 0.45), shade(palette.trim, -0.4), box(roundel(ESTATE_STAR[0], ESTATE_STAR[1], ESTATE_DRUM, 24, 0, Math.PI * 2)));
+    disc(ctx, f, shade(palette.space, 0.15), ...at(ESTATE_STAR[0], ESTATE_STAR[1]), 1.38 * 0.062);
     poly(ctx, f, palette.blade, box(steelStar(ESTATE_STAR[0], ESTATE_STAR[1], 1.25)));
   }
   // A headlamp at the bumper, a tail lamp at the tailgate — the shot's orange, never the enemy's red.
@@ -5644,6 +5651,13 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       const chrome = shade(palette.trim, 0.65);
       disc(ctx, f, shade(palette.trim, -0.45), ...p(0.04, 0), 0.13);
       shaded(ctx, f, p(0, -0.1), p(0, 0.1), shade(chrome, 0.3), shade(chrome, -0.35), [p(0, -0.1), p(mx, -0.1), p(mx, 0.1), p(0, 0.1)]);
+      // 0629: and a muzzle brake flaring at its end, darker than the barrels — the fighter's hull carries its shape.
+      shaded(ctx, f, p(0, -0.14), p(0, 0.14), shade(palette.trim, 0.2), shade(palette.trim, -0.5), [
+        p(mx - PULSE_BRAKE, -0.14),
+        p(mx, -0.14),
+        p(mx, 0.14),
+        p(mx - PULSE_BRAKE, 0.14),
+      ]);
       seam(ctx, f, shade(palette.trim, -0.55), 0.03, [p(0.08, 0), p(mx, 0)], 0.6);
       for (const side of [-1, 1] as const) glow(ctx, f, palette.hazard, ...p(mx, side * 0.05), 0.07, 0.75);
     },
@@ -5792,6 +5806,12 @@ function paintHopper(ctx: Pen, f: Frame, at: Pt, radius: number): void {
  * from halfway down the nose's upper edge, round the pad and the block, to halfway down its lower edge, and
  * back along both edges through the tip.
  */
+/**
+ * How long the pulse's muzzle brake is, back from its mouth, in the box's radius at the gun's scale — 0629. At 0.12
+ * it was 1.7 px at the fight's camera, under 0106's floor.
+ */
+const PULSE_BRAKE = 0.18;
+
 function fighterPulseHull(): Pt[] {
   const row = SHIPS.fighter;
   const s = row.mountScale;
@@ -5808,8 +5828,13 @@ function fighterPulseHull(): Pt[] {
     at(-0.06, -0.13),
     at(0.1, -0.13),
     at(0.14, -0.1),
-    at(mx, -0.1),
-    at(mx, 0.1),
+    // 0629: a muzzle brake flaring at the end of the barrels, where it was a block to its mouth.
+    at(mx - PULSE_BRAKE, -0.1),
+    at(mx - PULSE_BRAKE, -0.14),
+    at(mx, -0.14),
+    at(mx, 0.14),
+    at(mx - PULSE_BRAKE, 0.14),
+    at(mx - PULSE_BRAKE, 0.1),
     at(0.14, 0.1),
     at(0.1, 0.13),
     at(-0.06, 0.13),
