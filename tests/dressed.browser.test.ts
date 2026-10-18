@@ -178,12 +178,17 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
     }
   });
 
-  it('stands the cockpit monitor under the ship, in the stand’s middle, not its corner', async () => {
+  // 0628: on the workshop wall between the lift and the ship since, which is still the stand's middle.
+  it('stands the cockpit monitor on its wall, in the stand’s middle, not its corner', async () => {
     const page = await opened(1920, 1080);
     const stand = await box(page, `${shown('hangar')} .${HANGAR}stand`);
     const dash = await box(page, `${shown('hangar')} .${HANGAR}dash`);
     const middle = (dash.x + dash.width / 2 - stand.x) / stand.width;
-    expect(middle, `the monitor's middle is ${middle.toFixed(2)} of the way across the stand`).toBeGreaterThan(0.3);
+    /*
+      0628: a fifth, where it was 0.3 — the monitor hangs on the workshop wall left of the ship now, by the player's
+      choice, and its middle is 0.29 of the way across at this size. The corner this guards against is under 0.05.
+    */
+    expect(middle, `the monitor's middle is ${middle.toFixed(2)} of the way across the stand`).toBeGreaterThan(0.2);
     expect(middle).toBeLessThan(0.75);
     await page.context().close();
   });

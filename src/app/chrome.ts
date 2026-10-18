@@ -4083,7 +4083,29 @@ ${each('-action[hidden]')} { display: none; }
 /* A card's picture and a band's caption are a desktop's: a phone's band is one chip a line (0566). */
 .itc-hangar-option-pic, .itc-parts-option-pic, .itc-hangar-band-said, .itc-parts-band-said, .itc-shop-band-said { display: none; }
 @container (min-height: 461px) and (orientation: landscape) {
-  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { left: var(--itc-dash-x, 1.5%); bottom: 1.2%; max-width: min(24rem, 60%); }
+  /*
+    0628: hung on the workshop wall — *"need a wall section for the cockpit to hang from + some tool/work benches
+    beneath it"* — its frame's top on the line under the wall's hangers and its width the wall's, so the readout
+    wraps to the wall rather than the wall to the readout. A little less side padding than the floor's monitor had:
+    at 1280x720 the wall is thirty units, and the readout's two rows want all of it.
+  */
+  .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash {
+    box-sizing: border-box;
+    left: var(--itc-hang-x, 1.5%);
+    top: var(--itc-hang-y, auto);
+    bottom: auto;
+    width: var(--itc-hang-w, auto);
+    max-width: none;
+    padding-left: 0.7em;
+    padding-right: 0.7em;
+    /*
+      Played: *"don't have the cockpit overlay the tools on the tool bench."* Its type is the wall's: no bigger
+      than a fourteen-and-a-half-th of the wall's width, about two world units, so the readout wraps to three rows
+      at most and its foot, dangle and all, stays over the tallest tool on the benches (the dock's workshop row, its toolsTop)
+      at any size — a desktop scaled to 125% or 150% included. The floor's 0.85rem is the most it is.
+    */
+    font-size: min(0.85rem, calc(var(--itc-hang-w, 13.6rem) * 0.069));
+  }
   /*
     The foot's card stands down: each band says its own under itself (the caption), and the foot is the
     actions and the keys. The card is still filled, for a reader and for the phone's foot, which keeps it.
@@ -4619,6 +4641,8 @@ export interface StandMarks {
   keeperX: number;
   keeperY: number;
   shops: Record<KeeperKind, ShopBox>;
+  /** 0628: where the cockpit monitor hangs on the workshop wall — the left of its frame, its top, and its width. */
+  hang: { left: number; top: number; width: number };
 }
 
 /**
@@ -5752,6 +5776,7 @@ export function makeChrome(
         keeperX: Number.NaN,
         keeperY: Number.NaN,
         shops: Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, { left: Number.NaN, top: Number.NaN, right: Number.NaN, bottom: Number.NaN }])) as Record<KeeperKind, ShopBox>,
+        hang: { left: Number.NaN, top: Number.NaN, width: Number.NaN },
       },
     ]),
   ) as Record<Screen, StandMarks>;
@@ -5776,9 +5801,21 @@ export function makeChrome(
     const at = standMarks[screen];
     const dash = panel.dash!;
     if (Number.isFinite(at.shipX)) {
-      const x = Math.min(Math.max(at.shipX - box.left - dash.offsetWidth / 2, 0), Math.max(0, box.width - dash.offsetWidth));
-      stand.style.setProperty('--itc-dash-x', String(Math.round(x)) + 'px');
+      /*
+        0628: measured to the fraction and floored. `offsetWidth` is a whole pixel and the strip is not, so once the
+        ship stood far enough right for this to clamp — six units on, at 812x375 — a rounded `x` put its edge a
+        fraction of a pixel past the stand's.
+      */
+      const wide = dash.getBoundingClientRect().width;
+      const x = Math.min(Math.max(at.shipX - box.left - wide / 2, 0), Math.max(0, box.width - wide));
+      stand.style.setProperty('--itc-dash-x', String(Math.floor(x)) + 'px');
       stand.style.setProperty('--itc-dash-y', String(Math.round(at.shipY - box.top)) + 'px');
+    }
+    // 0628: and where it hangs on the workshop wall, which a desktop's layout reads — a phone's keeps the strip above.
+    if (Number.isFinite(at.hang.left)) {
+      stand.style.setProperty('--itc-hang-x', String(Math.round(at.hang.left - box.left)) + 'px');
+      stand.style.setProperty('--itc-hang-y', String(Math.round(at.hang.top - box.top)) + 'px');
+      stand.style.setProperty('--itc-hang-w', String(Math.round(at.hang.width)) + 'px');
     }
     // The doors over the shopfronts, each where its shop is drawn; the open tab's own shop is no door.
     for (const door of standDoors[screen] ?? []) {
@@ -8254,6 +8291,7 @@ export function makeChrome(
       said.keeperX = marks.keeperX;
       said.keeperY = marks.keeperY;
       for (const kind of KEEPER_KINDS) Object.assign(said.shops[kind], marks.shops[kind]);
+      Object.assign(said.hang, marks.hang);
       placeStand(screen);
     },
     setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void {

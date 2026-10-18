@@ -18,7 +18,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
+import { DOCK, FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import { figureOf, type GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
 import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, shade, trace, withFit, type Atlas, type Frame, type Pt } from './bake.ts';
@@ -299,6 +299,8 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'liftCar':
     case 'hoverRing':
     case 'moon':
+    case 'workWall':
+    case 'workBenches':
     case 'bar':
     case 'door':
     case 'spill':
@@ -462,6 +464,12 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       return;
     case 'moon':
       paintMoon(ctx, palette);
+      return;
+    case 'workWall':
+      paintWorkWall(ctx, palette);
+      return;
+    case 'workBenches':
+      paintWorkBenches(ctx, palette);
       return;
     case 'door': {
       // A sliding hatch with a lit porthole: it slides behind the facade, so it is drawn whole.
@@ -1086,6 +1094,307 @@ function paintLift(ctx: CanvasRenderingContext2D, palette: Palette): void {
   ctx.fillRect(-6, h - 3.2, 12, 1.6);
   ctx.fillStyle = PORT_INK.hazard;
   for (let x = -5.6; x < 5.5; x += 1.6) ctx.fillRect(x, h - 3, 0.8, 1.2);
+}
+
+/*
+  ── THE WORKSHOP — 0628 ──────────────────────────────────────────────────────────────────────────
+
+  *"need a wall section for the cockpit to hang from + some tool/work benches beneath it."* Both drawn in the
+  dock's world units from `DOCK.workshop`, so the brackets end on the line the cockpit monitor hangs from and
+  the posts and the bench legs stand on the deck where the place table says.
+*/
+
+/**
+ * The wall the cockpit monitor hangs from: a framed steel section standing on the deck, a header beam along its
+ * top under the catwalk's girder with two hangers off it, a strip light under the header, and a pegboard of
+ * tools behind where the monitor hangs — seen whole on a screen too small to hang it, and round its edges where
+ * it does. The monitor's power runs down the right-hand post to the benches.
+ */
+function paintWorkWall(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const shop = DOCK.workshop;
+  const middle = shop.foot - PORT_EXTENT.workWall / 2;
+  const top = shop.top - middle;
+  const hang = shop.hang - middle;
+  const foot = shop.foot - middle;
+  const half = shop.half;
+  const post = 1.6;
+  const header = 1.8;
+  // Its shadow on the back wall behind it, so it stands off the wall and not in it.
+  ctx.fillStyle = rgba(PORT_INK.wallDark, 0.55);
+  ctx.fillRect(-half + 1.2, top + 1.2, half * 2, foot - top - 1.2);
+  // The panel: steel sheets a shade lighter than the room's wall, seamed across, riveted along the seams.
+  const sheet = shade(PORT_INK.wall, 0.12);
+  ctx.fillStyle = sheet;
+  ctx.fillRect(-half + post, top + header, (half - post) * 2, foot - top - header);
+  const seams = [top + header + 9, top + header + 20, top + header + 31];
+  for (const y of seams) {
+    ctx.fillStyle = shade(sheet, -0.3);
+    ctx.fillRect(-half + post, y, (half - post) * 2, 0.35);
+    ctx.fillStyle = shade(sheet, 0.25);
+    for (let x = -half + post + 1.2; x < half - post; x += 2.6) ctx.fillRect(x - 0.18, y - 0.75, 0.36, 0.36);
+  }
+  // A light falling down the panel from the strip under the header.
+  const fall = ctx.createLinearGradient(0, top + header, 0, top + header + 14);
+  fall.addColorStop(0, rgba(PORT_INK.lamp, 0.22));
+  fall.addColorStop(1, rgba(PORT_INK.lamp, 0));
+  ctx.fillStyle = fall;
+  ctx.fillRect(-half + post, top + header, (half - post) * 2, 14);
+  // The pegboard, the panel's lower two thirds: a board of holes with the tools hung on it.
+  const boardTop = top + header + 10.5;
+  const boardBottom = foot - 4;
+  const board = shade('#5a4a36', -0.15);
+  ctx.fillStyle = board;
+  ctx.fillRect(-half + post + 1, boardTop, (half - post - 1) * 2, boardBottom - boardTop);
+  ctx.fillStyle = shade(board, -0.45);
+  for (let y = boardTop + 0.9; y < boardBottom - 0.4; y += 1.5) {
+    for (let x = -half + post + 1.9; x < half - post - 0.8; x += 1.5) ctx.fillRect(x - 0.13, y - 0.13, 0.26, 0.26);
+  }
+  ctx.strokeStyle = shade(board, 0.3);
+  ctx.lineWidth = 0.3;
+  ctx.strokeRect(-half + post + 1, boardTop, (half - post - 1) * 2, boardBottom - boardTop);
+  const steel = shade(palette.blade, -0.1);
+  const grip = shade(palette.enemy, -0.1);
+  // A row of spanners, smallest to largest.
+  ctx.strokeStyle = steel;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 5; i++) {
+    const x = -half + post + 3 + i * 1.3;
+    const long = 4.2 + i * 0.6;
+    ctx.lineWidth = 0.42 + i * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(x, boardTop + 2.4);
+    ctx.lineTo(x, boardTop + 2.4 + long);
+    ctx.stroke();
+    ctx.lineWidth = 0.28;
+    ctx.beginPath();
+    ctx.arc(x, boardTop + 1.9, 0.45 + i * 0.05, Math.PI * 0.15, Math.PI * 1.85);
+    ctx.stroke();
+  }
+  // A hammer, hung by its head.
+  ctx.fillStyle = PORT_INK.wood;
+  ctx.fillRect(-1.6, boardTop + 2.2, 0.7, 6.4);
+  ctx.fillStyle = steel;
+  ctx.fillRect(-2.9, boardTop + 1.3, 3.3, 1.2);
+  // Two screwdrivers, a red grip and a yellow one.
+  for (const [x, ink] of [[1.4, grip], [2.8, palette.hazard]] as const) {
+    ctx.fillStyle = ink;
+    ctx.fillRect(x - 0.4, boardTop + 1.6, 0.8, 2.4);
+    ctx.fillStyle = steel;
+    ctx.fillRect(x - 0.12, boardTop + 4, 0.24, 3.2);
+  }
+  // A pair of pliers, open.
+  ctx.strokeStyle = grip;
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(5, boardTop + 7.8);
+  ctx.lineTo(5.9, boardTop + 3.6);
+  ctx.moveTo(7, boardTop + 7.8);
+  ctx.lineTo(6.1, boardTop + 3.6);
+  ctx.stroke();
+  ctx.strokeStyle = steel;
+  ctx.lineWidth = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(5.9, boardTop + 3.6);
+  ctx.lineTo(6.3, boardTop + 1.6);
+  ctx.moveTo(6.1, boardTop + 3.6);
+  ctx.lineTo(5.7, boardTop + 1.6);
+  ctx.stroke();
+  // A coil of cable on a hook, and a tape measure.
+  ctx.strokeStyle = palette.player;
+  ctx.lineWidth = 0.35;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.ellipse(10.2, boardTop + 4.4, 2 - i * 0.25, 2.6 - i * 0.2, 0.2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = palette.hazard;
+  ctx.beginPath();
+  ctx.arc(-9.6, boardTop + 12.2, 1.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = shade(palette.hazard, -0.45);
+  ctx.beginPath();
+  ctx.arc(-9.6, boardTop + 12.2, 0.45, 0, Math.PI * 2);
+  ctx.fill();
+  // A saw along the board's foot.
+  ctx.fillStyle = steel;
+  ctx.beginPath();
+  ctx.moveTo(-3.6, boardTop + 11.4);
+  ctx.lineTo(7.6, boardTop + 11.4);
+  ctx.lineTo(7.6, boardTop + 12.3);
+  ctx.lineTo(-3.6, boardTop + 13.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = PORT_INK.wood;
+  ctx.fillRect(7.4, boardTop + 10.8, 2.4, 2);
+  // The posts: steel columns standing on the deck, lit on their inner edge, on bolted foot plates.
+  for (const side of [-1, 1]) {
+    const x = side < 0 ? -half : half - post;
+    ctx.fillStyle = shade(PORT_INK.wall, 0.24);
+    ctx.fillRect(x, top, post, foot - top);
+    ctx.fillStyle = shade(PORT_INK.wall, 0.45);
+    ctx.fillRect(side < 0 ? x + post - 0.3 : x, top, 0.3, foot - top);
+    ctx.fillStyle = shade(PORT_INK.wall, -0.2);
+    ctx.fillRect(side < 0 ? x : x + post - 0.3, top, 0.3, foot - top);
+    ctx.fillStyle = shade(PORT_INK.wall, 0.3);
+    ctx.fillRect(x - 0.6, foot - 0.9, post + 1.2, 0.9);
+    ctx.fillStyle = PORT_INK.seam;
+    for (let y = top + 3; y < foot - 2; y += 6) ctx.fillRect(x + post / 2 - 0.2, y, 0.4, 0.4);
+  }
+  // The header beam along the top, under the catwalk's girder, with the hazard's nosing on its lower edge.
+  ctx.fillStyle = shade(PORT_INK.wall, 0.3);
+  ctx.fillRect(-half - 0.6, top, half * 2 + 1.2, header);
+  ctx.fillStyle = shade(PORT_INK.wall, 0.5);
+  ctx.fillRect(-half - 0.6, top, half * 2 + 1.2, 0.3);
+  ctx.fillStyle = PORT_INK.hazard;
+  for (let x = -half; x < half; x += 1.6) ctx.fillRect(x, top + header - 0.4, 0.8, 0.4);
+  // The strip light under the header, along the panel.
+  ctx.fillStyle = PORT_INK.lamp;
+  ctx.fillRect(-half + post + 0.6, top + header, (half - post - 0.6) * 2, 0.35);
+  // The hangers: a bracket off the header each side, a short drop of chain, and a plate the monitor's frame
+  // hangs from — whose foot is `hang`.
+  for (const side of [-1, 1]) {
+    const x = side * (half - 4.5);
+    ctx.fillStyle = shade(PORT_INK.wall, 0.4);
+    ctx.fillRect(x - 0.9, top + header - 0.1, 1.8, 0.5);
+    ctx.strokeStyle = shade(palette.blade, -0.25);
+    ctx.lineWidth = 0.22;
+    for (let y = top + header + 0.5; y < hang - 0.7; y += 0.55) {
+      ctx.beginPath();
+      ctx.ellipse(x, y, 0.2, 0.3, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = shade(PORT_INK.wall, 0.4);
+    ctx.fillRect(x - 1.1, hang - 0.7, 2.2, 0.7);
+  }
+  // The monitor's power: down the right-hand post to the benches.
+  ctx.strokeStyle = shade(PORT_INK.wallDark, 0.1);
+  ctx.lineWidth = 0.45;
+  ctx.beginPath();
+  ctx.moveTo(half - post - 0.6, hang + 1);
+  ctx.bezierCurveTo(half - post - 0.2, hang + 8, half - post - 1.2, foot - 12, half - post - 0.5, foot - 6);
+  ctx.stroke();
+}
+
+/**
+ * The tool benches at the wall's foot — 0628: two, steel-framed with timber tops. The left has a vice and a red
+ * toolbox on it and a bank of drawers under it; the right a rack of parts bins, a lamp on an arm and a drill, and
+ * a shelf of tins under it. Their legs stand on the deck at `benchFoot`, a little nearer the player than the wall.
+ */
+function paintWorkBenches(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const shop = DOCK.workshop;
+  const middle = shop.benchFoot - PORT_EXTENT.workBenches / 2;
+  const top = shop.benchTop - middle;
+  const foot = shop.benchFoot - middle;
+  const steel = shade(palette.blade, -0.5);
+  const iron = shade(palette.blade, -0.15);
+  const benches = [
+    [-14.6, -0.9],
+    [0.9, 14.6],
+  ] as const;
+  for (const [left, right] of benches) {
+    // The shadow under it on the deck.
+    radialEllipse(ctx, (left + right) / 2, foot - 0.2, (right - left) / 2 + 0.6, 0.9, '#000000', 0.45);
+    // The legs and a stretcher low between them.
+    ctx.fillStyle = steel;
+    ctx.fillRect(left + 0.4, top + 1, 0.9, foot - top - 1);
+    ctx.fillRect(right - 1.3, top + 1, 0.9, foot - top - 1);
+    ctx.fillRect(left + 0.4, foot - 2.6, right - left - 0.8, 0.6);
+    // The frame under the top, and the top: a thick timber slab with a lit front edge.
+    ctx.fillStyle = shade(steel, 0.2);
+    ctx.fillRect(left + 0.2, top + 0.9, right - left - 0.4, 0.9);
+    ctx.fillStyle = PORT_INK.wood;
+    ctx.fillRect(left, top - 0.2, right - left, 1.2);
+    ctx.fillStyle = PORT_INK.woodLight;
+    ctx.fillRect(left, top - 0.2, right - left, 0.35);
+    ctx.fillStyle = PORT_INK.woodDark;
+    ctx.fillRect(left, top + 0.85, right - left, 0.2);
+  }
+  // Under the left bench, a bank of drawers with lit pulls.
+  ctx.fillStyle = shade(palette.enemy, -0.35);
+  ctx.fillRect(-13, top + 1.9, 6.4, 5.4);
+  for (let i = 0; i < 3; i++) {
+    const y = top + 2.1 + i * 1.75;
+    ctx.fillStyle = shade(palette.enemy, -0.2);
+    ctx.fillRect(-12.8, y, 6, 1.5);
+    ctx.fillStyle = shade(palette.blade, 0.1);
+    ctx.fillRect(-10.4, y + 0.6, 1.2, 0.3);
+  }
+  // On it: a vice at the end, its jaws and its screw.
+  ctx.fillStyle = iron;
+  ctx.fillRect(-14.2, top - 1.6, 2.6, 1.4);
+  ctx.fillRect(-13.6, top - 2.6, 0.7, 1);
+  ctx.fillRect(-12.6, top - 2.6, 0.7, 1);
+  ctx.fillStyle = shade(iron, -0.3);
+  ctx.fillRect(-15, top - 1.1, 1.1, 0.35);
+  // And a red toolbox, its lid and handle.
+  const box = shade(palette.enemy, -0.1);
+  ctx.fillStyle = box;
+  ctx.fillRect(-9.6, top - 2.6, 5, 2.4);
+  ctx.fillStyle = shade(box, -0.35);
+  ctx.fillRect(-9.6, top - 1.6, 5, 0.3);
+  ctx.strokeStyle = palette.blade;
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  ctx.moveTo(-8.4, top - 2.6);
+  ctx.lineTo(-8.4, top - 3.4);
+  ctx.lineTo(-5.8, top - 3.4);
+  ctx.lineTo(-5.8, top - 2.6);
+  ctx.stroke();
+  // A spanner left lying across the end of it.
+  ctx.strokeStyle = shade(palette.blade, -0.05);
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  ctx.moveTo(-4, top - 0.3);
+  ctx.lineTo(-1.6, top - 0.5);
+  ctx.stroke();
+  // Under the right bench, a shelf of tins.
+  ctx.fillStyle = shade(steel, 0.15);
+  ctx.fillRect(1.5, top + 4.6, 12.6, 0.5);
+  const tins = [palette.player, palette.hazard, palette.acid, palette.ally, palette.enemy];
+  for (let i = 0; i < tins.length; i++) {
+    ctx.fillStyle = shade(tins[i]!, -0.25);
+    ctx.fillRect(2.2 + i * 2.4, top + 2.6, 1.7, 2);
+    ctx.fillStyle = shade(tins[i]!, 0.1);
+    ctx.fillRect(2.2 + i * 2.4, top + 2.6, 1.7, 0.35);
+  }
+  // On it: a rack of parts bins, three by two, each a different ink with a part showing — the tallest thing on
+  // either bench, its top on `toolsTop`.
+  const tools = shop.toolsTop - middle;
+  ctx.fillStyle = shade(steel, 0.1);
+  ctx.fillRect(1.6, tools, 6.4, top - 0.2 - tools);
+  const bins = [palette.player, palette.hazard, palette.acid, palette.ally, palette.enemy, palette.void];
+  for (let i = 0; i < bins.length; i++) {
+    const x = 1.9 + (i % 3) * 2;
+    const y = tools + 0.3 + Math.floor(i / 3) * 1.9;
+    ctx.fillStyle = shade(bins[i]!, -0.3);
+    ctx.fillRect(x, y, 1.7, 1.6);
+    ctx.fillStyle = shade(bins[i]!, 0.15);
+    ctx.fillRect(x, y + 1.1, 1.7, 0.5);
+  }
+  // A lamp on a jointed arm, lit, throwing its pool on the top — its head under the rack's top.
+  ctx.strokeStyle = iron;
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  ctx.moveTo(13.4, top - 0.2);
+  ctx.lineTo(12.8, top - 3);
+  ctx.lineTo(10.8, tools + 0.6);
+  ctx.stroke();
+  ctx.fillStyle = iron;
+  ctx.beginPath();
+  ctx.moveTo(9.4, tools + 0.3);
+  ctx.lineTo(11, tools + 0.5);
+  ctx.lineTo(10.5, top - 2.2);
+  ctx.lineTo(9, top - 2.5);
+  ctx.closePath();
+  ctx.fill();
+  radialEllipse(ctx, 9.6, top - 0.2, 3, 0.8, PORT_INK.lamp, 0.55);
+  radial(ctx, 9.8, top - 2.6, 0.9, PORT_INK.lamp, 0.8);
+  // A drill lying on the top.
+  ctx.fillStyle = shade(palette.ally, -0.1);
+  ctx.fillRect(8.6, top - 1.4, 3, 1.1);
+  ctx.fillRect(8.9, top - 0.6, 0.9, 0.5);
+  ctx.fillStyle = steel;
+  ctx.fillRect(11.6, top - 1.05, 1.6, 0.3);
 }
 
 /** 0572: the lift's platform — a deck with a rail, and the field it floats on glowing under it. */

@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PORT_EXTENT, PORT_KINDS, PORT_SPRITE, STAGE, type PortKind } from '../src/content/port.ts';
+import { DOCK, PORT_EXTENT, PORT_KINDS, PORT_SPRITE, STAGE, type PortKind } from '../src/content/port.ts';
 import { DOCK_PLACES, DOCK_PLACE_KINDS, KEEPERS, KEEPER_KINDS, drawSpots, isDockPlace, type KeeperKind } from '../src/content/keepers.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SHIPS, fitted } from '../src/content/ships.ts';
@@ -512,5 +512,35 @@ describe('0611 — the keepers stand somewhere', () => {
     for (const kind of KEEPER_KINDS) expect(seen[kind].size, `${KEEPERS[kind].name} never turns up at some of their spots`).toBe(KEEPERS[kind].spots.length);
     // And every place in the dock is one some keeper goes to — a place no row names is a place nobody stands.
     for (const place of DOCK_PLACE_KINDS) expect(KEEPER_KINDS.some((kind) => KEEPERS[kind].spots.some((s) => s.at === place)), `nobody goes to ${place}`).toBe(true);
+  });
+});
+
+/*
+  ── 0628: THE SHIP IN THE MIDDLE OF THE OPEN DECK ────────────────────────────────────────────────
+
+  Played, with the ship six units on toward the bay for the workshop wall: *"the car now looks like it's flat
+  against the wall instead of in the centre of the hangar bay."* Its flame ended at the wall's post. Held in
+  pixels on the screen: the deck the ship's hull leaves either side of it — to the wall's right-hand post, and to
+  the bay's edge — is room on both sides and about the same.
+*/
+describe('0628 — the ship stands in the middle of the open deck', () => {
+  it('leaves about as much deck between its hull and the workshop wall as between its hull and the bay, at every desktop size', () => {
+    for (const [width, height] of [[1024, 768], [1280, 720], [1920, 1080]] as const) {
+      const blits = drawStand('hangar', width, height);
+      const wall = all(blits, 'workWall')[0]!;
+      const ship = all(blits, 'blueSide')[0]!;
+      const field = all(blits, 'field')[0]!;
+      const at = `${width}x${height}`;
+      // A unit in pixels is the wall's blit scale (it is laid at 1); the field stands a unit past the bay.
+      const post = wall.x + DOCK.workshop.half * wall.scale;
+      const bay = field.x - wall.scale;
+      // The hull's own reach, as 0540's guard reads it: 0.84 of the ship's half-box.
+      const hull = (PORT_EXTENT.blueSide * ship.scale * 0.84) / 2;
+      const behind = ship.x - hull - post;
+      const ahead = bay - (ship.x + hull);
+      expect(behind, `${at}: the ship's hull is against the workshop wall — ${behind.toFixed(0)} px of deck behind it`).toBeGreaterThan(4 * wall.scale);
+      expect(ahead, `${at}: the ship's hull is against the bay — ${ahead.toFixed(0)} px of deck ahead of it`).toBeGreaterThan(4 * wall.scale);
+      expect(Math.abs(behind - ahead), `${at}: ${behind.toFixed(0)} px of deck behind the ship and ${ahead.toFixed(0)} px ahead — it is not in the middle`).toBeLessThan(0.3 * (behind + ahead));
+    }
   });
 });

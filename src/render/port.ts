@@ -50,7 +50,7 @@ import {
   TRAIL_SAMPLES,
 } from '../content/port.ts';
 import { DOCK_PLACES, KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
-import { UFO_BULBS, UFO_RING, lampFrame, lampTurn, type ShipRow } from '../content/ships.ts';
+import { SHIPS, SHIP_KINDS, UFO_BULBS, UFO_RING, lampFrame, lampTurn, type ShipRow } from '../content/ships.ts';
 import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
@@ -219,6 +219,13 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     // The shops of the other tabs are there, in the dim: a shutter of the night over them, not a fade to the wall.
     if (keeper !== null && kind !== keeper) put(surface, view, PORT_SPRITE.veil, shop, DOCK.shopAcross - 0.5, SHOP_DIM, 0, PORT_EXTENT.alcove * s);
   }
+  /*
+    0628: the workshop wall between the lift and the cradle, in front of the catwalk's girder, that the cockpit
+    monitor hangs from — and the tool benches at its foot, nearer the player than it.
+  */
+  const shop = DOCK.workshop;
+  put(surface, view, PORT_SPRITE.workWall, shop.along, shop.foot - PORT_EXTENT.workWall / 2);
+  put(surface, view, PORT_SPRITE.workBenches, shop.along, shop.benchFoot - PORT_EXTENT.workBenches / 2);
   // The pilot's ship on its cradle on the deck, under the shops.
   const pad = DOCK.ship;
   // 0611: whoever stands behind the ship, before the cradle, so the cradle and the ship stand in front of them.
@@ -319,10 +326,22 @@ export function standMarksInto(
   view: View,
   keeper: KeeperKind | null,
   spots: Readonly<Record<KeeperKind, number>> | null,
-  out: { shipX: number; shipY: number; keeperX: number; keeperY: number; shops: Record<KeeperKind, { left: number; top: number; right: number; bottom: number }> },
+  out: {
+    shipX: number;
+    shipY: number;
+    keeperX: number;
+    keeperY: number;
+    shops: Record<KeeperKind, { left: number; top: number; right: number; bottom: number }>;
+    hang: { left: number; top: number; width: number };
+  },
 ): void {
   out.shipX = screenX(view, DOCK.ship, STAGE.deck);
   out.shipY = screenY(view, DOCK.ship, STAGE.deck + 1);
+  // 0628: where the cockpit monitor hangs on the workshop wall — the line under its hangers, a unit in from its posts.
+  const wall = DOCK.workshop;
+  out.hang.left = screenX(view, wall.along - wall.half + HANG_INSET, wall.hang);
+  out.hang.width = screenX(view, wall.along + wall.half - HANG_INSET, wall.hang) - out.hang.left;
+  out.hang.top = screenY(view, wall.along, wall.hang);
   // 0572: and each shopfront's box, its alcove's — what a click or a tap on the shop lands on.
   const half = (PORT_EXTENT.alcove * DOCK.shopScale) / 2;
   for (let k = 0; k < KEEPER_KINDS.length; k++) {
@@ -359,6 +378,12 @@ export function standMarksInto(
 }
 /** How far over a keeper's centre the top of their head is, in the units they are baked in. */
 const KEEPER_HEAD = 6;
+
+/**
+ * How far in from the outside of the workshop wall's posts the cockpit monitor's frame stands, either side, in
+ * world units — 0628: over the posts' inner halves, so it hangs in front of the wall and not past it.
+ */
+const HANG_INSET = 1;
 
 /** How lit a shop is while another tab is open — 0571: there, and plainly not the one being spoken to. */
 const SHOP_DIM = 0.5;
@@ -485,7 +510,22 @@ export function fitStand(
   const foot = (box.top ?? 0) + (box.height ?? 0);
   const fills = (screenHeight > 0 && screenHeight - foot < screenHeight * 0.05 ? screenHeight : foot) / (ACROSS_SPAN * base.scale);
   out.zoom = Math.max(fills, Math.min(camera.zoom, keepsLeft));
+  /*
+    0628: and the ship's hull whole in the column on the right, as the lift is kept on the left. The ship stands in
+    the middle of the open deck past the workshop wall, and a phone's column — a third of the screen — is narrower
+    than a desktop's: at 480x320 its nose ran past the column's edge. The room is slid left until it is in; on a
+    desktop's column it already is, and this asks nothing.
+  */
+  const nose = (DOCK.ship + SHIP_REACH - out.along) * base.scale * out.zoom;
+  out.x = Math.min(out.x, (box.left + box.width - nose) / width);
 }
+
+/**
+ * How far ahead of its centre the widest ship's hull reaches on the pad, in world units — 0628: its hull's radius,
+ * 0.42 of its box, at the pad's size (`intro.hangar` grown by `DOCK.shipGrow`).
+ */
+// @setup: read once off the ship table when the module loads, never in a frame.
+const SHIP_REACH = Math.max(...SHIP_KINDS.map((kind) => PORT_EXTENT.blueSide * 0.42 * SHIPS[kind].intro.hangar * DOCK.shipGrow));
 
 /**
  * Cover the whole canvas in the palette's space at `alpha` — one blit of a one-unit square, scaled past

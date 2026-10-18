@@ -105,7 +105,7 @@ export type KeeperSpot =
  * are the room's, not a keeper's: one keeper to a place, so two are never drawn in one spot, and no two
  * places' pictures meet (`tests/stand.test.ts`). Which of them a keeper goes to is their row's. Closed — 0016.
  */
-export const DOCK_PLACE_KINDS = ['lift', 'behind', 'front', 'left', 'right'] as const;
+export const DOCK_PLACE_KINDS = ['lift', 'behind', 'front', 'bench', 'wall', 'right'] as const;
 export type DockPlaceKind = (typeof DOCK_PLACE_KINDS)[number];
 
 /**
@@ -125,12 +125,21 @@ export const DOCK_PLACES: Record<DockPlaceKind, DockPlace> = {
   // On the lift's platform, its middle — the rail is at its back corner.
   lift: { floor: 'lift', along: 0.5 },
   // At the back of the deck by the ship's tail, against the wall: the cradle's slope and the ship in front.
-  behind: { floor: 'deck', along: -19.5, across: 0.6, drawn: 'behind' },
+  // 0628: a unit and a half nearer the ship's middle (it was -19.5), clear of the workshop wall's post.
+  behind: { floor: 'deck', along: -18, across: 0.6, drawn: 'behind' },
   // Down at the front of the deck, under the ship's nose, in front of the cradle's foot.
   front: { floor: 'deck', along: 6, across: 14, drawn: 'over' },
-  // Either side of the cradle, half way down the deck.
-  left: { floor: 'deck', along: -34, across: 7, drawn: 'over' },
-  right: { floor: 'deck', along: 27, across: 7, drawn: 'over' },
+  /*
+    0628: *"Unity, MM, Cosmo's can be standing in front or beside it"* — the workshop wall's. In front of its
+    left-hand bench, and beside its right-hand post, both down at the front of the deck: low enough that a head,
+    and the bubble over it, stand under the cockpit monitor's readout. 0611's `left` was where the benches are.
+  */
+  // From the ship at 131 (`DOCK.ship`): the bench place at 82 and the wall's at 106, in the gap between its post
+  // and the cradle.
+  bench: { floor: 'deck', along: -49, across: 16, drawn: 'over' },
+  wall: { floor: 'deck', along: -25, across: 16, drawn: 'over' },
+  // Beside the cradle, half way down the deck. 0628: three units nearer it (it was 27), clear of the bay's edge.
+  right: { floor: 'deck', along: 24, across: 7, drawn: 'over' },
 };
 
 /** Whether a spot is one of the dock's places, which a keeper shares with the others one at a time. */
@@ -197,7 +206,9 @@ export const COSMO = {
     { at: 'lift', line: 'Just heading up to the shop, friend — ride along?' },
     { at: 'behind', line: 'Just admiring the lines on her. Shop’s open — I’ll be right there.' },
     { at: 'front', line: 'There you are! Fine machine. Finer still with a little something from the shop.' },
-    { at: 'left', line: 'Taking in the view, friend. Shop’s open whenever you are.' },
+    // 0628: at the workshop wall's bench, and beside it under the cockpit monitor.
+    { at: 'bench', line: 'Just tidying Unity’s bench, friend. Found a little something for the shop.' },
+    { at: 'wall', line: 'Checking your readout, friend. Room on there for a little something new.' },
     { at: 'right', line: 'Lovely, lovely. Picture her in something new.' },
   ],
   // 0611: whole, in the waistcoat and bow tie, a hand up in a wave.
@@ -235,7 +246,9 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
       { at: 'lift', line: 'Just ducking up to the bench. Won’t be a tick.' },
       { at: 'behind', line: 'Having a squiz round the back of her. She’ll be right.' },
       { at: 'front', line: 'Righto, she’s all yours. I bring it all together.' },
-      { at: 'left', line: 'Just standing back for a look. She’s coming together.' },
+      // 0628: at the workshop wall — their bench, and the monitor they wired up.
+      { at: 'bench', line: 'Sorting the bench out. A hook for every spanner, and every spanner on its hook.' },
+      { at: 'wall', line: 'Wired that monitor up meself. Reads true, she does.' },
       { at: 'right', line: 'Tightened a few things up. Bonza.' },
     ],
     // 0611: whole and upright, the giant wrench on a shoulder — about eight units of weasel, the wrench over them.
@@ -267,7 +280,9 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
       { at: 'lift', line: 'Going up for more colour. Mind the wet bits.' },
       { at: 'behind', line: 'Checking the finish. Hold still — it’s nearly perfect.' },
       { at: 'front', line: 'Stand there. No — there. The light’s better.' },
-      { at: 'left', line: 'Stepping back to see the whole of her. Art needs distance.' },
+      // 0628: at the workshop wall.
+      { at: 'bench', line: 'Borrowing Unity’s bench. Do not tell them about the paint.' },
+      { at: 'wall', line: 'That monitor wants a frame with some colour in it. Noted.' },
       { at: 'right', line: 'From this side she really sings. We’ll make it look good.' },
     ],
     // 0611: whole, in the suit and the apron, the bubble on, a brush up.

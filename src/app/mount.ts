@@ -1750,6 +1750,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     keeperX: 0,
     keeperY: 0,
     shops: Object.fromEntries(KEEPER_KINDS.map((kind) => [kind, { left: 0, top: 0, right: 0, bottom: 0 }])) as Record<KeeperKind, { left: number; top: number; right: number; bottom: number }>,
+    // 0628: and where the cockpit monitor hangs on the workshop wall.
+    hang: { left: 0, top: 0, width: 0 },
   };
   function frameStand(): void {
     const stand = SCREENS[state.screen.current].stand;
