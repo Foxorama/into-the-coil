@@ -83,7 +83,8 @@ export const PROBES = [
     guard: 'reports the run in words as well as in pictures',
     edit: {
       path: 'src/app/chrome.ts',
-      find: "      shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth));",
+      // ⚠️ Re-anchored by 0638, which says the shield coming back after the count.
+      find: "      shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth) + mendSaid());",
       replace: '      void maxHealth;',
     },
   },

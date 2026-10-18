@@ -9,7 +9,7 @@ import { CANVAS_MS, pastIntro } from './intro.ts';
 import { EVERY_TIER_FINISHED, credit, launch, openRoom, shown as shownScreen } from './title.ts';
 import { seeded } from './seed.ts';
 import { HANGAR_KEY } from '../src/save/hangar.ts';
-import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS, MENU_PILOT_BUTTONS, MENU_REPEAT_AFTER } from '../src/app/menu.ts';
+import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS, MENU_PILOT_BUTTONS, MENU_REPEAT_AFTER, MENU_TAB_BUTTONS } from '../src/app/menu.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
@@ -675,6 +675,37 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await nudge(page, MENU_PILOT_BUTTONS.next);
     expect(await filled('hangar'), 'RT in the hangar did not step the pilot').not.toBe(there);
     expect(await shown(page, shownScreen('hangar')), 'RT in the hangar turned the tab').toBe(true);
+    await page.context().close();
+  });
+
+  it('0637 — and on the title, which has no tabs, the shoulders step the pilot too, drawn at the band', async () => {
+    /*
+      Played: *"the main screen menu is using right/left triggers and not right/left shoulder buttons like the
+      hangar. It should also have the RB and LB like the hangin out section does."* The title has no tab strip,
+      so LB and RB did nothing there. In what the player sees: the face marked on the band moves, the title
+      stays up, and LB and RB are drawn at the band's arrows once a pad is in hand.
+    */
+    const page = await open();
+    await afterFrames(page, 8);
+    const filled = (): Promise<string> =>
+      page.evaluate(
+        ({ attr, panel }: { attr: string; panel: string }) => {
+          const on = document.querySelector(`.${panel} [${attr}="pilot"] [aria-pressed="true"]`);
+          return (on?.getAttribute('aria-label') ?? on?.textContent ?? '').trim();
+        },
+        { attr: SETTING_ATTR, panel: prefixFor('title') + 'shown' },
+      );
+    const was = await filled();
+    await nudge(page, MENU_TAB_BUTTONS.next);
+    expect(await filled(), 'RB on the title did not step the pilot').not.toBe(was);
+    expect(await shown(page, shownScreen('title')), 'RB on the title left it').toBe(true);
+    await nudge(page, MENU_TAB_BUTTONS.previous);
+    expect(await filled(), 'LB on the title did not step back').toBe(was);
+    const keys = await page.evaluate(
+      (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].filter((k) => !k.hidden).map((k) => k.textContent),
+      `${shownScreen('title')} .${prefixFor('title')}band-key`,
+    );
+    expect(keys, 'a pad is in hand and the title does not say LB and RB step the pilots').toEqual(['LB', 'RB']);
     await page.context().close();
   });
 

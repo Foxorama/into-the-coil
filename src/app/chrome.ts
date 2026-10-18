@@ -1158,6 +1158,40 @@ ${each('-action-cursor')} {
 }
 .itc-playing-hud-charge-full { box-shadow: 0 0 0.45em currentColor; }
 .itc-playing-hud-charge-full > .itc-playing-hud-charge-fill { opacity: 1; }
+/*
+  0638: the ball's heat, beside its shields — a word and a gauge in the hazard's gold that turns the bullet's hot
+  ink and pulses from three quarters, where the glow under the ball turns red. Hollow frame and a fill, as the
+  charge bar is, so empty and full differ in shape and not only in colour (0024).
+*/
+.itc-playing-hud-heat { gap: 0.3em; color: var(--itc-heat); filter: drop-shadow(0 0 0.15em var(--itc-void, #000)); }
+.itc-playing-hud-heat[hidden] { display: none; }
+.itc-playing-hud-heat-word { font-size: 0.6em; font-weight: 800; letter-spacing: 0.08em; }
+.itc-playing-hud-gauge {
+  position: relative;
+  width: 3.2em;
+  height: 0.6em;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-radius: 0.35em;
+}
+.itc-playing-hud-gauge-fill {
+  position: absolute;
+  inset: 1px;
+  border-radius: 0.25em;
+  background: currentColor;
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.itc-playing-hud-heat-hot { color: var(--itc-heat-hot); animation: itc-playing-hud-heat-hot 0.5s ease-in-out infinite alternate; }
+@keyframes itc-playing-hud-heat-hot { from { filter: drop-shadow(0 0 0.1em currentColor); } to { filter: drop-shadow(0 0 0.5em currentColor); } }
+/*
+  0638: and the shield coming back, as the next empty pip filling from its foot — *"needs to show the shield regen
+  rate."* The pip is the shield's own shape (its mask), so the fill rises inside the shield it is mending.
+*/
+.itc-playing-hud-pip.itc-playing-hud-mending {
+  background: linear-gradient(to top, currentColor calc(var(--itc-mend, 0) * 100%), transparent calc(var(--itc-mend, 0) * 100%));
+  opacity: 0.85;
+}
 .itc-playing-trigger-button > .itc-playing-hud-charge { position: absolute; left: 50%; bottom: 8%; width: 60%; margin-left: -30%; height: 0.5em; }
 /*
   ── WHAT THE BOSS HAS LEFT ──────────────────────────────────────────────────────────────────────
@@ -1646,6 +1680,19 @@ ${each('-band-step')} {
   line-height: 1;
   opacity: 0.8;
 }
+/* 0637: the shoulders at a pilot band's arrows, on a screen whose shoulders step it — the tab strip's key, smaller. */
+${each('-band-key')} {
+  font-size: 0.5em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 0.1em 0.4em;
+  margin: 0 0.4em;
+  border: 1px solid currentColor;
+  border-radius: 0.35em;
+  vertical-align: middle;
+  opacity: 0.8;
+}
+${each('-band-key[hidden]')} { display: none; }
 ${each('-band-less')} { grid-area: less; }
 ${each('-band-more')} { grid-area: more; }
 ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
@@ -4721,6 +4768,10 @@ export interface Chrome {
    * change, never per frame (`onCharge`).
    */
   setCharge(slot: number, fraction: number): void;
+  /** 0638: the ball's heat, from cool at 0 to burning at 1, or negative for a ship that does not heat. On a change. */
+  setHeat(fraction: number): void;
+  /** 0638: how far the next shield is back, from 0 to 1, or negative for none coming. On a change. */
+  setMend(fraction: number): void;
   /**
    * Show exactly one screen's chrome and hide the rest. `null` shows none of it, which is what the
    * rotate gate needs — an overlay left visible under the gate is a focusable button on a page whose
@@ -5762,7 +5813,7 @@ export function makeChrome(
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
   /** How to play's pickup rows, in `PICKUP_KINDS` order — 0594, so a face not yet open is hidden. */
   const guideRows: GuideRow[] = [];
-  /** The shoulder glyphs at every tab strip's ends — 0548, shown while the device in hand is a pad. */
+  /** The shoulder glyphs at every tab strip's ends — 0548 — and at a tab-less pilot band's arrows (0637), shown while the device in hand is a pad. */
   const tabKeys: HTMLElement[] = [];
 
   const panels: Partial<Record<Screen, Panel>> = {};
@@ -6245,6 +6296,20 @@ export function makeChrome(
         button.tabIndex = -1;
         button.className = prefix + 'band-step ' + prefix + (towards < 0 ? 'band-less' : 'band-more');
         button.textContent = glyph;
+        /*
+          0637: on a screen with no tabs, where the shoulders step the pilots, they are drawn at the pilot
+          band's arrows while a pad is in hand — as the hangar draws them at its tab strip's ends (0548).
+        */
+        if (choice.name === 'pilot' && row.tabs.length === 0) {
+          const key = document.createElement('span');
+          key.className = prefix + 'band-key';
+          key.textContent = towards < 0 ? 'LB' : 'RB';
+          key.setAttribute('aria-hidden', 'true');
+          key.hidden = true;
+          tabKeys.push(key);
+          if (towards < 0) button.prepend(key);
+          else button.append(key);
+        }
         button.setAttribute('aria-label', said + ' ' + choice.label.toLowerCase());
         const press = (): void => {
           const band = choiceBands.find((b) => b.root === line);
@@ -6694,6 +6759,17 @@ export function makeChrome(
   // the number is what matters — 0024's floor is that every cue has a twin, not that it is visual.
   shieldGroup.setAttribute('role', 'img');
   const pips: HTMLElement[] = [];
+  // 0638: how far the next shield is back, or negative for none coming — drawn on the first empty pip.
+  let mend = -1;
+  let mendHealth = 0;
+  const mendSaid = (): string => (mend < 0 ? '' : ', next shield ' + String(Math.round(mend * 100)) + '%');
+  const paintMend = (): void => {
+    for (let i = 0; i < pips.length; i++) {
+      const on = mend >= 0 && i === mendHealth;
+      pips[i]!.classList.toggle('itc-playing-hud-mending', on);
+      if (on) pips[i]!.style.setProperty('--itc-mend', String(mend));
+    }
+  };
   /*
     ⚠️ **THE TRIGGERS STAND AS THE PAD'S BUTTONS STAND, NOT IN THE BINDING ORDER — 0574.** `SIDES` is
     gun, tubes, ward because that is `special1`–`special3`, and the pad puts them on A, B and X — X on
@@ -6701,7 +6777,33 @@ export function makeChrome(
     ward, gun, tubes: *"it's weird and awkward that the display in game doesn't match the 3 buttons."*
     `setHud` still writes `stackGroups` by slot; only where each group stands moves.
   */
-  hud.append(livesGroup, shieldGroup, ...slotsLeftToRight(stackGroups.length).map((slot) => stackGroups[slot]!.group));
+  /*
+    ── THE BALL'S HEAT, IN THE READOUT — 0638 ────────────────────────────────────────────────────────
+
+    *"the hamster ball needs to show … the heat gauge somewhere and all of that also needs to be displayed well
+    in mobile."* The heat was a glow under the ball in four stages, small on a phone and lost in a busy lane;
+    a gauge here, beside the shields it burns, in the hazard's gold and the bullet's hot ink near the top. In
+    the readout's own row rather than with the triggers, because on a touch screen the readout keeps its ship
+    and its shields and lets the triggers' counts go (0465) — and the heat is the shields' business.
+  */
+  const heatGroup = document.createElement('div');
+  heatGroup.className = 'itc-playing-hud-group itc-playing-hud-heat';
+  heatGroup.setAttribute('role', 'img');
+  heatGroup.hidden = true;
+  heatGroup.style.setProperty('--itc-heat', colours.hazard);
+  heatGroup.style.setProperty('--itc-heat-hot', colours.bullet);
+  const heatWord = document.createElement('span');
+  heatWord.className = 'itc-playing-hud-heat-word';
+  heatWord.textContent = 'HEAT';
+  heatWord.setAttribute('aria-hidden', 'true');
+  const heatGauge = document.createElement('div');
+  heatGauge.className = 'itc-playing-hud-gauge';
+  heatGauge.setAttribute('aria-hidden', 'true');
+  const heatFill = document.createElement('div');
+  heatFill.className = 'itc-playing-hud-gauge-fill';
+  heatGauge.appendChild(heatFill);
+  heatGroup.append(heatWord, heatGauge);
+  hud.append(livesGroup, shieldGroup, heatGroup, ...slotsLeftToRight(stackGroups.length).map((slot) => stackGroups[slot]!.group));
   /*
     The box the strip is sized against — 0465: the host's whole glass, a query container as the
     trigger discs' is, so the strip's type is a share of the SHORT axis and not of the width.
@@ -7721,9 +7823,11 @@ export function makeChrome(
       }
       if (shownLives >= 0 && lives < shownLives) kick(livesGroup, 'lost');
       shownHealth = health;
+      mendHealth = health;
+      paintMend();
       shownLives = lives;
       shieldGroup.style.display = maxHealth > 0 ? '' : 'none';
-      shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth));
+      shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth) + mendSaid());
     },
     setTriggers(triggers: readonly { label: string; sprite: number; charges: number }[]): void {
       /*
@@ -7764,6 +7868,20 @@ export function makeChrome(
         bands[i]!.count.textContent = '×' + String(Math.max(0, triggers[i]?.charges ?? 0));
       }
       paintTriggers();
+    },
+    setHeat(fraction: number): void {
+      heatGroup.hidden = fraction < 0;
+      if (fraction < 0) return;
+      const shown = fraction > 1 ? 1 : fraction;
+      heatFill.style.transform = 'scaleX(' + String(shown) + ')';
+      // 0638: hot from three quarters, where the glow under the ball turns red (`steerRam`'s last stage).
+      heatGroup.classList.toggle('itc-playing-hud-heat-hot', shown >= 0.75);
+      heatGroup.setAttribute('aria-label', 'Heat ' + String(Math.round(shown * 100)) + '%');
+    },
+    setMend(fraction: number): void {
+      mend = fraction;
+      paintMend();
+      shieldGroup.setAttribute('aria-label', (shieldGroup.getAttribute('aria-label') ?? '').replace(/, next shield \d+%$/, '') + mendSaid());
     },
     setCharge(slot: number, fraction: number): void {
       // Every other trigger's bar off: one special is earned, on the trigger its row throws on.
@@ -8143,7 +8261,18 @@ export function makeChrome(
     },
     tab(delta: number): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];
-      if (panel === undefined || shownScreen === null || panel.tabs.length === 0) return;
+      if (panel === undefined || shownScreen === null) return;
+      /*
+        ⚠️ **AND ON A SCREEN WITH NO TABS THE SHOULDERS STEP THE PILOT — 0637**: *"the main screen menu is
+        using right/left triggers and not right/left shoulder buttons like the hangar."* The title has no tab
+        strip, so LB and RB did nothing there while a hand that had learned them in the hangar reached for
+        them first. The triggers still step the pilot everywhere (0624).
+      */
+      if (panel.tabs.length === 0) {
+        const band = panel.bands.find((b) => b.name === 'pilot');
+        if (band !== undefined) stepBand(band, delta, true);
+        return;
+      }
       const tabs = SCREENS[shownScreen].tabs;
       const at = tabs.indexOf(shownScreen);
       const next = tabs[(at + delta + tabs.length) % tabs.length];

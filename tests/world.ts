@@ -185,6 +185,7 @@ export function inertLevel(): {
   ramHeat: number;
   ramCoolIn: number;
   regenIn: number;
+  regenSpan: number;
   regenSeen: number;
   danceBounces: number;
   danceSpeed: number;
@@ -232,6 +233,10 @@ export function inertLevel(): {
   punchFor: number;
   shownCharge: number;
   onCharge: (fraction: number) => void;
+  shownHeat: number;
+  shownMend: number;
+  onHeat: (fraction: number) => void;
+  onMend: (fraction: number) => void;
   onFeel: (feel: FeelKind) => void;
   joltVel: number;
   joltArmed: boolean;
@@ -347,6 +352,7 @@ export function inertLevel(): {
     ramHeat: 0,
     ramCoolIn: 0,
     regenIn: 0,
+    regenSpan: 0,
     regenSeen: 0,
     danceBounces: 0,
     danceSpeed: 0,
@@ -403,9 +409,27 @@ export function chargeParts(): {
   punchFor: number;
   shownCharge: number;
   onCharge: (fraction: number) => void;
+  shownHeat: number;
+  shownMend: number;
+  onHeat: (fraction: number) => void;
+  onMend: (fraction: number) => void;
   onFeel: (feel: FeelKind) => void;
 } {
-  return { waveIn: 0, waveKind: null, readyFor: 0, charge: 0, punchFor: 0, shownCharge: -1, onCharge: (): void => {}, onFeel: (): void => {} };
+  return {
+    waveIn: 0,
+    waveKind: null,
+    readyFor: 0,
+    charge: 0,
+    punchFor: 0,
+    shownCharge: -1,
+    onCharge: (): void => {},
+    // 0638: and the ball's heat and mending shield, drawn by nothing yet.
+    shownHeat: -1,
+    shownMend: -1,
+    onHeat: (): void => {},
+    onMend: (): void => {},
+    onFeel: (): void => {},
+  };
 }
 
 /** The pickup half of a world, built the way `mount.ts` builds it rather than restated. */
@@ -563,6 +587,7 @@ export function playableWorld(
     ramHeat: 0,
     ramCoolIn: 0,
     regenIn: 0,
+    regenSpan: 0,
     regenSeen: 0,
     danceBounces: 0,
     danceSpeed: 0,

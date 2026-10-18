@@ -1163,6 +1163,14 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE MORNING PLAY: THREE BUILT, AND THE SUPERCHARGE IS THE PLAYER'S CALL — 2026-10-18
+
+[`the-morning-play`](../reports/the-morning-play-2026-10-18.md) is the first play of the two pages below, and four
+notes on it: [0637](decisions/0637-the-shoulders-step-the-pilot-on-the-title.md),
+[0638](decisions/0638-the-ball-says-its-heat.md) and [0639](decisions/0639-a-boss-heats-the-ball-less.md) are
+built. **Next is the supercharge**: the report says how it works, why the overdrive surge is so strong against a
+boss, and four ways to answer it, and which one is the player's to choose.
+
 ### ⚠️ A RUN DOES NOT REACH INTO THE NEXT — OWED A PLAY — 2026-10-18
 
 [`the-run-resets`](../reports/the-run-resets-2026-10-18.md) is one more page, five notes, read in and built in one
