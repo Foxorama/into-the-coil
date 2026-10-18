@@ -591,7 +591,7 @@ describe.runIf(chromePath)('the in-game readout', () => {
       [...document.querySelectorAll(selector)].map((el) => el.getAttribute('aria-label') ?? ''),
       '.itc-playing-hud-group',
     );
-    expect(labels.some((l) => /\d+ lives/.test(l)), `no lives readout in ${labels.join(' | ')}`).toBe(true);
+    expect(labels.some((l) => /lives left: \d+/.test(l)), `no lives readout in ${labels.join(' | ')}`).toBe(true);
     expect(labels.some((l) => /Shield \d+ of \d+/.test(l)), `no shield readout in ${labels.join(' | ')}`).toBe(true);
     await page.context().close();
   });

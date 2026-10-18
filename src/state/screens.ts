@@ -879,8 +879,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * the level opens when they are gone.
    *
    * ⚠️ **IT ENDS IN THE RUN SINCE 0513, AND IT ENDED AT THE TITLE.** The boot's pick played it and the
-   * title came after; the pick is the title's *Fly* now, so the intro plays on the first flight of a
-   * visit and hands over to the run that flight asked for. `then: 'playing'` is the run beginning —
+   * title came after; the pick is the title's *Fly* now, so the intro plays on every flight (0635; it was
+   * the first of a visit) and hands over to the run that flight asked for. `then: 'playing'` is the run beginning —
    * `src/app/mount.ts` begins it on the tier and the ship the title showed, rather than showing a
    * screen with no run behind it. Its Skip goes the same way, into level one.
    *

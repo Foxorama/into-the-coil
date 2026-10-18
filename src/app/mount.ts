@@ -2215,12 +2215,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /*
     ── FLYING — 0513 ────────────────────────────────────────────────────────────────────────────────
 
-    The pilot screen's one way into a run: *Fly*, or a press on the highlighted pilot. The first flight
-    of a visit plays the intro with that pilot in it, and the intro ends in the run (its row's `then` is
-    `playing`, which `expireTo` below begins); every flight after it begins the run at once.
+    The pilot screen's one way into a run: *Fly*, or a press on the highlighted pilot. Every flight plays
+    the intro with that pilot in it, and the intro ends in the run (its row's `then` is `playing`, which
+    `expireTo` below begins).
+
+    ⚠️ **EVERY FLIGHT, AND NOT THE FIRST OF A VISIT — 0635**: *"new run w/out cache clear doesn't play the
+    intro cinematic"*, and *"end of run … should essentially be a cache clear for the next run"*. A flag
+    the page kept held it to the first flight, so it came back only on a reload. It is skippable, so a
+    player who has seen it is one press from the run.
   */
-  /** Whether this visit has flown yet — the intro is the first flight's. */
-  let flownThisVisit = false;
   /**
    * Whether a pointer's press on the highlighted pilot flies them: a pointer has chosen on the pilot
    * screen, or a run has been flown. False at boot, so a thumb's first landing on a card is a look.
@@ -2419,11 +2422,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     );
   };
   function fly(): void {
-    if (flownThisVisit) {
-      startRun();
-      return;
-    }
-    flownThisVisit = true;
     dispatch({ slice: 'screen', type: 'show', screen: 'intro' });
   }
   /** Where a screen goes when it runs out or is skipped — a run begun, or a screen shown (`beginsRun`, 0513). */

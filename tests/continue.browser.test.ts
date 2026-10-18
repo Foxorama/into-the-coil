@@ -116,7 +116,8 @@ describe.runIf(chromePath)('the run-over screen offers to continue, and the offe
     */
     const lives = await page.getAttribute('.itc-playing-hud-group[aria-label*="lives"]', 'aria-label');
     // The count before the comma: since 0526 the label says the gun flying after it.
-    expect(lives?.split(',')[0], 'the continue did not restock the run').toBe(String(DIFFICULTIES[QUICKEST].lives) + ' lives');
+    // 0636: the ships left behind the one flown, so the tier's count less one.
+    expect(lives?.split(',')[0], 'the continue did not restock the run').toBe('lives left: ' + String(DIFFICULTIES[QUICKEST].lives - 1));
     await page.context().close();
   });
 });

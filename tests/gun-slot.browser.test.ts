@@ -18,7 +18,7 @@ import { WEAPONS } from '../src/content/weapons.ts';
  *
  * `tests/gun-slot.test.ts` holds the rule and the run's gun. **What it cannot see is the shell passing
  * the fitting to the run** — the one line in `src/app/mount.ts` between the hangar and
- * `lifecycle.begin`. The readout says the gun with the lives — *"3 lives, Arc"* — because the ship's
+ * `lifecycle.begin`. The readout says the gun with the lives — *"lives left: 2, Arc"* since 0636 — because the ship's
  * icon is hidden from a reader, and that is what this reads, beside the pilot card the hangar shows.
  *
  * ⚠️ **READ THE SKIPPED COUNT.** `runIf` means a machine with no browser still passes.
@@ -53,8 +53,10 @@ describe.runIf(chromePath)('0526 — a run flies the gun the hangar fitted', () 
     await fly(page);
 
     const said = await page.evaluate(() => [...document.querySelectorAll('.itc-playing-hud [aria-label]')].map((e) => e.getAttribute('aria-label') ?? ''));
-    expect(said.join(' | '), 'the run did not fly the gun fitted in the hangar').toContain('lives, ' + arc.label);
-    expect(said.join(' | '), 'the run flew the ship’s own gun').not.toContain('lives, ' + WEAPONS[SHIPS.fighter.weapon].label);
+    // 0636: the label is *lives left: N*, then the gun.
+    const flies = (label: string): RegExp => new RegExp('lives left: \\d+, ' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    expect(said.join(' | '), 'the run did not fly the gun fitted in the hangar').toMatch(flies(arc.label));
+    expect(said.join(' | '), 'the run flew the ship’s own gun').not.toMatch(flies(WEAPONS[SHIPS.fighter.weapon].label));
     await context.close();
   });
 });
