@@ -20,7 +20,7 @@
  */
 
 import type { Palette, PaletteName } from '../content/palette.ts';
-import { THEMES, foeOf, lordOf, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
+import { THEMES, foeOf, lordOf, type FoeFinish, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
 import { BOSSES, type BossKind } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS, type ShotKind } from '../content/shots.ts';
 import { ROOTS, ROOT_POINTS, rootLineInto, rootWidth, type RootStrand as RootRow } from '../content/roots.ts';
@@ -2061,17 +2061,6 @@ type Mark =
   | { readonly kind: 'poly'; readonly points: readonly Pt[] }
   | { readonly kind: 'disc'; readonly x: number; readonly y: number; readonly r: number };
 
-/** A rectangular mark: a keel, a spine, a streak, an armour band. Corners in `r` from the centre. */
-const box = (x0: number, y0: number, x1: number, y1: number): Mark => ({
-  kind: 'poly',
-  points: [
-    [x0, y0],
-    [x1, y0],
-    [x1, y1],
-    [x0, y1],
-  ],
-});
-
 /** A round mark: a cockpit, a node, an eye, a pupil. */
 const dot = (x: number, y: number, r: number): Mark => ({ kind: 'disc', x, y, r });
 
@@ -2096,11 +2085,135 @@ function carve(ctx: Pen, f: Frame, colour: string, marks: readonly Mark[]): void
   ctx.fill('evenodd');
 }
 
-/** A cockpit behind the notched prow, then a keel back to the stern. The hull's own solidity. */
-const BOSS_KEEL: readonly Mark[] = [dot(-0.3, 0, 0.14), box(-0.1, -0.1, 0.78, 0.1)];
+/**
+ * The Approach's mid-boss from above, in the box's radius — 0631: a raider guard frigate, its ram prow at −x where
+ * the volley leaves (`muzzle` on its row), stepping out to a turret sponson on each shoulder and an engine nacelle
+ * either side of its stern, the main drive between them. Its upper half, prow to stern, mirrored for the lower.
+ * It reaches no further from its centre than the hexagon did (1.07 of the radius).
+ */
+const SENTINEL_TOP: readonly Pt[] = [
+  [-1, 0],
+  [-0.78, -0.12],
+  [-0.62, -0.26],
+  [-0.34, -0.32],
+  [-0.22, -0.56],
+  [0.1, -0.6],
+  [0.2, -0.42],
+  [0.42, -0.42],
+  [0.5, -0.74],
+  [0.66, -0.8],
+  [0.86, -0.6],
+  [0.86, -0.44],
+  [0.74, -0.34],
+  [0.92, -0.22],
+  [0.92, 0],
+];
+const SENTINEL_HULL: readonly Pt[] = [...SENTINEL_TOP, ...SENTINEL_TOP.slice(1, -1).reverse().map(([x, y]): Pt => [x, -y])];
 
-/** The spine, and the roots of the two outer prongs sitting on it. The hull's own openness. */
-const BOSS2_SPINE: readonly Mark[] = [box(-0.15, -0.09, 0.85, 0.09), dot(-0.05, -0.45, 0.11), dot(-0.05, 0.45, 0.11)];
+/**
+ * The Nebula's mid-boss — 0631: a harrow, three tines raked at the player on a narrow body, the middle one the
+ * longest and the outer two swept forward from the shoulders. Its upper half, tip to stern, mirrored for the
+ * lower; within the box the three prongs filled.
+ */
+const HARROW_TOP: readonly Pt[] = [
+  [-1, 0],
+  [-0.9, -0.1],
+  [-0.52, -0.13],
+  [-0.3, -0.3],
+  [-0.46, -0.62],
+  [-0.55, -0.94],
+  [-0.34, -0.88],
+  [-0.1, -0.62],
+  [0.15, -0.8],
+  [0.42, -0.7],
+  [0.66, -0.5],
+  [0.95, -0.38],
+  [0.88, -0.2],
+  [0.95, -0.08],
+  [0.95, 0],
+];
+const HARROW_HULL: readonly Pt[] = [...HARROW_TOP, ...HARROW_TOP.slice(1, -1).reverse().map(([x, y]): Pt => [x, -y])];
+
+/**
+ * Saurian Belt's mid-boss — 0631: a shoal mother, a blunt fish of a body with a dorsal and a ventral fin swept
+ * back to the tail. Its upper half, snout to tail, mirrored for the lower; within the box the teardrop filled.
+ */
+const SHOAL_TOP: readonly Pt[] = [
+  [-1, 0],
+  [-0.94, -0.18],
+  [-0.78, -0.38],
+  [-0.52, -0.56],
+  [-0.2, -0.64],
+  [0.2, -0.6],
+  [0.48, -0.5],
+  [0.7, -0.66],
+  [0.94, -0.86],
+  [0.86, -0.56],
+  [0.78, -0.3],
+  [0.86, -0.18],
+  [1, -0.1],
+  [1, 0],
+];
+const SHOAL_HULL: readonly Pt[] = [...SHOAL_TOP, ...SHOAL_TOP.slice(1, -1).reverse().map(([x, y]): Pt => [x, -y])];
+
+/** The redoubt's three ports: across the lane, where along it, and their radius. */
+const REDOUBT_PORTS: readonly number[] = [-0.5, 0, 0.5];
+const REDOUBT_PORT_X = -0.45;
+const REDOUBT_PORT_R = 0.17;
+
+/**
+ * The Rime's mid-boss's wall — 0631: the redoubt's slab, its stepped face at −x, crenellated along both long
+ * edges. Its upper half, face to back, mirrored for the lower.
+ *
+ * ⚠️ **THE OUTER PORTS ARE BITES IN THE OUTLINE, NOT HOLES.** Each runs over the face's slope and its step, so as
+ * a circle under `evenodd` it filled a crescent of hull OUTSIDE the wall. The outline follows the port's arc from
+ * where it meets the slope (at 0.585 of the way up it) to where it meets the step (0.1375 past the port's centre),
+ * round the side of the port inside the slab. The middle port is wholly inside and is cut in the arm.
+ */
+const REDOUBT_TOP: readonly Pt[] = [
+  [-1, 0],
+  [-1, -0.4],
+  ...roundel(REDOUBT_PORT_X, -0.5, REDOUBT_PORT_R, 16, Math.PI - 0.0717, -0.9425),
+  [-0.35, -0.95],
+  [-0.02, -0.95],
+  [-0.02, -0.86],
+  [0.12, -0.86],
+  [0.12, -0.95],
+  [0.36, -0.95],
+  [0.36, -0.86],
+  [0.5, -0.86],
+  [0.5, -0.95],
+  [0.72, -0.95],
+  [0.95, -0.4],
+  [0.95, 0],
+];
+const REDOUBT_HULL: readonly Pt[] = [...REDOUBT_TOP, ...REDOUBT_TOP.slice(1, -1).reverse().map(([x, y]): Pt => [x, -y])];
+
+/** The chorus's three lobes: where each sits across the lane, and their one radius. */
+const CHORUS_LOBES: readonly number[] = [-0.62, 0, 0.62];
+const CHORUS_LOBE_R = 0.62;
+
+/**
+ * The Mire's mid-boss — 0631: the chorus's three lobes as ONE outline, the arc of each that no other lobe covers.
+ * It was three circles and a bar under `evenodd`, so wherever two overlapped the sky showed through: a body of
+ * lenses with holes in it rather than three things that turned out to be one. Each pair of lobes meets at a pinch
+ * halfway between them, 30° either side of each lobe's own centre — the lobes are one radius apart.
+ */
+const CHORUS_HULL: readonly Pt[] = (() => {
+  const arc = (cy: number, from: number, to: number, steps: number): Pt[] =>
+    roundel(0, cy, CHORUS_LOBE_R, steps, from, to).slice(1);
+  const deg = Math.PI / 180;
+  return [
+    // The top lobe, from the right-hand pinch over its crown to the left-hand one.
+    ...arc(-0.62, 30 * deg, -210 * deg, 40),
+    // The middle lobe's left flank.
+    ...arc(0, 210 * deg, 150 * deg, 10),
+    // The bottom lobe, under its belly to the right-hand pinch.
+    ...arc(0.62, 210 * deg, -30 * deg, 40),
+    // The middle lobe's right flank, back to the start.
+    ...arc(0, 30 * deg, -30 * deg, 10),
+  ];
+})();
 
 /** A node in each of the four struts, off the hole rather than over it. The hull as a frame. */
 const BOSS3_NODES: readonly Mark[] = [
@@ -2109,16 +2222,6 @@ const BOSS3_NODES: readonly Mark[] = [
   dot(-0.38, -0.32, 0.09),
   dot(-0.38, 0.32, 0.09),
 ];
-
-/** Three streaks along the body, which is the one hull that reads as moving while it stands still. */
-const BOSS4_STREAKS: readonly Mark[] = [
-  box(-0.35, -0.36, 0.45, -0.24),
-  box(-0.35, -0.06, 0.45, 0.06),
-  box(-0.35, 0.24, 0.45, 0.36),
-];
-
-/** Two bands across the slab, forward of the ports rather than through them. The hull as a wall. */
-const BOSS5_BANDS: readonly Mark[] = [box(0.46, -0.78, 0.62, 0.78), box(0.14, -0.78, 0.3, 0.78)];
 
 /** An eye in each lobe, all three on the player's side. Three things that turned out to be one. */
 const BOSS6_EYES: readonly Mark[] = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];
@@ -8939,7 +9042,129 @@ function drawBody(ctx: Pen, f: Frame, skin: FoeSkin | null, hull: readonly Pt[],
   trace(ctx, f, hull);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) paint(skin);
+  if (skin === null) return;
+  paint(skin);
+  finishBody(ctx, f, skin, (pen) => trace(pen, f, hull));
+}
+
+/**
+ * What a place's raiders are finished with when its row says nothing — 0632. The one fallback, in shared code;
+ * each of the seven places authors its own on its `foe` row (`src/content/themes.ts`).
+ */
+const FINISH: FoeFinish = { light: 0.4, shadow: 0.6, rim: 0.8 };
+
+/** How wide the rim light is, as a share of the box's radius. */
+const RIM_WIDTH = 0.07;
+
+/**
+ * And never narrower than this, in the pixels it is baked at: 0106's floor, under which a mark is not drawn. A
+ * small enemy's radius is about fourteen pixels at the fight's camera, where its share alone is under one.
+ */
+const RIM_FLOOR = 2.5;
+
+/**
+ * The rim's alpha: under 0.9, so `tests/accents.test.ts` reads it as light rather than ink. It is laid
+ * `source-atop`, so it lands only on what the body already covers and cannot widen its silhouette.
+ */
+const RIM_ALPHA = 0.85;
+
+/** The path calls a lowered pen moves, by name; everything else goes straight through. */
+type PathCall = 'moveTo' | 'lineTo' | 'arc' | 'quadraticCurveTo' | 'bezierCurveTo' | 'rect';
+
+/**
+ * A pen that moves every path point it is given `dy` pixels down — 0632's rim, which is the body's own outline laid
+ * a little lower so that it falls inside every edge that faces up.
+ */
+function lowered(ctx: Pen, dy: number): Pen {
+  const moved: Pick<Pen, PathCall> = {
+    moveTo: (x, y) => ctx.moveTo(x, y + dy),
+    lineTo: (x, y) => ctx.lineTo(x, y + dy),
+    arc: (x, y, radius, a0, a1, ccw) => ctx.arc(x, y + dy, radius, a0, a1, ccw),
+    quadraticCurveTo: (cx, cy, x, y) => ctx.quadraticCurveTo(cx, cy + dy, x, y + dy),
+    bezierCurveTo: (c1x, c1y, c2x, c2y, x, y) => ctx.bezierCurveTo(c1x, c1y + dy, c2x, c2y + dy, x, y + dy),
+    rect: (x, y, w, h) => ctx.rect(x, y + dy, w, h),
+  };
+  return new Proxy(ctx, {
+    get: (target, key) => {
+      if (Object.hasOwn(moved, key)) return Reflect.get(moved, key);
+      const value: unknown = Reflect.get(target, key);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+}
+
+/**
+ * How far up and down a body's outline reaches, in pixels: the outline traced through a pen that only notes where
+ * it goes. An arc counts its whole circle, which is never less than the arc.
+ */
+function heightOf(ctx: Pen, outline: (pen: Pen) => void): [number, number] {
+  let top = Number.POSITIVE_INFINITY;
+  let bottom = Number.NEGATIVE_INFINITY;
+  const note = (...ys: number[]): void => {
+    for (const y of ys) {
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    }
+  };
+  const noted: Pick<Pen, PathCall | 'closePath'> = {
+    moveTo: (_x, y) => note(y),
+    lineTo: (_x, y) => note(y),
+    arc: (_x, y, radius) => note(y - radius, y + radius),
+    quadraticCurveTo: (_cx, cy, _x, y) => note(cy, y),
+    bezierCurveTo: (_c1x, c1y, _c2x, c2y, _x, y) => note(c1y, c2y, y),
+    rect: (_x, y, _w, h) => note(y, y + h),
+    closePath: () => undefined,
+  };
+  outline(
+    new Proxy(ctx, {
+      get: (target, key) => (Object.hasOwn(noted, key) ? Reflect.get(noted, key) : Reflect.get(target, key)),
+    }),
+  );
+  return [top, bottom];
+}
+
+/**
+ * The finish every body a place sends is given over its own paint — 0632: *"still look overall a lot like
+ * placeholders, can we do something overall with the enemy art"*. The bodies were flat cut-outs, and two things
+ * turn one into a form, each at the place's own strength (`FoeSkin.finish`):
+ *
+ * - **a form-shade** on the hull's own path: the lit ink along the top, fading out by the middle, and the plate
+ *   darkened along the bottom;
+ * - **a rim light**: the outline lowered by half the seal's width and half its own, stroked `source-atop` in the
+ *   lit ink brightened, fading out by the middle — so it lies just inside every edge that faces up, and nowhere
+ *   the body is not.
+ *
+ * `outline` re-traces the body's own path; the outline `seal` laid is the one outline, untouched (0276).
+ */
+function finishBody(ctx: Pen, f: Frame, skin: FoeSkin, outline: (pen: Pen) => void): void {
+  const look = skin.finish ?? FINISH;
+  // Over the body's own height and not the box's: a body a third of its box tall got only the middle of the light.
+  const [top, bottom] = heightOf(ctx, outline);
+  const form = ctx.createLinearGradient(f.half, top, f.half, bottom);
+  form.addColorStop(0, rgba(skin.lit, look.light));
+  form.addColorStop(0.45, rgba(skin.lit, 0));
+  form.addColorStop(0.55, rgba(skin.plate, 0));
+  form.addColorStop(1, rgba(shade(skin.plate, -0.3), look.shadow));
+  ctx.fillStyle = form;
+  ctx.beginPath();
+  outline(ctx);
+  ctx.fill('evenodd');
+  const sealWidth = ctx.lineWidth;
+  const width = Math.max(RIM_WIDTH * f.r, RIM_FLOOR);
+  const rim = ctx.createLinearGradient(f.half, top, f.half, bottom);
+  rim.addColorStop(0, rgba(mix(skin.lit, '#ffffff', 0.4), look.rim));
+  rim.addColorStop(0.5, rgba(skin.lit, 0));
+  rim.addColorStop(1, rgba(skin.lit, 0));
+  ctx.globalCompositeOperation = 'source-atop';
+  ctx.globalAlpha = RIM_ALPHA;
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  outline(lowered(ctx, sealWidth / 2 + width / 2));
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.lineWidth = sealWidth;
 }
 
 /*
@@ -8984,7 +9209,9 @@ function drawShared(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, 
   body.outline(ctx, f, n);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) body.paint(ctx, f, skin, theme, n);
+  if (skin === null) return;
+  body.paint(ctx, f, skin, theme, n);
+  finishBody(ctx, f, skin, (pen) => body.outline(pen, f, n));
 }
 
 function drawDrifter(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
@@ -9028,79 +9255,215 @@ function drawSower(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n
   place's own light.
 */
 
-function paintBoss(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The hexagonal hull: its lower half in shadow, its prow lit, rivets or scales across the back.
+/**
+ * The Approach's frigate, painted — 0631, in the end bosses' manner (0264): a form-shade over the whole hull from its
+ * lit upper side to its shadowed lower, The Approach's rivets down its flanks, armour seams, a superstructure down the
+ * spine with the bridge glowing in it, a turret on each sponson with its barrel on the lane, and its drives burning
+ * at the stern. Every solid mark clears 0106's floor at the fight's camera; the seams are lines.
+ */
+function paintBoss(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  // The form-shade, under everything: what turns the cut-out into a hull.
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.25), rgba(skin.plate, 0.6), SENTINEL_HULL);
+  // The lower half's armour in shadow, and the prow's upper face lit.
   plate(ctx, f, skin, [
-    [-0.4, 0.08],
-    [0.94, 0.42],
-    [0.48, 0.9],
-    [-0.52, 0.76],
-    [-0.42, 0.44],
+    [-0.56, 0.21],
+    [0.42, 0.34],
+    [0.7, 0.31],
+    [0.8, 0.44],
+    [0.81, 0.58],
+    [0.65, 0.74],
+    [0.54, 0.7],
+    [0.47, 0.44],
+    [0.44, 0.39],
+    [0.2, 0.39],
+    [0.16, 0.44],
+    [0.08, 0.56],
+    [-0.2, 0.53],
+    [-0.3, 0.31],
   ]);
   lit(ctx, f, skin, [
-    [-0.94, 0],
-    [-0.44, -0.42],
-    [-0.5, -0.74],
-    [-0.36, -0.66],
-    [-0.34, -0.4],
-    [-0.8, 0],
+    [-0.92, -0.01],
+    [-0.76, -0.08],
+    [-0.62, -0.2],
+    [-0.52, -0.2],
+    [-0.74, -0.04],
   ]);
-  // Either side of the keel, which is a carved hole and stays one — 0149's mark is not painted over.
-  motif(ctx, f, skin, theme, [
-    [0.05, -0.85],
-    [0.5, -0.85],
-    [0.9, -0.42],
-    [0.9, -0.2],
-    [0.05, -0.2],
-  ], 'boss');
-  motif(ctx, f, skin, theme, [
-    [0.05, 0.2],
-    [0.9, 0.2],
-    [0.9, 0.42],
-    [0.5, 0.85],
-    [0.05, 0.85],
-  ], 'boss-low');
-  disc(ctx, f, skin.eye, -0.32, 0, 0.09);
+  // A row of rivets down each flank between the seam's ribs: The Approach's motif, laid by hand because
+  // the seeded grid has no room for a stud beside the spine.
+  for (const side of [-1, 1]) {
+    for (const x of [-0.4, -0.08, 0.36, 0.62]) disc(ctx, f, shade(skin.plate, -0.3), x, 0.24 * side, 0.05);
+  }
+  // Armour seams along the flanks and across the hull.
+  for (const side of [-1, 1]) {
+    seam(ctx, f, shade(skin.plate, -0.35), 0.022, [[-0.62, 0.22 * side], [0.4, 0.36 * side], [0.78, 0.27 * side]], 0.8);
+    for (const x of [-0.34, 0.2, 0.5]) seam(ctx, f, shade(skin.plate, -0.35), 0.018, [[x, 0.18 * side], [x + 0.04, 0.4 * side]], 0.7);
+  }
+  // The superstructure down the spine: a raised deck, lit along its top and shadowed under.
+  shaded(ctx, f, [0, -0.18], [0, 0.18], shade(skin.lit, 0.15), shade(skin.plate, -0.1), [
+    [-0.66, 0],
+    [-0.5, -0.14],
+    [0.5, -0.17],
+    [0.66, -0.1],
+    [0.66, 0.1],
+    [0.5, 0.17],
+    [-0.5, 0.14],
+  ]);
+  seam(ctx, f, shade(skin.lit, 0.35), 0.02, [[-0.48, -0.1], [0.52, -0.13]], 0.85);
+  // The bridge, glowing in the eye's ink, a little back from the prow.
+  glow(ctx, f, skin.eye, -0.36, 0, 0.2, 0.45);
+  disc(ctx, f, skin.eye, -0.36, 0, 0.085);
+  // A turret on each sponson: its ring, its dome, and its barrels on the lane.
+  for (const side of [-1, 1]) {
+    disc(ctx, f, shade(skin.plate, -0.2), -0.04, 0.44 * side, 0.1);
+    disc(ctx, f, shade(skin.hull, 0.25), -0.04, 0.44 * side, 0.065);
+    poly(ctx, f, shade(skin.plate, -0.3), [
+      [-0.22, 0.41 * side],
+      [-0.06, 0.41 * side],
+      [-0.06, 0.47 * side],
+      [-0.22, 0.47 * side],
+    ]);
+  }
+  // The drives at the stern, burning in the eye's ink: the main one between the nacelles, and one in each.
+  for (const [x, y, rr] of [
+    [0.92, 0, 0.16],
+    [0.86, -0.52, 0.07],
+    [0.86, 0.52, 0.07],
+  ] as const) {
+    glow(ctx, f, skin.eye, x + 0.02, y, rr * 1.2, 0.5);
+    poly(ctx, f, skin.eye, [
+      [x - 0.08, y - rr],
+      [x - 0.02, y - rr],
+      [x - 0.02, y + rr],
+      [x - 0.08, y + rr],
+    ]);
+  }
 }
 
+/** A circle as a polygon of 24 sides — a lamp's socket, or a hole held out of a wash. */
+const socket = (x: number, y: number, radius: number): Pt[] => roundel(x, y, radius, 24, 0, Math.PI * 2);
+
+/**
+ * The Nebula's harrow, painted — 0631: the form-shade, its lower tine and underside in shadow, the middle tine's
+ * upper face and the upper tine's leading edge lit, the place's motif on its shoulder, a raised core down the
+ * spine with its vents burning, a pod glowing at each outer tine's root, and its drive at the stern.
+ */
 function paintBoss2(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The three prongs: the lower prong and the body's underside in shadow, the tips lit.
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.25), rgba(skin.plate, 0.6), HARROW_HULL);
   plate(ctx, f, skin, [
-    [-0.24, 0.34],
-    [0.12, 0.72],
-    [0.88, 0.32],
-    [0.88, 0.12],
-    [-0.1, 0.12],
-  ]);
-  plate(ctx, f, skin, [
+    [-0.42, 0.62],
     [-0.5, 0.86],
-    [0.1, 0.72],
-    [-0.28, 0.4],
+    [-0.37, 0.82],
+    [-0.14, 0.6],
+    [-0.06, 0.5],
+    [-0.28, 0.36],
+  ]);
+  plate(ctx, f, skin, [
+    [-0.48, 0.08],
+    [0.2, 0.16],
+    [0.62, 0.24],
+    [0.82, 0.2],
+    [0.8, 0.42],
+    [0.62, 0.46],
+    [0.4, 0.64],
+    [0.15, 0.74],
+    [-0.04, 0.54],
   ]);
   lit(ctx, f, skin, [
-    [-0.94, -0.12],
-    [-0.94, 0.12],
-    [-0.78, 0.1],
-    [-0.78, -0.1],
+    [-0.94, -0.02],
+    [-0.88, -0.07],
+    [-0.54, -0.1],
+    [-0.36, -0.2],
+    [-0.5, -0.04],
   ]);
   lit(ctx, f, skin, [
-    [-0.52, -0.9],
-    [-0.36, -0.86],
-    [-0.2, -0.5],
-    [-0.29, -0.46],
+    [-0.51, -0.85],
+    [-0.42, -0.6],
+    [-0.3, -0.36],
+    [-0.34, -0.6],
+    [-0.42, -0.84],
   ]);
   motif(ctx, f, skin, theme, [
-    [0, -0.7],
-    [0.85, -0.3],
-    [0.85, -0.12],
-    [0, -0.12],
+    [0.12, -0.66],
+    [0.42, -0.6],
+    [0.62, -0.44],
+    [0.3, -0.3],
+    [0.05, -0.36],
   ], 'boss2');
-  disc(ctx, f, skin.eye, -0.05, -0.45, 0.07);
-  disc(ctx, f, skin.eye, -0.05, 0.45, 0.07);
+  // Where each outer tine roots in the body, and the body's panels behind it.
+  for (const side of [-1, 1]) {
+    seam(ctx, f, shade(skin.plate, -0.35), 0.022, [[-0.24, 0.36 * side], [-0.02, 0.6 * side]], 0.8);
+    seam(ctx, f, shade(skin.plate, -0.35), 0.018, [[0.3, 0.16 * side], [0.36, 0.62 * side]], 0.7);
+    seam(ctx, f, shade(skin.plate, -0.35), 0.018, [[0.6, 0.16 * side], [0.66, 0.44 * side]], 0.7);
+  }
+  // The core down the spine, raised, lit along its top, with its vents burning in the eye's ink.
+  shaded(ctx, f, [0, -0.12], [0, 0.12], shade(skin.lit, 0.15), shade(skin.plate, -0.1), [
+    [-0.36, 0],
+    [-0.2, -0.09],
+    [0.7, -0.12],
+    [0.82, 0],
+    [0.7, 0.12],
+    [-0.2, 0.09],
+  ]);
+  seam(ctx, f, shade(skin.lit, 0.35), 0.02, [[-0.18, -0.07], [0.68, -0.095]], 0.85);
+  // What burns in it is the lit ink brightened, not the eye's: the Nebula's eye is all but black, and a
+  // vent in it read as a hole.
+  const burn = mix(skin.lit, '#ffffff', 0.35);
+  for (const x of [-0.1, 0.18, 0.46]) {
+    poly(ctx, f, shade(skin.plate, -0.4), [
+      [x, -0.045],
+      [x + 0.1, -0.055],
+      [x + 0.1, 0.055],
+      [x, 0.045],
+    ]);
+    glow(ctx, f, burn, x + 0.05, 0, 0.12, 0.45);
+    poly(ctx, f, burn, [
+      [x + 0.02, -0.03],
+      [x + 0.08, -0.035],
+      [x + 0.08, 0.035],
+      [x + 0.02, 0.03],
+    ]);
+  }
+  // A pod at each outer tine's root, glowing, and the three tips lit.
+  for (const side of [-1, 1]) {
+    disc(ctx, f, shade(skin.plate, -0.2), -0.05, 0.45 * side, 0.11);
+    glow(ctx, f, burn, -0.05, 0.45 * side, 0.2, 0.4);
+    disc(ctx, f, burn, -0.05, 0.45 * side, 0.07);
+    glow(ctx, f, burn, -0.49, 0.84 * side, 0.1, 0.5);
+  }
+  glow(ctx, f, burn, -0.92, 0, 0.1, 0.5);
+  // The drive at the stern.
+  glow(ctx, f, burn, 0.92, 0, 0.16, 0.5);
+  poly(ctx, f, burn, [
+    [0.84, -0.06],
+    [0.9, -0.06],
+    [0.9, 0.06],
+    [0.84, 0.06],
+  ]);
 }
 
+/** The lattice's frame, outer and inner, as `boss3`'s arm draws them. */
+const LATTICE_OUTER: readonly Pt[] = [
+  [-1, 0],
+  [0, -0.85],
+  [1, 0],
+  [0, 0.85],
+];
+const LATTICE_INNER: readonly Pt[] = [
+  [-0.42, 0],
+  [0, -0.36],
+  [0.42, 0],
+  [0, 0.36],
+];
+
+/**
+ * The Labyrinth's lattice, painted — 0631: the form-shade over the frame and not its hole, the lower struts in
+ * shadow and the forward one lit, the place's circuitry on the upper back, the struts' joints, a node lit in each
+ * strut, an emitter at each point of the frame, and the field it holds across its hole.
+ */
 function paintBoss3(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The lattice: the two lower struts in shadow, the two forward struts lit at their outer edges.
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.25), rgba(skin.plate, 0.6), LATTICE_OUTER, 1, false, [
+    LATTICE_INNER,
+  ]);
   plate(ctx, f, skin, [
     [-0.88, 0.06],
     [-0.44, 0.06],
@@ -9125,50 +9488,124 @@ function paintBoss3(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
     [0.62, -0.06],
     [0.08, -0.5],
   ], 'boss3');
+  // The joints down each strut, through its node, and the hole's rim burning.
+  seam(ctx, f, shade(skin.plate, -0.35), 0.02, [
+    [-0.71, 0],
+    [-0.38, -0.32],
+    [0, -0.6],
+    [0.38, -0.32],
+    [0.71, 0],
+    [0.38, 0.32],
+    [0, 0.6],
+    [-0.38, 0.32],
+    [-0.71, 0],
+  ], 0.75);
+  seam(ctx, f, skin.eye, 0.025, [
+    [-0.5, 0],
+    [0, -0.425],
+    [0.5, 0],
+    [0, 0.425],
+    [-0.5, 0],
+  ], 0.7);
+  // The field the frame holds across its hole: light, so the sky still shows through it.
+  glow(ctx, f, skin.eye, 0, 0, 0.38, 0.22);
   for (const y of [-0.32, 0.32]) {
-    disc(ctx, f, skin.eye, 0.38, y, 0.055);
-    disc(ctx, f, skin.eye, -0.38, y, 0.055);
+    for (const x of [-0.38, 0.38]) {
+      disc(ctx, f, shade(skin.plate, -0.25), x, y, 0.13);
+      glow(ctx, f, skin.eye, x, y, 0.22, 0.45);
+      disc(ctx, f, skin.eye, x, y, 0.065);
+    }
+  }
+  for (const [x, y] of [
+    [-0.86, 0],
+    [0.86, 0],
+    [0, -0.72],
+    [0, 0.72],
+  ] as const) {
+    glow(ctx, f, skin.eye, x, y, 0.12, 0.5);
+    disc(ctx, f, skin.eye, x, y, 0.045);
   }
 }
 
+/**
+ * Saurian Belt's shoal mother, painted — 0631: the form-shade, its belly in shadow, a lit stripe down its back,
+ * scales over its shoulders, its lateral line and gills, rays in its fins and its upper fin lit, and its eyes
+ * glowing in their sockets.
+ */
 function paintBoss4(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The shoal mother: the lower flank in shadow, the nose lit, scales across the back.
-  // Under the lowest streak and above the highest, so the three carved streaks stay the holes
-  // 0149 cut; the motif rides the fins, which is the one part of this hull with no hole in it.
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.25), rgba(skin.plate, 0.6), SHOAL_HULL);
   plate(ctx, f, skin, [
-    [-0.45, 0.42],
-    [0.5, 0.42],
-    [0.45, 0.49],
-    [-0.25, 0.58],
+    [-0.86, 0.2],
+    [-0.6, 0.42],
+    [-0.2, 0.54],
+    [0.3, 0.5],
+    [0.5, 0.4],
+    [0.1, 0.3],
+    [-0.5, 0.24],
   ]);
   lit(ctx, f, skin, [
-    [-0.94, 0],
-    [-0.32, -0.56],
+    [-0.9, -0.12],
+    [-0.72, -0.34],
+    [-0.48, -0.48],
+    [-0.2, -0.54],
     [-0.2, -0.46],
-    [-0.76, 0],
+    [-0.5, -0.38],
+    [-0.74, -0.22],
+  ]);
+  lit(ctx, f, skin, [
+    [0.56, -0.52],
+    [0.7, -0.62],
+    [0.88, -0.78],
+    [0.8, -0.6],
   ]);
   motif(ctx, f, skin, theme, [
-    [0.6, -0.5],
-    [0.9, -0.8],
-    [0.8, -0.3],
+    [-0.1, -0.5],
+    [0.4, -0.44],
+    [0.4, -0.14],
+    [-0.1, -0.14],
   ], 'boss4');
   motif(ctx, f, skin, theme, [
-    [0.6, 0.5],
-    [0.9, 0.8],
-    [0.8, 0.3],
+    [-0.1, 0.14],
+    [0.4, 0.14],
+    [0.4, 0.4],
+    [-0.1, 0.46],
   ], 'boss4-low');
-  disc(ctx, f, skin.eye, -0.6, -0.16, 0.08);
-  disc(ctx, f, skin.eye, -0.6, 0.16, 0.08);
+  // The lateral line, the gills behind the eyes, and the rays in the fins and the tail.
+  seam(ctx, f, shade(skin.lit, 0.3), 0.02, [[-0.7, 0], [0.84, 0]], 0.5);
+  for (const x of [-0.44, -0.36, -0.28]) {
+    seam(ctx, f, shade(skin.plate, -0.4), 0.028, [[x, -0.34], [x - 0.06, 0], [x, 0.34]], 0.85);
+  }
+  for (const side of [-1, 1]) {
+    for (const [x0, y0, x1, y1] of [
+      [0.5, 0.48, 0.9, 0.8],
+      [0.56, 0.48, 0.86, 0.64],
+      [0.62, 0.46, 0.82, 0.5],
+      [0.84, 0.12, 0.98, 0.07],
+    ] as const) {
+      seam(ctx, f, shade(skin.plate, -0.3), 0.018, [[x0, y0 * side], [x1, y1 * side]], 0.7);
+    }
+  }
+  for (const side of [-1, 1]) {
+    disc(ctx, f, shade(skin.plate, -0.3), -0.62, 0.2 * side, 0.1);
+    glow(ctx, f, skin.eye, -0.62, 0.2 * side, 0.2, 0.4);
+    disc(ctx, f, skin.eye, -0.62, 0.2 * side, 0.06);
+  }
 }
 
+/**
+ * The Rime's redoubt, painted — 0631: the form-shade over the slab and not its ports, its lower course and its
+ * rear in shadow, the place's motif along its upper course, two buttresses raised across it, its face lit
+ * between the ports, the ports burning, and a lamp beside each.
+ */
 function paintBoss5(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The redoubt: the lower slab in shadow, the face lit between the ports, plating across the back.
-  // Facing −x since 0452, so every x here is the mirror of what it was.
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.25), rgba(skin.plate, 0.6), REDOUBT_HULL, 1, false, [
+    socket(REDOUBT_PORT_X, 0, REDOUBT_PORT_R + 0.01),
+  ]);
   plate(ctx, f, skin, [
     [0.68, 0.62],
     [-0.3, 0.62],
-    [-0.3, 0.9],
-    [0.68, 0.9],
+    [-0.3, 0.82],
+    [0.68, 0.82],
   ]);
   plate(ctx, f, skin, [
     [0.9, 0.06],
@@ -9187,37 +9624,72 @@ function paintBoss5(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
     ]);
   }
   motif(ctx, f, skin, theme, [
-    [0.68, -0.9],
-    [-0.3, -0.9],
+    [0.68, -0.82],
+    [-0.3, -0.82],
     [-0.3, -0.62],
     [0.68, -0.62],
   ], 'boss5');
-  // A lamp beside each port, on the slab: the ports themselves are holes and stay holes.
-  for (const y of [-0.5, 0, 0.5]) disc(ctx, f, skin.eye, -0.14, y, 0.08);
+  // The courses of the wall, and two buttresses raised across it where the carved bands were.
+  for (const y of [-0.3, 0.3]) seam(ctx, f, shade(skin.plate, -0.35), 0.02, [[-0.3, y], [0.9, y]], 0.75);
+  for (const x of [0.14, 0.46]) {
+    shaded(ctx, f, [x, 0], [x + 0.16, 0], shade(skin.lit, 0.1), shade(skin.plate, -0.15), [
+      [x, -0.8],
+      [x + 0.16, -0.8],
+      [x + 0.16, 0.8],
+      [x, 0.8],
+    ]);
+    seam(ctx, f, shade(skin.lit, 0.35), 0.02, [[x + 0.02, -0.78], [x + 0.02, 0.78]], 0.8);
+  }
+  // The ports burning, the middle one ringed, and a lamp beside each on the slab.
+  for (const y of REDOUBT_PORTS) glow(ctx, f, skin.eye, REDOUBT_PORT_X, y, REDOUBT_PORT_R * 1.1, 0.55);
+  seam(ctx, f, shade(skin.plate, -0.4), 0.03, socket(REDOUBT_PORT_X, 0, REDOUBT_PORT_R + 0.035), 0.8);
+  for (const y of REDOUBT_PORTS) {
+    glow(ctx, f, skin.eye, -0.14, y, 0.16, 0.35);
+    disc(ctx, f, skin.eye, -0.14, y, 0.08);
+  }
 }
 
+/**
+ * The Mire's chorus, painted — 0631: each lobe turned as a body of its own, the lowest first so each lies over the
+ * one below it, lit along its upper rim; the spine down them all; veins; the place's motif on each lobe's back;
+ * and an eye glowing in each.
+ */
 function paintBoss6(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The chorus: the spine is a hole where it crosses the lobes, so the paint stays on the lobes'
-  // outer halves — the lower lobe's far side in shadow, the upper's in light.
-  plate(ctx, f, skin, [
-    [0.24, 0.72],
-    [0.5, 0.84],
-    [0.56, 0.66],
-    [0.36, 0.64],
+  const deg = Math.PI / 180;
+  const seeds = ['boss6', 'boss6-mid', 'boss6-low'] as const;
+  for (const i of [2, 0, 1]) {
+    const cy = CHORUS_LOBES[i]!;
+    // Opaque under its wash, so a lobe lies over the one below it rather than tinting through it.
+    shaded(ctx, f, [0, cy - 0.6], [0, cy + 0.6], skin.hull, skin.hull, socket(0, cy, 0.6), 1, false, [
+      socket(-0.46, cy, 0.105),
+    ]);
+    shaded(ctx, f, [-0.45, cy - 0.55], [0.45, cy + 0.55], rgba(skin.lit, 0.35), rgba(skin.plate, 0.65),
+      socket(0, cy, 0.6), 1, false, [socket(-0.46, cy, 0.105)]);
+    lit(ctx, f, skin, [
+      ...roundel(0, cy, 0.56, 10, 200 * deg, 290 * deg),
+      ...roundel(0, cy, 0.47, 10, 290 * deg, 200 * deg),
+    ]);
+    motif(ctx, f, skin, theme, [
+      [0.16, cy - 0.3],
+      [0.48, cy - 0.2],
+      [0.48, cy + 0.2],
+      [0.16, cy + 0.3],
+    ], seeds[i]!);
+    seam(ctx, f, shade(skin.plate, -0.3), 0.02, [[0.1, cy - 0.1], [0.3, cy - 0.25], [0.45, cy - 0.2]], 0.7);
+    seam(ctx, f, shade(skin.plate, -0.3), 0.02, [[0.1, cy + 0.1], [0.32, cy + 0.24], [0.46, cy + 0.3]], 0.7);
+  }
+  // The spine the three hang from, in shadow, lit down its forward edge.
+  shaded(ctx, f, [-0.1, 0], [0.1, 0], shade(skin.plate, 0.1), shade(skin.plate, -0.25), [
+    [-0.1, -1.02],
+    [0.1, -1.02],
+    [0.1, 1.02],
+    [-0.1, 1.02],
   ]);
-  lit(ctx, f, skin, [
-    [-0.24, -0.72],
-    [-0.5, -0.84],
-    [-0.56, -0.66],
-    [-0.36, -0.64],
-  ]);
-  motif(ctx, f, skin, theme, [
-    [0.3, -0.72],
-    [0.5, -0.86],
-    [0.58, -0.64],
-    [0.4, -0.62],
-  ], 'boss6');
-  for (const y of [-0.62, 0, 0.62]) disc(ctx, f, skin.eye, -0.46, y, 0.06);
+  seam(ctx, f, shade(skin.lit, 0.3), 0.02, [[-0.08, -1], [-0.08, 1]], 0.7);
+  for (const y of CHORUS_LOBES) {
+    glow(ctx, f, skin.eye, -0.46, y, 0.2, 0.45);
+    disc(ctx, f, skin.eye, -0.46, y, 0.06);
+  }
 }
 
 /*
@@ -14482,11 +14954,42 @@ function drawArtery(ctx: Pen, f: Frame, body: string): void {
   poly(ctx, f, body, hull, 0.9);
   seam(ctx, f, mix(body, '#ffffff', 0.3), 0.05, [[-ARTERY_HALF_LENGTH, -0.04], [ARTERY_HALF_LENGTH, -0.04]], 0.55);
 }
+/**
+ * The Core's axis, painted — 0631: the form-shade over the outer ring and not the gap inside it, the ring's lower
+ * half in shadow and its front lit, the place's motif round the back, its armour segments, a lamp at each of its
+ * four marks, the light it holds in the gap, and the core turned as an eye — an iris round the pupil.
+ */
 function paintBoss7(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The axis: the outer ring's lower half in shadow, its front lit, the motif round the back.
+  shaded(ctx, f, [-0.7, -0.7], [0.7, 0.7], rgba(skin.lit, 0.3), rgba(skin.plate, 0.6), socket(0, 0, 0.985), 1,
+    false, [roundel(0, 0, 0.675, 48, 0, Math.PI * 2)]);
   plate(ctx, f, skin, sector(0.7, 0.96, 0.15, Math.PI - 0.15));
   lit(ctx, f, skin, sector(0.7, 0.82, Math.PI + 0.3, Math.PI * 1.5 + 0.2));
   motif(ctx, f, skin, theme, sector(0.72, 0.94, -0.6, 0.6, 10), 'boss7');
+  // The ring's armour segments between its marks, its rim lit, and its inner edge in shadow.
+  for (const k of [1, 2, 4, 5, 7, 8, 10, 11]) {
+    const a = (k * Math.PI) / 6;
+    seam(ctx, f, shade(skin.plate, -0.35), 0.02, [[Math.cos(a) * 0.7, Math.sin(a) * 0.7], [Math.cos(a) * 0.95, Math.sin(a) * 0.95]], 0.75);
+  }
+  seam(ctx, f, shade(skin.lit, 0.35), 0.02, roundel(0, 0, 0.93, 24, Math.PI + 0.2, Math.PI * 1.5 + 0.3), 0.8);
+  seam(ctx, f, shade(skin.plate, -0.4), 0.025, roundel(0, 0, 0.7, 48, 0, Math.PI * 2), 0.7);
+  for (const [x, y] of [
+    [0.83, 0],
+    [-0.83, 0],
+    [0, -0.83],
+    [0, 0.83],
+  ] as const) {
+    disc(ctx, f, shade(skin.plate, -0.3), x, y, 0.1);
+    glow(ctx, f, skin.eye, x, y, 0.18, 0.45);
+    disc(ctx, f, skin.eye, x, y, 0.05);
+  }
+  // The light it holds in the gap, translucent, so the sky still shows through.
+  glow(ctx, f, skin.eye, 0, 0, 0.66, 0.22);
+  // The core as an eye: turned, an iris in the eye's ink round the pupil the arm cuts, and the pupil lit.
+  shaded(ctx, f, [-0.3, -0.3], [0.3, 0.3], shade(skin.lit, 0.2), shade(skin.plate, -0.2), socket(0, 0, 0.29), 1,
+    false, [socket(0, 0, 0.245)]);
+  shaded(ctx, f, [0, -0.24], [0, 0.24], skin.eye, shade(skin.eye, -0.4), socket(0, 0, 0.24), 1, false, [
+    socket(0, 0, 0.175),
+  ]);
   disc(ctx, f, skin.eye, 0, 0, 0.1);
 }
 /*
@@ -16481,10 +16984,13 @@ function drawKite(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
     tells this from the minnow by (`KITE_HULL`'s note), and a densified side that a pose bends is a
     curve — `tests/volans.test.ts` counted it as one. The corners move; the sides stay straight.
   */
-  trace(ctx, f, posed(KITE_HULL, KITE_POSES[n]!));
+  const hull = posed(KITE_HULL, KITE_POSES[n]!);
+  trace(ctx, f, hull);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) paintKite(ctx, f, skin, n);
+  if (skin === null) return;
+  paintKite(ctx, f, skin, n);
+  finishBody(ctx, f, skin, (pen) => trace(pen, f, hull));
 }
 
 function drawSwift(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
@@ -16493,10 +16999,13 @@ function drawSwift(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n
 
 function drawMinnow(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
   // A curve through its points, so posed and not densified — `MINNOW_POSES` has why.
-  curveLoop(ctx, f, posed(MINNOW_HULL, MINNOW_POSES[n]!));
+  const hull = posed(MINNOW_HULL, MINNOW_POSES[n]!);
+  curveLoop(ctx, f, hull);
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
-  if (skin !== null) paintMinnow(ctx, f, skin, n);
+  if (skin === null) return;
+  paintMinnow(ctx, f, skin, n);
+  finishBody(ctx, f, skin, (pen) => curveLoop(pen, f, hull));
 }
 export function drawKind(
   ctx: Pen,
@@ -17048,21 +17557,16 @@ export function drawKind(
         size of anything else on screen, so detail survives that would be mush on an enemy.
 
         The notch is what makes it read as facing the player rather than as a lump.
+
+        ⚠️ **A FRIGATE SINCE 0631** — *"remove placeholder graphics with miniboss art"*. The hexagon and its
+        carved keel were the placeholder: a raider guard frigate from above, its ram prow at −x, a
+        superstructure down its spine, a turret on each shoulder, and two engine nacelles at its stern
+        (`SENTINEL_HULL`).
       */
-      ctx.moveTo(half - r, half);
-      ctx.lineTo(half - r * 0.45, half - r * 0.45);
-      ctx.lineTo(half - r * 0.55, half - r * 0.8);
-      ctx.lineTo(half + r * 0.5, half - r * 0.95);
-      ctx.lineTo(half + r, half - r * 0.4);
-      ctx.lineTo(half + r, half + r * 0.4);
-      ctx.lineTo(half + r * 0.5, half + r * 0.95);
-      ctx.lineTo(half - r * 0.55, half + r * 0.8);
-      ctx.lineTo(half - r * 0.45, half + r * 0.45);
-      ctx.closePath();
+      trace(ctx, f, SENTINEL_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      carve(ctx, f, palette.space, BOSS_KEEL);
-      if (skin !== null) paintBoss(ctx, f, skin, theme);
+      if (skin !== null) paintBoss(ctx, f, skin);
       return;
     }
     case 'spinner':
@@ -17111,21 +17615,13 @@ export function drawKind(
 
         Same licence as the first: at 30 world units it is five times the size of anything else on
         screen, so detail survives that would be mush on an enemy.
+
+        ⚠️ **A HARROW SINCE 0631.** The spine carved out of it was a black bar, and read as a slot
+        rather than as a body: it is a raised core with its vents lit now (`HARROW_HULL`).
       */
-      ctx.moveTo(half - r, half - r * 0.16);
-      ctx.lineTo(half - r * 0.25, half - r * 0.3);
-      ctx.lineTo(half - r * 0.55, half - r * 0.95);
-      ctx.lineTo(half + r * 0.15, half - r * 0.8);
-      ctx.lineTo(half + r * 0.95, half - r * 0.35);
-      ctx.lineTo(half + r * 0.95, half + r * 0.35);
-      ctx.lineTo(half + r * 0.15, half + r * 0.8);
-      ctx.lineTo(half - r * 0.55, half + r * 0.95);
-      ctx.lineTo(half - r * 0.25, half + r * 0.3);
-      ctx.lineTo(half - r, half + r * 0.16);
-      ctx.closePath();
+      trace(ctx, f, HARROW_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      carve(ctx, f, palette.space, BOSS2_SPINE);
       if (skin !== null) paintBoss2(ctx, f, skin, theme);
       return;
     }
@@ -17136,8 +17632,9 @@ export function drawKind(
       numbers, and each one is built around ONE readable idea, because at 28 to 38 world units the
       shape is the first thing a player learns and the last thing they forget.
 
-      ⚠️ **Still placeholders, and the pipeline is still not.** The file's own opening paragraph says
-      so; what these buy is that no two bosses in the run are the same object in a different colour.
+      ⚠️ **NOT PLACEHOLDERS SINCE 0631** — *"remove placeholder graphics with miniboss art"*. Each
+      keeps its one idea and is painted in the end bosses' manner (0264): a form-shade, lit edges,
+      seams and the parts the idea names.
     */
     case 'boss3':
     case 'boss3Hit':
@@ -17161,21 +17658,11 @@ export function drawKind(
     case 'boss4':
     case 'boss4Hit':
       // A SHOAL MOTHER: a blunt teardrop trailing four fins. Level four is about speed, and this is
-      // the only hull in the game that reads as moving while it is standing still.
-      ctx.moveTo(half - r, half);
-      ctx.lineTo(half - r * 0.3, half - r * 0.62);
-      ctx.lineTo(half + r * 0.55, half - r * 0.5);
-      ctx.lineTo(half + r * 0.95, half - r * 0.86);
-      ctx.lineTo(half + r * 0.8, half - r * 0.22);
-      ctx.lineTo(half + r, half);
-      ctx.lineTo(half + r * 0.8, half + r * 0.22);
-      ctx.lineTo(half + r * 0.95, half + r * 0.86);
-      ctx.lineTo(half + r * 0.55, half + r * 0.5);
-      ctx.lineTo(half - r * 0.3, half + r * 0.62);
-      ctx.closePath();
+      // the only hull in the game that reads as moving while it is standing still. A fish since 0631,
+      // whose three carved streaks read as slots: its speed is in its swept fins and its fin rays now.
+      trace(ctx, f, SHOAL_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      carve(ctx, f, palette.space, BOSS4_STREAKS);
       if (skin !== null) paintBoss4(ctx, f, skin, theme);
       return;
     case 'boss5':
@@ -17186,42 +17673,24 @@ export function drawKind(
       // ⚠️ **THE FACE IS AT −x, TOWARD THE PLAYER — 0452.** It was drawn at +x, so the stepped face and
       // its three ports looked up the lane away from the ship while the flak went down it: a fortress
       // with its guns on its back. Mirrored, every point of it, the paint and the bands with it.
-      ctx.moveTo(half + r * 0.72, half - r * 0.95);
-      ctx.lineTo(half - r * 0.35, half - r * 0.95);
-      ctx.lineTo(half - r * 0.35, half - r * 0.55);
-      ctx.lineTo(half - r, half - r * 0.4);
-      ctx.lineTo(half - r, half + r * 0.4);
-      ctx.lineTo(half - r * 0.35, half + r * 0.55);
-      ctx.lineTo(half - r * 0.35, half + r * 0.95);
-      ctx.lineTo(half + r * 0.72, half + r * 0.95);
-      ctx.lineTo(half + r * 0.95, half + r * 0.4);
-      ctx.lineTo(half + r * 0.95, half - r * 0.4);
-      ctx.closePath();
-      // Three ports along the face, hollow, so the thing that shoots has somewhere it shoots from.
-      for (let i = -1; i <= 1; i++) {
-        const y = half + i * r * 0.5;
-        ctx.moveTo(half - r * 0.28, y);
-        ctx.arc(half - r * 0.45, y, r * 0.17, 0, Math.PI * 2);
-      }
+      //
+      // Crenellated along both long edges since 0631, and its two carved bands are raised buttresses.
+      trace(ctx, f, REDOUBT_HULL);
+      // Three ports along the face, hollow, so the thing that shoots has somewhere it shoots from: the
+      // outer two are bites in the outline, the middle one is cut here.
+      ctx.moveTo(half + (REDOUBT_PORT_X + REDOUBT_PORT_R) * r, half);
+      ctx.arc(half + REDOUBT_PORT_X * r, half, REDOUBT_PORT_R * r, 0, Math.PI * 2);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      carve(ctx, f, palette.space, BOSS5_BANDS);
       if (skin !== null) paintBoss5(ctx, f, skin, theme);
       return;
     case 'boss6':
     case 'boss6Hit':
       // A CHORUS: three stacked lobes on one spine, so it reads as several things that turned out to
-      // be one. Level six is about there being no gaps, and this is the hull that has none.
-      for (let i = -1; i <= 1; i++) {
-        const y = half + i * r * 0.62;
-        ctx.moveTo(half + r * 0.62, y);
-        ctx.arc(half, y, r * 0.62, 0, Math.PI * 2);
-      }
-      ctx.moveTo(half - r * 0.18, half - r);
-      ctx.lineTo(half + r * 0.18, half - r);
-      ctx.lineTo(half + r * 0.18, half + r);
-      ctx.lineTo(half - r * 0.18, half + r);
-      ctx.closePath();
+      // be one. Level six is about there being no gaps, and this is the hull that has none — which
+      // since 0631 is true: it was three circles and a bar under `evenodd`, holed wherever two met
+      // (`CHORUS_HULL`).
+      trace(ctx, f, CHORUS_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       carve(ctx, f, palette.space, BOSS6_EYES);
@@ -18466,6 +18935,8 @@ export function drawKind(
       curveLoop(ctx, f, posed(MOON_JELLY_HULL, JELLY_POSES[n]!));
       ctx.fillStyle = rgba(light, 0.35);
       seal(ctx);
+      // Not finished (0632): it is its own light, glowing through a hull at a third of its ink, and a
+      // form-shade is light falling on a solid body from outside it.
       if (skin !== null) paintMoonJelly(ctx, f, skin, light, n);
       return;
     }

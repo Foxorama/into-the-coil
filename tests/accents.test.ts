@@ -34,7 +34,7 @@ import { SHIPS, SHIP_KINDS, ownFit } from '../src/content/ships.ts';
 */
 vi.setConfig({ testTimeout: 150_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
-import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { ENEMIES, ENEMY_KINDS, type EnemyKind } from '../src/content/enemies.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
@@ -604,6 +604,40 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
     */
   }, 155_000);
 
+  it('0631: no sub-path of a hull straddles its outline, so a hole never fills ink outside the body', () => {
+    /*
+      ⚠️ **A HULL IS FILLED `evenodd`, AND A HOLE ACROSS THE EDGE IS INK OFF THE BODY.** A sub-path
+      wholly inside the outline is a hole; one wholly outside is a separate piece. One with points
+      both sides fills the part of itself OUTSIDE the outline: the redoubt's outer ports filled a
+      crescent of wall in the sky, and the chorus's overlapping lobes cancelled into lenses. Both read
+      as placeholders on the play-test of 2026-10-18 (*"remove placeholder graphics with miniboss
+      art"*), and neither is a mark the 0149 guard above can see — it measures paint against the
+      hull, and this is the hull disagreeing with itself.
+    */
+    for (const theme of THEME_KINDS) {
+      for (const kind of BODIES) {
+        const { hull } = hullAndPaint(kind, theme);
+        if (hull.subpaths.length < 2) continue;
+        const outline = edgeIndex({ ...hull, subpaths: [hull.subpaths[0]!] });
+        hull.subpaths.slice(1).forEach((subpath, i) => {
+          let inside = 0;
+          let outside = 0;
+          // A point within half a pixel of the outline is on it, and is neither.
+          for (const point of subpath) {
+            if (outline.distance(point) < 0.5) continue;
+            if (outline.inside(point)) inside++;
+            else outside++;
+          }
+          expect(
+            Math.min(inside, outside),
+            `sub-path ${i + 2} of the ${kind}'s hull at ${theme} has ${inside} points more than half a pixel inside ` +
+              `its outline and ${outside} outside, so under evenodd it fills ink beyond the body`,
+          ).toBe(0);
+        });
+      }
+    }
+  });
+
   it('and a translucent mark — a plume, a halo — stays inside the sprite’s own box', () => {
     for (const theme of THEME_KINDS) {
       for (const kind of BODIES) {
@@ -1076,6 +1110,48 @@ describe('paint costs nothing to draw', () => {
             `stroke ${i} on the ${kind} at ${theme} reaches ${over.toFixed(2)}px past its hull — a mark painted ` +
               'with a stroke is held to the silhouette exactly as a mark painted with a fill is',
           ).toBe(0);
+        }
+      }
+    }
+  });
+
+  it('0632: every enemy in every place is finished — a form-shade on its own hull, and a rim wide enough to be drawn', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"still look overall a lot like placeholders, can we do something overall with the
+      enemy art"*. The bodies were flat cut-outs; `finishBody` gives each the place's form-shade and rim
+      light. What is held is that every body the place sends has both — a body drawn some other way
+      would quietly be the one placeholder left — and that the rim clears 0106's 2.5 px at the fight's
+      camera, where a small enemy's radius is about fourteen pixels and the rim's share of it alone is
+      under one. The strengths are each place's to author and are not held: a place may want its
+      raiders flatter, and that is correct.
+    */
+    const same = (a: readonly (readonly Point[])[], b: readonly (readonly Point[])[]): boolean =>
+      a.length === b.length &&
+      a.every((s, i) => s.length === b[i]!.length && s.every(([x, y], j) => Math.abs(x - b[i]![j]![0]) < 1e-9 && Math.abs(y - b[i]![j]![1]) < 1e-9));
+    /*
+      ⚠️ **THE MOON JELLY IS NOT FINISHED, ON PURPOSE.** It is its own light, glowing through a hull laid
+      at a third of its ink, and a form-shade is light falling on a solid body from outside it. Named
+      here rather than skipped by a rule, so the next body that is not finished has to be named too.
+    */
+    const unfinished: readonly EnemyKind[] = ['moonJelly'];
+    const enemies = new Set(
+      ENEMY_KINDS.filter((k) => !unfinished.includes(k))
+        .flatMap((k) => ENEMIES[k].cycle.frames)
+        .map((i) => SPRITE_KINDS[i]!),
+    );
+    for (const theme of THEME_KINDS) {
+      for (const kind of enemies) {
+        const traced = trace(kind, theme);
+        const hull = traced.passes[0]!;
+        const shaded = traced.passes.slice(1).filter((pass) => pass.colour === 'gradient' && same(pass.subpaths, hull.subpaths));
+        expect(shaded.length, `the ${kind} at ${theme} has no form-shade laid on its own hull`).toBeGreaterThan(0);
+        const rims = traced.inks.filter((ink) => ink.composite === 'source-atop' && ink.colour === 'gradient');
+        expect(rims.length, `the ${kind} at ${theme} has no rim light`).toBeGreaterThan(0);
+        for (const rim of rims) {
+          expect(
+            rim.width,
+            `the ${kind}'s rim light at ${theme} is ${rim.width.toFixed(2)}px wide on a 1280×720 screen, under 0106's floor, so it is not drawn`,
+          ).toBeGreaterThanOrEqual(2.5);
         }
       }
     }

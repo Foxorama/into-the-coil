@@ -36,8 +36,9 @@ export const PROBES = [
     edit: {
       path: 'src/render/bake.ts',
       // ⚠️ Re-anchored by 0410, which draws the kite in `drawKite` so each frame of its cycle can.
-      find: '  trace(ctx, f, posed(KITE_HULL, KITE_POSES[n]!));',
-      replace: '  curveLoop(ctx, f, posed(KITE_HULL, KITE_POSES[n]!));',
+      // ⚠️ Re-anchored by 0632, which keeps the posed hull to trace again for the finish.
+      find: '  const hull = posed(KITE_HULL, KITE_POSES[n]!);\n  trace(ctx, f, hull);',
+      replace: '  const hull = posed(KITE_HULL, KITE_POSES[n]!);\n  curveLoop(ctx, f, hull);',
     },
   },
 ];
