@@ -60,8 +60,17 @@ Read that way, item 4 is the other four together:
 - the next run opens with the intro (3);
 - the counter is right (5).
 
-**Read and decided without asking — can be vetoed.** If the note did mean the save itself, wiping progress on a
-game over is a one-line change to make, and one that cannot be taken back for a player once it ships.
+**Confirmed by the player:** *"when I say cache clear, I mean hard browser refresh, not a full data cache clear."*
+A hard refresh resets everything the page holds and keeps what is saved, which is the line drawn here.
+
+The rest of what the page holds between runs was read for anything else of one run's reaching the next:
+- the finale's cue index, its rescued golfer and line, and the score table's flags are each reset where their own
+  run or finale begins;
+- the world is held whole by 0559.
+
+One difference from a refresh is kept on purpose: after a run, the card flown last stays armed, so a returning
+thumb is one tap from flying ([0513](../docs/decisions/0513-the-pilot-flies.md)'s convenience, not anything of
+the last run's).
 
 ## Landed
 

@@ -15,18 +15,15 @@ Amends [0513](0513-the-pilot-flies.md), whose intro was the first flight of a vi
 flight began the run at once. A cache clear reloads the page, which is the only reason the intro came back.
 Nothing in storage was involved.
 
-## Read, and decided without asking
+## What *a cache clear* means here
 
-**Item 4 is not read as wiping the save.** A cache clear also deletes the hangar and the settings: ships won,
-shards, fittings, the tier. The page is headed *Run Resets*, and its other notes are each something of one run
-reaching into the next. So it is read as *a new run starts as a first run after a cache clear does*, with what
-the player has earned kept. Each of the page's notes is part of that:
+**Item 4 is not read as wiping the save, and the player confirmed it:** *"when I say cache clear, I mean hard
+browser refresh, not a full data cache clear."* A hard refresh resets everything the page holds and keeps the
+hangar, the settings and the scores. So a new run starts as the first run after a refresh does. Each of the page's notes is part of that:
 - the intro (this decision);
 - the boss bar ([0634](0634-the-boss-bar-goes-with-the-run.md));
 - the held explosions ([0633](0633-a-beat-that-stands-still-holds-nothing.md));
 - the counter ([0636](0636-the-counter-is-the-ships-left.md)).
-
-The report says so as a reading the player can veto.
 
 ## The rule
 
