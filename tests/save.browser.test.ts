@@ -55,13 +55,23 @@ async function press(page: Page, index: number): Promise<void> {
   await page.locator(shown('save') + ' .' + SAVE + 'action', { hasText: SCREENS.save.actions[index]!.label }).first().click();
 }
 
-/** Answer the sheet up on `screen` with its button `label`, and wait for the page the answer reloads. */
-async function replace(page: Page, screen: 'save' | 'title'): Promise<void> {
+/**
+ * Answer the replace sheet up on `screen`, and wait for the page the answer reloads. Returns what the
+ * sheet said, for a case that reads it.
+ */
+async function replace(page: Page, screen: 'save' | 'title', asks = 'Replace the save here?', yes = 'Replace'): Promise<string> {
   const sheet = '.' + prefixFor(screen) + 'ask';
   await page.waitForSelector(sheet, { state: 'visible' });
-  expect(await page.textContent(sheet), 'the sheet does not ask to replace').toContain('Replace the save here?');
-  await Promise.all([page.waitForEvent('load'), page.locator(sheet + ' .' + prefixFor(screen) + 'action', { hasText: 'Replace' }).click()]);
+  const said = (await page.textContent(sheet)) ?? '';
+  expect(said, 'the sheet does not ask to replace').toContain(asks);
+  await Promise.all([page.waitForEvent('load'), page.locator(sheet + ' .' + prefixFor(screen) + 'action', { hasText: yes }).click()]);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+  return said;
+}
+
+/** Whether the Save tab's Undo is up. */
+async function undoShown(page: Page): Promise<boolean> {
+  return page.locator(shown('save') + ' .' + SAVE + 'action', { hasText: SCREENS.save.actions[4]!.label }).first().isVisible();
 }
 
 describe.runIf(chromePath)('0641 — the save leaves the device and comes back', () => {
@@ -87,8 +97,19 @@ describe.runIf(chromePath)('0641 — the save leaves the device and comes back',
     await writeFile(file, backupOf(withShards(777), 1_800_000_000_000));
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), press(page, 1)]);
     await chooser.setFiles(file);
-    await replace(page, 'save');
+    expect(await undoShown(page), 'Undo was up before anything was loaded').toBe(false);
+    // 0642: a load that loses shards says so before anything else.
+    const said = await replace(page, 'save');
+    expect(said, 'the sheet did not say what the load loses').toContain('3,544 fewer ✦');
     expect(await shardsKept(page), 'a file loaded is not what the page booted on').toBe(777);
+
+    // 0642: and undone — the save it replaced is the one the page boots on.
+    await pastIntro(page);
+    await openSave(page);
+    expect(await undoShown(page), 'Undo is not up after a load').toBe(true);
+    await press(page, 4);
+    await replace(page, 'save', 'Put back the save from before?', 'Put it back');
+    expect(await shardsKept(page), 'an undo did not put back the save the load replaced').toBe(4321);
 
     // In from a code, pasted.
     await pastIntro(page);

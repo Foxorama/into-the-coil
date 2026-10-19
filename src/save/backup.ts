@@ -121,8 +121,10 @@ export function restoreFrom(text: string, base: { settings: SettingsState; hanga
  * still holds for the visit; a restore that a full store refuses has done nothing at all, and the
  * page it reloads into would show the old save as if it were the one restored.
  */
-export function writeKept(store: Store | null, kept: Kept): boolean {
+export function writeKept(store: Store | null, kept: Kept, replaced: Kept | null = null, at = 0): boolean {
   if (store === null) return false;
+  // 0642: the save being replaced kept first, and the load refused if it cannot be — no undo, no load.
+  if (replaced !== null && !keepUndo(store, replaced, at)) return false;
   const docs: readonly (readonly [string, string])[] = [
     [SCORES_KEY, serialiseScores(kept.scores)],
     [SETTINGS_KEY, serialiseSettings(kept.settings)],
@@ -134,6 +136,60 @@ export function writeKept(store: Store | null, kept: Kept): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Where the save a load replaced is kept — `docs/decisions/0642-a-load-can-be-undone.md`. Named once;
+ * `PRIVACY.md` names it too, and a test holds the two together.
+ *
+ * ⚠️ **A WHOLE BACKUP, IN THE ENVELOPE A FILE CARRIES**, so undoing is a load like any other, read by
+ * `restoreFrom` and refused on its terms — and it keeps the save it puts aside, so an undo can be undone.
+ * One step back and no further: a second load puts aside the save the first one brought.
+ */
+export const UNDO_KEY = 'itc_undo';
+
+/** `replaced` put aside in `store`, and whether it reads back as written. */
+function keepUndo(store: Store, replaced: Kept, at: number): boolean {
+  const text = backupOf(replaced, at);
+  try {
+    store.setItem(UNDO_KEY, text);
+    return store.getItem(UNDO_KEY) === text;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The backup of the save the last load replaced, or `null` when there is none. Never throws. The text and
+ * not the save, so an undo goes through `restoreFrom` as every load does, and is refused on its terms.
+ */
+export function undoOf(store: Store | null): string | null {
+  if (store === null) return null;
+  try {
+    return store.getItem(UNDO_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What `here` has that `incoming` does not — 0642: each a phrase for the player, in a fixed order, and empty
+ * when the load loses nothing. Counted on what was earned: ships won, Star Shards, what was bought, the
+ * best run on the table, and the table's rows.
+ */
+export function lossesOf(here: Kept, incoming: Kept): string[] {
+  const out: string[] = [];
+  const count = <K extends string>(record: Readonly<Record<K, boolean>>): number => Object.values<boolean>(record).filter((on) => on).length;
+  const fewer = (have: number, get: number, what: string): void => {
+    if (get < have) out.push(`${(have - get).toLocaleString('en')} fewer ${what}`);
+  };
+  fewer(count(here.hangar.won), count(incoming.hangar.won), 'ships won');
+  fewer(here.hangar.shards, incoming.hangar.shards, '✦');
+  fewer(count(here.hangar.owned), count(incoming.hangar.owned), 'things bought');
+  const best = (kept: Kept): number => kept.scores[0]?.score ?? 0;
+  if (best(incoming) < best(here)) out.push(`a best run ${(best(here) - best(incoming)).toLocaleString('en')} lower`);
+  fewer(here.scores.length, incoming.scores.length, 'high scores');
+  return out;
 }
 
 /** Bytes as base64url — the alphabet a link carries without escaping. */

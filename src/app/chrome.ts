@@ -2408,7 +2408,8 @@ ${each('-tab-key[hidden]')} { display: none; }
 */
 @container (max-height: 460px) {
   .itc-save-choices { display: grid; grid-template-columns: 1fr 1fr; width: min(100%, 34em); }
-  .itc-save-choices > :last-child { grid-column: 1 / -1; }
+  /* 0642: Back beside Undo when it is up, and across both columns alone when it is not. */
+  .itc-save-choices > [hidden] + :last-child { grid-column: 1 / -1; }
   .itc-save-action-hint { display: none; }
   .itc-save-note-line { margin-bottom: 0.15em; font-size: 0.75em; }
   .itc-save-ask-card { padding: 0.5em 1em; gap: 0.25em; }

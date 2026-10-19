@@ -166,7 +166,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { CODE_HASH, backupOf, backupOfCode, codeOf, restoreFrom, writeKept, type Kept } from '../save/backup.ts';
+import { CODE_HASH, backupOf, backupOfCode, codeOf, lossesOf, restoreFrom, undoOf, writeKept, type Kept } from '../save/backup.ts';
 import { GAME_TITLE } from '../brand.ts';
 import { qrOf } from './qr.ts';
 import { artOpen, creditsFor, flameOpen, gunOpen, needsFirst, pilotRecord, plateOpen, rackOpen, reduceHangar, rimOpen, shellOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
@@ -2009,6 +2009,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (guarded === false) lines.push('Not protected: the browser may clear it to make room. A file keeps a copy it cannot.');
     lines.push('Here: ' + summary(keptNow()));
     chrome.setNote(lines);
+    // 0642: Undo only where a load has put a save aside.
+    chrome.setActionShown('save', 4, undoOf(keptStore) !== null);
     if (guarded === null && storage !== null && typeof storage.persisted === 'function') {
       storage.persisted().then(
         (answer) => {
@@ -2040,7 +2042,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.ask(screen, { title, lines, yes: 'OK', no: null }, () => undefined);
   };
   /** Offer the save in `text` in place of this one — or say why it cannot be. */
-  function offerRestore(screen: Screen, text: string | null): void {
+  function offerRestore(screen: Screen, text: string | null, undoing = false): void {
     const read =
       text === null
         ? ({ ok: false, why: 'That is not a save code, and nothing was changed.' } as const)
@@ -2049,16 +2051,31 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       tell(screen, 'Nothing was loaded', [read.why]);
       return;
     }
+    const here = keptNow();
+    /*
+      ⚠️ **WHAT IT WOULD LOSE FIRST — 0642.** A save shared as a code is pressed through out of habit, and the
+      two summaries under it are the same shape whichever is bigger; a line that says what goes is the one a
+      player reads before Replace. An undo is put aside either way, so this is the warning and not the net.
+    */
+    const lost = lossesOf(here, read.kept);
     const lines = [
-      (read.at === null ? 'The save: ' : 'Saved ' + new Date(read.at).toLocaleDateString() + ': ') + summary(read.kept),
-      'Here now: ' + summary(keptNow()),
+      ...(lost.length === 0 ? [] : ['This has less than you have here: ' + lost.join(', ') + '.']),
+      (read.at === null ? 'The save: ' : (undoing ? 'Put aside ' : 'Saved ') + new Date(read.at).toLocaleDateString() + ': ') + summary(read.kept),
+      'Here now: ' + summary(here),
+      undoing ? 'What is here now is put aside in its place.' : 'What is here now is put aside: Undo the last load brings it back.',
     ];
     // A run paused under Settings is not on the table yet, and the reload ends it.
     if (state.screen.opener === 'paused') lines.push('The paused run ends, and is not kept.');
-    chrome.ask(screen, { title: 'Replace the save here?', lines, yes: 'Replace', no: 'Keep this one' }, () => {
-      if (writeKept(keptStore, read.kept)) location.reload();
+    const title = undoing ? 'Put back the save from before?' : 'Replace the save here?';
+    chrome.ask(screen, { title, lines, yes: undoing ? 'Put it back' : 'Replace', no: 'Keep this one' }, () => {
+      if (writeKept(keptStore, read.kept, here, Date.now())) location.reload();
       else tell(screen, 'Nothing was loaded', ['This browser would not keep it. Nothing here changed.']);
     });
+  }
+  function undoLoad(): void {
+    const put = undoOf(keptStore);
+    if (put === null) tell('save', 'Nothing to undo', ['No save has been loaded over this one.']);
+    else offerRestore('save', put, true);
   }
   function offerArrived(): void {
     if (arrived === null) return;
@@ -2184,6 +2201,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else if (index === 1) loadFromFile();
     else if (index === 2) showCode();
     else if (index === 3) enterCode();
+    else if (index === 4) undoLoad();
     else goBack();
   }
 
