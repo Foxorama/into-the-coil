@@ -166,6 +166,9 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
+import { CODE_HASH, backupOf, backupOfCode, codeOf, restoreFrom, writeKept, type Kept } from '../save/backup.ts';
+import { GAME_TITLE } from '../brand.ts';
+import { qrOf } from './qr.ts';
 import { artOpen, creditsFor, flameOpen, gunOpen, needsFirst, pilotRecord, plateOpen, rackOpen, reduceHangar, rimOpen, shellOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
@@ -1952,6 +1955,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     } else if (now === 'victory') {
       const place = recordRun(true);
       chrome.setSheet('victory', runSheet(state.run, place, bank()));
+    } else if (now === 'save') noteSave();
+    // 0641: the title is where a save that arrived in a link is offered, and where the browser is asked to protect one.
+    if (now === 'title') {
+      protect();
+      offerArrived();
     }
     /*
       ⚠️ **NOT `now === 'title' && was === 'gameOver'` ANY MORE — 0559.** A continue that ran out or was
@@ -1964,6 +1972,219 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   function walkedAway(): void {
     recordRun(false);
     bank();
+  }
+
+  /*
+    ── THE SAVE, CARRIED — `docs/decisions/0641-the-save-travels.md` ────────────────────────────────────
+
+    Everything the game keeps is in this browser's storage for this origin and nowhere else, so these
+    are the ways it leaves: a file, and a code a phone's camera opens as a link. A restore writes all
+    three keys, reads them back, and reloads, so the page that shows the restored save is a page that
+    read it off the device at boot like any other — no second path into the state to keep in step.
+  */
+  /** What a save that arrived in the link holds, until the title offers it. `null` once offered, or for none. */
+  let arrived: string | null = null;
+  if (location.hash.startsWith(CODE_HASH)) {
+    arrived = location.hash;
+    // Out of the address bar at once, so a reload or a bookmark does not offer it a second time.
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  /** Whether the browser has promised not to clear the save to make room — `null` until it has said. */
+  let guarded: boolean | null = null;
+  const storage = typeof navigator.storage === 'object' ? navigator.storage : null;
+  const keptNow = (): Kept => ({ scores: scoreTable, settings: state.settings, hangar: state.hangar });
+  const earned = (): boolean => scoreTable.length > 0 || state.hangar.shards > 0 || SHIP_KINDS.some((kind) => state.hangar.won[kind]);
+  /** What a save holds, said in one line. */
+  const summary = (kept: Kept): string => {
+    const won = SHIP_KINDS.filter((kind) => kept.hangar.won[kind]).length;
+    return `${won} of ${SHIP_KINDS.length} ships won · ${kept.hangar.shards} ✦ · ${kept.scores.length} high scores`;
+  };
+  /** The Save tab's lines, as things stand. */
+  function noteSave(): void {
+    const lines =
+      keptStore === null
+        ? ['This browser is keeping nothing. Save to a file before you close it.']
+        : ['Kept in this browser on this device, and nowhere else.'];
+    if (guarded === true) lines.push('Protected: the browser will not clear it to make room.');
+    if (guarded === false) lines.push('Not protected: the browser may clear it to make room. A file keeps a copy it cannot.');
+    lines.push('Here: ' + summary(keptNow()));
+    chrome.setNote(lines);
+    if (guarded === null && storage !== null && typeof storage.persisted === 'function') {
+      storage.persisted().then(
+        (answer) => {
+          guarded = answer;
+          if (state.screen.current === 'save') noteSave();
+        },
+        () => undefined,
+      );
+    }
+  }
+  /*
+    ⚠️ **ASKED ON THE TITLE ONCE THERE IS SOMETHING TO LOSE, AND NOT AT BOOT.** Most browsers decide
+    silently; Firefox asks the player, and a first visit asked about storage before the game has shown
+    anything is a page asking for something it has not earned. Once a page, whatever the answer.
+  */
+  let protectAsked = false;
+  function protect(): void {
+    if (protectAsked || keptStore === null || storage === null || typeof storage.persist !== 'function' || !earned()) return;
+    protectAsked = true;
+    storage.persist().then(
+      (answer) => {
+        guarded = answer;
+      },
+      () => undefined,
+    );
+  }
+  /** A sheet that only tells. */
+  const tell = (screen: Screen, title: string, lines: readonly string[]): void => {
+    chrome.ask(screen, { title, lines, yes: 'OK', no: null }, () => undefined);
+  };
+  /** Offer the save in `text` in place of this one — or say why it cannot be. */
+  function offerRestore(screen: Screen, text: string | null): void {
+    const read =
+      text === null
+        ? ({ ok: false, why: 'That is not a save code, and nothing was changed.' } as const)
+        : restoreFrom(text, { settings: initialState.settings, hangar: initialState.hangar });
+    if (!read.ok) {
+      tell(screen, 'Nothing was loaded', [read.why]);
+      return;
+    }
+    const lines = [
+      (read.at === null ? 'The save: ' : 'Saved ' + new Date(read.at).toLocaleDateString() + ': ') + summary(read.kept),
+      'Here now: ' + summary(keptNow()),
+    ];
+    // A run paused under Settings is not on the table yet, and the reload ends it.
+    if (state.screen.opener === 'paused') lines.push('The paused run ends, and is not kept.');
+    chrome.ask(screen, { title: 'Replace the save here?', lines, yes: 'Replace', no: 'Keep this one' }, () => {
+      if (writeKept(keptStore, read.kept)) location.reload();
+      else tell(screen, 'Nothing was loaded', ['This browser would not keep it. Nothing here changed.']);
+    });
+  }
+  function offerArrived(): void {
+    if (arrived === null) return;
+    const link = arrived;
+    arrived = null;
+    void backupOfCode(link).then((text) => offerRestore('title', text));
+  }
+  /*
+    ⚠️ **A FILE IS PICKED, OR A CODE COPIED, ONLY FOR A PRESS THE BROWSER COUNTS.** It opens a file
+    chooser for a click or a key and not for a pad's button, which reaches the page as a polled state
+    rather than as an event — so a pad's press is told what to press instead of doing nothing.
+  */
+  const counted = (): boolean => navigator.userActivation?.isActive ?? true;
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = '.json,application/json';
+  picker.addEventListener('change', () => {
+    const file = picker.files?.[0];
+    picker.value = '';
+    if (file === undefined) return;
+    file.text().then(
+      (text) => offerRestore('save', text),
+      () => tell('save', 'Nothing was loaded', ['That file could not be read.']),
+    );
+  });
+  /** A name a player can tell apart in a downloads folder. */
+  const fileName = (): string => {
+    const day = new Date();
+    const two = (n: number): string => String(n).padStart(2, '0');
+    const slug = GAME_TITLE.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    return `${slug}-save-${day.getFullYear()}-${two(day.getMonth() + 1)}-${two(day.getDate())}.json`;
+  };
+  function saveToFile(): void {
+    const name = fileName();
+    const file = new File([backupOf(keptNow(), Date.now())], name, { type: 'application/json' });
+    // On a phone the share sheet is where *Save to Files* and every cloud drive are; a download is not.
+    const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    if (touch && counted() && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: name }).catch(() => undefined);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    tell('save', 'Saved', [name, 'Keep it somewhere that is not this browser.']);
+  }
+  function loadFromFile(): void {
+    if (!counted()) {
+      tell('save', 'Use the mouse or a key', ['A browser opens a file only for a click or a key press.']);
+      return;
+    }
+    picker.click();
+  }
+  /** The code, copied — or, where the browser will not, shown in a box the player copies from. */
+  function copy(code: string): void {
+    const fallback = (): void => {
+      window.prompt('Copy this code, then enter it on the other device', code);
+    };
+    if (navigator.clipboard === undefined) {
+      fallback();
+      return;
+    }
+    navigator.clipboard.writeText(code).then(
+      () => tell('save', 'Copied', ['On the other device: Settings, Save, Enter a code.']),
+      fallback,
+    );
+  }
+  function showCode(): void {
+    void codeOf(backupOf(keptNow(), Date.now())).then((code) => {
+      // A link only where the page has an address a phone can open; a page opened off a file has none.
+      const link = location.protocol === 'https:' || location.protocol === 'http:' ? location.origin + location.pathname + CODE_HASH + code : null;
+      const symbol = link === null ? null : qrOf(link);
+      if (symbol === null) {
+        chrome.ask('save', { title: 'A code for another device', lines: ['Copy it, then on the other device: Settings, Save, Enter a code.'], yes: 'Copy the code', no: 'Done' }, () =>
+          copy(code),
+        );
+        return;
+      }
+      // Two pixels a module at least, and four modules of light round it — what a camera finds a symbol by.
+      const scale = Math.max(2, Math.ceil(480 / (symbol.size + 8)));
+      const art = document.createElement('canvas');
+      art.width = (symbol.size + 8) * scale;
+      art.height = art.width;
+      art.setAttribute('role', 'img');
+      art.setAttribute('aria-label', 'A QR code holding this save');
+      const pen = art.getContext('2d');
+      if (pen !== null) {
+        pen.fillStyle = '#ffffff';
+        pen.fillRect(0, 0, art.width, art.height);
+        pen.fillStyle = '#000000';
+        symbol.dark.forEach((row, y) => {
+          row.forEach((on, x) => {
+            if (on) pen.fillRect((x + 4) * scale, (y + 4) * scale, scale, scale);
+          });
+        });
+      }
+      chrome.ask(
+        'save',
+        {
+          title: 'Scan it on the other device',
+          lines: ['Its camera opens the game there with this save.', 'An app on a home screen keeps its own: copy the code and enter it there.'],
+          yes: 'Copy the code',
+          no: 'Done',
+          art,
+        },
+        () => copy(code),
+      );
+    });
+  }
+  function enterCode(): void {
+    const pasted = window.prompt('Paste the code from the other device');
+    if (pasted === null || pasted.trim() === '') return;
+    void backupOfCode(pasted).then((text) => offerRestore('save', text));
+  }
+  /** The Save tab's buttons, in the order its row lists them. */
+  function onSave(index: number): void {
+    if (index === 0) saveToFile();
+    else if (index === 1) loadFromFile();
+    else if (index === 2) showCode();
+    else if (index === 3) enterCode();
+    else goBack();
   }
 
   /** Whether a run has begun since the shell last left one — 0558. Set when a run begins, spent by `leaveRun`. */
@@ -2515,6 +2736,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         dispatch({ slice: 'screen', type: 'show', screen: 'music' });
       } else goBack();
     } else if (screen === 'guide') goBack();
+    // 0641: the Save tab's own four, and Back.
+    else if (screen === 'save') onSave(index);
     /*
       ⚠️ **THE PAUSE — 0511**, in the order its row lists them: *Resume* goes through the count-in, as
       Back does; *Settings* and *How to play* are the title's own two screens, opened from here so their

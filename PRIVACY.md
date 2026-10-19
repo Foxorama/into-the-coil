@@ -1,6 +1,6 @@
 # Privacy — Into the Coil
 
-**Last updated: 4 October 2026**
+**Last updated: 19 October 2026**
 
 ## The short version
 
@@ -36,6 +36,24 @@ fails the build if either names storage the other does not.
 
 You can wipe everything at any time by clearing site data in your browser, or by uninstalling the
 app if you installed it.
+
+## Taking your save with you
+
+**Settings → Save** lets you carry those three things to another browser or device. Nothing about it
+goes anywhere unless you take it there yourself:
+
+- **Save to a file** writes them into a file on your device, through your browser's own download or
+  share sheet. Load it on the other device with **Load a file**.
+- **Show a code** draws them as a QR code and a line of text, on your screen and nowhere else. The QR
+  code is a link to the game with the save after the `#` in it — the part of an address a browser
+  never sends to the server — so opening it on a phone hands the save to the game there and to no
+  one in between. The game takes it out of the address bar as soon as it has read it.
+- Anyone who has your file or your code can load your save, and nothing more: it holds what is in the
+  table above, and no name.
+
+Once you have something worth keeping, the game also asks your browser to **protect its storage**, so
+that it is not cleared to make room. Most browsers answer without asking you; Firefox asks. Either
+way, the answer stays in your browser.
 
 ## What the game sends
 

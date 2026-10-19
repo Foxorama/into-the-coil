@@ -917,7 +917,7 @@ ${each('-action')} {
   running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
   glance, and the choice is the whole screen.
 */
-.itc-title-action-hint, .itc-music-action-hint {
+.itc-title-action-hint, .itc-music-action-hint, .itc-save-action-hint {
   display: block;
   /* A floor, so the smallest phone's card does not set its hint at eight pixels — 0370. */
   font-size: max(0.62em, 0.7rem);
@@ -2361,7 +2361,7 @@ ${each('-tab-key[hidden]')} { display: none; }
   The sheet that asks before a purchase — 0564, answered *"a confirm sheet"*: the ware, its price, the
   balance before and after, and Buy beside Not now. Over the whole screen, so nothing behind it is pressed.
 */
-.itc-shop-ask, .itc-guide-ask {
+.itc-shop-ask, .itc-guide-ask, .itc-save-ask {
   position: absolute;
   inset: 0;
   z-index: 5;
@@ -2372,7 +2372,7 @@ ${each('-tab-key[hidden]')} { display: none; }
   justify-content: center;
   background: color-mix(in srgb, var(--itc-void) 62%, transparent);
 }
-.itc-shop-ask-card, .itc-guide-ask-card {
+.itc-shop-ask-card, .itc-guide-ask-card, .itc-save-ask-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2385,12 +2385,36 @@ ${each('-tab-key[hidden]')} { display: none; }
   box-shadow: 0 0 2em color-mix(in srgb, var(--itc-ink) 30%, transparent);
   text-align: center;
 }
-.itc-shop-ask-title, .itc-guide-ask-title { margin: 0; font-size: 1.2em; font-weight: 800; }
+.itc-shop-ask-title, .itc-guide-ask-title, .itc-save-ask-title { margin: 0; font-size: 1.2em; font-weight: 800; }
 .itc-shop-ask-art { display: block; position: relative; width: 5em; height: 5em; }
 .itc-shop-ask-art .itc-shop-art-dangle { font-size: 1.6em; top: 0; }
 .itc-shop-ask-art .itc-shop-art-flame { font-size: 1.5em; }
-.itc-shop-ask-line, .itc-guide-ask-line { margin: 0; font-size: 0.85em; opacity: 0.9; font-variant-numeric: tabular-nums; }
-.itc-shop-ask-row, .itc-guide-ask-row { display: flex; gap: 0.7em; margin-top: 0.3em; }
+.itc-shop-ask-line, .itc-guide-ask-line, .itc-save-ask-line { margin: 0; font-size: 0.85em; opacity: 0.9; font-variant-numeric: tabular-nums; }
+.itc-shop-ask-row, .itc-guide-ask-row, .itc-save-ask-row { display: flex; gap: 0.7em; margin-top: 0.3em; }
+/*
+  0641: the Save tab. Its sheet carries the code, as large as the card allows and square, its modules
+  drawn whole and never smoothed, on its own light ground, which is what a camera looks for. Its
+  buttons stand in a column, each with what it does under it.
+*/
+.itc-save-ask-card { max-width: min(30em, 94cqw); max-height: 94cqh; overflow-y: auto; }
+.itc-save-ask-code { display: block; width: min(62cqh, 80cqw); height: min(62cqh, 80cqw); image-rendering: pixelated; border-radius: 0.3em; }
+.itc-save-note { width: min(100%, 34em); text-align: center; }
+.itc-save-note-line { margin: 0 0 0.35em; font-size: 0.85em; opacity: 0.9; }
+.itc-save-choices { width: min(100%, 24em); flex-direction: column; align-items: stretch; gap: min(0.5rem, 1.4cqh); }
+/*
+  0641, on a phone: the four in two columns over Back, each its label alone, and the code a size the card
+  holds whole. Photographed at 844x390, the column ran Enter a code and Back under the fold and the
+  sheet lost its title off the top.
+*/
+@container (max-height: 460px) {
+  .itc-save-choices { display: grid; grid-template-columns: 1fr 1fr; width: min(100%, 34em); }
+  .itc-save-choices > :last-child { grid-column: 1 / -1; }
+  .itc-save-action-hint { display: none; }
+  .itc-save-note-line { margin-bottom: 0.15em; font-size: 0.75em; }
+  .itc-save-ask-card { padding: 0.5em 1em; gap: 0.25em; }
+  .itc-save-ask-line { font-size: 0.75em; }
+  .itc-save-ask-code { width: min(52cqh, 80cqw); height: min(52cqh, 80cqw); }
+}
 /*
   0580: a pickup face's sheet on How to play — the face large, its name and what it gives, then its lines
   as a two-column list: what each is, and what it is for this face. Never wider than a phone's plate.
@@ -4340,6 +4364,8 @@ interface Panel {
   now: NowPlayingParts | null;
   /** The crossing's words — 0340. `null` on every other screen, on `now`'s exact terms. */
   crossing: CrossingParts | null;
+  /** The Save tab's account of where the save is kept — 0641. `null` on every other screen, on `now`'s exact terms. */
+  note: HTMLElement | null;
   /** A level's or a run's account — 0428. `null` on every screen that has none. */
   sheet: HTMLElement | null;
   /** The high scores, and the body that drops their column while there are none — 0429, 0458. `null` off the title. */
@@ -4718,6 +4744,18 @@ const FACE_PIXELS = 128;
  */
 export const BOARD_SHOWN = 5;
 
+/**
+ * What a sheet asks — 0564. `art` is a picture to show large in place of the focus card's — 0641's code —
+ * and a `no` of `null` is a sheet that only tells, with one button that puts it away.
+ */
+export interface Question {
+  title: string;
+  lines: readonly string[];
+  yes: string;
+  no: string | null;
+  art?: HTMLCanvasElement;
+}
+
 export interface Chrome {
   /** Everything to put on the page, in order. The stylesheet first. */
   elements: readonly HTMLElement[];
@@ -4883,6 +4921,8 @@ export interface Chrome {
    * caller decides the resolution, and there are two things here that can change in a whole crossing.
    */
   setCrossing(crossing: Crossing | null): void;
+  /** Say on the Save tab where the save is kept and how safe it is there — 0641. One line a paragraph. */
+  setNote(lines: readonly string[]): void;
   /**
    * Say whether the screen up now may be skipped yet — 0412 for the intro, whose game behind it has to
    * finish loading first; the finale always may (0418). Shown on a row that `skips`, while this is true.
@@ -4929,7 +4969,7 @@ export interface Chrome {
    * with what is asked, the lines that say what it costs, and two buttons. The cursor walks only the two
    * while it is up; `no`, B and Escape put it away. `yes` is called once, and the sheet goes.
    */
-  ask(screen: Screen, question: { title: string; lines: readonly string[]; yes: string; no: string }, yes: () => void): void;
+  ask(screen: Screen, question: Question, yes: () => void): void;
   /** Put a sheet away without its `yes` — 0564. True if one was up, so Back knows it was spent. */
   dismiss(): boolean;
   /**
@@ -6138,6 +6178,13 @@ export function makeChrome(
     const nowPlaying = screen === 'music' ? buildNowPlaying(prefix, onSeek, listeners) : null;
     // 0340: the crossing's words, on the line above's exact terms.
     const crossing = screen === 'travel' ? buildCrossing(prefix) : null;
+    // 0641: the Save tab's lines, on the two lines above's terms — written by `setNote`.
+    let note: HTMLElement | null = null;
+    if (screen === 'save') {
+      note = document.createElement('div');
+      note.className = prefix + 'note';
+      note.setAttribute('aria-live', 'polite');
+    }
 
     let board: Panel['board'] = null;
     // 0580: How to play's faces, filled as its key is built.
@@ -6183,6 +6230,8 @@ export function makeChrome(
         reading it. Below the name is where a button that means *I have read this* belongs.
       */
       if (crossing !== null) panel.appendChild(crossing.root);
+      // 0641: above the buttons, which is what they are about.
+      if (note !== null) panel.appendChild(note);
       // 0458: the bands above the actions, which is the order the cursor walks them in.
       host.appendChild(settingsBox);
       if (plate === null) host.appendChild(choices);
@@ -6654,7 +6703,7 @@ export function makeChrome(
 
     // 0562: the card opens speaking for the screen's first band of its own, which is where the cursor opens (0561).
     const spoken = focus === null ? null : (choiceBands.find((b) => b.faces === 'words') ?? null);
-    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper, focus, spoken, glyphs, groups: groupBoxes, keys };
+    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, note, sheet, board, dash, keeper, focus, spoken, glyphs, groups: groupBoxes, keys };
     elements.push(root);
   }
 
@@ -8445,7 +8494,7 @@ export function makeChrome(
         });
       }
     },
-    ask(screen: Screen, question: { title: string; lines: readonly string[]; yes: string; no: string }, yes: () => void): void {
+    ask(screen: Screen, question: Question, yes: () => void): void {
       const panel = panels[screen];
       if (panel === undefined) return;
       this.dismiss();
@@ -8460,8 +8509,13 @@ export function makeChrome(
       title.className = prefix + 'ask-title';
       title.textContent = question.title;
       card.appendChild(title);
+      // 0641: a picture the asker drew, as it is — the code is the whole of what that sheet shows.
+      if (question.art !== undefined) {
+        question.art.classList.add(prefix + 'ask-code');
+        card.appendChild(question.art);
+      }
       // 0564: the ware itself, large, as the focus card has it.
-      const art = panel.focus?.art.cloneNode(true);
+      const art = question.art === undefined ? panel.focus?.art.cloneNode(true) : undefined;
       if (art instanceof HTMLElement && art.childNodes.length > 0) {
         art.className = prefix + 'ask-art';
         const from = panel.focus?.art.querySelectorAll('canvas') ?? [];
@@ -8494,15 +8548,16 @@ export function makeChrome(
         this.dismiss();
         yes();
       });
-      const decline = button(question.no, false, () => this.dismiss());
-      row.append(confirm, decline);
+      const decline = question.no === null ? null : button(question.no, false, () => this.dismiss());
+      if (decline === null) row.append(confirm);
+      else row.append(confirm, decline);
       card.appendChild(row);
       sheet.appendChild(card);
       panel.root.appendChild(sheet);
       // The cursor walks the two while the sheet is up, and comes back to where it was when it goes.
       const was = { row: cursor.row, col: cursor.col };
       unring(panel, prefix);
-      panel.rows.splice(0, panel.rows.length, [confirm, decline]);
+      panel.rows.splice(0, panel.rows.length, decline === null ? [confirm] : [confirm, decline]);
       cursor.row = 0;
       cursor.col = 0;
       asking = {
@@ -8620,6 +8675,18 @@ export function makeChrome(
         control.appendChild(line);
       }
       line.textContent = hint;
+    },
+    setNote(lines: readonly string[]): void {
+      const note = panels.save?.note;
+      if (note === undefined || note === null) return;
+      note.replaceChildren(
+        ...lines.map((text) => {
+          const line = document.createElement('p');
+          line.className = prefixFor('save') + 'note-line';
+          line.textContent = text;
+          return line;
+        }),
+      );
     },
     setCrossing(crossing: Crossing | null): void {
       const parts = panels.travel?.crossing;
