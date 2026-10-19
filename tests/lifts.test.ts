@@ -27,8 +27,9 @@ describe('a save reads every version before its own', () => {
   });
 
   it('steps an older document up through every lift in order', () => {
-    const toTwo: Lift = (doc) => ({ ...doc, two: true, path: `${String(doc.path)}>2` });
-    const toThree: Lift = (doc) => ({ ...doc, three: doc.two === true, path: `${String(doc.path)}>3` });
+    type Trail = { path?: unknown; two?: unknown };
+    const toTwo: Lift = (doc) => ({ ...doc, two: true, path: `${String((doc as Trail).path)}>2` });
+    const toThree: Lift = (doc) => ({ ...doc, three: (doc as Trail).two === true, path: `${String((doc as Trail).path)}>3` });
     expect(lifted({ v: 1, path: '1', kept: 'x' }, 3, [toTwo, toThree])).toEqual({ v: 3, path: '1>2>3', two: true, three: true, kept: 'x' });
     expect(lifted({ v: 2, path: '2' }, 3, [toTwo, toThree])).toEqual({ v: 3, path: '2>3', three: false });
     expect(lifted({ v: 3, path: '3' }, 3, [toTwo, toThree])).toEqual({ v: 3, path: '3' });

@@ -17,7 +17,7 @@ export interface Store {
  * One step of a kept document's shape — 0643: a document of version `n` as version `n + 1` reads it.
  * A key's lifts are a list in version order, so the first lifts version 1 to 2.
  */
-export type Lift = (doc: Readonly<Record<string, unknown>>) => Record<string, unknown>;
+export type Lift = (doc: object) => object;
 
 /**
  * `data` as version `current` reads it — 0643 — or `null` when it is not a document, or its version is
@@ -30,10 +30,10 @@ export type Lift = (doc: Readonly<Record<string, unknown>>) => Record<string, un
  * ⚠️ **A NEWER ONE IS STILL `null`**, because nothing here can know what a later build meant by it. What
  * a newer document costs on the next write is written down in 0643 and not answered here.
  */
-export function lifted(data: unknown, current: number, lifts: readonly Lift[]): Record<string, unknown> | null {
+export function lifted(data: unknown, current: number, lifts: readonly Lift[]): object | null {
   if (typeof data !== 'object' || data === null) return null;
-  let doc = data as Record<string, unknown>;
-  const v = doc.v;
+  let doc: object = data;
+  const v = (data as { v?: unknown }).v;
   if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > current) return null;
   for (let at = v; at < current; at++) {
     const lift = lifts[at - 1];
