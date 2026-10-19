@@ -9,23 +9,24 @@ every session.
 ## One paragraph
 
 A scrolling space shooter in the R-Type and Raiden II line. You fly one character's ship through a
-run of eight levels toward the centre of the galaxy, picking up weapons that stay with you, choosing
-your next destination from a branching chart, and fighting a unique boss at the end of each stop. It
-is the Jörmungandr fight from *The Far Carry* — timing, arsenal, escalating phases — made into a
-whole game.
+run of seven places toward the centre of the galaxy, picking up weapons that stay with you, and
+fighting a mid-boss inside each place and a unique boss at the end of it. It is the Jörmungandr fight
+from *The Far Carry* — timing, arsenal, escalating phases — made into a whole game.
+
+⚠️ **The route is fixed** — seven places in one order, crossed in flight
+([0340](decisions/0340-the-coil-is-a-route.md)). A branching chart between them is not built, and
+whether 1.0 has one is the first question in
+[`the-v1-list`](../reports/the-v1-list-2026-10-15.md).
 
 ## The shape of a run
 
 | | |
 |---|---|
 | **The way in** | the page opens on the name while the game loads, then offers the four *Far Carry* golfers; the pick turns the sound on and plays the intro, in which Venoma Krait's Viper lights on its pad and blasts out of the spaceport, and the chosen golfer runs out of the bar to their own ship and chases her through the first level's sky. The title comes up when they are gone; the intro's Skip is up throughout, Escape goes to the menu from anywhere before it — [0415](decisions/0415-the-golfer-is-chosen.md), [0416](decisions/0416-the-viper-has-a-pilot.md), [0411](decisions/0411-the-chase-begins-at-the-port.md), [0412](decisions/0412-the-port-is-heard.md). Each golfer flies their own ship — [0441](decisions/0441-a-pilot-flies-their-own-ship.md) |
-| **The menu** | rows: a difficulty band and a pilot band of portraits over *Fly*, *Hangin’ Out* and *Settings*, beside the top five of the table. *Hangin’ Out* is the hangar, where a ship won in is fitted out — [0521](decisions/0521-the-hangar-opens.md) — its second tab is *Paint & Parts*, where each ship's looks are fitted — its wheels ([0527](decisions/0527-the-wheels-turn.md)), the art on its nose, dome or flank ([0528](decisions/0528-the-noses-are-painted.md)), the colour of its body ([0529](decisions/0529-the-livery-is-free.md)) and its flame ([0530](decisions/0530-the-ions-burn-blue.md)), and the missile tubes it carries into a run ([0578](decisions/0578-the-tubes-are-sold.md)) — and its third is *Cosmo’s Cosmetics*, which sells things to hang from the dash, a car's spinning wheels, blue Ion Thrusters and missile and seeker tubes, two of each at 500, for Star Shards — [0523](decisions/0523-cosmo-opens.md). Settings holds the look, the sound and the crossing as bands, the music room, a *How to play* tab, and a *Save* tab that carries the whole save to another device as a file or a QR code — [0641](decisions/0641-the-save-travels.md). Up and down move between rows and left and right along one, on a pad, the arrows or WASD; B and Escape go back — [0458](decisions/0458-the-title-is-rows.md) |
-| **The way out** | the last boss beaten, the finale — and no cut into it: the heart the jellyfish died on races, catches fire and bursts, and the Viper is thrown out of it with one of the golfers who was not chosen in her cockpit — Venoma's captive all along, and the heart took her. The fighter comes up beside her and the two fly off together, each golfer speaking from their own ship — the found one about being found, the chosen one answering, a named speech bubble each with a voice of their own — until they open up and go. Then the victory screen. Skip is up throughout — [0418](decisions/0418-the-heart-lets-go.md), [0426](decisions/0426-the-finale-is-the-fight-going-on.md). ⚠️ No victory piece of music yet |
-| **Prologue** | choose 1 of the 4 *Far Carry* golfers. Short stage → the Jörmungandr fight. One of the three unchosen characters betrays you |
-| **Level 1 choice** | keep your prologue character, or swap to one of 3 others drawn from the unlocked pool |
-| **Levels 1–7** | waves, hazards, a mid-boss inside each level and one unique end boss at its end — [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) |
-| **The chart** | between levels, a branching map of destinations. Every step deeper is harder |
-| **The betrayer** | returns as the end boss of a later level |
+| **The menu** | rows: a difficulty band and a pilot band of portraits over *Fly*, *Hangin’ Out* and *Settings*, beside the top five of the table. *Hangin’ Out* is the hangar, where a ship won in is fitted out — [0521](decisions/0521-the-hangar-opens.md) — its second tab is *Paint & Parts*, where each ship's looks are fitted — its wheels ([0527](decisions/0527-the-wheels-turn.md)), the art on its nose, dome or flank ([0528](decisions/0528-the-noses-are-painted.md)), the colour of its body ([0529](decisions/0529-the-livery-is-free.md)) and its flame ([0530](decisions/0530-the-ions-burn-blue.md)), and the missile tubes it carries into a run ([0578](decisions/0578-the-tubes-are-sold.md)) — and its third is *Cosmo’s Cosmetics*, which sells things to hang from the dash, a car's spinning wheels, blue Ion Thrusters and missile and seeker tubes, for Star Shards — [0523](decisions/0523-cosmo-opens.md), priced in `src/content/prices.ts` ([0585](decisions/0585-the-prices-rise.md)). Settings holds the sound, the crossing, the hand, the steering and the rumble as bands ([0590](decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md)), the music room, a *How to play* tab, and a *Save* tab that carries the whole save to another device as a file or a QR code — [0641](decisions/0641-the-save-travels.md). Up and down move between rows and left and right along one, on a pad, the arrows or WASD; B and Escape go back — [0458](decisions/0458-the-title-is-rows.md) |
+| **The way out** | the last boss beaten, the finale — and no cut into it: the heart the jellyfish died on races, catches fire and bursts, and the Viper is thrown out of it with one of the golfers who was not chosen in her cockpit — Venoma's captive all along, and the heart took her. The fighter comes up beside her and the two fly off together, each golfer speaking from their own ship — the found one about being found, the chosen one answering, a named speech bubble each with a voice of their own — until they open up and go. Then the victory screen. Skip is up throughout — [0418](decisions/0418-the-heart-lets-go.md), [0426](decisions/0426-the-finale-is-the-fight-going-on.md). ⚠️ No victory piece of music yet: the victory screen plays the title track ([0597](decisions/0597-the-title-track-plays-in-the-menu.md)) |
+| **Levels 1–7** | waves, hazards, a mid-boss inside each level and one unique end boss at its end — [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) — crossed between in flight ([0340](decisions/0340-the-coil-is-a-route.md)) |
+| ⚠️ **Not built** | the original plan's **prologue** (a short stage, then the Jörmungandr fight, with one unchosen golfer betraying you), the **Level 1 swap** from an unlock pool, the branching **chart**, and the **betrayer** returning as a later boss. The finale built the opposite story — an unchosen golfer is Venoma's captive and is rescued — so the betrayal cannot stand beside it. Whether any of these is in 1.0 is [`the-v1-list`](../reports/the-v1-list-2026-10-15.md)'s first question |
 | **Target length** | 15–30 minutes, prologue to final boss. **~2 minutes of stage per level plus its boss** — it was ~3 and the player cut it twice from play, for DENSITY: *"reduce the level length without reducing enemy count to increase the density of enemies"*, and then *"it still took me 3 minutes"*. [0114](decisions/0114-the-fight-is-a-different-piece.md) |
 
 Upgrades and buffs **carry forward across levels, through a death and through a continue** —
@@ -35,7 +36,8 @@ that changes a run is bought** — everything is found in the level and applied 
 A run's score pays Star Shards, and they buy only looks —
 [0522](decisions/0522-the-score-pays-in-shards.md).
 
-A run carries **three lives**, fixed. **A death spends one and nothing else**: both ladders, both
+A run carries **the tier's lives** — three on *Legendary Pilot* and *Savior of the Galaxy*, two on
+*Let the Galaxy Burn* (`src/content/difficulty.ts`). **A death spends one and nothing else**: both ladders, both
 kinds and the arsenal's charges are the ship that comes back —
 [0372](decisions/0372-a-death-keeps-the-ladders.md); nothing is thrown onto the field. The last life
 ends the run.
@@ -67,7 +69,7 @@ seconds, which is the only other thing it costs.
 
 Levels are authored once, in `along` × `across` world units. The camera maps the long screen axis to
 `along` and the short to `across`, so **both orientations show the same span of world and play at the
-same difficulty**. Desktop landscape is the primary target; portrait is native, not a fallback.
+same difficulty**. Desktop landscape is the primary target.
 
 ⚠️ **Landscape is the only orientation shipped** — [0031](decisions/0031-landscape-is-the-shipped-orientation.md).
 Portrait is dropped as a destination, not as architecture. One art view is authored (side profile),
@@ -114,29 +116,35 @@ The axes, in the order they are cheapest to make felt:
 Two or three differences authored first, then played, then extended — not a full roster designed up
 front. The constraint is that adding one stays a table edit.
 
-**Prologue roster — the four *Far Carry* golfers:** Feather Fade, Huang-Woo Hook, Longshot Larry,
-Backspin Bo.
+**Seven pilots: the four *Far Carry* golfers from the first run** — Feather Fade, Huang-Woo Hook,
+Longshot Larry, Backspin Bo — **and three secret pilots, each behind a lock**
+([0546](decisions/0546-the-marmot-rides.md), [0592](decisions/0592-the-crashes-are-counted.md)): the
+Marmot once all four golfers have cleared the game, Unity after ten lives lost to something the ship
+flew into, and MMXXVI after five things bought. All three can be met as the rescued pilot before they
+are unlocked. The locks are rows in `src/content/golfers.ts`.
 
 **Each flies their own ship, and the ship owns the gun** —
-[0441](decisions/0441-a-pilot-flies-their-own-ship.md). All four are drawn from above in one square
-box, with one hurtbox, so what tells them apart is the gun:
+[0441](decisions/0441-a-pilot-flies-their-own-ship.md). All are drawn from above in one square box,
+with one hurtbox, so what tells them apart is the gun:
 
-| golfer | ship | gun |
+| pilot | ship | gun |
 |---|---|---|
 | Huang-Woo Hook | the fighter | **pulse** |
 | Feather Fade | the Little Green Caddie, a saucer | **ray** — [0442](decisions/0442-the-ray-gun.md) |
-| Backspin Bo | the Firebird, the black car with the gold phoenix | **shuriken**, thrown from its hubcaps |
-| Longshot Larry | the Gilded Estate, the gold wagon | **arc**, from a lightning rod on the roof rack |
+| Backspin Bo | the Firebird, the black car with the gold phoenix | **catherine**, a burning wheel on a tether — [0545](decisions/0545-the-catherine-wheel.md) |
+| Longshot Larry | the Gilded Estate, the gold wagon | **shuriken** |
+| The Marmot | the Thunderbolt | **arc** — [0546](decisions/0546-the-marmot-rides.md) |
+| Unity | the Hamster Ball | **ram**: the ball flown into things — [0593](decisions/0593-the-hamster-ball-rolls.md) |
+| MMXXVI | the Aqua Duck | **paintball** — [0595](decisions/0595-the-aqua-duck-paints.md) |
 
 A ship opens a run on its whole gun and two charges of the special fitted to it in the hangar — its own
 gun's, until the ship and another have both been won in and it borrows theirs
 ([0524](decisions/0524-the-special-is-fitted.md)) — and carries its missile tubes on its own hull.
 
-**Level 1 roster:** your prologue pick, plus three drawn from the unlocked pool. Always four on
-offer. The draw is seeded from the run seed, so resuming does not reroll it.
-
-**Unlock pool:** the nine *Far Carry* caddies, plus the three prologue golfers you did not fly, plus
-new faces.
+⚠️ **Not built: the Level 1 roster and the caddy unlock pool** — a pick of four at level one, drawn
+from the nine *Far Carry* caddies and the golfers not flown. The secret pilots above are the unlocks
+that exist; whether the pool is in 1.0 is [`the-v1-list`](../reports/the-v1-list-2026-10-15.md)'s
+first question. What was planned for the caddies, kept for when it is answered:
 
 The predecessor names most of its caddies by species and role. This game gives them **actual names
 and characterisation** — the same nine, not extra ones:
@@ -163,10 +171,11 @@ no device is faster than another — see
 | | movement | specials |
 |---|---|---|
 | keyboard | arrows or WASD, by **physical key position** so a non-QWERTY layout keeps the shape | Space, Shift, and E or X for the ward |
-| touch | **relative drag** — the ship moves by however far the thumb moved, not to where it is | a tap strip along the leading edge, one band per special |
+| touch | **relative drag** — the ship moves by however far the thumb moved, not to where it is | trigger discs, on the side the *Hand* setting puts them — [0512](decisions/0512-the-touch-is-yours.md), [0590](decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md) |
 | gamepad | left stick, analog, with a radial deadzone | face buttons |
 
-**A touch stick is offered as an alternative and is not the default.** A glass stick has no tactile
+⚠️ **A touch stick is written (`src/app/touch.ts`) and not offered** — no setting selects it. The
+reasoning for it as the alternative stands: a glass stick has no tactile
 centre to return to, saturates at full deflection, and costs a re-centre to reverse. Relative drag
 has none of those and is the scheme the mobile shooters that got this right actually use. Both exist
 because *what the author thinks is the right way to play is not necessarily the right way to play* —
@@ -258,9 +267,12 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | gun | whose | what it does |
 |---|---|---|
 | **pulse** | the fighter | fast, small, four barrels; reaches the edge of the screen and can miss |
-| **arc** | the Gilded Estate | chain lightning. From the nose to the nearest body in reach whose whole hull is on the screen, then the next, three links at most, each jump shorter; on a lone boss it jumps around the hull. Cannot miss, cannot reach. Its first jump is 82, zoomed with the view — [0443](decisions/0443-the-arc-is-zoomed-with-the-view.md), [0257](decisions/0257-the-arc-lands-on-the-screen.md) |
-| **shuriken** | the Firebird | steel blades, thrown in pairs from the front wheels. Each goes up the lane and swings across it, the two a half-turn apart, so their tracks are the two strands of a helix; they land on everything they cross, once per impact flash, and are not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0244](decisions/0244-a-blade-rides-a-helix.md) |
+| **arc** | the Thunderbolt | chain lightning. From the nose to the nearest body in reach whose whole hull is on the screen, then the next, three links at most, each jump shorter; on a lone boss it jumps around the hull. Cannot miss, cannot reach. Its first jump is 82, zoomed with the view — [0443](decisions/0443-the-arc-is-zoomed-with-the-view.md), [0257](decisions/0257-the-arc-lands-on-the-screen.md) |
+| **shuriken** | the Gilded Estate | steel blades, thrown in pairs. Each goes up the lane and swings across it, the two a half-turn apart, so their tracks are the two strands of a helix; they land on everything they cross, once per impact flash, and are not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0244](decisions/0244-a-blade-rides-a-helix.md) |
 | **ray** | the Little Green Caddie | four concentric lavender rings, one volley every eight steps, which burst where they land and hurt everything close by — [0442](decisions/0442-the-ray-gun.md) |
+| **catherine** | the Firebird | a burning wheel that flies out ahead, slows and hangs spinning on a leash; moving the ship sweeps the tether across whatever is between them, and past the leash's length the wheel is towed — [0545](decisions/0545-the-catherine-wheel.md), [0551](decisions/0551-the-wheel-is-held-closer.md) |
+| **ram** | the Hamster Ball | nothing leaves the ship: the ball lands on what it is flown into, and every landing heats it until a full gauge burns a shield off — [0593](decisions/0593-the-hamster-ball-rolls.md) |
+| **paintball** | the Aqua Duck | one barrel, a ball every quarter beat, a little off straight and each its own colour, bursting into a splat on what it hits — [0595](decisions/0595-the-aqua-duck-paints.md) |
 
 | tube | what it does | its surge |
 |---|---|---|
@@ -274,6 +286,9 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | **overdrive** | missiles | ten seconds of two golden pods, each volley firing a straight missile of their own beside the fitted tubes: three times the damage, piercing like a blade — [0373](decisions/0373-a-special-is-the-guns-own.md), moved off the gun by [0375](decisions/0375-the-bomb-is-a-missile.md), [0379](decisions/0379-the-specials-are-seen.md) |
 | **storm** | arc | thrown like the bomb; goes off as six strikes to the nearest bodies on the screen, each chaining to two more, a twentieth of a boss once, and bolts flickering across the screen for half a second — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
 | **whirlpool** | shuriken | three spiral arms of eight big blades opened ahead of the ship, turning and growing, landing on a boss again and again, and gone once none of it is on the screen — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
+| **candle** | catherine | eight firework stars, one every half beat, fanned and sweeping from the nose, alternating near and far — [0537](decisions/0537-the-candle-is-lit.md) |
+| **War Dance** | ram | the ship itself is thrown; what lands is the ball, and it is earned by landing — [0593](decisions/0593-the-hamster-ball-rolls.md), [0594](decisions/0594-every-ship-dances.md), [0613](decisions/0613-the-dance-is-earned.md) |
+| **Water Cannon** | paintball | a jet of water swept across the lane for two seconds from the ship's own gun — [0595](decisions/0595-the-aqua-duck-paints.md) |
 | **nova** | ray, and the shield pickup's third face | on the ward's trigger: a lavender ring bursting from the ship to past every edge of the screen, popping every shot it touches, striking every body it crosses once and a boss once for a twentieth — [0447](decisions/0447-the-ward-is-a-third-trigger.md) |
 | **void** | the shield pickup's second face, and a shield at a full shell; one to open a Burn run unless the ship opens on novas | thrown up the lane on the ward's trigger as a turning swirl ([0447](decisions/0447-the-ward-is-a-third-trigger.md)); opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
 
@@ -342,11 +357,12 @@ A level is **an authored script** — a list of waves, each a place, an enemy ki
 lane — plus one boss at the end of it. Decided,
 [0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md).
 
-**Two levels exist**, played as a straight sequence with a screen between them —
-[0042](decisions/0042-a-run-is-a-sequence-of-levels.md). Lives, upgrades and the arsenal cross that
-boundary; the camera, the waves and the ship reset. **The chart does not exist yet**, and a line
-first is deliberate: a chart is a screen, a graph and a set of rules that want to be decided against
-levels somebody has played.
+**Seven levels exist**, played as a straight sequence —
+[0042](decisions/0042-a-run-is-a-sequence-of-levels.md) — and crossed between in flight, the ship
+burning from one place to the next with the route drawn on a nav plate
+([0340](decisions/0340-the-coil-is-a-route.md)). Lives, upgrades and the arsenal cross that
+boundary. **The chart does not exist**, and a line first was deliberate: a chart is a screen, a graph
+and a set of rules that want to be decided against levels somebody has played.
 ⚠️ **EVERY LEVEL IS A PLACE NOW** — [0107](decisions/0107-a-level-is-a-place.md). Seven themes, one
 per level, each carrying its own backdrop and its own mix of the music. **No biome is NAMED**: the
 places are this project's own, because the fiction is downstream of whether theming works at all and
@@ -409,9 +425,8 @@ shards called in from the sides that shatter into a snowflake where they die. A 
 life after the muzzle, and a body's death may throw.
 
 ⚠️ **A phase changes what a boss DOES, not what it looks like** —
-[0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). Nothing on screen currently
-says how much boss is left, and whether that reads as progress is the first question a play-test of
-level one has to answer.
+[0040](decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md). How much boss is left is
+the health bar along the top — [0360](decisions/0360-the-boss-has-a-health-bar.md).
 
 ⚠️ **AND A BOSS MAY NOW UNCOIL, OR OPEN** — [0150](decisions/0150-the-uncoil-and-the-eye.md) and
 [0151](decisions/0151-the-gap-you-have-to-reach.md), from *"the bosses need to be more interactive
@@ -432,9 +447,11 @@ and gets harder with each level. It's a short game so the replayability comes fr
 Management of difficulty is **'is this unfair' OR 'is this a learnable strategy'**?"* A hard mechanism
 is kept when it is the second one and softened only when it is the first.
 
-Hazards are environmental and must be dealt with, not only dodged. Asteroids are the reference case:
-shoot one and the fragments become weapons that damage enemies — a hazard that stays playable under
-auto-fire and low-input control schemes.
+Hazards are environmental and must be dealt with, not only dodged: the Labyrinth's stone, which the
+void carves; the Saurian Belt's volcano and its thrown rock; the Mire's acid floor; the serpent's
+roots. ⚠️ **Not built:** the asteroid the plan named as the reference case — shoot one and the
+fragments become weapons that damage enemies. Wreckage in the field is inert by design
+(`src/content/debris.ts`).
 
 ## Score
 
@@ -462,7 +479,9 @@ scored 1,579,750 — 157 shards.
 **The high-score table, the settings and the hangar are what is kept between visits today** —
 [0429](decisions/0429-the-table-is-kept.md), [0510](decisions/0510-the-settings-are-kept.md),
 [0521](decisions/0521-the-hangar-opens.md); the pilot is picked each visit. The hangar holds which
-ships have beaten the jellyfish and how each is fitted out. What follows is the run save, which does not exist yet.
+ships have beaten the jellyfish, how each is fitted out, the shards and what they bought, the tiers
+finished and the crashes counted. What follows is the run save, which **does not exist** — whether 1.0
+has it is [`the-v1-list`](../reports/the-v1-list-2026-10-15.md)'s second question.
 
 The save is an **interruption hedge and not a safety net** —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). It exists so that a browser
@@ -476,7 +495,9 @@ So it stores the run's **current** lives and **current** arsenal, and resumes at
 level the player was in. No re-picks, no re-rolls, and a countdown before the first wave arrives.
 Closing the page costs the progress made through that level and returns nothing.
 
-Storage keys are `itc_*`, listed in `PRIVACY.md`, versioned from v1 with a migration chain. All of them
+Storage keys are `itc_*`, listed in `PRIVACY.md`, each versioned and each still at v1; a field is added
+to a version rather than bumping it. ⚠️ **There is no migration chain yet**: a reader handed any other
+version reads nothing, so the first bump would empty every player's key — the v1 list's Part 4.1. All of them
 leave the device together and come back together, as a file or a code; a restore that cannot read one
 refuses the whole — [0641](decisions/0641-the-save-travels.md) — and a load puts the save it replaces aside
 first, so it can be undone — [0642](decisions/0642-a-load-can-be-undone.md).
@@ -484,19 +505,21 @@ first, so it can be undone — [0642](decisions/0642-a-load-can-be-undone.md).
 ## Frame rate is a feature, not a target
 
 A player who dies to a stutter has been cheated, and every point of difficulty this game can afford
-is bought with smoothness. Four rules, all architectural, all owed a decision before the loop exists.
+is bought with smoothness. Four rules, all architectural, decided in
+[0022](decisions/0022-frame-rate-is-a-feature.md) and [0025](decisions/0025-the-frame-budget-is-counted-not-timed.md).
 
 **Art is generated as code and baked into bitmaps.** Every ship, enemy, boss and effect is a pure
 function of `(kind, variant, palette, view)` drawn once into an offscreen canvas at load, and blitted
 thereafter. Per-frame path filling is banned. This is not a compromise between procedural art and
 sprites — it is both: no asset files, so the single-file build survives; a blit per entity, so the
 frame cost is a sprite's; and the art stays re-renderable at any size or palette, which is what makes
-the high-contrast and colour-blind palettes free rather than a second art pass.
+a second palette free rather than a second art pass. ⚠️ A high-contrast palette is authored
+(`src/content/palette.ts`) and not offered — no setting reaches it; a colour-blind one is not built.
 
 **The simulation runs on a fixed timestep; rendering interpolates.** A sim stepped by wall-clock
 delta teleports bullets through the player on a dropped frame, and makes difficulty a property of the
-machine. Fixed steps also keep the run deterministic, which is what the seeded draws, the resume and the
-replays all rest on. (0022 also listed a one-button clearability proof here;
+machine. Fixed steps also keep the run deterministic, which is what the seeded draws rest on, and
+what a run save or a replay would — neither is built. (0022 also listed a one-button clearability proof here;
 [0024](decisions/0024-the-accessibility-floor-is-settings.md) dropped it with the authored assist
 path. The fixed timestep is unaffected.)
 
@@ -523,7 +546,7 @@ shows, no coaching. Players are assumed to be adaptable; hints are added where p
 needed, never pre-emptively. Over-explanation costs flow, spoils content, and turns a HUD into a wall
 of text.
 
-Owed a decision, and a test.
+A style rule, not a guard: no decision states it and no test holds it.
 
 ## Accessibility
 
@@ -553,6 +576,11 @@ Opt-in settings: high-contrast and colour-blind palettes, reduced motion, and a 
 assists — pace, resilience, hurtbox, terrain, auto-specials, flight assist. **No assist ever makes
 the game harder**, and no comfort setting may touch the sim.
 
+⚠️ **None of the opt-ins is offered yet.** The six assists are modelled (`src/sim/assist.ts`) and the
+game always runs them at their defaults; the high-contrast palette is authored and unreachable; the
+menus follow the system's reduced-motion preference and the field does not; there is no colour-blind
+palette. Which of these 1.0 offers, and what the itch page may claim, is open.
+
 The **authored horizontal assist path per level is dropped**, along with the law it required
 (*anything demanding cross-axis evasion is scripted, not reactive*) — it banned most of the genre and
 taxed every level forever, to serve one setting. One-button survives as a rail input mapping, which
@@ -567,7 +595,8 @@ Not claimed: blind-friendly play, and textless. For a positional shooter both ar
   colour. Selling anything the simulation reads — a gun, a life, a charge, a shield — is an argued
   reversal of 0522, not a drift. It was *no shop, no currency, no economy* until then, and no decision
   had argued it: the one sentence behind it was about power found in a level.
-- **No procedural level generation.** Levels are authored; the chart between them is the variety.
+- **No procedural level generation.** Levels are authored; the variety is the seven places, the
+  seven ships and the three tiers.
 - **No always-online anything.** The game makes no network requests after load.
 
 ## Carried from *The Far Carry*
@@ -579,10 +608,7 @@ fused to that domain at the type level.
 changed, sharpened or replaced on the way across. "Space Ducks" becomes the singular Space Duck, and
 four caddies the predecessor names by species are **named and given a background** rather than
 replaced — see the table above; the roster does not grow. Nothing here is bound to the predecessor's
-spellings.
-
-`CLAUDE.md`'s current wording — *"its patterns transfer; its content does not"* — is amended to say
-this.
+spellings. `CLAUDE.md` says the same: *"Its patterns and its fiction transfer."*
 
 ### Canon
 
@@ -595,10 +621,10 @@ with all the time there has ever been.
 
 ## Open
 
-- Whether a *Far Carry* backup file can be imported to seed the prologue. Possible via the exported
-  `far-carry-backup` envelope; impossible via storage, which is origin-scoped. Not a dependency —
-  the prologue exists for every player either way.
-- The chart's shape. It must read as descent toward the centre, and must not be a copy of the star
-  map.
+- **What 1.0 is** — [`the-v1-list`](../reports/the-v1-list-2026-10-15.md) asks it, and
+  [`the-road-to-v1`](../reports/the-road-to-v1-2026-10-19.md) is where it got to. The prologue, the
+  Level 1 pool, the chart, the betrayer, the run save and the victory piece each wait on that answer.
+- Whether a *Far Carry* backup file can be imported to seed a run. Possible via the exported
+  `far-carry-backup` envelope; impossible via storage, which is origin-scoped. Not a dependency.
 - Music. Procedural synthesis keeps the single-file build; a baked track does not. Sound effects are
   synthesised either way.
