@@ -496,8 +496,9 @@ level the player was in. No re-picks, no re-rolls, and a countdown before the fi
 Closing the page costs the progress made through that level and returns nothing.
 
 Storage keys are `itc_*`, listed in `PRIVACY.md`, each versioned and each still at v1; a field is added
-to a version rather than bumping it. ⚠️ **There is no migration chain yet**: a reader handed any other
-version reads nothing, so the first bump would empty every player's key — the v1 list's Part 4.1. All of them
+to a version rather than bumping it. **An older document is lifted, never dropped**: each key keeps a
+lift from every version before its own, and a bump without one fails the build —
+[0643](decisions/0643-a-save-reads-every-version-before-its-own.md). All of them
 leave the device together and come back together, as a file or a code; a restore that cannot read one
 refuses the whole — [0641](decisions/0641-the-save-travels.md) — and a load puts the save it replaces aside
 first, so it can be undone — [0642](decisions/0642-a-load-can-be-undone.md).

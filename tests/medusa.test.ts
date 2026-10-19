@@ -567,6 +567,20 @@ describe('0476 — the jellyfish can be finished, and opens', () => {
     }
   });
 
+  it('and on Burn every gun finishes her from the bell’s lane: the open bell’s void does not eat all of it', () => {
+    /*
+      ⚠️ **THE STALL ABOVE WAS THE VOID — 0644.** Eight void a ring on Burn's cadence swallowed every
+      link of the arc and every paintball, so the Thunderbolt and the Aqua Duck held at the bell
+      never finished her: the last game boss, on the hardest tier, with no end. Six a ring lets both
+      through. A fight with no end is never correct, so every gun, not the two that stalled.
+    */
+    for (const gun of WEAPON_KINDS) {
+      const short = WEAPONS[gun].flight === 'ram' ? 0 : 45;
+      const fight = flyFight('medusa', gun, { lane: 'boss', short, cap: CAP, difficulty: 'burn' });
+      expect(fight.seconds, `on Burn the ${gun} from ${short} short never finished the jellyfish in ${CAP} s`).not.toBeNull();
+    }
+  });
+
   it('IN LANE UNITS: the bell stands past the ship’s box, so nothing flies round behind it', () => {
     // *"You shouldn't be able to fly around it."* Its far rim at rest, nearest the drift allows, against
     // the furthest the ship can go.
