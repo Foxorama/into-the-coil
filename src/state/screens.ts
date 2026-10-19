@@ -57,6 +57,7 @@ export const SCREEN_KINDS = [
   'parts',
   'shop',
   'guide',
+  'save',
   'playing',
   'gameOver',
   'ended',
@@ -1113,7 +1114,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     inRun: false,
     back: 'opener',
-    tabs: ['settings', 'guide'],
+    // 0641: and the save, a tab of the same place.
+    tabs: ['settings', 'guide', 'save'],
     opensOn: 'choice',
   },
   /**
@@ -1451,7 +1453,44 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     inRun: false,
     back: 'opener',
-    tabs: ['settings', 'guide'],
+    tabs: ['settings', 'guide', 'save'],
+    opensOn: 'action',
+  },
+  /**
+   * The save — `docs/decisions/0641-the-save-travels.md`. Asked for 2026-10-19: *"is there a way for a
+   * player to export/import their save data if they want to uninstall or move from browser to phone?"*
+   *
+   * ⚠️ **A TAB OF SETTINGS, AND THE QR CODE IS HERE AND NOT IN THE HANGAR** — answered the same day.
+   * What the hangar holds is the most of what is carried, and it is still not the whole: the table and
+   * the settings go too, so the place it is carried from is the one that is about the game and not the
+   * ship.
+   *
+   * ⚠️ **TWO WAYS ACROSS, BECAUSE NEITHER WORKS EVERYWHERE.** A file is the copy that outlives the
+   * device — an uninstall, a cleared browser — and is clumsy on a phone. A code is a phone's camera
+   * pointed at a monitor; it is also a line of text, which is how a save gets into an app installed to
+   * a home screen, whose storage is not its own browser's.
+   */
+  save: {
+    heading: 'Save',
+    pause: null,
+    leads: false,
+    stand: null,
+    actions: [
+      { label: 'Save to a file', hint: 'A copy you keep' },
+      { label: 'Load a file', hint: 'Replaces this save' },
+      { label: 'Show a code', hint: 'Scan it on another device' },
+      { label: 'Enter a code', hint: 'Paste one from another device' },
+      { label: 'Back', hint: '' },
+    ],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: false,
+    back: 'opener',
+    tabs: ['settings', 'guide', 'save'],
     opensOn: 'action',
   },
   // `pushed: false` — the HUD is pushed at it, and the HUD is not a panel: `src/app/chrome.ts` builds
