@@ -36,8 +36,9 @@ export const PROBES = [
     guard: 'a document it cannot trust is the defaults',
     edit: {
       path: 'src/save/settings.ts',
-      find: '  if (doc.v !== SETTINGS_VERSION) return base;',
-      replace: '',
+      // Since 0643 the version is read by `lifted`; taking the document as it comes skips it.
+      find: '  const read = lifted(data, SETTINGS_VERSION, SETTINGS_LIFTS);',
+      replace: '  const read = data as Record<string, unknown> | null;',
     },
   },
   {

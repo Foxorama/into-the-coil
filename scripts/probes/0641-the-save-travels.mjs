@@ -27,7 +27,7 @@ export const PROBES = [
     guard: 'is refused, and never read as the defaults, for every way it can be wrong',
     edit: {
       path: 'src/save/backup.ts',
-      find: '  return v === version ? null : DAMAGED;',
+      find: '  return typeof v === \'number\' && Number.isInteger(v) && v >= 1 ? null : DAMAGED;',
       replace: '  return null;',
     },
   },

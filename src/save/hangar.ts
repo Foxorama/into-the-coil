@@ -26,13 +26,19 @@ import { RACK_KINDS } from '../content/racks.ts';
 import { SHELL_KINDS } from '../content/shells.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
 import { type HangarState, artOpen, flameOpen, gunOpen, liveryOf, liveryOpen, plateOpen, rackOpen, rimOpen, shellOpen, specialOpen } from '../state/slices/hangar.ts';
-import type { Store } from './store.ts';
+import { type Lift, type Store, lifted } from './store.ts';
 
 /** Where the hangar lives. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
 export const HANGAR_KEY = 'itc_hangar';
 
 /** The shape's version. A change an old document cannot be read as bumps it. */
 export const HANGAR_VERSION = 1;
+
+/**
+ * Every older version lifted to the next — 0643. Empty while the shape has only been version 1; a bump
+ * adds the lift from the version before it, and `tests/lifts.test.ts` fails one that does not.
+ */
+export const HANGAR_LIFTS: readonly Lift[] = [];
 
 /** `raw` if it is a ship kind, or `null`. Narrows without a cast — 0016. */
 function shipOf(raw: unknown): ShipKind | null {
@@ -56,9 +62,9 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
   } catch {
     return base;
   }
-  if (typeof data !== 'object' || data === null) return base;
-  const doc = data as HangarDoc;
-  if (doc.v !== HANGAR_VERSION) return base;
+  const read = lifted(data, HANGAR_VERSION, HANGAR_LIFTS);
+  if (read === null) return base;
+  const doc = read as HangarDoc;
   const wonDoc = perShipOf(doc.won);
   const plateDoc = perShipOf(doc.plate);
   const won = { ...base.won };
