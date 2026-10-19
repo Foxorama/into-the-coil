@@ -113,9 +113,10 @@ export interface Surge {
   /**
    * The pods: `count` extra missiles of `missile` each volley, placed by `podSide`, with
    * `damage` multiplying the missile's own, `fuse` its life, and `pierce` how many landings it
-   * survives, gated as a blade's are (0357) — one is spent by arriving.
+   * survives, gated as a blade's are (0357) — one is spent by arriving. `bossPierce` is how many of
+   * those landings a boss may take before the pod is spent on it (0640): a pierce is for a wave.
    */
-  pods: { missile: MissileKind; count: number; damage: number; fuse: number; pierce: number };
+  pods: { missile: MissileKind; count: number; damage: number; fuse: number; pierce: number; bossPierce: number };
 }
 
 /**
@@ -409,7 +410,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     bossShare: 0,
     // One seeker a volley, down the middle, whatever tubes are fitted — 0379; one and not two since
     // 0405, played: *"the big problem was the supercharged missiles."*
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, pods: { missile: 'homing', count: 1, damage: 4, fuse: 2, pierce: 1 } },
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, pods: { missile: 'homing', count: 1, damage: 4, fuse: 2, pierce: 1, bossPierce: 1 } },
     storm: null,
     whirl: null,
     rift: null,
@@ -437,7 +438,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     reach: 0,
     bossShare: 0,
     // One straight missile a volley, down the middle, whatever tubes are fitted — 0379; one since 0405.
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, pods: { missile: 'straight', count: 1, damage: 3, fuse: 1, pierce: BLADE_EDGE } },
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, pods: { missile: 'straight', count: 1, damage: 3, fuse: 1, pierce: BLADE_EDGE, bossPierce: 1 } },
     storm: null,
     whirl: null,
     rift: null,
