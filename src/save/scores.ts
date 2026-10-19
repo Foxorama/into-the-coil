@@ -17,13 +17,16 @@
 
 import { GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
-import { browserStore, type Store } from './store.ts';
+import { browserStore, lifted, type Lift, type Store } from './store.ts';
 
 /** Where the table lives. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
 export const SCORES_KEY = 'itc_scores';
 
 /** The shape's version. A change to `ScoreEntry` that an old table cannot be read as bumps it. */
 export const SCORES_VERSION = 1;
+
+/** Every older version lifted to the next — 0643, on `HANGAR_LIFTS`'s terms. Empty at version 1. */
+export const SCORES_LIFTS: readonly Lift[] = [];
 
 /** How many runs the table keeps. */
 export const TABLE_SIZE = 10;
@@ -90,9 +93,10 @@ export function parseScores(text: string | null): ScoreEntry[] {
   } catch {
     return [];
   }
-  if (typeof data !== 'object' || data === null) return [];
-  const doc = data as { v?: unknown; entries?: unknown };
-  if (doc.v !== SCORES_VERSION || !Array.isArray(doc.entries)) return [];
+  const read = lifted(data, SCORES_VERSION, SCORES_LIFTS);
+  if (read === null) return [];
+  const doc = read as { v?: unknown; entries?: unknown };
+  if (!Array.isArray(doc.entries)) return [];
   const out: ScoreEntry[] = [];
   for (const raw of doc.entries) {
     const entry = entryFrom(raw);

@@ -22,13 +22,16 @@ import { TRAVEL_KINDS } from '../content/travel.ts';
 import { HAND_KINDS, STEER_KINDS } from '../content/touch.ts';
 import { CREDIT_KINDS } from '../content/credits.ts';
 import type { SettingsState } from '../state/slices/settings.ts';
-import type { Store } from './store.ts';
+import { type Lift, type Store, lifted } from './store.ts';
 
 /** Where the settings live. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
 export const SETTINGS_KEY = 'itc_settings';
 
 /** The shape's version. A change an old document cannot be read as bumps it. */
 export const SETTINGS_VERSION = 1;
+
+/** Every older version lifted to the next — 0643, on `HANGAR_LIFTS`'s terms. Empty at version 1. */
+export const SETTINGS_LIFTS: readonly Lift[] = [];
 
 /**
  * What is kept: every setting but the pilot.
@@ -72,9 +75,9 @@ export function settingsFrom(text: string | null, base: SettingsState): Settings
   } catch {
     return base;
   }
-  if (typeof data !== 'object' || data === null) return base;
-  const doc = data as Partial<Record<keyof KeptSettings | 'v', unknown>>;
-  if (doc.v !== SETTINGS_VERSION) return base;
+  const read = lifted(data, SETTINGS_VERSION, SETTINGS_LIFTS);
+  if (read === null) return base;
+  const doc = read as Partial<Record<keyof KeptSettings | 'v', unknown>>;
   return {
     sound: oneOf(SOUND_KINDS, doc.sound, base.sound),
     /*

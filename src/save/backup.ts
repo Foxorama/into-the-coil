@@ -74,13 +74,14 @@ const NOT_A_SAVE = 'That is not a save from this game, and nothing was changed.'
 
 /**
  * Why a document cannot be restored, or `null` if this build can read it: an object, at the version
- * its own module writes. A higher version is a newer game, and anything else is damage.
+ * its own module writes or any before it, which that module lifts on reading — 0643. A higher version
+ * is a newer game, and anything else is damage.
  */
 function refusal(doc: unknown, version: number): string | null {
   if (typeof doc !== 'object' || doc === null) return DAMAGED;
   const v = (doc as { v?: unknown }).v;
   if (typeof v === 'number' && v > version) return NEWER;
-  return v === version ? null : DAMAGED;
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? null : DAMAGED;
 }
 
 /**

@@ -36,8 +36,9 @@ export const PROBES = [
     guard: 'a table it cannot trust is an empty table',
     edit: {
       path: 'src/save/scores.ts',
-      find: '  if (doc.v !== SCORES_VERSION || !Array.isArray(doc.entries)) return [];',
-      replace: '  if (!Array.isArray(doc.entries)) return [];',
+      // Since 0643 the version is read by `lifted`; taking the document as it comes skips it.
+      find: '  const read = lifted(data, SCORES_VERSION, SCORES_LIFTS);',
+      replace: '  const read = data as Record<string, unknown> | null;',
     },
   },
   {
