@@ -478,7 +478,8 @@ Closing the page costs the progress made through that level and returns nothing.
 
 Storage keys are `itc_*`, listed in `PRIVACY.md`, versioned from v1 with a migration chain. All of them
 leave the device together and come back together, as a file or a code; a restore that cannot read one
-refuses the whole — [0641](decisions/0641-the-save-travels.md).
+refuses the whole — [0641](decisions/0641-the-save-travels.md) — and a load puts the save it replaces aside
+first, so it can be undone — [0642](decisions/0642-a-load-can-be-undone.md).
 
 ## Frame rate is a feature, not a target
 

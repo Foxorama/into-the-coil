@@ -1480,6 +1480,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       { label: 'Load a file', hint: 'Replaces this save' },
       { label: 'Show a code', hint: 'Scan it on another device' },
       { label: 'Enter a code', hint: 'Paste one from another device' },
+      // 0642: up only where a load has put a save aside — `src/app/mount.ts` shows it.
+      { label: 'Undo the last load', hint: 'Puts back the save it replaced' },
       { label: 'Back', hint: '' },
     ],
     choices: [],

@@ -16,7 +16,8 @@ code by a test, so it cannot quietly fall out of date.
 ## What the game stores on your device
 
 **The game keeps three things between visits: its high-score table, your settings, and your
-hangar.** It does not save a run in progress.
+hangar** — and, once you have loaded a save over them, a copy of the three as they were. It does not
+save a run in progress.
 
 | What | Where | Why |
 |---|---|---|
@@ -24,6 +25,7 @@ hangar.** It does not save a run in progress.
 | The ten best runs: each one's score, which golfer flew it, the difficulty, how far it got, how many continues it took, and the date it ended | Local Storage, key `itc_scores` | So the title screen can show the high scores |
 | Your settings: the look, sound on or off, rumble on or off, how long the crossing between places lasts, the difficulty last chosen, and whether runs may be continued | Local Storage, key `itc_settings` | So the game opens the way you left it |
 | Your hangar: which ships you have won a run in, how each ship is fitted out, how many Star Shards you hold, what you have bought with them, and how many times your ship has been lost to something it flew into | Local Storage, key `itc_hangar` | So what you have unlocked stays unlocked |
+| The save as it was before you last loaded one over it — the three above, together — and when that was | Local Storage, key `itc_undo` | So **Undo the last load** can put it back |
 
 That cache holds the game's own program — the same file the server sent you — and nothing about you.
 It is the ordinary mechanism that lets an installed web app work offline.
@@ -50,6 +52,8 @@ goes anywhere unless you take it there yourself:
   one in between. The game takes it out of the address bar as soon as it has read it.
 - Anyone who has your file or your code can load your save, and nothing more: it holds what is in the
   table above, and no name.
+- Loading a save over yours keeps yours, on this device, until the next load: **Undo the last load**
+  puts it back. A file or a code you make never carries that copy.
 
 Once you have something worth keeping, the game also asks your browser to **protect its storage**, so
 that it is not cleared to make room. Most browsers answer without asking you; Firefox asks. Either

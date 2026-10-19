@@ -7,7 +7,7 @@ import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
 import { SCORES_KEY, TABLE_SIZE, type ScoreEntry } from '../src/save/scores.ts';
 import { SETTINGS_KEY } from '../src/save/settings.ts';
-import { BACKUP_KIND, CODE_HASH, backupOf, backupOfCode, codeOf, restoreFrom, writeKept, type Kept } from '../src/save/backup.ts';
+import { BACKUP_KIND, CODE_HASH, UNDO_KEY, backupOf, backupOfCode, codeOf, lossesOf, restoreFrom, undoOf, writeKept, type Kept } from '../src/save/backup.ts';
 import type { Store } from '../src/save/store.ts';
 import { QR_MOST_BYTES, versionFor } from '../src/app/qr.ts';
 
@@ -42,6 +42,9 @@ function fullest(): Kept {
     hangar: { ...initialState.hangar, won, owned, shards: 1_234_567, crashes: 9_999 },
   };
 }
+
+/** A save with nothing earned. */
+const withNothing = (): Kept => ({ scores: [], settings: initialState.settings, hangar: initialState.hangar });
 
 /** A store in a map, which can be told to refuse a write. */
 function storeOf(refuses: 'keeps' | 'throws' | 'drops' = 'keeps'): Store & { map: Map<string, string> } {
@@ -108,6 +111,43 @@ describe('a backup', () => {
     expect(writeKept(storeOf('throws'), kept), 'a store that threw').toBe(false);
     expect(writeKept(storeOf('drops'), kept), 'a store that kept nothing').toBe(false);
     expect(writeKept(null, kept)).toBe(false);
+  });
+});
+
+describe('a load undone — 0642', () => {
+  it('puts the save it replaces aside first, as a backup a load reads back whole', () => {
+    const store = storeOf();
+    const before = fullest();
+    const after = { ...fullest(), hangar: { ...fullest().hangar, shards: 3 } };
+    expect(writeKept(store, after, before, 1_800_000_000_000)).toBe(true);
+    const put = undoOf(store);
+    expect(put, 'nothing was put aside').not.toBeNull();
+    expect(restoreFrom(put ?? '', base)).toEqual({ ok: true, at: 1_800_000_000_000, kept: before });
+  });
+
+  it('refuses the load when the save it replaces cannot be put aside', () => {
+    const map = new Map<string, string>();
+    // A store with room for everything but the copy.
+    const store: Store = {
+      getItem: (key) => map.get(key) ?? null,
+      setItem: (key, value) => {
+        if (key === UNDO_KEY) throw new Error('full');
+        map.set(key, value);
+      },
+    };
+    expect(writeKept(store, fullest(), withNothing(), 0)).toBe(false);
+    expect(map.size, 'the load went ahead without its undo').toBe(0);
+  });
+
+  it('says what a load would lose, and nothing for one that loses nothing', () => {
+    const empty = withNothing();
+    expect(lossesOf(empty, fullest())).toEqual([]);
+    expect(lossesOf(fullest(), fullest())).toEqual([]);
+    const lost = lossesOf(fullest(), empty);
+    expect(lost[0]).toBe(`${SHIP_KINDS.length} fewer ships won`);
+    expect(lost.join(', ')).toContain('1,234,567 fewer ✦');
+    expect(lost.join(', ')).toContain(`${TABLE_SIZE} fewer high scores`);
+    expect(lost.join(', ')).toContain('a best run 98,765,432 lower');
   });
 });
 
