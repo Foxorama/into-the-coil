@@ -15,6 +15,7 @@ import { SHOTS } from '../src/content/shots.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
+import { arena } from '../scripts/weigh-boss.mjs';
 
 /**
  * A SPECIAL IS THE GUN'S OWN — `docs/decisions/0373-a-special-is-the-guns-own.md`.
@@ -311,4 +312,48 @@ describe('0373 — a surge is worn', () => {
     expect(world.surgeFor, 'a surge outlived the ship').toBe(0);
     expect(world.aura.size, 'an aura outlived the ship').toBe(0);
   });
+});
+
+describe('0640 — a pod pierces a wave and not a boss', () => {
+  /*
+    *"the supercharge missiles powerful seems to be really strong"* — an overdrive pod carried its twelve
+    landings onto a boss, and one charge took 1,670 to 2,750 health off four of the seven: most of an end
+    boss from one pickup. Held in what the player sees go: landings on the boss, against volleys fired.
+  */
+  for (const surge of ['hunt', 'overdrive'] as const) {
+    it(`${surge}: over one charge, each pod lands on the boss no more often than its row's bossPierce`, () => {
+      const pods = SPECIALS[surge].surge!.pods;
+      const { world } = playableWorld(arena('volans'));
+      const frame = new GameFrame(world);
+      world.shipRow = SHIPS[shipCarrying('pulse')];
+      world.weapon = { ...weaponFor(world.shipRow, []), launchers: 0 };
+      wearHull(world);
+      let volleys = 0;
+      world.onCue = (kind) => {
+        if (kind === 'missile') volleys++;
+      };
+      let landings = 0;
+      let start = -1;
+      for (let step = 0; step < 8000 && (start < 0 || step - start < SPECIALS[surge].surge!.steps); step++) {
+        world.ship.invulnFor = NEVER;
+        world.fireIn = NEVER;
+        if (world.bossPool.size > 0 && world.bossEntering < 0) {
+          if (start < 0) {
+            start = step;
+            world.missileIn = 1;
+          }
+          world.surgeKind = surge;
+          world.surgeFor = NEVER;
+          world.ship.across = world.bossPool.at(0).across;
+        } else world.missileIn = NEVER;
+        // What the boss sends out is a wave, which a pod may pierce; the boss is all this counts.
+        world.enemies.clear();
+        frame.step();
+        if (start >= 0) landings += world.hits.count;
+      }
+      expect(start, 'the boss never came on, so this measured nothing').toBeGreaterThanOrEqual(0);
+      expect(landings, 'no pod reached the boss, so this measured nothing').toBeGreaterThan(0);
+      expect(landings, `${volleys} volleys landed ${landings} times`).toBeLessThanOrEqual(volleys * pods.count * pods.bossPierce);
+    });
+  }
 });

@@ -2,7 +2,7 @@
 //
 // Usage:
 //   node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-boss.mjs
-//        [bossKind …] [--difficulty=savior] [--health=N]
+//        [bossKind …] [--difficulty=savior] [--health=N] [--surge=overdrive]
 //
 // Every gun is flown in the ship it is keyed to, at what was the top of its ladder — 0441: a gun
 // has no tiers since, so `--tier` went with them.
@@ -46,6 +46,7 @@ import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS, laneAcross } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, fitted, shipCarrying } from '../src/content/ships.ts';
+import { SPECIALS } from '../src/content/specials.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -81,7 +82,7 @@ export function heldShorts(gun) {
 }
 
 /** The boss alone at the end of a short level in its own place, with nothing in front of it. */
-function arena(kind) {
+export function arena(kind) {
   const home = LEVEL_KINDS.find((level) => LEVELS[level].boss === kind);
   if (home === undefined) throw new Error(`${kind} is no level's end boss`);
   return { waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS, boss: kind, theme: LEVELS[home].theme };
@@ -169,6 +170,56 @@ export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, shor
   return { seconds: null, phaseAt };
 }
 
+/**
+ * What one charge of a tube surge takes off a boss — 0640: the boss's health lost over the surge's
+ * length from the first step it can be hurt, flown with the gun alone and then with the surge worn.
+ * The fitted tubes stay silent in both, so the difference is the pods and nothing else.
+ *
+ * ⚠️ OWED SINCE 0405, WHICH SAID THIS FIXTURE SILENCES MISSILES. A charge was estimated from the code
+ * at two thousand damage and nothing could read it; `flyFight` still silences them, so its floors
+ * measure the gun, and this is the surge's own number beside them.
+ *
+ * @param {import('../src/content/bosses.ts').BossKind} kind
+ * @param {import('../src/content/weapons.ts').WeaponKind} gun
+ * @param {import('../src/content/specials.ts').SpecialKind | null} surge
+ * @param {{ difficulty?: import('../src/content/difficulty.ts').DifficultyKind, lane?: number | 'boss', short?: number | null }} [options]
+ * @returns {number} the health the boss lost
+ */
+export function flyCharge(kind, gun, surge, { difficulty = 'savior', lane = 'boss', short = null } = {}) {
+  const { world, wrecks } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
+  const frame = new GameFrame(world);
+  world.shipRow = fitted(SHIPS[shipCarrying(gun)], gun);
+  world.weapon = { ...weaponFor(world.shipRow, []), launchers: 0 };
+  wearHull(world);
+  const steps = surge === null ? SPECIALS.overdrive.surge.steps : SPECIALS[surge].surge.steps;
+  let start = -1;
+  let from = 0;
+  for (let step = 0; step < steps + 6000; step++) {
+    world.ship.health = world.shipRow.health;
+    world.ship.invulnFor = NEVER;
+    if (world.bossPool.size > 0 && world.bossEntering < 0) {
+      const boss = world.bossPool.at(0);
+      if (start < 0) {
+        start = step;
+        from = boss.health;
+      }
+      if (step - start >= steps || world.bossBeaten) return from - Math.max(0, boss.health);
+      world.surgeKind = surge;
+      world.surgeFor = surge === null ? 0 : steps - (step - start);
+      world.ship.prevAcross = world.ship.across;
+      world.ship.across = lane === 'boss' ? boss.across : lane;
+      if (short !== null) {
+        world.ship.prevAlong = world.ship.along;
+        world.ship.along = boss.along - boss.radius - short;
+      }
+    }
+    frame.step();
+    if (wrecks.count > 0) throw new Error(`${kind}, ${gun}: the ship died, so this measured a respawn`);
+    if (start >= 0 && world.bossPool.size === 0) return from;
+  }
+  throw new Error(`${kind} never came on to be fought`);
+}
+
 const isMain = process.argv[1] !== undefined && /weigh-boss\.mjs$/.test(process.argv[1].replace(/\\/g, '/'));
 if (isMain) {
   const args = process.argv.slice(2);
@@ -180,6 +231,18 @@ if (isMain) {
   const kinds = named.length > 0 ? named : LEVEL_KINDS.map((level) => LEVELS[level].boss);
   const difficulty = flag('difficulty', 'savior');
   const health = flag('health', null);
+  // `--surge=overdrive` prints what one charge takes off each boss, beside the gun alone — 0640.
+  const surge = flag('surge', null);
+  if (surge !== null) {
+    for (const kind of kinds) {
+      for (const gun of WEAPON_KINDS) {
+        const bare = flyCharge(kind, gun, null, { difficulty });
+        const charged = flyCharge(kind, gun, surge, { difficulty });
+        console.log(`${kind.padEnd(12)} ${gun.padEnd(9)} one ${surge} charge: ${charged.toFixed(0).padStart(5)} health, the gun alone ${bare.toFixed(0).padStart(5)}`);
+      }
+    }
+    process.exit(0);
+  }
   const secs = (s) => (s === null ? 'never' : `${s.toFixed(0)}s`);
   const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
   let fought = 0;

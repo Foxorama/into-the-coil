@@ -2759,8 +2759,9 @@ export class GameFrame implements Frame {
     stepWaves(w);
     let bites = bladeHits === null ? 0 : w.hits.count - rammed - doused;
     if (shootable) {
-      killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
-      collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
+      // A boss spends a pod's pierce on its own terms — 0640: `bossLeft`, which the hull and its body share.
+      killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, 0, null, -1, -1, true);
+      collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits, 0, null, -1, -1, true);
     }
     // A piercing missile is not spent by arriving, so the pool shrinking cannot cue it — 0375.
     if (tubesPierce) bites = w.hits.count;
@@ -6642,6 +6643,8 @@ function fireMissiles(w: World): void {
     missile.seekTurn = tube.seek;
     missile.lifeFor = tube.fuse * pods.fuse;
     missile.health = pods.pierce;
+    // And how much of it a boss may take — 0640.
+    missile.bossLeft = pods.bossPierce;
   }
 }
 

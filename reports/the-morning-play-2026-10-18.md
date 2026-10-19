@@ -69,9 +69,13 @@ The pierce was written for bullets and kept when it became a missile. **Nothing 
 
 And whichever, fly a surge in `weigh-boss` so the number is measured rather than estimated.
 
+**The player's choice, 2026-10-19:** *"Go with option 1 for the supercharge"*. Built as
+[0640](../docs/decisions/0640-a-pod-pierces-a-wave-and-not-a-boss.md), with a charge flown in `weigh-boss`
+(`--surge=overdrive`). The measured before and after are in that decision's table.
+
 ## Owed
 
 - A pad on the title (1).
 - The ball's readout in a fight on a phone (2).
 - Bosses 1 to 3 in the ball, and the later ones (3).
-- The supercharge, on the player's choice (4).
+- An overdrive charge on a boss in play, now that it lands once (4).

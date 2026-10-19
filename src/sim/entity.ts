@@ -168,6 +168,11 @@ export interface Entity extends Body {
    */
   landIn: number;
   /**
+   * Landings a shot that pierces still has on a boss — 0640. Its pierce goes on through everything
+   * else; a boss spends it at once when this runs out. Zero for every shot that is spent by arriving.
+   */
+  bossLeft: number;
+  /**
    * Steps until this target may take another blade — `docs/decisions/0391-a-target-takes-a-blade-so-often.md`.
    * `landIn` is the blade's clock; this is the target's, and a boss's body keeps its hull's.
    */
@@ -639,6 +644,7 @@ export function makeEntity(): Entity {
     flashGap: 0,
     struckIn: 0,
     landIn: 0,
+    bossLeft: 0,
     bladeIn: 0,
     kind: 0,
     fireIn: 0,
@@ -722,6 +728,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.flashGap = 0;
   e.struckIn = 0;
   e.landIn = 0;
+  e.bossLeft = 0;
   e.bladeIn = 0;
   e.kind = kind;
   e.fireIn = 0;

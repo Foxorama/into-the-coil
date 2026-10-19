@@ -196,6 +196,8 @@ export function collideInto(
    */
   only = -1,
   except = -1,
+  /** The targets are a boss, so a shot that pierces spends its `bossLeft` here — 0640. */
+  boss = false,
 ): number {
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
@@ -258,6 +260,9 @@ export function collideInto(
         before the blade had one, so this is the release that was always here, written as what it
         always meant; a blade has `BLADE_EDGE` and goes on to the next body.
       */
+      // A pod's pierce is for a wave and not for a boss: twelve landings across one hull was a charge
+      // that killed most of them alone — 0640. Its last landing on a boss is its last.
+      if (boss && shot.health > 1 && --shot.bossLeft <= 0) shot.health = 1;
       shot.health -= 1;
       if (shot.health <= 0) shots.releaseAt(s);
       if (target.health <= 0) {
