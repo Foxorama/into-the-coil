@@ -24,13 +24,15 @@ v1.0 is **eight things, in this order**. Items 1–3 are yours. Everything after
    biggest is what 1.0 *is*: `docs/game.md` still described a prologue, a betrayer, a Level 1 pool and
    a branching chart, none of which exists. My recommendation, as on the 15th, is that 1.0 is the
    game as built, plus the victory music.
-2. **Decide the jellyfish on Burn** — [below](#2-a-likely-soft-lock-the-last-boss-on-burn). Measured
-   tonight: with the Thunderbolt or the Aqua Duck, the last boss on *Let the Galaxy Burn* likely cannot
-   be finished by the gun. A fight that never ends is the one defect a 1.0 cannot ship with.
+2. ~~**Decide the jellyfish on Burn**~~ — **decided 2026-10-20 and built as
+   [0644](../docs/decisions/0644-the-open-bell-throws-six.md)**: six void a ring rather than eight, and
+   every gun now finishes her on Burn. [Below](#2-a-likely-soft-lock-the-last-boss-on-burn) is the
+   measurement that found it.
 3. **Play** — [`the-plays-owed`](the-plays-owed-2026-10-19.md) is all 174 items. **The 12 below are
    the ones that decide whether 1.0 ships**; the rest can be played after it.
-4. **The save-version decision** — a reader handed any version but its own reads nothing, so the
-   first bump after 1.0 empties every player's hangar. Cheap now, expensive after.
+4. ~~**The save-version decision**~~ — **built as
+   [0643](../docs/decisions/0643-a-save-reads-every-version-before-its-own.md)**, the chain's first
+   link, on the recommendation; the player's to veto.
 5. **A `v0.9.0` candidate played inside the itch embed** while the page is still restricted. Nothing
    here has ever looked at the game in itch's iframe.
 6. **The state-of-play rewrite.** It is 355 KB and its *What is next* is forty headings of *owed a
@@ -138,7 +140,12 @@ assuming, present a plan"* (state-of-play, 2026-09-10):
   stream gets through. It is the most targeted fix and the most new code.
 
 **My recommendation is (b)**: one number, every ship, and Burn's last phase stays the hardest
-thing in the game. Not built, waiting on your word.
+thing in the game.
+
+**Answered 2026-10-20:** *"Yes, cut the jellyfish's open-phase void ring from 8 to 6 blasts on every
+tier."* Measured first: six a ring lets the arc finish her in 76 s and the paintball in 95 s, while a
+slower cadence (72 steps rather than 48) still left the arc stuck. Built as
+[0644](../docs/decisions/0644-the-open-bell-throws-six.md), which holds the numbers and the guard.
 
 ---
 
@@ -194,8 +201,8 @@ bench (`rig/bench.html`) is local only. The play list's first sitting is a whole
 
 | | what | status |
 |---|---|---|
-| 4.1 | **The save's version.** All three readers (`hangar.ts:61`, `scores.ts:95`, `settings.ts:77`) read nothing on any version but their own, so the first bump empties every player's key. Decide: a migration chain, or a written *a bump resets* | **Yours to decide.** Recommendation: the chain's first link — every reader steps an older document up through a list of lifts (empty today), and a test fails if a version is bumped without one. No key changes; it is code that runs on read |
-| 4.2 | **The jellyfish on Burn** | §2 — waiting on (a), (b) or (c) |
+| 4.1 | **The save's version.** All three readers (`hangar.ts:61`, `scores.ts:95`, `settings.ts:77`) read nothing on any version but their own, so the first bump empties every player's key. Decide: a migration chain, or a written *a bump resets* | **Built as [0643](../docs/decisions/0643-a-save-reads-every-version-before-its-own.md)**, the chain's first link: every reader steps an older document up through a list of lifts (empty today), and a test fails if a version is bumped without one. Yours to veto |
+| 4.2 | **The jellyfish on Burn** | **Built as [0644](../docs/decisions/0644-the-open-bell-throws-six.md)**: (b), six void a ring |
 | 4.3 | **The victory piece** — question 2 said yes | Being built. 0418 names the work: the music is keyed by place, and this piece is not a place |
 | 4.4 | **The save QR inside itch.** The code's link points at the page it was made on (`mount.ts`); made inside itch's iframe, that is itch's per-upload address, and a phone that opens it saves into storage the embed may never read | Found by the release audit; **check it in the `v0.9.0` play** before deciding anything |
 | 4.5 | **`release.yml` installs butler unpinned** (`…/LATEST/…`). A butler release on tag day changes the tool mid-release | Small; pin it with the `v0.9.0` PR |

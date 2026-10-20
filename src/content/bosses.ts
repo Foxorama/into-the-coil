@@ -4952,8 +4952,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
         lane; warned for 0.4 s rather than 0.2, because a zigzag has to be read before it is dodged —
         the pterodactyl's and the hydra's are warned for 0.3 and 0.4.
 
-        ⚠️ **AND EIGHT VOID A RING RATHER THAN TEN — 0402.** *"It needs slightly less void balls
-        firing."* A fifth fewer, on the same cadence.
+        ⚠️ **AND SIX VOID A RING — 0402 TOOK TEN TO EIGHT, 0644 EIGHT TO SIX.** *"It needs slightly
+        less void balls firing,"* and then a measurement: on Burn eight swallowed every link of the arc
+        and every paintball, and the fight never ended for two ships. Same cadence.
 
         ⚠️ **SLOWER, AS FAR AS 0260'S EIGHT VOLLEYS ALLOW — 0471.** *"The … jellyfish level boss
         fire[s] a bit too fast."* 66, 54, 48, 42 and 36 became 72, 66, 60, 54 and 48: at the tuned
@@ -4972,7 +4973,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
       { upTo: 0.47, fireEvery: 54, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true }, hull: { rest: SPRITE.boss14Amber, hit: SPRITE.boss14AmberHit } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
       // runs into (0150's floor). The bell parted — 0402: *"actually 'open and expose the heart'"*.
-      { upTo: 0.31, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
+      // Six void a ring, not eight — 0644: on Burn eight swallowed every arc link and every paintball,
+      // so the Thunderbolt and the Aqua Duck could not finish her by the gun.
+      { upTo: 0.31, fireEvery: 48, shots: 6, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
     ],
   },
 };
