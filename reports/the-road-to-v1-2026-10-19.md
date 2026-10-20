@@ -76,17 +76,15 @@ is enough:
 
 1. *"Skip this completely and remove."* The prologue, the betrayer, the Level 1 swap and the chart are
    gone from `docs/game.md`, and with them the caddy pool. **The rescue story stands.**
-2. *"Unclear on what this is?"* — **still open**, explained back:
-   - **The run save** keeps a run in progress, so a closed tab resumes at the start of the level it was
-     on, with its lives and arsenal.
-   - **The victory piece** is music of the ending's own; today the victory screen plays the title track.
+2. *"Unclear on what this is?"* — explained back (the run save keeps a run across a closed tab; the
+   victory piece is the ending's own music), then answered: **"run save, no. Victory music, yes."**
 3. *"Desktop 1st, phones supported because people were playing it on phones."* The site and itch copy
    say so, and itch's *mobile friendly* is ticked.
 4. *"Pay what you want on itch, chip in link on vulpeculagames."* Both are in
    [vulpeculagames-site#33](https://github.com/Foxorama/vulpeculagames-site/pull/33).
-5. *"Which are these?"* — **still open**, explained back: the 35 calls listed under
-   [*Vetoes owed*](the-plays-owed-2026-10-19.md#vetoes-owed), where a decision made a judgement the
-   player may overturn.
+5. *"Which are these?"* — explained back as the 35 calls under
+   [*Vetoes owed*](the-plays-owed-2026-10-19.md#vetoes-owed), then **"agree with the veto
+   suggestion"**: each is raised in play if it bothers the player, and silence keeps it.
 6. *"Yes, but I'll do that last; the v0.9.0 to v1.0 bump should essentially be no changes."* So
    `v0.9.0` is the release candidate, and `v1.0.0` is the same tree with only the version moved.
 
@@ -198,7 +196,7 @@ bench (`rig/bench.html`) is local only. The play list's first sitting is a whole
 |---|---|---|
 | 4.1 | **The save's version.** All three readers (`hangar.ts:61`, `scores.ts:95`, `settings.ts:77`) read nothing on any version but their own, so the first bump empties every player's key. Decide: a migration chain, or a written *a bump resets* | **Yours to decide.** Recommendation: the chain's first link — every reader steps an older document up through a list of lifts (empty today), and a test fails if a version is bumped without one. No key changes; it is code that runs on read |
 | 4.2 | **The jellyfish on Burn** | §2 — waiting on (a), (b) or (c) |
-| 4.3 | **The victory piece**, if question 2 says yes | Not started. 0418 names the work: the music is keyed by place, and this piece is not a place |
+| 4.3 | **The victory piece** — question 2 said yes | Being built. 0418 names the work: the music is keyed by place, and this piece is not a place |
 | 4.4 | **The save QR inside itch.** The code's link points at the page it was made on (`mount.ts`); made inside itch's iframe, that is itch's per-upload address, and a phone that opens it saves into storage the embed may never read | Found by the release audit; **check it in the `v0.9.0` play** before deciding anything |
 | 4.5 | **`release.yml` installs butler unpinned** (`…/LATEST/…`). A butler release on tag day changes the tool mid-release | Small; pin it with the `v0.9.0` PR |
 | 4.6 | `index.html` has no meta description or `og:` tags, so a shared game link unfurls bare | Small; it must keep 0002's brand test green |

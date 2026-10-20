@@ -455,20 +455,11 @@ scored 1,579,750 — 157 shards.
 [0429](decisions/0429-the-table-is-kept.md), [0510](decisions/0510-the-settings-are-kept.md),
 [0521](decisions/0521-the-hangar-opens.md); the pilot is picked each visit. The hangar holds which
 ships have beaten the jellyfish, how each is fitted out, the shards and what they bought, the tiers
-finished and the crashes counted. What follows is the run save, which **does not exist** — whether 1.0
-has it is [`the-v1-list`](../reports/the-v1-list-2026-10-15.md)'s second question.
+finished and the crashes counted.
 
-The save is an **interruption hedge and not a safety net** —
-[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). It exists so that a browser
-killed in the background does not destroy a run, and it must never turn a game over into a retry.
-
-⚠️ **[0068](decisions/0068-a-run-over-is-a-continue.md) does not weaken this.** A continue is offered
-on a screen, for seven seconds, and expires; reloading the page past a game over is still refused.
-The save is not the place a second chance comes from.
-
-So it stores the run's **current** lives and **current** arsenal, and resumes at the start of the
-level the player was in. No re-picks, no re-rolls, and a countdown before the first wave arrives.
-Closing the page costs the progress made through that level and returns nothing.
+**A run in progress is not kept**: closing the page ends it. A run save was planned as an interruption
+hedge ([0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)) and was left out of
+1.0 by the player, 2026-10-20 — a run is fifteen to thirty minutes.
 
 Storage keys are `itc_*`, listed in `PRIVACY.md`, each versioned and each still at v1; a field is added
 to a version rather than bumping it. ⚠️ **There is no migration chain yet**: a reader handed any other
@@ -594,7 +585,5 @@ with all the time there has ever been.
 
 ## Open
 
-- **The run save and the victory piece** — whether 1.0 has either is
-  [`the-road-to-v1`](../reports/the-road-to-v1-2026-10-19.md)'s open question 2.
 - Music. Procedural synthesis keeps the single-file build; a baked track does not. Sound effects are
   synthesised either way.
