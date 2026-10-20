@@ -8,7 +8,7 @@
 
 import BakeWorker from './bake.worker.ts?worker&inline';
 import type { BakeReply, BakeRequest } from './bake.worker.ts';
-import type { LayerBaker, TitleBaker } from './sound.ts';
+import type { CodaBaker, LayerBaker, TitleBaker } from './sound.ts';
 import { SAMPLE_RATE } from './sound.ts';
 
 /**
@@ -19,7 +19,7 @@ import { SAMPLE_RATE } from './sound.ts';
 const workersFor = (cores: number): number => Math.max(1, Math.min(4, cores - 2));
 
 /** A baker backed by workers, or `null` where a worker cannot be made. */
-export function makeBakePool(): { layer: LayerBaker; title: TitleBaker } | null {
+export function makeBakePool(): { layer: LayerBaker; title: TitleBaker; coda: CodaBaker } | null {
   if (typeof Worker === 'undefined') return null;
   const waiting: { request: BakeRequest; done: (buffer: Float32Array) => void }[] = [];
   const pending = new Map<number, (buffer: Float32Array) => void>();
@@ -59,5 +59,7 @@ export function makeBakePool(): { layer: LayerBaker; title: TitleBaker } | null 
     layer: (layer, theme) => ask({ id: nextId++, layer, rate: SAMPLE_RATE, theme }),
     // 0597: the title track's parts, on the same workers and the same queue.
     title: (title) => ask({ id: nextId++, title, rate: SAMPLE_RATE }),
+    // 0645: a place's coda, the same way — once a run, when its last boss arrives.
+    coda: (coda) => ask({ id: nextId++, coda, rate: SAMPLE_RATE }),
   };
 }

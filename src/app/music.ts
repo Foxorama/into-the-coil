@@ -60,7 +60,8 @@ import {
   type ThemeLadder,
 } from '../content/themes.ts';
 import { MUSIC_ROLES, roleOf } from '../content/arrangement.ts';
-import { TITLE_BARS, TITLE_PARTS, titleMoves, type TitlePartName } from '../content/title-track.ts';
+import { TITLE_BARS, TITLE_PARTS, pieceBars, titleMoves, type TitlePartName, type TitlePiece } from '../content/title-track.ts';
+import { codaOf, codaSecondsOf } from '../content/codas.ts';
 import type { SoundKind } from '../content/sound.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
@@ -321,6 +322,79 @@ export function bakeTitlePart(name: TitlePartName, rate: number): Float32Array {
 /** How long one pass of the title's score lasts, in seconds — the menu plays it round. */
 export const TITLE_PASS_SECONDS = TITLE_BARS * BAR_SECONDS;
 
+/** How long one pass of `piece` lasts, in seconds — the menu's or the ending's (0645). */
+export const passSecondsOf = (piece: TitlePiece): number => pieceBars(piece) * BAR_SECONDS;
+
+/**
+ * How many bars after the coda is struck the ending's theme comes in — `docs/decisions/0645-the-heart-resolves.md`.
+ *
+ * ⚠️ **FIVE, SO THE THEME RISES UNDER THE CODA'S HELD CHORD.** The coda walks its lead down onto a long A over its
+ * fourth and fifth bars and rings for two more; the ending's first section rises over two bars, so it arrives as the
+ * chord is letting go and the one becomes the other rather than following it across a silence.
+ */
+export const VICTORY_ENTERS_BARS = 5;
+
+/**
+ * `theme`'s coda as one mono buffer, in jobs — `docs/decisions/0645-the-heart-resolves.md`.
+ *
+ * ⚠️ **ON THE ALBUM'S OWN NOTES AND LEVELS** — `codaOf`, rendered as `scripts/hear.mjs --album` renders it, part by
+ * part, each in its layer's room, each at the loudest its layer is anywhere in the level, then trimmed by
+ * `GAME_CODA_TRIM_DB` to sit where the album's measurement puts it. **The fight's own peak levels were tried first and
+ * struck it fifteen decibels under the fight**: the fight's bed is its drums, and the coda's pad, lead and drone sit
+ * low in it.
+ *
+ * ⚠️ **MONO, AND THAT IS THE MEMORY.** The Black Heart is the largest place the game holds; a stereo coda per part
+ * would be several of them. One buffer of a chord is two megabytes, and a final chord has no field to lose.
+ */
+const CODA_RUNGS = ['run', 'push', 'surge', 'approach', 'boss', 'bossPeak'] as const;
+
+/**
+ * How far under the album's level the game strikes the coda, in decibels — `docs/decisions/0645-the-heart-resolves.md`.
+ *
+ * ⚠️ **MEASURED, ON THE ALBUM'S OWN RULE.** The album sets the coda a decibel and a half under what it follows, read
+ * K-weighted off its own render (`scripts/album.mjs`, `scripts/hear.mjs --album`); the game cannot measure its own mix,
+ * so the measurement was made once on the ending's render and this is the result. At the album's part levels The
+ * Black Heart's coda struck at −19.8 LUFS over a fight at −22.4 — the ballad's piano and flute are the loudest its
+ * layers ever are — and 4.1 decibels puts it 1.5 under. The Black Heart is the only coda the game strikes.
+ */
+export const GAME_CODA_TRIM_DB = -4.1;
+
+export function codaNotes(theme: ThemeKind, rate: number): { buffer: Float32Array; notes: (() => void)[] } {
+  const length = Math.round(codaSecondsOf(theme) * rate);
+  const buffer = new Float32Array(length);
+  const rng = makeRng('coda').stream(theme);
+  const notes: (() => void)[] = [];
+  for (const part of codaOf(theme)) {
+    const gain = Math.max(...CODA_RUNGS.map((rung) => rungOf(theme, rung, part.layer))) * mixOf(theme, part.layer) * 10 ** (GAME_CODA_TRIM_DB / 20);
+    if (!(gain > 0)) continue;
+    const own = new Float32Array(length);
+    for (const voice of part.voices) {
+      const step = BEAT_SECONDS / voice.perBeat;
+      for (let k = 0; k < voice.steps.length; k++) {
+        const value = voice.steps[k];
+        if (value === null || value === undefined) continue;
+        notes.push(() => {
+          const pitch = voice.pitched ? MUSIC_ROOT * Math.pow(2, voice.octave + value / 12) : 0;
+          const note = voice.pitched ? { ...voice.note, from: pitch, to: pitch } : { ...voice.note, gain: voice.note.gain * value };
+          sampleLayerInto(note, rate, rng, own, Math.round(k * step * rate), false);
+        });
+      }
+    }
+    notes.push(() => {
+      addRoom(own, rate, airOf(theme, part.layer));
+      for (let i = 0; i < length; i++) buffer[i] = buffer[i]! + own[i]! * gain;
+    });
+  }
+  return { buffer, notes };
+}
+
+/** `theme`'s coda baked straight through — the guards' and the listen's. */
+export function bakeCoda(theme: ThemeKind, rate: number): Float32Array {
+  const { buffer, notes } = codaNotes(theme, rate);
+  for (const note of notes) note();
+  return buffer;
+}
+
 /**
  * How long the menu's music takes to hand over to a run's and back, in seconds — a bar, on the bar grid both play
  * on, so neither piece is cut mid-bar (0117) and the hand-over is heard as one.
@@ -526,6 +600,37 @@ export function musicPlaceFor(screen: Screen, audition: ThemeKind | null, runLev
  */
 export function titleWanted(screen: Screen, audition: ThemeKind | null, sound: SoundKind): boolean {
   return !SCREENS[screen].inRun && audition === null && sound === 'on';
+}
+
+/**
+ * Which piece the title's parts play on `screen` — `docs/decisions/0645-the-heart-resolves.md`: the ending's from the
+ * finale to the victory screen, the menu's everywhere else.
+ */
+export function titlePieceFor(screen: Screen): TitlePiece {
+  return screen === 'outro' || screen === 'victory' ? 'victory' : 'menu';
+}
+
+/**
+ * Whether a piece on the title's parts is wanted on `screen`: the menu's off a run (0597), and the ending's over the
+ * finale too, which is part of a run — 0645. It enters there under the coda's held chord.
+ */
+export function pieceWanted(screen: Screen, audition: ThemeKind | null, sound: SoundKind): boolean {
+  return titleWanted(screen, audition, sound) || (screen === 'outro' && audition === null && sound === 'on');
+}
+
+/**
+ * The place whose coda is held on `screen`, or `null` — `docs/decisions/0645-the-heart-resolves.md`.
+ *
+ * From the last place's boss arriving (`runLevel` is the last place's index until the boss dies, `bossOn` its arrival)
+ * through the finale it is struck on. **Held through the fight** so the bake is not on the frame the boss dies on, and
+ * dropped once the run is over or never reached it.
+ */
+export function codaHeldFor(screen: Screen, runLevel: number, bossOn: boolean, sound: SoundKind): ThemeKind | null {
+  if (sound !== 'on') return null;
+  const last = LEVEL_KINDS.length - 1;
+  const theme = LEVELS[LEVEL_KINDS[last]!].theme;
+  if (screen === 'outro') return theme;
+  return SCREENS[screen].inRun && runLevel === last && bossOn ? theme : null;
 }
 
 /**
@@ -1054,7 +1159,13 @@ export interface MusicOut {
    * bar and plays the score round; not wanted, it hands back at the next bar and **its buffers are let go**, so a run
    * never holds the title's 17 MB beside its own place.
    */
-  title(wanted: boolean): void;
+  title(wanted: boolean, piece?: TitlePiece): void;
+  /**
+   * Strike a coda over the run's music — `docs/decisions/0645-the-heart-resolves.md`. At the next bar the run's layers
+   * let go over a third of a second, the coda plays once, and a title piece wanted after it waits until
+   * `VICTORY_ENTERS_BARS` into it. The run's bed comes back on the next run, when the title hands it back.
+   */
+  coda(buffer: Float32Array): void;
   /** Whether the title track is held, so the caller knows to bake it again. */
   hasTitle(): boolean;
   /** Whether the title track is on the air, and from what audio time its current pass began — for the guards. */
@@ -1800,6 +1911,20 @@ export function makeMusicOut(
   let titleFrom: number | null = null;
   /** Audio time the next pass begins, once it has been written, or `null`. */
   let titleNext: number | null = null;
+  /** Which piece the pass on the air is, and so how long it lasts — the menu's, or the ending's (0645). */
+  let titlePiece: TitlePiece = 'menu';
+  /*
+    ── THE CODA — `docs/decisions/0645-the-heart-resolves.md` ─────────────────────────────────────────────────────
+
+    One more gain in front of the master, so the coda is mastered as both pieces are. `runMuted` is the run's bed let go
+    under it: until the title takes over and hands the bed back on the next run, nothing else may bring it up, or the
+    Black Heart's loops would be heard again under the ending.
+  */
+  const codaBus = ctx.createGain();
+  codaBus.connect(master);
+  let runMuted = false;
+  /** The earliest audio time a title piece may start — the coda's own `VICTORY_ENTERS_BARS`, or none. */
+  let titleNotBefore = 0;
 
   /**
    * Write one pass of the score from `when`: seven loops started together, and each part's level as the score moves
@@ -1822,7 +1947,7 @@ export function makeMusicOut(
       source.start(when);
       titleSources.push(source);
       const param = titleGains[name].gain;
-      for (const move of titleMoves(name, again)) {
+      for (const move of titleMoves(name, again, titlePiece)) {
         const at = when + move.at * BAR_SECONDS;
         param.setValueAtTime(move.from, at);
         param.linearRampToValueAtTime(move.to, at + move.over * BAR_SECONDS);
@@ -2149,7 +2274,7 @@ export function makeMusicOut(
       }
       titleBuffers = made;
     },
-    title(wanted: boolean): void {
+    title(wanted: boolean, piece: TitlePiece = 'menu'): void {
       /*
         ⚠️ **NOT WANTED, THE BUFFERS GO WHETHER OR NOT THEY WERE EVER PLAYED** — 0597. A run is the place the
         memory is spent (`tests/sound.test.ts`'s 145 MB), and a title baked on the menu and never heard because the
@@ -2158,7 +2283,18 @@ export function makeMusicOut(
       */
       if (!wanted) {
         titleBuffers = null;
-        if (titleFrom === null) return;
+        titleNotBefore = 0;
+        if (titleFrom === null) {
+          // 0645: a coda let the run's bed go and no title ever took over — the sound turned off under the ending,
+          // say. The next run must not start in silence.
+          if (!runMuted) return;
+          const at = placeArrivesAt(anchorAudio, ctx.currentTime, SCHEDULE_AHEAD);
+          runBus.gain.cancelScheduledValues(at);
+          runBus.gain.setValueAtTime(0, at);
+          runBus.gain.linearRampToValueAtTime(1, at + TITLE_HANDOVER_SECONDS);
+          runMuted = false;
+          return;
+        }
         const at = placeArrivesAt(anchorAudio, ctx.currentTime, SCHEDULE_AHEAD);
         const until = at + TITLE_HANDOVER_SECONDS;
         titleBus.gain.cancelScheduledValues(at);
@@ -2167,6 +2303,7 @@ export function makeMusicOut(
         runBus.gain.cancelScheduledValues(at);
         runBus.gain.setValueAtTime(0, at);
         runBus.gain.linearRampToValueAtTime(1, until);
+        runMuted = false;
         stopTitle(until);
         return;
       }
@@ -2177,26 +2314,58 @@ export function makeMusicOut(
           ⚠️ **AT THE RUN'S NEXT BAR, SO THE MENU'S PIECE IS ON THE RUN'S GRID** — 0117's rule, and it is what lets
           either piece hand over to the other on a downbeat both of them have. The score opens on its drone and pad
           rising out of silence over a bar, so the title's bus is simply open and the run's falls away beneath it.
+
+          ⚠️ **AND NOT BEFORE A CODA SAYS** — 0645. The coda was struck on a bar of this same grid, so its
+          `VICTORY_ENTERS_BARS` is a bar too, and the run's bed it let go is not brought up again to be faded out.
         */
-        const when = placeArrivesAt(anchorAudio, now, SCHEDULE_AHEAD);
-        runBus.gain.cancelScheduledValues(when);
-        runBus.gain.setValueAtTime(1, when);
-        runBus.gain.linearRampToValueAtTime(0, when + TITLE_HANDOVER_SECONDS);
+        const when = Math.max(placeArrivesAt(anchorAudio, now, SCHEDULE_AHEAD), titleNotBefore);
+        if (!runMuted) {
+          runBus.gain.cancelScheduledValues(when);
+          runBus.gain.setValueAtTime(1, when);
+          runBus.gain.linearRampToValueAtTime(0, when + TITLE_HANDOVER_SECONDS);
+        }
         titleBus.gain.cancelScheduledValues(when);
         titleBus.gain.setValueAtTime(1, when);
+        titlePiece = piece;
         writePass(when, false);
         titleFrom = when;
         return;
       }
-      // Half a pass gone, the next is written — one comparison a frame, and a write once every minute.
-      if (titleNext === null && now > titleFrom + TITLE_PASS_SECONDS / 2) {
-        titleNext = titleFrom + TITLE_PASS_SECONDS;
+      /*
+        Half a pass gone, the next is written — one comparison a frame, and a write once every minute. **The next pass
+        is the piece wanted now** (0645): the menu after a win comes back to the menu's score at a pass's end, rather
+        than cutting the ending off in the middle of its theme.
+      */
+      if (titleNext === null && now > titleFrom + passSecondsOf(titlePiece) / 2) {
+        titleNext = titleFrom + passSecondsOf(titlePiece);
+        titlePiece = piece;
         writePass(titleNext, true);
       }
       if (titleNext !== null && now >= titleNext) {
         titleFrom = titleNext;
         titleNext = null;
       }
+    },
+    coda(buffer: Float32Array): void {
+      if (!started || !on) return;
+      /*
+        ⚠️ **ON THE RUN'S NEXT BAR, AND THE BED LETS GO OVER A THIRD OF A SECOND** — 0645, on `scripts/album.mjs`'s own
+        terms, where the loops let go of the fight over 0.35 s as the coda is struck. The bar is 0117's, so the coda and
+        the theme after it stay on the grid the run was playing on.
+      */
+      const at = placeArrivesAt(anchorAudio, ctx.currentTime, SCHEDULE_AHEAD);
+      runBus.gain.cancelScheduledValues(at);
+      runBus.gain.setValueAtTime(runMuted ? 0 : 1, at);
+      runBus.gain.linearRampToValueAtTime(0, at + 0.35);
+      runMuted = true;
+      // @setup: one buffer and one source, once a run, when its last boss dies.
+      const made = ctx.createBuffer(1, buffer.length, rate);
+      made.getChannelData(0).set(buffer);
+      const source = ctx.createBufferSource();
+      source.buffer = made;
+      source.connect(codaBus);
+      source.start(at);
+      titleNotBefore = at + VICTORY_ENTERS_BARS * BAR_SECONDS;
     },
     hasTitle(): boolean {
       return titleBuffers !== null;

@@ -9,7 +9,8 @@ export const PROBES = [
     guard: 'reads the score as the album does',
     edit: {
       path: 'src/content/title-track.ts',
-      find: '  let was = again ? TITLE_SCORE[TITLE_SCORE.length - 1]!.parts[name] ?? 0 : 0;',
+      // Re-anchored by 0645, where the score became one of two.
+      find: '  let was = again ? score[score.length - 1]!.parts[name] ?? 0 : 0;',
       replace: '  let was = 0;',
     },
   },
