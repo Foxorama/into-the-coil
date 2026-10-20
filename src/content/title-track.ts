@@ -206,6 +206,38 @@ export const TITLE_SCORE: readonly { bars: number; glide?: number; rise?: number
 /** How many bars the score lasts before the album's coda, which is one pass of it in the menu (0597). */
 export const TITLE_BARS = TITLE_SCORE.reduce((n, s) => n + s.bars, 0);
 
+/** One section of a score: how many bars, and each part's level in it. */
+export type TitleSection = (typeof TITLE_SCORE)[number];
+
+/**
+ * THE ENDING'S SCORE — the title's own parts, played as a victory. `docs/decisions/0645-the-heart-resolves.md`.
+ *
+ * Asked for: *"Black Heart resolves into the triumphant title theme."* The Black Heart's coda is struck as the jellyfish
+ * dies, and this enters under its last held chord, so the run's ending is the game's own theme coming home.
+ *
+ * ⚠️ **IT STARTS AT THE THEME AND NEVER GOES BACK TO THE FLOOR.** The menu's score opens on a drone and a pad waking out
+ * of silence, which is right for a page loading and wrong for a win: so the ending enters on the theme with everything
+ * under it, the pad that only the opening had brought back for warmth, and the flute over the climb. Its breath is the
+ * breakdown, and a pass that follows a pass comes back in at the climb's own levels.
+ */
+export const VICTORY_SCORE: readonly TitleSection[] = [
+  // The theme, out of the coda's held chord, over two bars.
+  { bars: 16, rise: 2, parts: { drone: 0.32, pad: 0.45, bass: 1, heart: 1, arp: 0.8, lead: 1 } },
+  // Everything, the flute over the theme.
+  { bars: 16, parts: { drone: 0.32, pad: 0.45, bass: 1, heart: 1, arp: 0.7, lead: 1, flute: 0.45 } },
+  // The breath: the title's own breakdown.
+  { bars: 8, glide: 2, parts: { drone: 0.4, bass: 0.6, flute: 1, heart: 0.8, arp: 0.35 } },
+];
+
+/** The two pieces the title's parts play: the menu's, and the ending's. */
+export type TitlePiece = 'menu' | 'victory';
+
+/** Each piece's score — keyed by the closed set, as every content table is (0016). */
+export const TITLE_SCORES: Record<TitlePiece, readonly TitleSection[]> = { menu: TITLE_SCORE, victory: VICTORY_SCORE };
+
+/** How many bars one pass of `piece` lasts. */
+export const pieceBars = (piece: TitlePiece): number => TITLE_SCORES[piece].reduce((n, s) => n + s.bars, 0);
+
 /** One move of a part's level: from `from` at bar `at`, arriving at `to` `over` bars later and holding there. */
 export interface TitleMove {
   readonly at: number;
@@ -222,11 +254,12 @@ export interface TitleMove {
  * not say. **`again` is a pass that follows a pass**, which enters at the last section's levels rather than from
  * silence: the menu plays the score round, and the album plays it once and strikes its coda.
  */
-export function titleMoves(name: TitlePartName, again: boolean): TitleMove[] {
+export function titleMoves(name: TitlePartName, again: boolean, piece: TitlePiece = 'menu'): TitleMove[] {
+  const score = TITLE_SCORES[piece];
   const moves: TitleMove[] = [];
   let at = 0;
-  let was = again ? TITLE_SCORE[TITLE_SCORE.length - 1]!.parts[name] ?? 0 : 0;
-  for (const section of TITLE_SCORE) {
+  let was = again ? score[score.length - 1]!.parts[name] ?? 0 : 0;
+  for (const section of score) {
     const level = section.parts[name] ?? 0;
     moves.push({ at, from: was, to: level, over: level < was ? section.glide ?? 1 : section.rise ?? 1 });
     was = level;

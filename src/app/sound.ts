@@ -60,7 +60,7 @@ import {
   type CueRow,
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
-import { makeMusicOut, bakeLayer, bakeLoops, layerNotes, panGains, panStereoGains, titleNotes, TITLE_PART_NAMES, type MusicOut } from './music.ts';
+import { makeMusicOut, bakeLayer, bakeLoops, codaNotes, layerNotes, panGains, panStereoGains, titleNotes, TITLE_PART_NAMES, type MusicOut } from './music.ts';
 import type { TitlePartName } from '../content/title-track.ts';
 import { bakedBy, cueRowOf, cuedBy, type ThemeKind } from '../content/themes.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
@@ -1985,6 +1985,59 @@ export function bakeTitle(
     if (at >= jobs.length) {
       walked = true;
       finish();
+      return;
+    }
+    schedule(step);
+  };
+  schedule(step);
+  return {
+    stop(): void {
+      stopped = true;
+    },
+  };
+}
+
+/** Something that synthesises a place's coda somewhere other than here — the same worker pool (0645). */
+export type CodaBaker = (theme: ThemeKind) => Promise<Float32Array>;
+
+/** Who bakes a coda, if not this thread. */
+let codaBaker: CodaBaker | null = null;
+export function useCodaBaker(baker: CodaBaker | null): void {
+  codaBaker = baker;
+}
+
+/**
+ * Bake `theme`'s coda — `docs/decisions/0645-the-heart-resolves.md` — and hand it over once it has landed.
+ *
+ * ⚠️ **ON THE WORKERS WHERE THERE ARE ANY, AND ON THE SLICED WALK WHERE THERE ARE NOT** — `bakeTitle`'s two routes,
+ * the same samples either way. **Started when the last boss arrives**, so it is held through the fight and ready at the
+ * death: two megabytes beside the place, and 215 ms of synthesis that must not land on the frame the jellyfish dies on.
+ */
+export function bakeCodaOf(
+  theme: ThemeKind,
+  ready: (buffer: Float32Array) => void,
+  schedule: (run: () => void) => void = (run) => void setTimeout(run, 0),
+): { stop(): void } {
+  let stopped = false;
+  const baker = codaBaker;
+  if (baker !== null) {
+    void baker(theme).then((buffer) => {
+      if (!stopped) ready(buffer);
+    });
+    return {
+      stop(): void {
+        stopped = true;
+      },
+    };
+  }
+  const { buffer, notes } = codaNotes(theme, SAMPLE_RATE);
+  let at = 0;
+  const step = (): void => {
+    if (stopped) return;
+    at = sliceOf(notes, at);
+    if (at >= notes.length) {
+      stopped = true;
+      ready(buffer);
       return;
     }
     schedule(step);

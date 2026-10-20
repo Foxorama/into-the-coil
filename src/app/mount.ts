@@ -93,19 +93,21 @@ import {
   auraBuild,
   auraFor,
   auraNearnessFor,
+  codaHeldFor,
   levelOfPlace,
   musicLevelFor,
   musicPlaceFor,
   pictureComingFor,
   picturePlaceFor,
+  pieceWanted,
   placeFor,
-  titleWanted,
+  titlePieceFor,
   UNITS_PER_SECOND,
   type MusicOut,
 } from './music.ts';
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
-import { bakePlace, bakeTitle, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone, type PlaceBake } from './sound.ts';
+import { bakeCodaOf, bakePlace, bakeTitle, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone, type PlaceBake } from './sound.ts';
 import { DOCK, INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
@@ -3840,7 +3842,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   let titleBake: { stop(): void } | null = null;
   const keepTitle = (music: MusicOut): void => {
-    const wanted = titleWanted(state.screen.current, audition, state.settings.sound);
+    // 0645: and the ending's piece on the same parts, from the finale on.
+    const wanted = pieceWanted(state.screen.current, audition, state.settings.sound);
     if (!wanted) {
       titleBake?.stop();
       titleBake = null;
@@ -3851,7 +3854,40 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         audioOut.music()?.setTitle(parts);
       });
     }
-    music.title(wanted);
+    music.title(wanted, titlePieceFor(state.screen.current));
+  };
+
+  /*
+    ── THE CODA — `docs/decisions/0645-the-heart-resolves.md` ────────────────────────────────────────────────────────
+
+    *"Black Heart resolves into the triumphant title theme."* The last place's coda is baked when its boss arrives and
+    held through the fight, struck once at the bar after the finale begins, and let go: the mixer copies it. Asked
+    BEFORE `keepTitle`, so on the finale's first frame the coda has set the bar the ending's piece waits for.
+  */
+  let codaBake: { stop(): void } | null = null;
+  let codaBuffer: Float32Array | null = null;
+  let codaStruck = false;
+  const keepCoda = (music: MusicOut): void => {
+    const screen = state.screen.current;
+    const place = codaHeldFor(screen, state.run.level, world.bossSpawned, state.settings.sound);
+    if (place === null) {
+      codaBake?.stop();
+      codaBake = null;
+      codaBuffer = null;
+      codaStruck = false;
+      return;
+    }
+    if (codaBuffer === null && codaBake === null && !codaStruck) {
+      codaBake = bakeCodaOf(place, (buffer) => {
+        codaBake = null;
+        codaBuffer = buffer;
+      });
+    }
+    if (screen === 'outro' && codaBuffer !== null && !codaStruck) {
+      music.coda(codaBuffer);
+      codaBuffer = null;
+      codaStruck = true;
+    }
   };
 
   /*
@@ -4385,6 +4421,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       after the last boss it was The Black Heart's until a new run began.
     */
     bakeIncomingPlace(musicPlaceFor(state.screen.current, audition, state.run.level));
+    // 0645: the last place's coda, before the title, so the ending's piece waits for it.
+    keepCoda(music);
     // 0597: and the menu's own music, on every screen that is not part of a run.
     keepTitle(music);
     /*

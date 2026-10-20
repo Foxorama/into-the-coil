@@ -18,15 +18,24 @@ import {
   MUSIC_GAIN,
   MUSIC_LAYERS,
 } from '../src/content/music.ts';
-import { TITLE_BARS, TITLE_PARTS, TITLE_SCORE, titleLevelAt, titleMoves, type TitlePartName } from '../src/content/title-track.ts';
+import { TITLE_BARS, TITLE_PARTS, TITLE_SCORE, VICTORY_SCORE, titleLevelAt, titleMoves, type TitlePartName } from '../src/content/title-track.ts';
 import {
   TITLE_HANDOVER_SECONDS,
   TITLE_PART_NAMES,
   TITLE_PASS_SECONDS,
+  VICTORY_ENTERS_BARS,
+  bakeCoda,
   bakeTitlePart,
+  codaHeldFor,
+  codaNotes,
   makeMusicOut,
+  passSecondsOf,
+  pieceWanted,
+  titlePieceFor,
   titleWanted,
 } from '../src/app/music.ts';
+import { codaSecondsOf } from '../src/content/codas.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SCREENS, type Screen } from '../src/state/screens.ts';
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { SAMPLE_RATE } from '../src/app/sound.ts';
@@ -284,6 +293,112 @@ describe('0597 — the title track plays in the menu', () => {
       title + largest,
       `the menu holds ${title.toFixed(1)} MB of title beside a place's ${largest.toFixed(1)} MB, against a BUDGET of 145 MB — ` +
         'owned by whoever is willing to shorten a part or let the menu wait for its music',
+    ).toBeLessThan(145);
+  });
+});
+
+/**
+ * THE HEART RESOLVES — `docs/decisions/0645-the-heart-resolves.md`. Asked: *"Black Heart resolves into the
+ * triumphant title theme."* The last place's coda is struck as its boss dies, and the title's parts play the ending's
+ * score under its held chord, on the finale and the victory screen.
+ */
+describe('0645 — the heart resolves into the title theme', () => {
+  const last = LEVEL_KINDS.length - 1;
+  const core = LEVELS[LEVEL_KINDS[last]!].theme;
+  /** A coda buffer of its own length, so its source can be told from the run's and the title's. */
+  const codaSources = (sources: FakeSource[]): FakeSource[] => sources.filter((s) => s.buffer?.length === 48);
+  /** The run's bus: a run source's gain, its panner, the bus behind them. */
+  const runBusOf = (sources: FakeSource[]): FakeParam => busOf(runSources(sources)[0]!);
+
+  it('THE ASK: the ending enters on the theme, with everything under it, and never goes back to the floor', () => {
+    expect(titleLevelAt(titleMoves('lead', false, 'victory'), 2), 'the ending does not open on the theme').toBe(1);
+    expect(titleLevelAt(titleMoves('lead', false, 'menu'), 2), 'the menu now opens on the theme too, which is the ending’s').toBe(0);
+    for (const section of VICTORY_SCORE) {
+      expect(section.parts.heart ?? 0, 'a section of the ending drops the groove back to the floor').toBeGreaterThan(0);
+      expect(section.parts.bass ?? 0, 'a section of the ending drops the bass back to the floor').toBeGreaterThan(0);
+    }
+    expect(passSecondsOf('victory'), 'a pass of the ending is not its score').toBe(VICTORY_SCORE.reduce((n, s) => n + s.bars, 0) * BAR_SECONDS);
+  });
+
+  it('waits for the coda: struck at a bar over the bed letting go, the theme comes in under its held chord, and the bed stays down', () => {
+    const fake = fakeContext();
+    const music = makeMusicOut(fake.ctx, { connect() {} } as unknown as AudioNode, silentLoops(), SAMPLE_RATE);
+    music.start();
+    const anchor = runSources(fake.sources)[0]!.started!;
+    const runBus = runBusOf(fake.sources);
+    fake.now(0.3);
+    music.coda(new Float32Array(48));
+    const coda = codaSources(fake.sources);
+    expect(coda, 'the coda was not struck').toHaveLength(1);
+    const strike = coda[0]!.started!;
+    const bars = (strike - anchor) / BAR_SECONDS;
+    expect(Math.abs(bars - Math.round(bars)), 'the coda was not struck on the run’s bar grid').toBeLessThan(1e-9);
+    expect(coda[0]!.loop, 'the coda loops').toBe(false);
+    expect(headingAt(runBus, strike + 0.35), 'the run’s bed did not let go under the coda').toBe(0);
+
+    // The title is baked and wanted at once, as the finale's first frame asks: it still waits for the coda.
+    music.setTitle(silentTitle());
+    music.title(true, 'victory');
+    const first = titleSources(fake.sources);
+    expect(first, 'not one source per part').toHaveLength(TITLE_PART_NAMES.length);
+    expect(first[0]!.started, 'the theme did not come in under the coda’s held chord').toBeCloseTo(strike + VICTORY_ENTERS_BARS * BAR_SECONDS, 9);
+    const raised = runBus.writes.some((w) => w.kind !== 'cancel' && w.at > strike && w.value > 0);
+    expect(raised, 'the bed the coda let go was brought back up under the ending').toBe(false);
+
+    // A run: the title hands back, and the bed comes back with it.
+    fake.now(first[0]!.started! + 1);
+    music.title(false);
+    expect(headingAt(runBus, first[0]!.stopped!), 'the next run starts without its music').toBe(1);
+  });
+
+  it('and with no title after it — the sound off under the ending — the next run still has its bed', () => {
+    const fake = fakeContext();
+    const music = makeMusicOut(fake.ctx, { connect() {} } as unknown as AudioNode, silentLoops(), SAMPLE_RATE);
+    music.start();
+    const runBus = runBusOf(fake.sources);
+    fake.now(0.3);
+    music.coda(new Float32Array(48));
+    fake.now(5);
+    music.title(false);
+    expect(headingAt(runBus, 5 + BAR_SECONDS + TITLE_HANDOVER_SECONDS + 0.1), 'the bed the coda let go never came back').toBe(1);
+  });
+
+  it('plays the ending from the finale to the victory screen, holds the coda from the last boss to the finale, and neither with the sound off', () => {
+    for (const screen of Object.keys(SCREENS) as Screen[]) {
+      const ending = screen === 'outro' || screen === 'victory';
+      expect(titlePieceFor(screen), `${screen}: the wrong piece`).toBe(ending ? 'victory' : 'menu');
+      expect(pieceWanted(screen, null, 'on'), `${screen}: whether a title piece is wanted`).toBe(!SCREENS[screen].inRun || screen === 'outro');
+      expect(pieceWanted(screen, null, 'off'), `${screen}: a title piece with the sound off`).toBe(false);
+      expect(codaHeldFor(screen, last, true, 'off'), `${screen}: a coda held with the sound off`).toBeNull();
+    }
+    expect(codaHeldFor('playing', last - 1, true, 'on'), 'a coda held for a boss that is not the last').toBeNull();
+    expect(codaHeldFor('playing', last, false, 'on'), 'the coda held before the last boss arrived').toBeNull();
+    expect(codaHeldFor('playing', last, true, 'on'), 'the coda not held through the last fight').toBe(core);
+    expect(codaHeldFor('outro', last + 1, false, 'on'), 'the coda let go before the finale struck it').toBe(core);
+    expect(codaHeldFor('victory', last + 1, false, 'on'), 'the coda held past the finale').toBeNull();
+  });
+
+  it('bakes the last place’s coda whole, in jobs a frame can take, the same samples straight through', () => {
+    const straight = bakeCoda(core, SAMPLE_RATE);
+    expect(straight.length, 'the coda is not its own length').toBe(Math.round(codaSecondsOf(core) * SAMPLE_RATE));
+    let peak = 0;
+    for (const v of straight) peak = Math.max(peak, Math.abs(v));
+    expect(peak, 'the coda is silent').toBeGreaterThan(0.01);
+    const { buffer, notes } = codaNotes(core, SAMPLE_RATE);
+    expect(notes.length, 'the coda is one job, which is a frame').toBeGreaterThan(1);
+    for (const note of notes) note();
+    expect(buffer, 'the jobs do not make the same samples').toEqual(straight);
+  }, 60_000);
+
+  it('BUDGET: the last place, the title and the coda held together over the finale sit under the line', () => {
+    const MB = (seconds: number): number => (seconds * SAMPLE_RATE * 4) / 1e6;
+    const place = MB(MUSIC_LAYERS.reduce((sum, layer) => sum + barsOf(core, layer), 0) * BAR_SECONDS);
+    const title = MB(TITLE_PART_NAMES.reduce((sum, name) => sum + TITLE_PARTS[name].bars, 0) * BAR_SECONDS);
+    const coda = MB(codaSecondsOf(core));
+    expect(
+      place + title + coda,
+      `the finale holds ${place.toFixed(1)} MB of place, ${title.toFixed(1)} of title and ${coda.toFixed(1)} of coda, against a BUDGET of ` +
+        '145 MB — owned by whoever is willing to shorten the ballad or let the ending wait for its music',
     ).toBeLessThan(145);
   });
 });

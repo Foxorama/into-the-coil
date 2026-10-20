@@ -2,7 +2,7 @@ import { APP_VERSION, BUILD_ID, GAME_TITLE } from './brand.ts';
 import { DEFAULT_PALETTE, PALETTES } from './content/palette.ts';
 import { mount } from './app/mount.ts';
 import { makeBakePool } from './app/bake-pool.ts';
-import { useLayerBaker, useTitleBaker } from './app/sound.ts';
+import { useCodaBaker, useLayerBaker, useTitleBaker } from './app/sound.ts';
 
 /**
  * The boot watchdog's half of the contract, declared where TypeScript can see it.
@@ -42,6 +42,8 @@ if (app instanceof HTMLElement) {
   const pool = makeBakePool();
   useLayerBaker(pool?.layer ?? null);
   useTitleBaker(pool?.title ?? null);
+  // 0645: and the last place's coda, for the ending.
+  useCodaBaker(pool?.coda ?? null);
   const mounted = mount(app, DEFAULT_PALETTE);
   if (mounted === null) {
     // No 2D context. Say so where a player can read it, rather than showing a black rectangle.
