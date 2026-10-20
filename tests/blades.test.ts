@@ -289,12 +289,17 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
     }
   });
 
-  it('THE PICTURE: a boss that rains void still takes the blade’s damage, at the tier the game is tuned for', () => {
+  it('THE PICTURE: a boss that rains void still takes the blade’s damage, on Burn where it rains hardest', () => {
     /*
       ⚠️ **THE ONE IN UNITS THE PLAYER WATCHES** — 0027: health coming off the boss per second of
       flying, rather than a number this file could check against itself. Medusa's last phase throws a
-      ring of ten void every sixth of a second (0255), so it is the case the fix is about, and it is
-      driven at Savior — the tuned tier — through the real frame.
+      ring of void (0255), so it is the case the fix is about, driven through the real frame.
+
+      ⚠️ **ON BURN SINCE 0644, WHICH TOOK THE RING FROM EIGHT TO SIX.** At Savior six a ring no longer
+      reaches the blade often enough to tell the defect from the fix: the same ten seconds read 1.00 of
+      the swept fight correct and 0.97 with the void eating the whole blade, and CI's proof said *went
+      red, but on the wrong test*. On Burn, where the ring comes fastest, they read 1.00 and 0.06.
+      Measured with a throwaway copy of this fight, not kept.
 
       ⚠️ **A SHARE OF THE SAME FIGHT WITH THE RAIN SWEPT, so nothing here pins a rate.** What is
       refused is the blade being turned OFF by a wall of mouths: before the fix the same ten seconds
@@ -302,7 +307,7 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
       cost, which is `scripts/weigh-boss.mjs`'s to report and a play's to settle.
     */
     const fought = (sweep: boolean): number => {
-      const built = playableWorld(MEDUSA_ALONE, 'savior');
+      const built = playableWorld(MEDUSA_ALONE, 'burn');
       const world = built.world;
       /*
         ⚠️ **THE RAIN WITHOUT THE TENTACLES IN FRONT OF IT, SINCE 0403.** Five tentacles now hang down the
