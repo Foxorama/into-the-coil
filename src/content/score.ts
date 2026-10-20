@@ -15,10 +15,22 @@
 import type { Side } from './specials.ts';
 
 /**
- * Kills without a hit it takes to climb one step of the multiplier. A shield taking a hit is a hit:
- * the ask's own words, and the streak goes back to nothing on it exactly as it does on a death.
+ * Kills in a streak it takes to climb one step of the multiplier.
+ *
+ * ⚠️ **A STREAK IS KEPT BY HITTING, NOT BY NOT BEING HIT, SINCE 0647.** 0428 ended it on any hit the ship
+ * took, in the ask's words — and the Hamster Ball, which is hit every time it rams, sat at ×1 for whole
+ * runs: *"the ball is constantly getting hit so the score counter is continually at 1."* Asked instead:
+ * *"x seconds after not hitting an enemy it resets – counter stops on boss death and restarts on first
+ * enemy death of the next level."*
  */
 export const STREAK_STEP = 10;
+
+/**
+ * How long the streak lives without anything of the player's landing on an enemy or a boss, in seconds —
+ * 0647. A play number: long enough to cross the gap between two waves the guns are already firing into,
+ * short enough that a lull flown without shooting anything costs it.
+ */
+export const STREAK_QUIET_SECONDS = 3;
 
 /** The most the streak can multiply a kill by. Reached at `STREAK_STEP × (cap − 1)` kills. */
 export const MULTIPLIER_CAP = 8;
@@ -35,7 +47,7 @@ export function shardsFor(points: number): number {
   return Math.floor(Math.max(0, points) / SHARD_POINTS);
 }
 
-/** What a kill is multiplied by, `streak` kills since the last hit. */
+/** What a kill is multiplied by, `streak` kills into the streak. */
 export function multiplierFor(streak: number): number {
   return Math.min(MULTIPLIER_CAP, 1 + Math.floor(Math.max(0, streak) / STREAK_STEP));
 }

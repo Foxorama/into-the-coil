@@ -1477,7 +1477,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shownBoss: -1,
     onBoss: (): void => {},
     // Nothing scored at mount, and replaced below with the chrome — 0428.
-    score: { points: 0, streak: 0, best: 0, kills: 0, spawned: 0, hits: 0 },
+    score: { points: 0, streak: 0, quiet: 0, held: false, best: 0, kills: 0, spawned: 0, hits: 0 },
     shownPoints: 0,
     shownStreak: 0,
     onScore: (): void => {},
