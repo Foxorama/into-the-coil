@@ -13,7 +13,7 @@ import { LANES, flyFight, heldShorts } from '../scripts/weigh-boss.mjs';
 import { BOSSES, type BossKind } from '../src/content/bosses.ts';
 import { DIFFICULTIES, fireGapFor } from '../src/content/difficulty.ts';
 import type { ShipKind } from '../src/content/ships.ts';
-import type { WeaponKind } from '../src/content/weapons.ts';
+import { WEAPONS, type WeaponKind } from '../src/content/weapons.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /** 0260's floor: the quickest fight of a real boss, in seconds, at the gun the player can have. */
@@ -40,6 +40,15 @@ export function quickestFight(kind: BossKind, gun: WeaponKind, ship?: ShipKind):
 
 /** 0260 on a boss with no chain: forty seconds, and eight volleys in each phase summed over its stretches. */
 export function expectBossFloor(kind: BossKind, gun: WeaponKind, ship?: ShipKind): void {
+  /*
+    ⚠️ **NOT THE RAM, SINCE 0646.** The floor is flown with the ship held where it fights from for the whole fight, and a
+    ram's place is against the hull — which no ball can hold: every landing heats it, and the play says *"you
+    constantly have to back off the boss."* So the floor read the ball at a contact no player keeps, and every damage
+    the ram was given was solved against it. A model of the backing off was built and refused: where a cooling ball
+    waits decides the answer (on the jellyfish it rammed her tentacles and never cooled), and that is the player's
+    choice, not this file's. The ball's boss fights are the play's to judge.
+  */
+  if (WEAPONS[gun].ram !== null) return;
   const row = BOSSES[kind];
   const flying = ship === undefined ? '' : ` in the ${ship}`;
   const quickest = quickestFight(kind, gun, ship);
@@ -62,6 +71,8 @@ export function expectBossFloor(kind: BossKind, gun: WeaponKind, ship?: ShipKind
 
 /** The serpent's: twenty-eight seconds, no phase skipped, and eight volleys in each stretch of one. */
 export function expectSerpentFloor(gun: WeaponKind, ship: ShipKind): void {
+  // Not the ram, on `expectBossFloor`'s terms — 0646: the floor holds it on the hull, where no ball can stay.
+  if (WEAPONS[gun].ram !== null) return;
   const row = BOSSES.jormungandr;
   const quickest = quickestFight('jormungandr', gun, ship);
   if (quickest === null) return;

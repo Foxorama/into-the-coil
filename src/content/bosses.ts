@@ -2726,7 +2726,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       number is `1.5 × arc ÷ the median of those three`, so the arc is as quick as the others at their
       best and no quicker; the decision has the table. The end bosses solved their own in 0372.
     */
-    gunWeights: { arc: 1.06 },
+    gunWeights: { arc: 1.06, ram: 1.9 },
     move: { kind: 'patrol' },
     // A spray since 0258 — *"minibosses need to be on their own pattern path and not actively
     // matching the player or aiming at the player."* One shot straight down the lane, then the fan.
@@ -2822,7 +2822,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   harrow: {
     points: 6000,
     // The arc as quick as the other guns at their best — 0573, the sentinel's note.
-    gunWeights: { arc: 0.81 },
+    gunWeights: { arc: 0.81, ram: 1.9 },
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.24 from 0111.
     move: { kind: 'bob', amplitude: 22, wavelength: 140, rear: 0 },
     attack: { kind: 'spray' },
@@ -2901,7 +2901,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     points: 8000,
     // The arc as quick as the other guns at their best — 0573, the sentinel's note. The lowest of the
     // seven: at 1.5 it took this hull in 2 s against the others' 6.
-    gunWeights: { arc: 0.47 },
+    gunWeights: { arc: 0.47, ram: 1.9 },
     move: { kind: 'patrol' },
     attack: { kind: 'wall', gap: 15 },
     uncoil: null,
@@ -2979,7 +2979,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   shoalMother: {
     points: 7000,
     // The arc as quick as the other guns at their best — 0573, the sentinel's note.
-    gunWeights: { arc: 0.67 },
+    gunWeights: { arc: 0.67, ram: 1.9 },
     move: { kind: 'bob', amplitude: 26, wavelength: 150, rear: 0 },
     // A wall since 0258: a mid-boss fires a pattern, and `bob/spray` is the harrow's pair. Its
     // phases widen the wall from one pair of lances either side of it to five, the hole in front.
@@ -3040,7 +3040,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   redoubt: {
     points: 9000,
     // The arc as quick as the other guns at their best — 0573, the sentinel's note.
-    gunWeights: { arc: 1.19 },
+    gunWeights: { arc: 1.19, ram: 1.9 },
     move: { kind: 'patrol' },
     attack: { kind: 'ring' },
     uncoil: null,
@@ -3101,7 +3101,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   chorus: {
     points: 10000,
     // The arc as quick as the other guns at their best — 0573, the sentinel's note.
-    gunWeights: { arc: 0.78 },
+    gunWeights: { arc: 0.78, ram: 1.9 },
     move: { kind: 'bob', amplitude: 22, wavelength: 110, rear: 0 },
     attack: { kind: 'rake', turn: 0.55 },
     /*
@@ -3197,7 +3197,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
   axis: {
     points: 12000,
     // The arc as quick as the other guns at their best — 0573, the sentinel's note.
-    gunWeights: { arc: 1.17 },
+    gunWeights: { arc: 1.17, ram: 1.9 },
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.2 from 0111.
     move: { kind: 'bob', amplitude: 20, wavelength: 180, rear: 0 },
     attack: { kind: 'ring' },
@@ -3668,7 +3668,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       0609: 1.5 — the ball never breaks now, so a held ram lands all fight: at 7, 6.5 s. At 1.4, 33.9 s; at
       1.5, 31.6 s, where 0593's seven had it at 31.1.
     */
-    gunWeights: { arc: 1, ray: 0.93, ram: 1.5 },
+    gunWeights: { arc: 1, ray: 0.93, ram: 2.4 },
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
       boss out of the player's half at the NEAR end of its swing, measured at `station − drift − rear
@@ -4926,7 +4926,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       0609: the ram at 2.4 — it never breaks now, so it lands all fight and she is fed nothing between: at 9,
       9.1 s; at 1.8, 68.5 s against 48–62 for the ram on every other boss; at 2.4, 44.4 s.
     */
-    gunWeights: { arc: 1.4, catherine: 0.5, ram: 2.4, paintball: 1.6 },
+    gunWeights: { arc: 1.4, catherine: 0.5, ram: 3.84, paintball: 1.6 },
     damage: 3,
     /*
       ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you
