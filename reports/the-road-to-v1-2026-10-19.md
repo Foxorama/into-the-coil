@@ -72,6 +72,24 @@ is enough:
 | 5 | The vetoes: raised in each sitting, silence is acceptance? | **Yes.** There are 35 now, listed at the end of [`the-plays-owed`](the-plays-owed-2026-10-19.md#vetoes-owed) |
 | 6 | A `v0.9.0` candidate played inside the itch embed first? | **Yes.** See item 5 of the short answer |
 
+**Answered 2026-10-20:**
+
+1. *"Skip this completely and remove."* The prologue, the betrayer, the Level 1 swap and the chart are
+   gone from `docs/game.md`, and with them the caddy pool. **The rescue story stands.**
+2. *"Unclear on what this is?"* — **still open**, explained back:
+   - **The run save** keeps a run in progress, so a closed tab resumes at the start of the level it was
+     on, with its lives and arsenal.
+   - **The victory piece** is music of the ending's own; today the victory screen plays the title track.
+3. *"Desktop 1st, phones supported because people were playing it on phones."* The site and itch copy
+   say so, and itch's *mobile friendly* is ticked.
+4. *"Pay what you want on itch, chip in link on vulpeculagames."* Both are in
+   [vulpeculagames-site#33](https://github.com/Foxorama/vulpeculagames-site/pull/33).
+5. *"Which are these?"* — **still open**, explained back: the 35 calls listed under
+   [*Vetoes owed*](the-plays-owed-2026-10-19.md#vetoes-owed), where a decision made a judgement the
+   player may overturn.
+6. *"Yes, but I'll do that last; the v0.9.0 to v1.0 bump should essentially be no changes."* So
+   `v0.9.0` is the release candidate, and `v1.0.0` is the same tree with only the version moved.
+
 **One more, new since the list:** the opt-in accessibility settings. `game.md` promises palettes,
 reduced motion and six assists; all six assists are modelled in `src/sim/assist.ts` and none is
 reachable by a player, and the high-contrast palette is authored and unreachable. **Recommendation:

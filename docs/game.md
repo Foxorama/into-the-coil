@@ -13,10 +13,8 @@ run of seven places toward the centre of the galaxy, picking up weapons that sta
 fighting a mid-boss inside each place and a unique boss at the end of it. It is the Jörmungandr fight
 from *The Far Carry* — timing, arsenal, escalating phases — made into a whole game.
 
-⚠️ **The route is fixed** — seven places in one order, crossed in flight
-([0340](decisions/0340-the-coil-is-a-route.md)). A branching chart between them is not built, and
-whether 1.0 has one is the first question in
-[`the-v1-list`](../reports/the-v1-list-2026-10-15.md).
+**The route is fixed**: seven places in one order, crossed in flight
+([0340](decisions/0340-the-coil-is-a-route.md)).
 
 ## The shape of a run
 
@@ -26,8 +24,7 @@ whether 1.0 has one is the first question in
 | **The menu** | rows: a difficulty band and a pilot band of portraits over *Fly*, *Hangin’ Out* and *Settings*, beside the top five of the table. *Hangin’ Out* is the hangar, where a ship won in is fitted out — [0521](decisions/0521-the-hangar-opens.md) — its second tab is *Paint & Parts*, where each ship's looks are fitted — its wheels ([0527](decisions/0527-the-wheels-turn.md)), the art on its nose, dome or flank ([0528](decisions/0528-the-noses-are-painted.md)), the colour of its body ([0529](decisions/0529-the-livery-is-free.md)) and its flame ([0530](decisions/0530-the-ions-burn-blue.md)), and the missile tubes it carries into a run ([0578](decisions/0578-the-tubes-are-sold.md)) — and its third is *Cosmo’s Cosmetics*, which sells things to hang from the dash, a car's spinning wheels, blue Ion Thrusters and missile and seeker tubes, for Star Shards — [0523](decisions/0523-cosmo-opens.md), priced in `src/content/prices.ts` ([0585](decisions/0585-the-prices-rise.md)). Settings holds the sound, the crossing, the hand, the steering and the rumble as bands ([0590](decisions/0590-the-settings-are-tidied-and-the-game-has-a-left-hand.md)), the music room, a *How to play* tab, and a *Save* tab that carries the whole save to another device as a file or a QR code — [0641](decisions/0641-the-save-travels.md). Up and down move between rows and left and right along one, on a pad, the arrows or WASD; B and Escape go back — [0458](decisions/0458-the-title-is-rows.md) |
 | **The way out** | the last boss beaten, the finale — and no cut into it: the heart the jellyfish died on races, catches fire and bursts, and the Viper is thrown out of it with one of the golfers who was not chosen in her cockpit — Venoma's captive all along, and the heart took her. The fighter comes up beside her and the two fly off together, each golfer speaking from their own ship — the found one about being found, the chosen one answering, a named speech bubble each with a voice of their own — until they open up and go. Then the victory screen. Skip is up throughout — [0418](decisions/0418-the-heart-lets-go.md), [0426](decisions/0426-the-finale-is-the-fight-going-on.md). ⚠️ No victory piece of music yet: the victory screen plays the title track ([0597](decisions/0597-the-title-track-plays-in-the-menu.md)) |
 | **Levels 1–7** | waves, hazards, a mid-boss inside each level and one unique end boss at its end — [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) — crossed between in flight ([0340](decisions/0340-the-coil-is-a-route.md)) |
-| ⚠️ **Not built** | the original plan's **prologue** (a short stage, then the Jörmungandr fight, with one unchosen golfer betraying you), the **Level 1 swap** from an unlock pool, the branching **chart**, and the **betrayer** returning as a later boss. The finale built the opposite story — an unchosen golfer is Venoma's captive and is rescued — so the betrayal cannot stand beside it. Whether any of these is in 1.0 is [`the-v1-list`](../reports/the-v1-list-2026-10-15.md)'s first question |
-| **Target length** | 15–30 minutes, prologue to final boss. **~2 minutes of stage per level plus its boss** — it was ~3 and the player cut it twice from play, for DENSITY: *"reduce the level length without reducing enemy count to increase the density of enemies"*, and then *"it still took me 3 minutes"*. [0114](decisions/0114-the-fight-is-a-different-piece.md) |
+| **Target length** | 15–30 minutes, intro to final boss. **~2 minutes of stage per level plus its boss** — it was ~3 and the player cut it twice from play, for DENSITY: *"reduce the level length without reducing enemy count to increase the density of enemies"*, and then *"it still took me 3 minutes"*. [0114](decisions/0114-the-fight-is-a-different-piece.md) |
 
 Upgrades and buffs **carry forward across levels, through a death and through a continue** —
 [0372](decisions/0372-a-death-keeps-the-ladders.md), reversing
@@ -140,27 +137,6 @@ with one hurtbox, so what tells them apart is the gun:
 A ship opens a run on its whole gun and two charges of the special fitted to it in the hangar — its own
 gun's, until the ship and another have both been won in and it borrows theirs
 ([0524](decisions/0524-the-special-is-fitted.md)) — and carries its missile tubes on its own hull.
-
-⚠️ **Not built: the Level 1 roster and the caddy unlock pool** — a pick of four at level one, drawn
-from the nine *Far Carry* caddies and the golfers not flown. The secret pilots above are the unlocks
-that exist; whether the pool is in 1.0 is [`the-v1-list`](../reports/the-v1-list-2026-10-15.md)'s
-first question. What was planned for the caddies, kept for when it is answered:
-
-The predecessor names most of its caddies by species and role. This game gives them **actual names
-and characterisation** — the same nine, not extra ones:
-
-| *The Far Carry* | here |
-|---|---|
-| Space Ducks | **Lord Pembleforth the 5th**, a Space Duck — singular |
-| Convict Sheep | **Peep** |
-| Mystic Mole | **Marty** |
-| Prognostic Parrot | **Percival** |
-| Penelope Putter · Driver Dan · Dr Chipinski · Suggestible Sam · Sandy the Sand-Saver | carried across as they are, for now |
-
-⚠️ **A rename is not a new face.** The pool is nine caddies either way; naming four of them does not
-grow it. "New faces" above means characters that do not exist in the predecessor at all, and none are
-named yet. None of the four names on the right appears in *The Far Carry*, and the caddy there is the
-plural "Space Ducks".
 
 ## Controls
 
@@ -361,8 +337,7 @@ lane — plus one boss at the end of it. Decided,
 [0042](decisions/0042-a-run-is-a-sequence-of-levels.md) — and crossed between in flight, the ship
 burning from one place to the next with the route drawn on a nav plate
 ([0340](decisions/0340-the-coil-is-a-route.md)). Lives, upgrades and the arsenal cross that
-boundary. **The chart does not exist**, and a line first was deliberate: a chart is a screen, a graph
-and a set of rules that want to be decided against levels somebody has played.
+boundary.
 ⚠️ **EVERY LEVEL IS A PLACE NOW** — [0107](decisions/0107-a-level-is-a-place.md). Seven themes, one
 per level, each carrying its own backdrop and its own mix of the music. **No biome is NAMED**: the
 places are this project's own, because the fiction is downstream of whether theming works at all and
@@ -605,9 +580,7 @@ Not claimed: blind-friendly play, and textless. For a positional shooter both ar
 fused to that domain at the type level.
 
 **Fiction transfers as raw material, not as scripture.** Names, details and characterisation may be
-changed, sharpened or replaced on the way across. "Space Ducks" becomes the singular Space Duck, and
-four caddies the predecessor names by species are **named and given a background** rather than
-replaced — see the table above; the roster does not grow. Nothing here is bound to the predecessor's
+changed, sharpened or replaced on the way across. Nothing here is bound to the predecessor's
 spellings. `CLAUDE.md` says the same: *"Its patterns and its fiction transfer."*
 
 ### Canon
@@ -621,10 +594,7 @@ with all the time there has ever been.
 
 ## Open
 
-- **What 1.0 is** — [`the-v1-list`](../reports/the-v1-list-2026-10-15.md) asks it, and
-  [`the-road-to-v1`](../reports/the-road-to-v1-2026-10-19.md) is where it got to. The prologue, the
-  Level 1 pool, the chart, the betrayer, the run save and the victory piece each wait on that answer.
-- Whether a *Far Carry* backup file can be imported to seed a run. Possible via the exported
-  `far-carry-backup` envelope; impossible via storage, which is origin-scoped. Not a dependency.
+- **The run save and the victory piece** — whether 1.0 has either is
+  [`the-road-to-v1`](../reports/the-road-to-v1-2026-10-19.md)'s open question 2.
 - Music. Procedural synthesis keeps the single-file build; a baked track does not. Sound effects are
   synthesised either way.
