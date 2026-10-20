@@ -120,7 +120,7 @@ import type { FeelKind } from '../content/feels.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { STEP_MS, type Frame } from './loop.ts';
-import { multiplierFor } from '../content/score.ts';
+import { STREAK_QUIET_SECONDS, multiplierFor } from '../content/score.ts';
 import type { DeathCause } from '../state/slices/run.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -1108,8 +1108,12 @@ const BEAST_RELIGHT_STEPS = 20;
 export interface LevelScore {
   /** Points from kills, streaks and bosses, this level. */
   points: number;
-  /** Kills since the last hit, carried across a level boundary. */
+  /** Kills in the streak, carried across a level boundary. */
   streak: number;
+  /** Steps since anything of the player's last landed on an enemy or a boss — 0647's clock. */
+  quiet: number;
+  /** Whether the clock is stopped: from the end boss's death to the first kill of the next level — 0647. */
+  held: boolean;
   /** The longest streak this level has seen. */
   best: number;
   /** Bodies killed by the player, and bodies sent, this level — the rank's share. */
@@ -2924,14 +2928,13 @@ export class GameFrame implements Frame {
       */
       if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield', w.ship.across);
       /*
-        ⚠️ **ANY HIT ENDS THE STREAK, A SHIELD'S AS MUCH AS THE HULL'S** — 0428, in the ask's words:
-        *"a shield taking a hit counts as a hit and resets the counter."* Here, after the one-hit cap,
-        so a step that met three bullets is one hit to the rank as it is one mark off the shell.
+        A hit taken is counted for the rank, a shield's as much as the hull's — 0428 — here, after the
+        one-hit cap, so a step that met three bullets is one hit as it is one mark off the shell.
+
+        ⚠️ **IT NO LONGER ENDS THE STREAK — 0647.** The Hamster Ball is hit every time it rams, and sat at ×1
+        for whole runs; the streak is kept by hitting now, on `stepStreak`'s clock.
       */
-      if (w.ship.health < healthBefore) {
-        w.score.hits += 1;
-        w.score.streak = 0;
-      }
+      if (w.ship.health < healthBefore) w.score.hits += 1;
     }
     /*
       A blast lands ONCE. Everything above has now seen it, so it spends itself here and what remains
@@ -2996,6 +2999,8 @@ export class GameFrame implements Frame {
       if (w.score.streak > w.score.best) w.score.best = w.score.streak;
       w.score.points += w.enemyRows[w.deaths.kind[i]!]!.points * multiplierFor(w.score.streak);
     }
+    // 0647: the streak's clock, after the kills it has just counted.
+    stepStreak(w);
     for (let i = 0; i < w.bossDeaths.count; i++) {
       burst(w, w.bossDeaths.along[i]!, w.bossDeaths.across[i]!, BURST.enemy);
       flare(w, w.bossDeaths.along[i]!, w.bossDeaths.across[i]!, 'burst');
@@ -3222,6 +3227,11 @@ export class GameFrame implements Frame {
         mid-boss's: the level goes on after it at the rate its fire was thrown at.
       */
       if (w.fight === 1) cancelFire(w);
+      // 0647: and stops the streak's clock until the next level's first kill. Not the mid-boss's: its level goes on.
+      if (w.fight === 1) {
+        w.score.held = true;
+        w.score.quiet = 0;
+      }
       /*
         ⚠️ **THE LEVEL DOES NOT END HERE ANY MORE.** Reported from play: *"bosses need a real
         explosion and an end-of-level beat — currently the level just ends."* It did: the same step
@@ -13148,6 +13158,8 @@ export function startLevel(w: World, level: LevelRow): void {
   w.levelIndex = 0;
   // A run's streak starts here and nowhere else: a level boundary carries it on — 0428.
   w.score.streak = 0;
+  w.score.quiet = 0;
+  w.score.held = false;
   // The mid-boss's fight first, where the level has one — 0247.
   w.fight = level.midBoss === null ? 1 : 0;
   // The corridor, from the origin `resetScene` is about to put the level at, which is nought — 0348.
@@ -13431,12 +13443,42 @@ function beginScript(w: World): void {
   resetLevelScore(w.score);
 }
 
+/** How many steps the streak lives with nothing of the player's landing — 0647. */
+const STREAK_QUIET_STEPS = Math.round((STREAK_QUIET_SECONDS * 1000) / STEP_MS);
+
+/** Whether anything in `pool` was struck in the last flash's worth of steps — `struckIn`, set by every landing (0334). */
+function anyStruck(pool: Pool<Entity>): boolean {
+  for (let i = 0; i < pool.size; i++) if (pool.at(i).struckIn > 0) return true;
+  return false;
+}
+
+/**
+ * The streak's clock — `docs/decisions/0647-the-streak-is-kept-by-hitting.md`. Asked: *"x seconds after not hitting
+ * an enemy it resets – counter stops on boss death and restarts on first enemy death of the next level."*
+ *
+ * ⚠️ **IT READS WHAT WAS STRUCK, NOT WHAT STRUCK IT.** Seven guns, ten specials, the tubes and the ram each land by a
+ * path of their own; every one of them ends in a target's `struckIn` (`src/sim/collide.ts`), so the clock asks the
+ * pools and not the guns, and a gun added later keeps the streak alive without being told to.
+ */
+function stepStreak(w: World): void {
+  const score = w.score;
+  // The first kill of the next level starts the clock the end boss's death stopped.
+  if (w.deaths.count > 0) score.held = false;
+  if (score.held) return;
+  if (w.deaths.count > 0 || anyStruck(w.enemies) || anyStruck(w.bossPool) || anyStruck(w.bossBody)) {
+    score.quiet = 0;
+    return;
+  }
+  score.quiet += 1;
+  if (score.quiet >= STREAK_QUIET_STEPS) score.streak = 0;
+}
+
 /**
  * A level's account, back to nothing — 0428. At a level's script and again once the shell has banked
  * the clear into the run, so the HUD never counts one level twice across the break and the burn.
  *
- * ⚠️ **NOT THE STREAK.** A streak is kills without a hit, and a level boundary is not a hit: it
- * carries on into the next level and only a hit or a new run (`startLevel`) ends it.
+ * ⚠️ **NOT THE STREAK.** A level boundary carries it on into the next level, its clock stopped (0647), and only
+ * a quiet spell or a new run (`startLevel`) ends it.
  */
 export function resetLevelScore(score: LevelScore): void {
   score.points = 0;
@@ -13453,6 +13495,8 @@ export function resetLevelScore(score: LevelScore): void {
  */
 export function resetCreditScore(score: LevelScore): void {
   score.streak = 0;
+  score.quiet = 0;
+  score.held = false;
   resetLevelScore(score);
 }
 

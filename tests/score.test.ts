@@ -3,7 +3,7 @@ import { GameFrame, resetCreditScore, resetLevelScore } from '../src/app/frame.t
 import type { LevelRow } from '../src/content/levels.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { BOSSES } from '../src/content/bosses.ts';
-import { BONUSES, MULTIPLIER_CAP, STREAK_STEP, bonusFor, multiplierFor, rankFor, tallyOf } from '../src/content/score.ts';
+import { BONUSES, MULTIPLIER_CAP, STREAK_QUIET_SECONDS, STREAK_STEP, bonusFor, multiplierFor, rankFor, tallyOf } from '../src/content/score.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { bankedBonus, bankedScore } from '../src/state/slices/run.ts';
 import { boardLines, entryOf, levelSheet, overSheet, runSheet, tallyAtClear } from '../src/app/score.ts';
@@ -75,7 +75,7 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
     expect(heard.length, 'the score was reported more often than it changed').toBeLessThanOrEqual(world.score.kills);
   });
 
-  it('THE ASK: a shield taking a hit is a hit — the streak goes back to nothing and the rank hears it', () => {
+  it('0647 — a shield taking a hit is a hit for the rank, and the streak stands', () => {
     const { world, cues } = playableWorld(DRIFTERS(1));
     const frame = new GameFrame(world);
     for (let i = 0; i < STEPS_PER_SECOND * 30 && world.enemies.size === 0; i++) frame.step();
@@ -91,8 +91,53 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
     frame.step();
     expect(world.ship.health, 'the shield did not take the hit').toBe(world.shipRow.health);
     expect(cues, 'this was not a shield taking a hit').toContain('shield');
-    expect(world.score.streak, 'a shield taking a hit left the streak standing').toBe(0);
+    expect(world.score.streak, 'a hit taken ended the streak, and since 0647 only a quiet spell does').toBe(37);
     expect(world.score.hits).toBe(1);
+  });
+
+  it('0647 — THE ASK: the streak ends after three seconds with nothing landing on an enemy, and a landing puts the clock back', () => {
+    // Nothing on the field: the clock runs out.
+    const quiet = playableWorld(DRIFTERS(0)).world;
+    const idle = new GameFrame(quiet);
+    quiet.score.streak = 20;
+    const steps = STREAK_QUIET_SECONDS * STEPS_PER_SECOND;
+    for (let i = 0; i < steps - 1; i++) idle.step();
+    expect(quiet.score.streak, 'the streak ended before its three seconds were up').toBe(20);
+    for (let i = 0; i < 2; i++) idle.step();
+    expect(quiet.score.streak, 'three seconds with nothing landing left the streak standing').toBe(0);
+
+    // A body the guns keep hitting and cannot kill: the clock never runs out.
+    const { world } = playableWorld(DRIFTERS(1));
+    const frame = new GameFrame(world);
+    world.tuning = { ...world.tuning, playerDamage: 0 };
+    for (let i = 0; i < STEPS_PER_SECOND * 30 && world.enemies.size === 0; i++) frame.step();
+    const body = world.enemies.at(0);
+    world.score.streak = 20;
+    for (let i = 0; i < steps * 3; i++) {
+      body.health = 9999;
+      body.along = world.ship.along + 25;
+      body.across = world.ship.across;
+      body.prevAlong = body.along;
+      body.prevAcross = body.across;
+      frame.step();
+    }
+    expect(world.score.streak, 'a body being hit for nine seconds did not keep the streak').toBe(20);
+  });
+
+  it('0647 — THE ASK: the end boss’s death stops the clock, and the next level’s first kill starts it', () => {
+    const level: LevelRow = { ...DRIFTERS(0), waves: [], bossAt: 700, midBoss: null, boss: 'jormungandr' };
+    const { world } = playableWorld(level);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 6000 && !world.bossBeaten; i++) {
+      if (world.bossPool.size > 0 && world.bossEntering < 0) world.bossPool.at(0).health = 1;
+      world.ship.health = world.shipRow.health;
+      frame.step();
+    }
+    expect(world.bossBeaten, 'the end boss could not be killed').toBe(true);
+    world.score.streak = 30;
+    for (let i = 0; i < STREAK_QUIET_SECONDS * STEPS_PER_SECOND * 3; i++) frame.step();
+    expect(world.score.held, 'the end boss’s death did not stop the clock').toBe(true);
+    expect(world.score.streak, 'the streak ran out between levels').toBe(30);
   });
 
   it('a boss is worth its row’s points, flat — the streak multiplies a wave and never a fight', () => {
@@ -110,6 +155,7 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
       frame.step();
     }
     expect(world.fight, 'the mid-boss could not be killed').toBe(1);
+    expect(world.score.held, 'a mid-boss’s death stopped the streak’s clock, and its level goes on').toBe(false);
     expect(world.score.kills, 'something else died in the window, so the delta is not the boss’s').toBe(kills);
     expect(world.score.points - before).toBe(BOSSES.sentinel.points);
   });
@@ -142,7 +188,7 @@ describe('0428 — a level’s rank and its bonuses', () => {
   it('THE ASK: the clear pays for each shield on the hull, each bomb on the gun and each charge in the tubes', () => {
     let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP, credits: 'free' });
     state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
-    const score = { points: 12000, streak: 5, best: 30, kills: 90, spawned: 100, hits: 1 };
+    const score = { points: 12000, streak: 5, quiet: 0, held: false, best: 30, kills: 90, spawned: 100, hits: 1 };
     const tally = tallyAtClear(state.run, score, 2);
     expect(tally.held).toEqual({ shield: 2, bomb: state.run.arsenal.gun.length, missile: state.run.arsenal.tubes.length });
     expect(tally.held.missile, 'the tubes’ charge was not counted').toBe(1);
@@ -206,7 +252,7 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
     let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'burn', ship: SHIP, credits: 'free' });
     state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(0, 1000, 1, 1, 0, { shield: 0, bomb: 0, missile: 0 }) });
     state = reduce(state, { slice: 'run', type: 'levelCleared' });
-    const flying = { points: 450, streak: 0, best: 0, kills: 3, spawned: 9, hits: 3 };
+    const flying = { points: 450, streak: 0, quiet: 0, held: false, best: 0, kills: 3, spawned: 9, hits: 3 };
     const entry = entryOf(state.run, flying, 'bo', false, 123);
     expect(entry).toEqual({ score: 1450, bonus: 0, pilot: 'bo', difficulty: 'burn', levels: 1, cleared: false, continues: 0, when: 123 });
     expect(boardLines([entry, { ...entry, cleared: true }])).toEqual([
@@ -247,7 +293,7 @@ describe('0438 — a continue starts the score again, and the table keeps the cr
 
   it('THE ASK: the table tracks the score and the level reached, for a credit that cleared nothing of its own', () => {
     const after = reduce(ranOutOnThree(), { slice: 'run', type: 'continued' });
-    const flying = { points: 700, streak: 0, best: 0, kills: 3, spawned: 9, hits: 3 };
+    const flying = { points: 700, streak: 0, quiet: 0, held: false, best: 0, kills: 3, spawned: 9, hits: 3 };
     const entry = entryOf(after.run, flying, 'larry', false, 9);
     expect(entry.score, 'the new credit carried the last one’s score').toBe(700);
     expect(entry.levels, 'the credit bought on level three was recorded as reaching level one').toBe(2);
@@ -256,7 +302,7 @@ describe('0438 — a continue starts the score again, and the table keeps the cr
 
   it('the run over says the score, how far the credit got, and where it lands on the table', () => {
     const state = ranOutOnThree();
-    const flying = { points: 500, streak: 0, best: 0, kills: 3, spawned: 9, hits: 3 };
+    const flying = { points: 500, streak: 0, quiet: 0, held: false, best: 0, kills: 3, spawned: 9, hits: 3 };
     const said = Object.fromEntries(overSheet(state.run, flying, 4, 12).map((l) => [l.label, l.value]));
     expect(said.Score).toBe(bankedScore(state.run) + 500);
     expect(said.Reached).toBe('Level 3');
@@ -267,8 +313,8 @@ describe('0438 — a continue starts the score again, and the table keeps the cr
   });
 
   it('the frame’s count starts again with the credit, streak and all', () => {
-    const score = { points: 4200, streak: 33, best: 40, kills: 30, spawned: 40, hits: 2 };
+    const score = { points: 4200, streak: 33, quiet: 0, held: false, best: 40, kills: 30, spawned: 40, hits: 2 };
     resetCreditScore(score);
-    expect(score).toEqual({ points: 0, streak: 0, best: 0, kills: 0, spawned: 0, hits: 0 });
+    expect(score).toEqual({ points: 0, streak: 0, quiet: 0, held: false, best: 0, kills: 0, spawned: 0, hits: 0 });
   });
 });

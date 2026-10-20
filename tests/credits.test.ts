@@ -38,6 +38,8 @@ function runOut(credits: CreditKind): State {
 const flying = (points: number, kills: number, spawned: number, hits: number): LevelScore => ({
   points,
   streak: 0,
+  quiet: 0,
+  held: false,
   best: 0,
   kills,
   spawned,

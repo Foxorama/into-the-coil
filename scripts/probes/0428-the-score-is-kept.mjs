@@ -20,13 +20,13 @@ export const PROBES = [
   {
     decision: '0428',
     suite: 'tests/score.test.ts',
-    // The ask's own sentence: a shield's hit is a hit. A streak that only a death ends is the reading it refuses.
-    broke: 'the streak ended only by a death, so a shield taking a hit left it standing',
-    guard: 'THE ASK: a shield taking a hit is a hit',
+    // The ask's own sentence: a shield's hit is a hit. Since 0647 it is a hit for the rank and not for the streak.
+    broke: 'a hit counted only on a death, so a shield taking a hit went unranked',
+    guard: '0647 — a shield taking a hit is a hit for the rank',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      if (w.ship.health < healthBefore) {\n        w.score.hits += 1;',
-      replace: '      if (w.ship.health < healthBefore && w.ship.health <= 0) {\n        w.score.hits += 1;',
+      find: '      if (w.ship.health < healthBefore) w.score.hits += 1;',
+      replace: '      if (w.ship.health < healthBefore && w.ship.health <= 0) w.score.hits += 1;',
     },
   },
   {

@@ -385,7 +385,7 @@ export function inertLevel(): {
 /** The score half of a world: nothing counted, and a readout that has drawn nothing — 0428. */
 export function scoreParts(): { score: LevelScore; shownPoints: number; shownStreak: number; onScore: () => void } {
   return {
-    score: { points: 0, streak: 0, best: 0, kills: 0, spawned: 0, hits: 0 },
+    score: { points: 0, streak: 0, quiet: 0, held: false, best: 0, kills: 0, spawned: 0, hits: 0 },
     shownPoints: 0,
     shownStreak: 0,
     onScore: (): void => {},
