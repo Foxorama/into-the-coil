@@ -684,8 +684,15 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       ⚠️ **ONE AND NINE TENTHS SINCE 0617.** 0615's knock took a held ram on a boss from 6.6 landings a second to
       5.3, and the play said *"just a shade more damage against bosses … it's very close to where it needs to
       be, but just slightly too slow."* A fifth more puts most of what the knock took back.
+
+      ⚠️ **AND 3.04 ON AN END BOSS SINCE 0646, SIX TENTHS MORE — THE MID-BOSSES KEEP 1.9 ON THEIR OWN ROWS.** The
+      play: *"needs 40–75% more boss damage as you constantly have to back off the boss … don't change miniboss
+      damage."* Every number above was solved with the ball held on the hull for the whole fight, which no ball can
+      do, so 0260's floor no longer flies the ram (`tests/boss-floor.ts`). Held, the end bosses went from 32–52 s to
+      20–32 s (`scripts/weigh-boss.mjs`, Savior); a ball that backs off to cool takes longer, by however long the
+      player waits. The serpent's and the jellyfish's own entries move by the same share.
     */
-    bossWeight: 1.9,
+    bossWeight: 3.04,
     landGap: 6,
     special: 'warDance',
     // Never drawn: no other ship flies it (`lends`). The ball's own front, from either view, so a reader
