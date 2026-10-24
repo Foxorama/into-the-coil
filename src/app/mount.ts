@@ -2580,11 +2580,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   /**
    * Whether a press on the highlighted pilot flies them: a pointer has chosen on the pilot screen, the
-   * cursor has pressed the pilot it is on (0667), or a run has been flown. False at boot, so a thumb's
+   * cursor has pressed the pilot it is on (0668), or a run has been flown. False at boot, so a thumb's
    * first landing on a card is a look, and a pad's first A on the band is too; a step stands it down.
    */
   let pilotArmed = false;
-  /** Arm the highlighted pilot or stand them down, and say which on the title's band — 0667. */
+  /** Arm the highlighted pilot or stand them down, and say which on the title's band — 0668. */
   const armPilot = (armed: boolean): void => {
     pilotArmed = armed;
     chrome.setArmed('pilot', armed);
@@ -2979,7 +2979,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       */
       const takes = SCREENS[state.screen.current].choices.some((c) => c.name === 'pilot' && c.press === 'takes');
       /*
-        ⚠️ **AND THE CURSOR'S PRESS LOOKS FIRST TOO — 0667**, amending 0513's one-press rule for a pad and a
+        ⚠️ **AND THE CURSOR'S PRESS LOOKS FIRST TOO — 0668**, amending 0513's one-press rule for a pad and a
         keyboard. A pad browsing a band of faces is the thumb's case: B from the hangar, down past the quiet row
         onto the band, right, A — and a browse was a twenty-second intro. So a cursor's press on the pilot the
         band is on arms them, and a second flies; a step along the band is a look and arms nothing.

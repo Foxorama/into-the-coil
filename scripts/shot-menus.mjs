@@ -88,7 +88,7 @@ const GUARD = [
   [1280, 720],
 ].map(([width, height]) => ({ tag: `${width}x${height}`, width, height, phone: false }));
 /**
- * `--sizes=wide`: the two larger desktops the hangar family is handed over at since 0667 — a 1080p monitor and
+ * `--sizes=wide`: the two larger desktops the hangar family is handed over at since 0668 — a 1080p monitor and
  * an ultrawide, where the review found the plate one width at every size and its type barely grown.
  */
 const WIDE = [

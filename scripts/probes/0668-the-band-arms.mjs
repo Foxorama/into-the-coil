@@ -1,4 +1,4 @@
-// The breaks behind docs/decisions/0667-the-band-arms.md.
+// The breaks behind docs/decisions/0668-the-band-arms.md.
 //
 // ⚠️ Four defects in one decision, and each break puts one back as the review found it: the pad's one press
 // on the pilot band, the hover that lost its glass and its rim, the shop's hint run on after its label, and
@@ -7,7 +7,7 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0667',
+    decision: '0668',
     suite: 'tests/menu.browser.test.ts',
     // 0513's one-press rule back for the cursor: the pad's first A on the band flies.
     broke: 'A on the pilot band flying the pilot it is on, with no look first',
@@ -19,7 +19,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0667',
+    decision: '0668',
     suite: 'tests/menu.browser.test.ts',
     broke: 'the armed pilot never said on the title',
     guard: 'THE WALK: A on the pilot band arms the pilot it is on',
@@ -30,7 +30,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0667',
+    decision: '0668',
     suite: 'tests/layout.browser.test.ts',
     // The shorthand that won on hover, wiping the glass and the rim to a flat grey.
     broke: 'a hovered button drawn as a flat grey with no rim',
@@ -43,7 +43,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0667',
+    decision: '0668',
     suite: 'tests/layout.browser.test.ts',
     broke: 'a hovered button whose glass sinks to the void',
     guard: 'no darker than Settings beside it',
@@ -54,30 +54,19 @@ export const PROBES = [
     },
   },
   {
-    decision: '0667',
+    decision: '0668',
     suite: 'tests/chrome.test.ts',
-    // The four screens named by hand again, and the shop not one of them.
-    broke: 'the action hint set on a line of its own on four named screens and not the shop',
+    // Screens named by hand again, and one that gives its actions hints left out — the shop's defect, on Save.
+    broke: 'the action hint set on a line of its own on screens named by hand, Save not one of them',
     guard: 'every screen with a hinted action sets the hint on its own line',
     edit: {
       path: 'src/app/chrome.ts',
       find: "${each('-action-hint')} {",
-      replace: '.itc-title-action-hint, .itc-music-action-hint, .itc-save-action-hint, .itc-controls-action-hint {',
+      replace: '.itc-title-action-hint, .itc-music-action-hint, .itc-controls-action-hint {',
     },
   },
   {
-    decision: '0667',
-    suite: 'tests/cosmo.browser.test.ts',
-    broke: 'Show owned’s hint run on after its label',
-    guard: 'what is owned is off the shelves until Show owned is ticked',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: "${each('-action-hint')} {",
-      replace: '.itc-title-action-hint, .itc-music-action-hint, .itc-save-action-hint, .itc-controls-action-hint {',
-    },
-  },
-  {
-    decision: '0667',
+    decision: '0668',
     suite: 'tests/layout.browser.test.ts',
     broke: 'each Settings tab centred on its own content, its strip at its own height',
     guard: 'with their strip at one height, on every device',

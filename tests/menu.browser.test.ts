@@ -710,11 +710,11 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await page.context().close();
   });
 
-  it('0667 — THE WALK: A on the pilot band arms the pilot it is on, and a second A flies them', async () => {
+  it('0668 — THE WALK: A on the pilot band arms the pilot it is on, and a second A flies them', async () => {
     /*
       The review's walk (`reports/the-menus-reviewed-again-2026-10-24.md`, 1.1): into the hangar, B back to the
       title, down from the quiet row round onto the pilot band, right, A — and a browse was the intro. 0513 gave
-      the cursor's press the one-press rule; 0667 gives it the thumb's. In what the player sees: the title still
+      the cursor's press the one-press rule; 0668 gives it the thumb's. In what the player sees: the title still
       up, the face stepped onto marked and armed, and only the second A shows the intro.
     */
     const page = await open();

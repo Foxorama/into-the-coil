@@ -41,7 +41,7 @@ export const PROBES = [
     guard: 'a first tap on another card says who they are',
     edit: {
       path: 'src/app/mount.ts',
-      // ⚠️ And by 0667, whose cursor's press looks first as a thumb's does.
+      // ⚠️ And by 0668, whose cursor's press looks first as a thumb's does.
       find: '      if (takes && pressed && pilotArmed) {',
       replace: '      if (true) {',
     },

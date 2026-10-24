@@ -174,15 +174,6 @@ describe.runIf(chromePath)('0657 — Cosmo’s shelves show what is for sale, an
     expect(await golfball.isHidden(), 'the golf ball, owned, is on the shelf with the box unticked').toBe(true);
     expect(await family.isHidden(), 'the family dice, for sale, are off the shelf').toBe(false);
     expect(await tick.innerText(), 'the box does not say it is unticked').toContain('☐');
-    // 0667: and its hint on a line of its own, under the label, rather than run on after it.
-    const lines = await tick.evaluate((button, hint) => {
-      const label = document.createRange();
-      label.selectNodeContents(button.firstChild!);
-      const under = button.querySelector('.' + hint);
-      return under === null ? null : { label: label.getBoundingClientRect().bottom, hint: under.getBoundingClientRect().top };
-    }, SHOP + 'action-hint');
-    expect(lines, 'Show owned has no hint').not.toBeNull();
-    expect(lines!.hint, 'Show owned’s hint runs on after its label, on the same line').toBeGreaterThanOrEqual(lines!.label - 1);
     await tick.click();
     expect(await golfball.isHidden(), 'ticked, the golf ball is still off the shelf').toBe(false);
     expect(await tick.innerText(), 'the box does not say it is ticked').toContain('☑');

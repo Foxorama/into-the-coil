@@ -70,7 +70,7 @@ export const PROBES = [
     guard: 'shuts what is not won, fits what is, keeps it, and flies in it',
     edit: {
       path: 'src/app/mount.ts',
-      // ⚠️ Re-pointed by 0667, whose cursor's press looks first as a thumb's does.
+      // ⚠️ Re-pointed by 0668, whose cursor's press looks first as a thumb's does.
       find: '      if (takes && pressed && pilotArmed) {',
       replace: '      if (pressed && pilotArmed) {',
     },

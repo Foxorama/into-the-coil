@@ -1,6 +1,7 @@
-# 0667 — The band arms, the hover lifts, the hint breaks, the strip stays
+# 0668 — The band arms, the hover lifts, the hint breaks, the strip stays
 
-**Accepted 2026-10-24.** Item 1 of [`the-menus-planned`](../../reports/the-menus-planned-2026-10-24.md), from
+**Accepted 2026-10-24.** Numbered 0668 because [0667](0667-play-asks-of-venoma.md) landed on `main` while this
+was in review. Item 1 of [`the-menus-planned`](../../reports/the-menus-planned-2026-10-24.md), from
 [`the-menus-reviewed-again`](../../reports/the-menus-reviewed-again-2026-10-24.md)'s first four findings, with the
 player's answer: *"Agree with the suggested answers."* It amends [0513](0513-the-pilot-flies.md) (the cursor's
 press on the pilot band) and keeps [0458](0458-the-title-is-rows.md) (*Fly* is the one press that always starts
@@ -47,7 +48,7 @@ stays.
 
 ## What it cost and the guards it moved
 
-- **`tests/menu.browser.test.ts`**, *0667 — THE WALK*: the review's walk on the stubbed pad. After B, down and
+- **`tests/menu.browser.test.ts`**, *0668 — THE WALK*: the review's walk on the stubbed pad. After B, down and
   right, the first A leaves the title up with the second pilot marked and *Ready* shown; the second A begins the
   flight (the intro, or the run for a pilot with no story — the store has Venoma open, 0666). It replaces 0513's
   *A on the pilot band flies*. 0513's, 0415's and 0521's probes are re-pointed at the new line.
@@ -56,13 +57,16 @@ stays.
   within 4 of *Settings*', read off a screenshot.
 - **`tests/chrome.test.ts`**: every screen whose row gives an action a hint has a rule setting that screen's
   `-action-hint` to `display: block`.
-- **`tests/cosmo.browser.test.ts`**: *Show owned*'s hint starts under its label's line.
+- **The shop's own case went first, on `main`.** [0667](0667-play-asks-of-venoma.md), merged while this was in
+  review, took the toggle's hint away (*Owned*, no hint, on the player's word). So the run-on this item named no
+  longer exists to be seen; the rule is still kept for every screen, and the style guard holds it for the three
+  that give hints today: Controls, Save and the music room. The browser check on Cosmo's toggle is not written.
 - **The top margin on a phone.** The first build used `min(2rem, 6cqh)` everywhere, and the layout guard found
   How to play scrolling by 10 px at 480×320 and a touch Settings by 8 px at 667×375. Under 460 px tall the margin
   is 0, where the panel was already at the top.
 
-Probed in `scripts/probes/0667-the-band-arms.mjs`: the one-press rule back, *Ready* never shown, the shorthand
-back, the hover's glass as the void, the four named screens back (twice, once per guard), and the margin taken out.
+Probed in `scripts/probes/0668-the-band-arms.mjs`: the one-press rule back, *Ready* never shown, the shorthand
+back, the hover's glass as the void, the screens named by hand with Save left out, and the margin taken out.
 
 **Photographed** at the pair, the guard's six, and 1920×1080 and 2560×1080; the walk re-run on the stubbed pad.
 

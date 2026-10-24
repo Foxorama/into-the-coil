@@ -961,7 +961,7 @@ describe.runIf(chromePath)('a screen that cannot fit stays reachable', () => {
   });
 });
 
-describe.runIf(chromePath)('0667 — a place’s tab strip stands where it is on every tab', () => {
+describe.runIf(chromePath)('0668 — a place’s tab strip stands where it is on every tab', () => {
   it('draws Settings, Controls, How to play and Save with their strip at one height, on every device', async () => {
     /*
       Measured in the review at 1280x720: 84 px on How to play, 92 on Save and 189 on Controls, because each
@@ -986,7 +986,7 @@ describe.runIf(chromePath)('0667 — a place’s tab strip stands where it is on
   });
 });
 
-describe.runIf(chromePath)('0667 — a button under the pointer lifts and keeps its rim', () => {
+describe.runIf(chromePath)('0668 — a button under the pointer lifts and keeps its rim', () => {
   it('draws the hovered Hangin’ Out no darker than Settings beside it, with as bright a rim', async () => {
     /*
       In the player's unit, a screenshot's luminance: the hovered button's glass against the resting one beside

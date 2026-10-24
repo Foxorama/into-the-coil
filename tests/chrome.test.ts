@@ -264,7 +264,7 @@ describe('every screen owns its class prefix', () => {
     }
   });
 
-  it('0667 — every screen with a hinted action sets the hint on its own line', () => {
+  it('0668 — every screen with a hinted action sets the hint on its own line', () => {
     /*
       Cosmo's *Show owned* read *"Show ownedPut what you own back on the shelves"* at every size: the rule that
       puts a hint on a line of its own named four screens by hand, and not the shop. Walked off the rows, so a

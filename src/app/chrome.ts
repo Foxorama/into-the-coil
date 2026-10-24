@@ -146,7 +146,7 @@ const banded = (rule: (p: string) => string): string => BANDED.map((screen) => r
 
 /**
  * The screens that are tabs of one place and stand on no stand — Settings, Controls, How to play and Save
- * (0667). Their strip is one strip to the player, so it stands at one height on every tab. Read off the
+ * (0668). Their strip is one strip to the player, so it stands at one height on every tab. Read off the
  * rows, on `FACED`'s terms: the hangar's tabs have their stand, which lays them out, and are not these.
  */
 const TABBED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].tabs.length > 0 && SCREENS[screen].stand === null);
@@ -301,7 +301,7 @@ ${each('-panel')} {
   font: 600 clamp(0.85rem, 5.4cqh, 1.25rem)/1.35 system-ui, sans-serif;
 }
 /*
-  ⚠️ **AND A PLACE'S TABS STAND AT THE TOP — 0667.** Centred on its own content, each tab's panel put its
+  ⚠️ **AND A PLACE'S TABS STAND AT THE TOP — 0668.** Centred on its own content, each tab's panel put its
   strip at its own height: at 1280x720 it sat at 84, 92 and 189 px across three of the four, and a step
   along the strip moved it out from under the cursor. A fixed margin above and the auto one below keep it
   where it is, with the content filling down; it still falls back to the top and scrolls when it overflows.
@@ -950,7 +950,7 @@ ${each('-action')} {
   running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
   glance, and the choice is the whole screen.
 
-  ⚠️ **EVERY SCREEN'S, BY each() — 0667.** It named four screens by hand, and Cosmo's was not one, so
+  ⚠️ **EVERY SCREEN'S, BY each() — 0668.** It named four screens by hand, and Cosmo's was not one, so
   its one hinted action read as a single run of words with no break between the label and the hint.
 */
 ${each('-action-hint')} {
@@ -2056,7 +2056,7 @@ ${faced((p) => `.${p}pilot-line > .${p}pilot-craft`)} { color: var(--itc-ally, v
 ${faced((p) => `.${p}pilot-line > .${p}pilot-gun`)} { opacity: 0.85; font-weight: 500; }
 ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.55em; color: var(--itc-ink); opacity: 0.5; }
 /*
-  ── ARMED — 0667 ─────────────────────────────────────────────────────────────────────────────────
+  ── ARMED — 0668 ─────────────────────────────────────────────────────────────────────────────────
 
   A press on the pilot the band is on arms them, and the next flies. Said twice, so neither carries it
   alone: a second ring round the face in the run's other ink, and the word at the line's head in a pill,
@@ -5228,7 +5228,7 @@ export interface Chrome {
   /** Whether a band is drawn and walked — 0565: the tone, which says nothing on the factory's paint. */
   setBandShown(name: ChoiceName, shown: boolean): void;
   /**
-   * Whether the option a band that takes is on is armed — 0667: pressed once, so the next press flies. Drawn as
+   * Whether the option a band that takes is on is armed — 0668: pressed once, so the next press flies. Drawn as
    * a second ring round the face and *Ready* on the line under the faces, on every screen the band is on.
    */
   setArmed(name: ChoiceName, armed: boolean): void;
@@ -6023,7 +6023,7 @@ export function makeChrome(
     bio: HTMLElement | null;
     craft: HTMLElement;
     gun: HTMLElement;
-    /** 0667: *Ready*, on a line, shown while the pilot is armed; `null` on a card. */
+    /** 0668: *Ready*, on a line, shown while the pilot is armed; `null` on a card. */
     armed: HTMLElement | null;
     card: 'line' | 'whole';
   }
@@ -6051,7 +6051,7 @@ export function makeChrome(
       const name = part('span', 'name');
       const craft = part('span', 'craft');
       const gun = part('span', 'gun');
-      // 0667: the word that says the next press flies, at the line's head, hidden until the pilot is armed.
+      // 0668: the word that says the next press flies, at the line's head, hidden until the pilot is armed.
       const armed = part('span', 'armed');
       armed.textContent = 'Ready';
       armed.hidden = true;
