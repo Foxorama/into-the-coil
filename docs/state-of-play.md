@@ -1163,16 +1163,18 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE NOTEBOOK PAGES ARE A QUEUE OF TWENTY-ONE: ELEVEN BUILT — OWED A PLAY — 2026-10-24
+### ⚠️ THE NOTEBOOK PAGES ARE A QUEUE OF TWENTY-ONE: FOURTEEN BUILT — OWED A PLAY — 2026-10-24
 
 [`the-notebook-pages`](../reports/the-notebook-pages-2026-10-24.md) is every item on four handwritten pages and two
 asked after them, each with its status, and the player's answers. Built: [0649](decisions/0649-the-streak-ticks-down.md),
 [0650](decisions/0650-a-savior-death-opens-on-a-shield.md), [0651](decisions/0651-the-arc-lets-the-serpent-fall.md),
 [0652](decisions/0652-a-full-rack-throws-a-shield.md), [0653](decisions/0653-the-clock-is-the-balls.md),
 [0654](decisions/0654-the-dance-charges-slower.md), [0655](decisions/0655-legend-keeps-the-supercharge.md),
-[0656](decisions/0656-the-void-rolls.md) and [0657](decisions/0657-the-menus-show-what-you-have.md), the menus. **Next is
-the play** of all of it, which also names what else on the menus is wrong (17); then the fighter's gun and tubes under
-its hull (3).
+[0656](decisions/0656-the-void-rolls.md), [0657](decisions/0657-the-menus-show-what-you-have.md), the menus, and the
+three sounds: [0658](decisions/0658-every-shell-pops-its-own.md), [0659](decisions/0659-a-menu-press-is-heard.md) and
+[0660](decisions/0660-the-pterodactyl-screams.md). **Next is the play** of all of it, which also names what else on the
+menus is wrong (17); meanwhile the rest of the queue in the report's order of cost — level descriptions (13), the
+fighter's gun and tubes under its hull (3, 4), the tubes' slots (10), the controls (16), and Venoma (1).
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
 

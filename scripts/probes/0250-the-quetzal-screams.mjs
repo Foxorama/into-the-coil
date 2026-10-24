@@ -27,8 +27,8 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // Re-anchored by 0388, which gave the mouth its zigzag, 0452, which put its root in the throat, and
       // 0453, which gave it a path of its own.
-      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },",
-      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },",
+      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE }, cue: 'pteroCharge' },",
+      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE }, cue: 'pteroCharge' },",
     },
   },
   {

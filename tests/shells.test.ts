@@ -23,6 +23,9 @@ import { GameFrame } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { tracingPen } from './paths.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
+import { CUES } from '../src/content/cues.ts';
+import { SHOTS } from '../src/content/shots.ts';
+import { reset } from '../src/sim/entity.ts';
 
 /** The state with `shards` held and `ships` won in. */
 function holding(shards: number, ...ships: ShipKind[]): State {
@@ -192,6 +195,36 @@ describe('the pictures', () => {
         }),
       );
       expect(drawn.size, `${kind} shimmers as one picture`).toBe(3);
+    }
+  });
+});
+
+describe('0658 — every shell is heard in its own voice', () => {
+  it('THE ASK: every shell names the sound of it taking a hit, and no two shells share one', () => {
+    // *"Sheild pop noise is bad + should be specific per shield."*
+    const pops = SHELL_KINDS.map((kind) => SHELLS[kind].shell.pop);
+    expect(new Set(pops).size, `two shells share a pop: ${pops.join(', ')}`).toBe(SHELL_KINDS.length);
+    for (const kind of SHELL_KINDS) expect(CUES[SHELLS[kind].shell.pop].twin, `${kind}'s pop is not the shell's mark leaving`).toBe('shell-mark');
+  });
+
+  it('a hit a shield takes plays the worn shell’s pop, through the real frame', () => {
+    for (const kind of SHELL_KINDS) {
+      const { world, cues } = playableWorld(NO_LEVEL);
+      world.shipRow = { ...world.shipRow, shield: SHELLS[kind].shell };
+      const frame = new GameFrame(world);
+      world.ship.health = world.shipRow.health + 1;
+      const before = world.ship.health;
+      for (let i = 0; i < 240 && world.ship.health === before; i++) {
+        if (world.enemyShots.size === 0) {
+          const shot = world.enemyShots.spawn()!;
+          reset(shot, world.ship.along + 6, world.ship.across, SHOTS.spit);
+          shot.velAlong = -SHOTS.spit.speed + world.scrollPerStep;
+        }
+        frame.step();
+      }
+      expect(world.ship.health, `the ${kind} shell was never hit`).toBeLessThan(before);
+      expect(cues, `the ${kind} shell took a hit and was not heard in its own voice`).toContain(SHELLS[kind].shell.pop);
+      for (const other of SHELL_KINDS) if (other !== kind) expect(cues, `the ${kind} shell was heard as the ${other}`).not.toContain(SHELLS[other].shell.pop);
     }
   });
 });

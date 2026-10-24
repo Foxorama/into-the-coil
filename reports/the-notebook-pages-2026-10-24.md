@@ -28,11 +28,11 @@ ones not built, the cause found in the code (with where) or what would establish
 | 5 | *"Grav ball special needs to roll forward, not stay in one spot; roll forward off screen then disappear."* | **Built — [0656](../docs/decisions/0656-the-void-rolls.md).** Answered: *"Grav ball is the void special."* |
 | 6 | *"Points on time was added to L'il Caddie instead of hamster ball."* | **Built — [0653](../docs/decisions/0653-the-clock-is-the-balls.md).** Answered: *"the lil caddie's score multiplier kept resetting to 1 and that score multiplier reset should only apply to the hamster ball."* |
 | 7 | *"Point decay should be 3 sec, + then it ticks down per sec till a hit happens."* | **Built — [0649](../docs/decisions/0649-the-streak-ticks-down.md)** |
-| 8 | *"Confirm noise on menus."* | **Not built** |
-| 9 | *"Shield pop noise is bad + should be specific per shield."* | **Not built** |
+| 8 | *"Confirm noise on menus."* | **Built — [0659](../docs/decisions/0659-a-menu-press-is-heard.md)** |
+| 9 | *"Shield pop noise is bad + should be specific per shield."* | **Built — [0658](../docs/decisions/0658-every-shell-pops-its-own.md)** |
 | 10 | *"Missile tubes should be individual and have a left/right slot, not have a '2nd tube'. You can buy up to two of each tube & equip them however you like. The two tubes + one of each is way overengineering it."* | **Not built — a redesign of [0577](../docs/decisions/0577-the-tubes-are-full.md) and [0578](../docs/decisions/0578-the-tubes-are-sold.md)**, and the save holds what is owned and fitted, so it carries a rollback note ([0001](../docs/decisions/0001-revertability-not-risk-rating.md)) |
 | 11 | *"Savior → spawn w/ shield after death."* | **Built — [0650](../docs/decisions/0650-a-savior-death-opens-on-a-shield.md)**, taking back [0614](../docs/decisions/0614-the-shields-come-down-a-tier.md)'s *"don't give saviour a shield on death"* |
-| 12 | *"Pterodactyl lazer noise."* | **Not built** |
+| 12 | *"Pterodactyl lazer noise."* | **Built — [0660](../docs/decisions/0660-the-pterodactyl-screams.md)** |
 | 13 | *"Level descriptions."* | **Not built — where they are shown is the player's** |
 | 14 | *"Side arrows show on menus even when nothing to nav to."* | **Built — [0657](../docs/decisions/0657-the-menus-show-what-you-have.md)** |
 | 15 | *"A button on game console goes to next item in stores, it should confirm just like it does on main menu."* | **Built — [0657](../docs/decisions/0657-the-menus-show-what-you-have.md)**: A on a Cosmo's shelf presses Buy |
@@ -62,3 +62,10 @@ work (8, 9, 12).
 - **19**: *"The bubble jet missing was unity shop."*
 - **The menus**: *"Changes apply to everywhere. The menus suck pretty hard on desktop as well as mobile."*
 - **0652 on Legend**: *"Legend should keep the missile supercharge."*
+- **5, after 0656**: *"Does the void roll up the screen or go from the player to the right side of the screen, cos if
+  it goes up off the top of the screen that's wrong. It should do the same now, but instead of stopping where the
+  explosion is, it should keep heading to the right side of the screen to clear that row to the right side of the
+  screen."* It already does: the rift rolls along the lane, which on a landscape screen is to the right, and closes
+  once it is wholly past that edge (`cullPlayerShotAlong`, `src/app/frame.ts`). 0656 and the code's notes said *the
+  top of the screen*, which is the leading edge only on a portrait one; `docs/game.md` and the notes now say the
+  leading edge. 0656 is not edited ([written once](../docs/decisions/README.md)).
