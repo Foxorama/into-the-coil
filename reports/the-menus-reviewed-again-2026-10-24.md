@@ -357,9 +357,10 @@ the guard's six, and the pad walk re-run with the stub before it is handed over.
 
 ## The answers
 
-Not yet asked. The questions this leaves to the player:
+Given 2026-10-24, the same day: *"Agree with the suggested answers."* Each recommendation is the
+answer, and [`the-menus-planned`](the-menus-planned-2026-10-24.md) is the plan built on them.
 
-| question | recommendation |
+| question | answer |
 |---|---|
 | on a pad, does A on the pilot band arm the pilot, or move the cursor to *Fly*? | **arm**, as a phone's first tap does |
 | does the intro play on every flight, or does Travel get an *Intro* band? | **a band** |

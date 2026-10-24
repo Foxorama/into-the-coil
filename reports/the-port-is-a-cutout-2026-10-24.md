@@ -255,9 +255,10 @@ verdict on the picture is never confused with a change to the pipeline.
 
 ## The answers
 
-Not yet asked. Left to the player:
+Given 2026-10-24, the same day: *"Agree with the suggested answers."* Each recommendation is the
+answer, and [`the-port-planned`](the-port-planned-2026-10-24.md) is the plan built on them.
 
-| question | recommendation |
+| question | answer |
 |---|---|
 | is the station outside the Mothership of the fiction (a ship) or a station (a ring, a spar)? | **a ship**: the Far Carry's clubhouse is aboard the Mothership, and a hull with a bay reads as one |
 | does the Viper's pad get the Coil's violet, or stay the port's cyan? | **violet** |

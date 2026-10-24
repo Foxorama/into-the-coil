@@ -1184,8 +1184,11 @@ desktop, a phone and three larger desktops, a stubbed pad walked through the tit
 and targets measured: ten findings, desktop first, and a suggested order. Beside it
 [`the-port-is-a-cutout`](../reports/the-port-is-a-cutout-2026-10-24.md) reads the intro's hangar, the station
 outside and the dock as pictures, says why each reads flat, and holds nine recommendations in the order each
-buys the most. Neither is built; each is a plan's raw material, and each ends with the questions it leaves to the
-player.
+buys the most. Neither is built. **The player answered both the same day** — *"agree with the suggested
+answers"* — and each has its plan: [`the-menus-planned`](../reports/the-menus-planned-2026-10-24.md), nine PRs
+with the defects first and the per-tab stands last, and [`the-port-planned`](../reports/the-port-planned-2026-10-24.md),
+six PRs with the station outside first and the dock's shops last. The plans hold the order and what each
+owes; the menus' item 8 waits for the port's first three.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
 
