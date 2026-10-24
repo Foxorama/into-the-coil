@@ -34,7 +34,7 @@ export const STREAK_QUIET_SECONDS = 3;
 
 /**
  * How often the multiplier comes down a step once the quiet has run out, in seconds — 0649. Asked for:
- * *"point decay should be 3 sec, and then it ticks down per sec till a hit happens."* Until 0649 the
+ * *"Point decay should be 3 sec, + then it ticks down per sec till a hit happens."* Until 0649 the
  * quiet ended the streak whole.
  */
 export const STREAK_DECAY_SECONDS = 1;

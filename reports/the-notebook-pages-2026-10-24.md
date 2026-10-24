@@ -6,9 +6,10 @@ working on the next set of feedback in the meantime."* Transcribed here because 
 I could not read with certainty is marked *(read as)*.
 
 **What checked `main`:** at `0ceba48` (#645), `npm run typecheck` and the whole `npx vitest run` on a fresh
-`npm ci` — the result is in the PR that lands this report. #646 (0648, the ball runs hot) was open with its
-CI running; nothing below touches the files it does except `src/app/frame.ts`, `docs/game.md` and
-`docs/state-of-play.md`, in lines it does not.
+`npm ci` — the result is in the PR that lands this report. #646 (0648) merged during the work; it was opened
+on `0ceba48`, and its run 40077265945 passed every suite shard, every proof shard and the joined `test` job
+before the merge, so `f3e8355` is the tree CI tested. It is merged into this branch; the one conflict was
+`docs/state-of-play.md`, both entries kept.
 
 ⚠️ **Pointers, not findings, where a decision holds the finding.** Each item names its status and, for the
 ones not built, the cause found in the code (with where) or what would establish one.

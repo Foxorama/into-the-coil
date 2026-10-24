@@ -40,8 +40,9 @@ kill puts back is re-anchored onto the renamed test.
 ## Not held by any guard
 
 - **A second.** Whether ×8 falling to ×1 in ten seconds of quiet is a cost a player feels is the play's.
-- **The readout says nothing while it falls.** 0647 named that as the next change if a falling streak needs
-  to be seen before it falls; with a step a second it is seen as it falls, which may be enough.
+- **The readout.** It already shakes when the multiplier falls from above ×1 (`src/app/chrome.ts`), so a
+  falling streak now shakes once a second, each step seen as it goes. Nothing warns before the first step;
+  0647 named that as the next change if the play asks for it.
 
 ## Rollback
 
