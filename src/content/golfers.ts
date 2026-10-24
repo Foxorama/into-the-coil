@@ -11,9 +11,10 @@
  */
 
 import type { ShipKind } from './ships.ts';
+import { DIFFICULTY_KINDS, type DifficultyKind } from './difficulty.ts';
 
 /** Every golfer, in the predecessor's roster order — the order the select screen offers them in. Closed. */
-export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo', 'marmot', 'unity', 'mmxxvi'] as const;
+export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo', 'marmot', 'unity', 'mmxxvi', 'venoma'] as const;
 
 export type GolferKind = (typeof GOLFER_KINDS)[number];
 
@@ -103,6 +104,13 @@ export interface GolferRow extends RunnerRow {
    * first run. Each row says its own lock, the four starting pilots' as nothing (0282).
    */
   opens: PilotLock;
+  /**
+   * Whether the story is told round them — 0666. Every pilot chases the Viper out of the port in the intro and
+   * finds a golfer in her cockpit in the finale; Venoma Krait IS the Viper's pilot, so a run she flies has
+   * neither: no intro, the finale's chase and talk left out, the victory screen straight after the last boss.
+   * She is never the one found, either (`rescuable`). Every row says its own (0282).
+   */
+  story: boolean;
 }
 
 /**
@@ -125,6 +133,11 @@ export interface PilotLock {
   readonly crashes: number;
   /** How many things must have been bought, from any shelf — 0592, the page's *"x customisations"*. */
   readonly bought: number;
+  /**
+   * Which tiers must have been finished — 0666, the page's *"unlocked if beat all diffs with any character"*. A
+   * tier is finished by a run that won it, in any ship (`finished` in `src/state/slices/hangar.ts`, 0608's).
+   */
+  readonly tiers: readonly DifficultyKind[];
 }
 
 /**
@@ -135,21 +148,24 @@ export interface PilotRecord {
   readonly won: Readonly<Record<ShipKind, boolean>>;
   readonly crashes: number;
   readonly bought: number;
+  // 0666: and which tiers a run has won.
+  readonly finished: Readonly<Record<DifficultyKind, boolean>>;
 }
 
-/** What is still owed on `lock` — 0592: the pilots still to clear, and what is left of each count. */
-export function lockLeft(lock: PilotLock, record: PilotRecord): { after: GolferKind[]; crashes: number; bought: number } {
+/** What is still owed on `lock` — 0592: the pilots still to clear, and what is left of each count; 0666: the tiers. */
+export function lockLeft(lock: PilotLock, record: PilotRecord): { after: GolferKind[]; crashes: number; bought: number; tiers: DifficultyKind[] } {
   return {
     after: lock.after.filter((k) => !record.won[GOLFERS[k].ship]),
     crashes: Math.max(0, lock.crashes - record.crashes),
     bought: Math.max(0, lock.bought - record.bought),
+    tiers: lock.tiers.filter((tier) => !record.finished[tier]),
   };
 }
 
 /** Whether `lock` is met — every part of it. */
 export function lockOpen(lock: PilotLock, record: PilotRecord): boolean {
   const left = lockLeft(lock, record);
-  return left.after.length === 0 && left.crashes === 0 && left.bought === 0;
+  return left.after.length === 0 && left.crashes === 0 && left.bought === 0 && left.tiers.length === 0;
 }
 
 /** What every golfer wears under the cap and polo: the predecessor intro's trousers, shoes and bag. */
@@ -176,7 +192,8 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 0.98,
     bio: 'Learned to read solar wind flying kites over the Ngong Hills; a feather on the dash, and a slow, sure drift through any crossfire.',
     voice: 1.14,
-    opens: { after: [], crashes: 0, bought: 0 },
+    opens: { after: [], crashes: 0, bought: 0, tiers: [] },
+    story: true,
     saved: [
       'You found me! I felt the wind change, and I hoped it was you.',
       'I was starting to think nobody was coming. Thank you.',
@@ -207,7 +224,8 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1,
     bio: 'Flies by ear with the canopy blacked out and names every gun by its report; once hooked under the Gwangalli bridge at full burn.',
     voice: 1.03,
-    opens: { after: [], crashes: 0, bought: 0 },
+    opens: { after: [], crashes: 0, bought: 0, tiers: [] },
+    story: true,
     saved: [
       'I heard your guns through the walls. I knew someone had come.',
       'It was so dark in there. Thank you for finding me.',
@@ -238,7 +256,8 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1.08,
     bio: 'Three long-haul records, a dented fender on the mantel, two kids and a kelpie, and a wagon that once towed a road train through a meteor storm.',
     voice: 0.8,
-    opens: { after: [], crashes: 0, bought: 0 },
+    opens: { after: [], crashes: 0, bought: 0, tiers: [] },
+    story: true,
     saved: [
       'Mate! You came for me! Thought I was a goner in there.',
       'Get me home to the kids and the dog. I owe you a cold one.',
@@ -269,7 +288,8 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1,
     bio: 'Puts spin on everything, shots included; roasts coffee named for their barrel rolls; once lost a dogfight to their own ricochet.',
     voice: 0.95,
-    opens: { after: [], crashes: 0, bought: 0 },
+    opens: { after: [], crashes: 0, bought: 0, tiers: [] },
+    story: true,
     saved: [
       'You came back for me. I’m naming my next coffee roast after you.',
       'I thought I’d be stuck in there forever. Thank you. Really.',
@@ -316,7 +336,8 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     bio: 'Tends the spaceport bar on tips and pockets whatever the trade tents drop; rides the Thunderbolt out whenever the jar is full.',
     // High and quick: a small animal's voice, and the whistle a marmot is named for.
     voice: 1.38,
-    opens: { after: ['feather', 'woo', 'larry', 'bo'], crashes: 0, bought: 0 },
+    opens: { after: ['feather', 'woo', 'larry', 'bo'], crashes: 0, bought: 0, tiers: [] },
+    story: true,
     saved: [
       'About time! I was down to my last golf ball in there.',
       'You came for me? Drinks are on the house. Forever.',
@@ -365,7 +386,8 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     bio: 'Fixes every ship in the port and drives none of them; rolls out in a hamster ball, and whatever is in the way finds out why.',
     // Quick and a little high: a small animal's voice, and lower than the Marmot's whistle.
     voice: 1.26,
-    opens: { after: [], crashes: 10, bought: 0 },
+    opens: { after: [], crashes: 10, bought: 0, tiers: [] },
+    story: true,
     saved: [
       'Fair dinkum, you came for me! I owe you a full service, free.',
       'Strewth, that thing had me rattled. Ta for getting me out.',
@@ -414,7 +436,8 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     bio: 'Paints every ship that leaves the port and signs none of them; flies a bath duck with a paintball marker, and nothing it hits stays plain.',
     // Squeaky and bright: the highest voice in the port, above the Marmot's whistle.
     voice: 1.5,
-    opens: { after: [], crashes: 0, bought: 5 },
+    opens: { after: [], crashes: 0, bought: 5, tiers: [] },
+    story: true,
     saved: [
       'You came for me! Hold still, you’ve got a little paint on you. Perfect.',
       'I was so bored in there. Not one wall worth painting. Thank you!',
@@ -429,6 +452,49 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
       'Hop in the bath! We’re bubbling out of here.',
       'I took the scenic route. It was gorgeous. Let’s go home.',
     ],
+  },
+  /**
+   * Venoma Krait — 0666. The Coil's prodigy, the predecessor's recurring rival, and the Viper's pilot in this
+   * game's intro (0416): the page, *"Venoma secret ship — unlocked if beat all diffs with any character. Has the
+   * serpent boss attacks → acid spray; missile turrets are the void blasts from serpent boss + special is red
+   * lightning called down from the sky."*
+   *
+   * ⚠️ **HER COLOURS ARE 0416's**, the runner row 0444 took out of the intro: hooded in the Wyrm-Ship's green, the
+   * bag in its acid, the rest of her in its dark, sleeves to the wrist. She is a person, as every golfer is.
+   *
+   * ⚠️ **LOCKED BEHIND EVERY TIER FINISHED, IN ANY SHIP** — the page's *"beat all diffs with any character"*: a
+   * tier is finished by a win on it (`finished`, 0608), whoever flew it. Not rescuable and not in the intro or
+   * the finale (`story`): she is who the story is about, so she cannot be found in her own cockpit.
+   *
+   * ⚠️ **SHE HAS NO LINES**, since she is never the one found and never the one who came: `saved` and `saving`
+   * are empty, and nothing reads them for a pilot with no story.
+   */
+  venoma: {
+    name: 'Venoma Krait',
+    goesBy: 'Venoma',
+    ship: 'viper',
+    home: 'The Coil',
+    pronouns: 'she/her',
+    // The Wyrm-Ship's livery (`VIPER` in `src/content/port.ts`): its green body for the cap a hood covers,
+    // the shirt and the hood, and its belly's dark for her trousers.
+    cap: '#1c3a2a',
+    shirt: '#1c3a2a',
+    skin: '#c89a74',
+    hair: '#0d1a12',
+    cut: 'sweep',
+    stubble: false,
+    build: 0.97,
+    bag: '#54dba0',
+    hood: '#2a5a40',
+    pants: '#0f2419',
+    longSleeves: true,
+    bio: 'The Coil’s prodigy and everyone’s rival; flies the Viper, which spits what the serpent spits and calls its lightning down on whatever she points at.',
+    // Low and even: the coolest voice in the port.
+    voice: 0.88,
+    opens: { after: [], crashes: 0, bought: 0, tiers: [...DIFFICULTY_KINDS] },
+    story: false,
+    saved: [],
+    saving: [],
   },
 };
 
@@ -472,5 +538,6 @@ export const DEFAULT_GOLFER: GolferKind = 'bo';
  * The predecessor picked its boss partner the same way (`scramblePartnerId`), read for this.
  */
 export function rescuable(chosen: GolferKind): readonly GolferKind[] {
-  return GOLFER_KINDS.filter((kind) => kind !== chosen);
+  // 0666: and never a pilot the story is not told round — Venoma is the one who took them.
+  return GOLFER_KINDS.filter((kind) => kind !== chosen && GOLFERS[kind].story);
 }

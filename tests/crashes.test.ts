@@ -169,7 +169,7 @@ describe('0592 — what has been bought is counted off what is owned', () => {
 
 describe('0592 — a lock may name the two counts, and the band says what is left', () => {
   const NOBODY: PilotRecord = pilotRecord(initialHangar);
-  const lock: PilotLock = { after: [], crashes: 10, bought: 5 };
+  const lock: PilotLock = { after: [], crashes: 10, bought: 5, tiers: [] };
 
   it('is shut until every part is met, and open the moment the last one is', () => {
     expect(lockOpen(lock, NOBODY)).toBe(false);

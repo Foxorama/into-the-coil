@@ -663,6 +663,14 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   acid: 'acid',
   void: 'void',
   /*
+    ⚠️ **VENOMA'S SPIT AND HER TUBES' VOID ARE THE PLAYER'S, IN THE PLAYER'S INKS — 0666.** The serpent's two in
+    their own inks above are *this will burn you* and *this will take you*; hers are thrown AT the serpent, so
+    each wears the ink of the player's thing it stands in for: the spit the ship's own cyan, the void the seeker's
+    lavender. 0081, held by `tests/legibility.test.ts`.
+  */
+  venomSpit: 'player',
+  venomVoid: 'ally',
+  /*
     ⚠️ **THE BALL IS IN THE VOID'S INK AND ITS DROPS IN THE ACID'S — 0311.** It carries both, and the two
     have to be tellable apart the instant it bursts: one object becomes sixteen, half of them the ink it
     was drawn in and half the other. So the hull is the void's ring and the acid is what churns inside it.
@@ -721,6 +729,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupDance: 'acid',
   // 0595: the Water Cannon — in the player's water, as its jet is, which no other face of the bomb pickup wears.
   pickupWater: 'water',
+  // 0666: Red Lightning — in the enemy's red, the page's *"red lightning"*, which no other face of the bomb pickup wears.
+  pickupSmite: 'enemy',
   pickupShield: 'pickup',
   /*
     The ward's faces — 0447. The void wears its own lavender; the nova wears the white of the heart it
@@ -917,6 +927,18 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shieldDrip240a: 'player',
   shieldDrip240b: 'player',
   shieldDrip240c: 'player',
+  shieldScale0a: 'player',
+  shieldScale0b: 'player',
+  shieldScale0c: 'player',
+  shieldScale120a: 'player',
+  shieldScale120b: 'player',
+  shieldScale120c: 'player',
+  shieldScale180a: 'player',
+  shieldScale180b: 'player',
+  shieldScale180c: 'player',
+  shieldScale240a: 'player',
+  shieldScale240b: 'player',
+  shieldScale240c: 'player',
   // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
   // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
   auraHunt: 'ally',
@@ -1016,6 +1038,12 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   duckTubeHit: 'hazard',
   duckTubes: 'player',
   duckTubesHit: 'hazard',
+  viper: 'player',
+  viperHit: 'hazard',
+  viperTube: 'player',
+  viperTubeHit: 'hazard',
+  viperTubes: 'player',
+  viperTubesHit: 'hazard',
   // 0594: every ship dancing, the player's as the ship standing still is.
   fighterDance1: 'player',
   fighterDance2: 'player',
@@ -1059,6 +1087,12 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   duckTubeDance2: 'player',
   duckTubesDance1: 'player',
   duckTubesDance2: 'player',
+  viperDance1: 'player',
+  viperDance2: 'player',
+  viperTubeDance1: 'player',
+  viperTubeDance2: 'player',
+  viperTubesDance1: 'player',
+  viperTubesDance2: 'player',
   // 0609: the War Dance's flare — the player's own light, as everything the ship wears is.
   danceFlare0: 'player',
   danceFlare1: 'player',
@@ -2556,7 +2590,7 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, po
 */
 
 /** Every flyable ship's art, by kind — what `drawKind` and the port both draw. */
-type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball' | 'duck';
+type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball' | 'duck' | 'viper';
 
 /*
   ── THE FIGHTER'S TUBES WERE HERE — ON ITS CHIN AND ITS WING ROOTS — AND 0581 HUNG THEM UNDER ITS WINGS ──
@@ -2734,14 +2768,16 @@ function paintPylon(ctx: Pen, f: Frame, palette: Palette, [x, y]: Pt): void {
  * the missile in each roof turret at one tube and two — 0448. `tests/mounts.test.ts` holds the ship rows'
  * `muzzle` and `tubes` to these, so a turret moved in the drawing cannot leave its missiles behind.
  */
-export function carMounts(ship: 'firebird' | 'estate' | 'thunderbolt' | 'duck'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
+export function carMounts(ship: 'firebird' | 'estate' | 'thunderbolt' | 'duck' | 'viper'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
   const firebird = ship === 'firebird';
   const box = (x: number, y: number): Pt => (firebird ? inBox([[x, y]], 1, 1.5) : inBox([[x, y]], 0, 1))[0]!;
   // 0545: the Thunderbolt's pods on its rear fender, and its lightning ball on the fork crown.
   // 0595: the Aqua Duck's pods on its back, and its marker's mouth under its chin.
-  const spans = firebird ? FIREBIRD_TURRETS : ship === 'estate' ? ESTATE_TURRETS : ship === 'duck' ? DUCK_PODS : THUNDERBOLT_PODS;
-  const top = firebird ? FIREBIRD_TURRET_TOP : ship === 'estate' ? ESTATE_TURRET_TOP : ship === 'duck' ? DUCK_POD_TOP : THUNDERBOLT_POD_TOP;
-  const muzzle = firebird ? FIREBIRD_HUB : ship === 'estate' ? ESTATE_STAR : ship === 'duck' ? DUCK_MUZZLE : THUNDERBOLT_BALL;
+  // 0666: the Viper's launcher on its back, behind the canopy, and its jaw.
+  const viper = ship === 'viper';
+  const spans = firebird ? FIREBIRD_TURRETS : ship === 'estate' ? ESTATE_TURRETS : ship === 'duck' ? DUCK_PODS : viper ? VIPER_PODS : THUNDERBOLT_PODS;
+  const top = firebird ? FIREBIRD_TURRET_TOP : ship === 'estate' ? ESTATE_TURRET_TOP : ship === 'duck' ? DUCK_POD_TOP : viper ? VIPER_POD_TOP : THUNDERBOLT_POD_TOP;
+  const muzzle = firebird ? FIREBIRD_HUB : ship === 'estate' ? ESTATE_STAR : ship === 'duck' ? DUCK_MUZZLE : viper ? VIPER_MUZZLE : THUNDERBOLT_BALL;
   return {
     muzzle: box(muzzle[0], muzzle[1]),
     // Each missile's nose in its own mouth in the launcher's face, a tenth short of its front (0629).
@@ -4192,6 +4228,233 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
   paintTurrets(ctx, f, DUCK_PODS[stage]!, DUCK_POD_TOP, DUCK_BACK, box, { shell: shade(body, -0.1), band: chrome });
 }
 
+/*
+  ── THE VIPER — 0666 ────────────────────────────────────────────────────────────────────────────────
+
+  Venoma Krait's racer, the ship the intro has always blasted out of the port (`paintViper` in
+  `src/render/port-bake.ts`), flyable — from the side in the predecessor's frame about (0, 1), as the cars and
+  the duck are. The port's drawing is in its own ±1 frame; `VIPER_SCALE` lays it in the predecessor's, so the
+  shapes below are the port's own numbers: a snake's head for a prow, a bubble of glass on its back, the
+  launcher behind it, a dorsal fin hooked over like a tail about to strike, a swept wing under the hull, and the
+  the fang under the jaw where its acid leaves. One outline takes in all of it, so every one is silhouette.
+
+  ⚠️ **NOT THE PORT'S INKS.** The port paints her in the Wyrm-Ship's dark green with an acid glass (`VIPER` in
+  `src/content/port.ts`), fixed colours a palette does not answer; in the fight she is the player's ship, so her
+  body is a palette mix — the player's cyan taken over halfway to the acid's lime — and the high-contrast
+  palette answers it as it answers every hull. Darker for the scales and the belly, as the port's are.
+
+  ⚠️ **AND NO FAR WING.** The port shows the far wing in shadow over the back; here that is where the launcher
+  stands, so the far wing is left out rather than drawn through it.
+*/
+
+/** The port's ±1 frame laid in the predecessor's: a unit of the port's drawing is this many of the predecessor's. */
+const VIPER_SCALE = 18;
+/** A point of the port's drawing, in the predecessor's frame about (0, 1). */
+function viperAt(x: number, y: number): Pt {
+  return [x * VIPER_SCALE, y * VIPER_SCALE + 1];
+}
+/** Its back, where the launcher stands, and how high the launcher stands on it — the predecessor's frame. */
+const VIPER_BACK = -2;
+const VIPER_POD_TOP = -5.4;
+/** Where its launcher stands on its back, at one tube and two, as `[back, front]` spans — behind the canopy. */
+const VIPER_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-4.6, 0.4]], [[-5.2, -2.6], [-1.6, 1]]];
+/** Its jaw, where the acid leaves; `VIPER_MUZZLE` on its row. */
+const VIPER_MUZZLE: Pt = [17.6, 1.9];
+/** The root of the fin, which it turns about in its War Dance, and the neck the head rears about — 0666. */
+const VIPER_FIN_ROOT: Pt = viperAt(-0.46, -0.16);
+const VIPER_NECK: Pt = viperAt(0.5, 0.02);
+/** How far the fin coils back and is thrown forward, and how far the head rears, in its War Dance — radians. */
+const VIPER_COIL = -0.32;
+const VIPER_THROW = 0.22;
+const VIPER_REAR = -0.14;
+
+/** The top of the head from the nose back to the canopy, in the port's frame. */
+const VIPER_HEAD_TOP: readonly Pt[] = [
+  [1, 0.03],
+  [0.95, -0.05],
+  [0.86, -0.11],
+  [0.74, -0.14],
+  [0.62, -0.155],
+  [0.5, -0.17],
+];
+/** The canopy's top, front to back. */
+const VIPER_CANOPY: readonly Pt[] = [
+  [0.49, -0.19],
+  [0.46, -0.235],
+  [0.4, -0.262],
+  [0.3, -0.275],
+  [0.2, -0.262],
+  [0.14, -0.235],
+  [0.11, -0.19],
+];
+/** The dorsal fin, from its root up round its hook and back down to the hull. */
+const VIPER_FIN: readonly Pt[] = [
+  [-0.3, -0.165],
+  [-0.42, -0.33],
+  [-0.56, -0.46],
+  [-0.72, -0.53],
+  [-0.85, -0.48],
+  [-0.88, -0.36],
+  [-0.8, -0.32],
+  [-0.72, -0.38],
+  [-0.64, -0.32],
+  [-0.62, -0.13],
+];
+/** The stern and the belly back to the wing, the wing, and the belly on to the jaw. */
+const VIPER_BELLY: readonly Pt[] = [
+  [-0.8, -0.06],
+  [-0.88, -0.05],
+  [-0.88, 0.1],
+  [-0.7, 0.155],
+  [-0.5, 0.185],
+  [-0.36, 0.19],
+  // The wing, swept back and down.
+  [-0.52, 0.36],
+  [-0.3, 0.36],
+  [0.16, 0.195],
+  [0.4, 0.19],
+  [0.6, 0.13],
+  [0.74, 0.1],
+];
+/**
+ * The fang under the jaw, back to front: its root, its point, its front. One, as a snake's pair is from the side, and
+ * broad: two of the port's slender fangs were a pixel and a third across at the fight's camera, under 0106's floor.
+ */
+const VIPER_FANGS: readonly Pt[] = [
+  [0.72, 0.105],
+  [0.79, 0.27],
+  [0.86, 0.088],
+];
+
+/** The Viper's outline at `stage` tubes, in the predecessor's frame — with its own gun, the fang under the jaw it spits from. */
+function viperOutline(stage: number, own = true): Pt[] {
+  const at = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => viperAt(x, y));
+  return [
+    ...at(VIPER_HEAD_TOP),
+    ...at(VIPER_CANOPY),
+    [viperAt(0.11, 0)[0], VIPER_BACK],
+    ...turretsOn(VIPER_PODS[stage]!, () => VIPER_BACK, VIPER_POD_TOP),
+    ...at(VIPER_FIN),
+    ...at(VIPER_BELLY),
+    // The jaw: the fang under it with her own gun, closed without.
+    ...(own ? at(VIPER_FANGS) : []),
+    ...at([[0.93, 0.06]]),
+  ];
+}
+
+/**
+ * A point of the Viper as it strikes in its War Dance — 0666: the fin turned about its root by `fin`, as much of it
+ * as the point is the fin's, and the head about the neck by `head`, as much as the point is the head's. Nothing
+ * else moves — the canopy, the launcher the frame lays tubes in, the wing and the stern its flame burns from.
+ */
+function viperStrikes(fin: number, head: number): (p: Pt) => Pt {
+  if (fin === 0 && head === 0) return (p) => p;
+  const [rx] = VIPER_FIN_ROOT;
+  const [nx] = VIPER_NECK;
+  return ([x, y]) => {
+    const finShare = Math.min(1, Math.max(0, (rx + 2.2 - x) / 2.2)) * Math.min(1, Math.max(0, (-y - 1.6) / 1.4));
+    const headShare = Math.min(1, Math.max(0, (x - nx) / 2.4));
+    const [fx, fy] = pitchAbout(VIPER_FIN_ROOT, fin * finShare)([x, y]);
+    return pitchAbout(VIPER_NECK, head * headShare)([fx, fy]);
+  };
+}
+
+/** The top and the belly of the hull at `x` along, in the port's frame — what a band round it runs between. */
+function viperGirth(x: number): readonly [number, number] {
+  const top: readonly Pt[] = [[1, 0.03], [0.74, -0.14], [0.5, -0.17], [-0.1, -0.17], [-0.4, -0.16], [-0.66, -0.12], [-0.88, -0.05]];
+  const belly: readonly Pt[] = [[1, 0.03], [0.74, 0.1], [0.6, 0.13], [0.4, 0.19], [-0.2, 0.2], [-0.5, 0.185], [-0.88, 0.1]];
+  const on = (line: readonly Pt[]): number => {
+    for (let i = 1; i < line.length; i++) {
+      const [x0, y0] = line[i - 1]!;
+      const [x1, y1] = line[i]!;
+      if (x <= x0 && x >= x1) return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
+    }
+    return 0;
+  };
+  return [on(top), on(belly)];
+}
+
+function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'wyrmGreen', livery: string | null = null, pose: DancePose = 0): void {
+  // The player's cyan taken halfway to the acid's lime: a venom green every palette answers.
+  const body = livery ?? mix(palette.player, palette.acid, 0.55);
+  const dark = shade(body, -0.5);
+  const bob = viperStrikes(pose === 1 ? VIPER_COIL : pose === 2 ? VIPER_THROW : 0, pose === 2 ? VIPER_REAR : 0);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points.map(bob), 0, 1);
+  const port = (points: readonly Pt[]): Pt[] => box(points.map(([x, y]) => viperAt(x, y)));
+  const at = (x: number, y: number): Pt => port([[x, y]])[0]!;
+  // A shape painted on the outline's own edges is split as the outline is, so its edge IS the outline's.
+  const onEdge = (points: readonly Pt[]): Pt[] => box(densified(points.map(([x, y]) => viperAt(x, y)), 1));
+  const outline = box(densified(viperOutline(stage, own), 1));
+  ctx.fillStyle = body;
+  trace(ctx, f, outline);
+  seal(ctx);
+  // Lit along its back and dark along its belly, as the port's is.
+  shaded(ctx, f, at(0, -0.3), at(0, 0.3), shade(body, 0.25), shade(body, -0.3), outline);
+  // The fin, a shade darker than the back it rises from, so it reads as a fin and not more hull.
+  poly(ctx, f, shade(body, -0.18), onEdge(VIPER_FIN));
+  // The wing, its leading edge lit.
+  poly(ctx, f, shade(body, -0.25), onEdge([[-0.36, 0.19], [-0.52, 0.36], [-0.3, 0.36], [0.16, 0.195]]));
+  poly(ctx, f, shade(body, 0.45), onEdge([[0.16, 0.195], [-0.3, 0.36], [-0.4, 0.36], [0.03, 0.21]]));
+  // The belly, its scales darker: a band from the jaw to the stern, two units deep — over 0106's floor.
+  poly(ctx, f, dark, port([[0.6, 0.13], [0.4, 0.19], [-0.2, 0.2], [-0.5, 0.185], [-0.86, 0.1], [-0.86, 0.04], [-0.5, 0.075], [-0.2, 0.085], [0.4, 0.075], [0.62, 0.07]]));
+  /*
+    Its looks, on the flank — 0528's slot. Each mark two units and more across, so it clears 0106's floor at the
+    shipped camera: a band or a diamond a tenth of the port's frame or more, which is 1.8 of the predecessor's.
+  */
+  if (art === 'wyrmGreen') {
+    // As it came: the port's lateral line, and the scales along it as chevrons.
+    // Each arm a twentieth of the port's frame thick — 0106's floor at the shipped camera.
+    for (let x = 0.42; x > -0.66; x -= 0.2) {
+      poly(ctx, f, dark, port([[x, -0.04], [x - 0.1, 0.02], [x, 0.08], [x + 0.07, 0.08], [x - 0.02, 0.02], [x + 0.07, -0.04]]));
+    }
+  } else if (art === 'kraitBands') {
+    // A krait's bands round the hull, dark and evenly spaced from the neck to the stern.
+    for (const x of [0.46, 0.18, -0.1, -0.38, -0.66]) {
+      const [t0, b0] = viperGirth(x);
+      const [t1, b1] = viperGirth(x - 0.11);
+      // Held a little in from the hull's top and belly, which `viperGirth` draws as straight runs between its points.
+      poly(ctx, f, shade(palette.space, 0.12), port([[x, t0 + 0.02], [x - 0.11, t1 + 0.02], [x - 0.11, b1 - 0.02], [x, b0 - 0.02]]));
+    }
+  } else if (art === 'diamondback') {
+    // A rattler's diamonds down the back, each dark round a lit heart.
+    // Five, from the neck to where the hull narrows toward the stern — a sixth there stood over the back's edge.
+    for (const x of [0.46, 0.22, -0.02, -0.26, -0.5]) {
+      // The heart a tenth of the port's frame tall, over 0106's floor; the diamond round it half as much again.
+      poly(ctx, f, dark, port([[x + 0.1, -0.045], [x, -0.13], [x - 0.1, -0.045], [x, 0.04]]));
+      poly(ctx, f, shade(body, 0.4), port([[x + 0.06, -0.045], [x, -0.1], [x - 0.06, -0.045], [x, 0.01]]));
+    }
+  } else if (art === 'venomLine') {
+    // A line of venom from the fangs to the stern, lit from inside: two units of it, and a glow over that.
+    const line = port([[0.84, 0.03], [0.4, 0.0], [-0.2, -0.01], [-0.86, 0.02], [-0.86, 0.08], [-0.2, 0.1], [0.4, 0.1], [0.84, 0.06]]);
+    poly(ctx, f, shade(mix(body, palette.pickup, 0.5), 0.35), line);
+    const [gx, gy] = at(0, 0.05);
+    glow(ctx, f, palette.pickup, gx, gy, 0.5, 0.35);
+  }
+  // The canopy — glass with the sky in it, and a glint.
+  poly(ctx, f, mix(palette.frost, palette.space, 0.55), port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16]]));
+  const [cx, cy] = at(0.36, -0.23);
+  disc(ctx, f, palette.impact, cx, cy, 0.5 * 0.062, 0.7);
+  // The eye: lit, and its slit.
+  const [ex, ey] = at(0.76, -0.07);
+  glow(ctx, f, palette.hazard, ex, ey, 2.4 * 0.062, 0.6);
+  disc(ctx, f, palette.hazard, ex, ey, 1.15 * 0.062);
+  // No slit: at the fight's camera it is half a pixel across, under 0106's floor — the eye is the lit bead alone.
+  // The mouth, a dark line back from short of the nose; and with her own gun the fang under it, white.
+  seam(ctx, f, shade(body, -0.75), 0.035, port([[0.9, 0.035], [0.66, 0.085]]), 0.9);
+  if (own) {
+    poly(ctx, f, palette.impact, onEdge(VIPER_FANGS));
+    // The venom at the jaw, where the spit leaves — the spit's own cyan, no further out than the box allows.
+    const [mx, my] = box([VIPER_MUZZLE])[0]!;
+    glow(ctx, f, palette.player, mx, my, 0.9 * 0.062, 0.6);
+  }
+  // The nozzle in the stern, dark, the void's violet already in it — inside the stern, not over it.
+  const [nx, ny] = at(-0.8, 0.025);
+  disc(ctx, f, shade(palette.space, 0.1), nx, ny, 1 * 0.062);
+  glow(ctx, f, palette.ally, nx, ny, 2.2 * 0.062, 0.5);
+  // The launcher on its back, in its own green banded in the void's violet.
+  paintTurrets(ctx, f, VIPER_PODS[stage]!, VIPER_POD_TOP, VIPER_BACK, box, { shell: shade(body, -0.15), band: mix(palette.ally, palette.void, 0.4) });
+}
+
 /**
  * A ship in the one box, at no tubes, one or two — 0441. `f` is the box's frame; the fighter is drawn
  * at its own hull's size inside it, as its capped tier always was (0229).
@@ -4315,6 +4578,10 @@ export function drawPlayerShip(
     // MMXXVI's bath-duck submarine, its marker under its chin — 0595.
     case 'duck':
       drawDuck(ctx, f, palette, stage, own, art, livery, pose);
+      break;
+    // Venoma Krait's Viper, the fangs she spits from under its jaw — 0666.
+    case 'viper':
+      drawViper(ctx, f, palette, stage, own, art, livery, pose);
       break;
     default: {
       const unhandled: never = ship;
@@ -5981,6 +6248,26 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       shaded(ctx, f, p(0, my - 0.06), p(0, my + 0.06), shade(chrome, 0.3), shade(chrome, -0.35), [p(mx * 0.55, my - 0.06), p(mx, my - 0.06), p(mx, my + 0.06), p(mx * 0.55, my + 0.06)]);
       disc(ctx, f, shade(palette.frost, -0.2), ...p(0.02, my - 0.17), 0.12, 0.85);
       paintHopper(ctx, f, p(0.02, my - 0.17), 0.12);
+    },
+  },
+  /*
+    The acid — 0666: a venom gland, the Viper's own dark green, with two white fangs out to the mouth and the spit's
+    cyan glowing between them. Each fang a tenth across, over 0106's floor at a ship's six tenths.
+  */
+  acid: {
+    top: (ctx, f, palette, p, [mx]) => {
+      const gland = shade(mix(palette.player, palette.acid, 0.55), -0.45);
+      poly(ctx, f, gland, [p(-0.08, -0.11), p(mx * 0.55, -0.12), p(mx * 0.7, 0), p(mx * 0.55, 0.12), p(-0.08, 0.11)]);
+      for (const side of [-1, 1] as const) poly(ctx, f, palette.impact, [p(mx * 0.5, side * 0.12), p(mx, side * 0.05), p(mx * 0.5, side * 0.02)]);
+      glow(ctx, f, palette.player, ...p(mx, 0), 0.06, 0.75);
+    },
+    side: (ctx, f, palette, p, [mx, my]) => {
+      const gland = shade(mix(palette.player, palette.acid, 0.55), -0.45);
+      // A post up from the hull to the gland, the gland, and the fangs out to its mouth.
+      poly(ctx, f, shade(palette.trim, -0.35), [p(-0.05, 0), p(0.05, 0), p(0.05, my), p(-0.05, my)]);
+      poly(ctx, f, gland, [p(-0.12, my - 0.1), p(mx * 0.55, my - 0.11), p(mx * 0.7, my), p(mx * 0.55, my + 0.11), p(-0.12, my + 0.1)]);
+      // The fang's point is the mouth the spit leaves.
+      poly(ctx, f, palette.impact, [p(mx * 0.5, my - 0.07), p(mx, my), p(mx * 0.5, my + 0.07)]);
     },
   },
 };
@@ -16881,6 +17168,56 @@ function drawDripPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette)
 }
 
 /**
+ * Shed scales — 0666, the Viper's own: five scales laid along the arc, each overlapping the next as a snake's do,
+ * a keeled leaf in the Viper's green with its edge darker and its keel lit, on a faint rail of the void's violet. In
+ * each `shimmer` a different scale catches the light down its keel, so the three frames ripple along the coil.
+ */
+function drawScalePlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const green = mix(palette.player, palette.pickup, 0.45);
+  const { radius, edge, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.8, mix(palette.ally, palette.void, 0.4), edge * 1.2, 0.1, 'butt');
+  const scales = 5;
+  const step = (PLATE_SWEEP * 1.6) / scales;
+  const first = angle - (step * (scales - 1)) / 2;
+  for (let i = 0; i < scales; i++) {
+    const a = first + i * step;
+    const fade = plateFade(at, a);
+    const [x, y] = platePoint(at, a, radius);
+    // Along the arc and out from it, so each scale points round the coil.
+    const tx = -Math.sin(a);
+    const ty = Math.cos(a);
+    const nx = Math.cos(a);
+    const ny = Math.sin(a);
+    const long = edge * 1.25;
+    const wide = edge * 0.8;
+    const leaf = (grow: number): void => {
+      ctx.beginPath();
+      ctx.moveTo(x + tx * long * grow, y + ty * long * grow);
+      ctx.quadraticCurveTo(x + nx * wide * grow, y + ny * wide * grow, x - tx * long * 0.8 * grow, y - ty * long * 0.8 * grow);
+      ctx.quadraticCurveTo(x - nx * wide * grow, y - ny * wide * grow, x + tx * long * grow, y + ty * long * grow);
+      ctx.closePath();
+    };
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = shade(green, -0.45);
+    leaf(1);
+    ctx.fill();
+    ctx.fillStyle = green;
+    leaf(0.72);
+    ctx.fill();
+    // The keel down its middle, lit on the scale that holds the light.
+    ctx.globalAlpha = (i % 3 === shimmer ? 0.95 : 0.45) * fade;
+    ctx.strokeStyle = i % 3 === shimmer ? palette.impact : shade(green, 0.45);
+    ctx.lineWidth = edge * 0.28;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x + tx * long * 0.6, y + ty * long * 0.6);
+    ctx.lineTo(x - tx * long * 0.45, y - ty * long * 0.45);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
  * Sunflower seeds — 0593, the Hamster Ball's own: five seeds laid along the arc end to end, each a dark
  * teardrop with two cream stripes down it, on a faint rail of the plastic's blue. In each `shimmer` a
  * different seed catches the light — a glint on its round end — so the three frames turn the hoard.
@@ -17041,6 +17378,9 @@ function drawPlate(ctx: Pen, at: PlateAt, look: ShieldLook, shimmer: number, pal
       return;
     case 'drips':
       drawDripPlate(ctx, at, shimmer, palette);
+      return;
+    case 'scales':
+      drawScalePlate(ctx, at, shimmer, palette);
       return;
     default: {
       const never: never = look;
@@ -17298,6 +17638,19 @@ export function drawKind(
     case 'duckTubesHit':
       drawPlayerShip(ctx, f, palette, 'duck', 2);
       return;
+    // 0666: the Viper.
+    case 'viper':
+    case 'viperHit':
+      drawPlayerShip(ctx, f, palette, 'viper', 0);
+      return;
+    case 'viperTube':
+    case 'viperTubeHit':
+      drawPlayerShip(ctx, f, palette, 'viper', 1);
+      return;
+    case 'viperTubes':
+    case 'viperTubesHit':
+      drawPlayerShip(ctx, f, palette, 'viper', 2);
+      return;
     // 0594: every ship's War Dance, its two poses at each stage — `danceOf` reads which from the name.
     case 'fighterDance1':
     case 'fighterDance2':
@@ -17340,7 +17693,13 @@ export function drawKind(
     case 'duckTubeDance1':
     case 'duckTubeDance2':
     case 'duckTubesDance1':
-    case 'duckTubesDance2': {
+    case 'duckTubesDance2':
+    case 'viperDance1':
+    case 'viperDance2':
+    case 'viperTubeDance1':
+    case 'viperTubeDance2':
+    case 'viperTubesDance1':
+    case 'viperTubesDance2': {
       const { ship, stage, pose } = danceOf(kind);
       const fit = fitNow(ship);
       drawPlayerShip(ctx, f, palette, ship, stage, gunNow(ship), fit.rim, fit.art, fit.livery, pose);
@@ -18501,6 +18860,36 @@ export function drawKind(
       disc(ctx, f, shade(palette.acid, 0.6), -0.1, -0.12, 0.24);
       disc(ctx, f, shade(palette.acid, 0.85), -0.16, -0.18, 0.11);
       return;
+    case 'venomSpit':
+      /*
+        VENOMA'S SPIT — 0666: a bead with its tail thrown out behind it, a spit and not a gobbet. The serpent's acid
+        is an irregular blob with no heading (0300) because its beads leave on every heading; hers leave in a fan
+        that is never more than a fifth of a turn off the nose, so a tail behind the head is never wrong by more
+        than that — and it is what tells her spit from the serpent's at a glance, with the ink.
+      */
+      trace(ctx, f, [
+        [-0.95, 0],
+        [-0.3, -0.24],
+        ...roundel(0.3, 0, 0.5, 12, -Math.PI * 0.62, Math.PI * 0.62),
+        [-0.3, 0.24],
+      ]);
+      seal(ctx);
+      glow(ctx, f, palette.player, 0.1, 0, 0.95, 0.55);
+      disc(ctx, f, shade(palette.player, 0.6), 0.32, -0.06, 0.24);
+      return;
+    case 'venomVoid':
+      /*
+        THE VIPER'S VOID BLAST — 0666: the serpent's ring (0248), a disc with a hole through it, in the player's
+        lavender where hers is the void's violet; a ring is the one shot with a hole, and the ink says whose.
+      */
+      ctx.arc(half, half, r * 0.8, 0, Math.PI * 2);
+      ctx.moveTo(half + r * 0.36, half);
+      ctx.arc(half, half, r * 0.36, 0, Math.PI * 2);
+      seal(ctx);
+      glow(ctx, f, palette.ally, 0, 0, 1.05, 0.7);
+      band(ctx, f, shade(palette.ally, 0.45), 0, 0, 0.5, 0.4, 0.85);
+      disc(ctx, f, shade(palette.ally, 0.75), 0, -0.58, 0.16);
+      return;
     case 'void':
       /*
         A RING — 0248: a disc with a hole through it, `evenodd`. The warden is a ring too and it is a
@@ -19396,6 +19785,36 @@ export function drawKind(
           [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
         ]);
       }
+      return;
+    }
+    case 'pickupSmite': {
+      /*
+        RED LIGHTNING — 0666: a cloud with a bolt forked down out of it. Told from the arc's face, which is a bolt
+        alone, by the cloud it falls from; from the bomb and the dance by the bolt. One outline, cloud and bolt.
+        Glyph at three quarters of the box and a bubble round it, on the arc face's terms — 0236.
+      */
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const deg = Math.PI / 180;
+      trace(ctx, fg, [
+        [0.72, -0.08],
+        [0.16, -0.08],
+        [0.02, 0.3],
+        [0.22, 0.3],
+        [-0.12, 0.9],
+        [-0.02, 0.42],
+        [-0.22, 0.42],
+        [-0.08, -0.08],
+        [-0.72, -0.08],
+        ...roundel(-0.42, -0.3, 0.32, 8, 150 * deg, 300 * deg),
+        ...roundel(0.02, -0.42, 0.36, 8, 205 * deg, 335 * deg),
+        ...roundel(0.44, -0.26, 0.3, 8, 250 * deg, 400 * deg),
+      ]);
+      seal(ctx);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
+      // The cloud's belly in shade, and the bolt's white heart down its middle.
+      poly(ctx, fg, shade(palette.enemy, -0.4), [[0.66, -0.08], [-0.66, -0.08], [-0.6, -0.2], [0.6, -0.2]], 0.8);
+      // Down the middle of the bolt's upper leg; the lower is too narrow to hold a line inside it.
+      seam(ctx, fg, palette.impact, 0.05, [[0.04, -0.04], [-0.08, 0.28]], 0.9);
       return;
     }
     case 'pickupWater': {
@@ -20584,7 +21003,19 @@ export function drawKind(
     case 'shieldDrip180c':
     case 'shieldDrip240a':
     case 'shieldDrip240b':
-    case 'shieldDrip240c': {
+    case 'shieldDrip240c':
+    case 'shieldScale0a':
+    case 'shieldScale0b':
+    case 'shieldScale0c':
+    case 'shieldScale120a':
+    case 'shieldScale120b':
+    case 'shieldScale120c':
+    case 'shieldScale180a':
+    case 'shieldScale180b':
+    case 'shieldScale180c':
+    case 'shieldScale240a':
+    case 'shieldScale240b':
+    case 'shieldScale240c': {
       const plate = shieldPlateOf(SPRITE[kind]);
       if (plate === null) throw new Error(`${kind} stands at no place on any ship's shell`);
       const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!, shellOrbit(plate.shell));

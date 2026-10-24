@@ -120,6 +120,8 @@ export const CUE_KINDS = [
   'shieldBack',
   // The paintball marker's — 0595: each ball leaving with a pneumatic pop.
   'paintball',
+  // Venoma's acid spray — 0666.
+  'spit',
   'threat',
   'hit',
   'kill',
@@ -147,6 +149,9 @@ export const CUE_KINDS = [
   'overdrive',
   'stormThrow',
   'storm',
+  // Red Lightning — 0666: the sky called on, and each bolt it lets fall.
+  'smite',
+  'smiteStrike',
   'whirlpool',
   'voidThrow',
   'rift',
@@ -178,6 +183,7 @@ export const CUE_KINDS = [
   'shieldStorm',
   'shieldSeeds',
   'shieldDrips',
+  'shieldScales',
   'shieldAurora',
   'shieldRunes',
   'shieldDisco',
@@ -1123,6 +1129,22 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(19), to: inKey(12), seconds: 0.05, gain: 0.5, attack: 0.001, curve: 4.5, drive: 0.15 },
       // The guns' shared bottom — 0102.
       { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.05, gain: 0.36, attack: 0.002, curve: 4, drive: 0.2 },
+    ],
+  },
+  /** Venoma's acid — 0666: a wet hiss through the teeth, and the guns' shared bottom under it. */
+  spit: {
+    twin: 'shot-appears',
+    hold: 2,
+    gain: 0.2,
+    glue: 0.12,
+    figure: [1, 0.72, 0.86, 0.72],
+    layers: [
+      // The hiss: bright noise through a narrow band, longer than the marker's breath and falling.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.46, attack: 0.002, curve: 3.6, lowFrom: 9000, lowTo: 4200, highFrom: 2600, q: 1.8 },
+      // The spit: a quick sine flicking down a fourth.
+      { wave: 'sine', from: inKey(24), to: inKey(19), seconds: 0.035, gain: 0.32, attack: 0.001, curve: 5 },
+      // The guns' shared bottom — 0102.
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.05, gain: 0.34, attack: 0.002, curve: 4, drive: 0.2 },
     ],
   },
   /**
@@ -2327,6 +2349,36 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(14), to: inKey(0), seconds: 0.14, gain: 0.6, attack: 0.001, curve: 3.2, drive: 0.35 },
     ],
   },
+  /** Red Lightning called — 0666: the sky drawn in, a low swell of noise rising under a fifth that climbs to the root above. */
+  smite: {
+    twin: 'bomb-appears',
+    air: 0.25,
+    hold: 6,
+    gain: 0.32,
+    glue: 0.1,
+    layers: [
+      { wave: 'noise', from: 700, to: 2600, seconds: 0.36, gain: 0.5, attack: 0.02, curve: 2, lowFrom: 2600, lowTo: 7000, highFrom: 300, q: 0.8, pan: 0.3, panTo: -0.3 },
+      { wave: 'square', from: inKey(7), to: inKey(12), seconds: 0.28, gain: 0.24, attack: 0.01, curve: 2.6, lowFrom: 1400, lowTo: 3600, highFrom: 200, q: 1.2 },
+      { wave: 'sine', from: inKey(0), to: inKey(12), seconds: 0.16, gain: 0.5, attack: 0.002, curve: 3, drive: 0.3 },
+    ],
+  },
+  /**
+   * A bolt of it lands — 0666: the storm's crack, shorter and with no after flickers, since eight of them fall in a
+   * second and each is its own. Less weight on the root than the storm's, and no duck: the track would pump eight times.
+   */
+  smiteStrike: {
+    twin: 'storm-strikes',
+    air: 0.45,
+    onGrid: true,
+    hold: 4,
+    gain: 0.26,
+    glue: 0.12,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.66, attack: 0.0003, curve: 5, lowFrom: 12000, lowTo: 6000, highFrom: 1500 },
+      { wave: 'noise', from: 4800, to: 1600, at: 0.004, seconds: 0.2, gain: 0.42, attack: 0.002, curve: 2.6, lowFrom: 8000, lowTo: 2600, highFrom: 700, drive: 0.4 },
+      { wave: 'sine', from: inKey(7), to: inKey(0), at: 0.004, seconds: 0.16, gain: 0.44, attack: 0.001, curve: 3, drive: 0.45 },
+    ],
+  },
   /**
    * The storm goes off — *"a blast of lightning with some after flickers."* One crack of it, bright
    * and hard, with the thunder's weight on the root under it; then the flickers, three short snaps of
@@ -2828,6 +2880,23 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(21), to: inKey(28), at: 0.09, seconds: 0.06, gain: 0.32, attack: 0.001, curve: 4.5, pan: 0.3 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.08, attack: 0.001, curve: 5, lowFrom: 3000, highFrom: 600 },
       { wave: 'sine', from: inKey(5), to: inKey(7), seconds: 0.12, gain: 0.28, attack: 0.002, curve: 4 },
+    ],
+  },
+  /** The shed scales' — 0666: a snake's hiss over a rattle of four dry clicks, and a low note rising a step under it. */
+  shieldScales: {
+    twin: 'shell-mark',
+    air: 0.3,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.22, gain: 0.12, attack: 0.01, curve: 2.4, lowFrom: 12000, highFrom: 4200, pan: -0.3, panTo: 0.3 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.26, attack: 0.0005, curve: 7, lowFrom: 9000, highFrom: 2400, q: 1.4 },
+      { wave: 'noise', from: 0, to: 0, at: 0.035, seconds: 0.02, gain: 0.24, attack: 0.0005, curve: 7, lowFrom: 9000, highFrom: 2400, q: 1.4, pan: 0.25 },
+      { wave: 'noise', from: 0, to: 0, at: 0.07, seconds: 0.02, gain: 0.22, attack: 0.0005, curve: 7, lowFrom: 9000, highFrom: 2400, q: 1.4, pan: -0.25 },
+      { wave: 'noise', from: 0, to: 0, at: 0.105, seconds: 0.02, gain: 0.2, attack: 0.0005, curve: 7, lowFrom: 9000, highFrom: 2400, q: 1.4 },
+      { wave: 'tri', from: inKey(7), to: inKey(9), seconds: 0.12, gain: 0.32, attack: 0.002, curve: 4 },
     ],
   },
   /** The aurora's — 0658: a shimmer of the key's own chord rising together, its curtains moving either side. */

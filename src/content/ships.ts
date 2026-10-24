@@ -29,12 +29,13 @@ import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
 import type { FlameKind } from './flames.ts';
 import type { StreakRule } from './score.ts';
+import type { ShotKind } from './shots.ts';
 import { SHELLS, SHELL_KINDS, type ShellKind, type ShieldShell } from './shells.ts';
 // 0612: who is aboard. `golfers.ts` imports this file for a type alone, so the two do not load each other.
 import { GOLFERS, figureOf, pilotOf, type Figure } from './golfers.ts';
 
 /** Every flyable ship. Closed. */
-export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball' | 'duck';
+export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'ball' | 'duck' | 'viper';
 
 export interface ShipRow extends Body {
   /** What the player would call it — the pilot select's line under the golfer. */
@@ -223,6 +224,13 @@ export interface ShipRow extends Body {
    * is a row's to say (0282), and the hangar may change it.
    */
   flame: FlameKind;
+  /**
+   * What its tubes fire in place of each fitted kind's own missile — 0666, the Viper's void blasts: *"missile
+   * turrets are the void blasts from serpent boss"*. The fitted kind still says how it flies, how hard it lands
+   * and whether it hunts; this shot is how it looks and how big it lands. Absent is the kind's own missile, which
+   * every other ship fires (0282: a default in shared code, the row's own where it has one).
+   */
+  tubeFire?: ShotKind;
 }
 
 /**
@@ -430,6 +438,8 @@ const FIREBIRD_HUB = wheelAt(13.6, -5.4, 1, 1.5);
 const ESTATE_STAR = wheelAt(14.2, -0.1, 0, 1);
 /** The paintball marker's mouth under the Aqua Duck's chin, drawn about (0, 1) — `DUCK_MUZZLE` in the bake, 0595. */
 const DUCK_MUZZLE = wheelAt(17.2, 1.2, 0, 1);
+/** The Viper's jaw, where her acid leaves, drawn about (0, 1) — `VIPER_MUZZLE` in the bake, 0666. */
+const VIPER_MUZZLE = wheelAt(17.6, 1.9, 0, 1);
 
 /**
  * `row` flying `gun` — 0525. Its own gun is the row as it is. Another's is the row with that gun, and a
@@ -567,7 +577,7 @@ export const BALL_RADIUS = 3;
 /** How far across from the ball's centre its tube cradles stand, in world units — on the axle, just outside the ball. */
 export const BALL_CRADLE = 3.5;
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird', 'estate', 'thunderbolt', 'ball', 'duck'];
+export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird', 'estate', 'thunderbolt', 'ball', 'duck', 'viper'];
 
 /**
  * Which hull a ship carrying `launchers` missile tubes is drawn as.
@@ -1104,6 +1114,75 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     shield: SHELLS.drips.shell,
     lamps: [],
     flame: 'bubbleJets',
+  },
+  /**
+   * Venoma Krait's Viper — `docs/decisions/0666-venoma-flies-the-viper.md`. The ship the intro has always blasted
+   * out of the port (`paintViper` in `src/render/port-bake.ts`), flyable: a racer built as a serpent, from the
+   * side as the cars are, in the predecessor's frame about (0, 1) (`drawViper` in the bake; `carMounts` holds
+   * every place below to the drawing) — a snake's head for a prow with fangs under the jaw, a bubble of glass on
+   * its back, a swept wing, a dorsal fin that hooks over like a tail about to strike, and a launcher on its back.
+   */
+  viper: {
+    label: 'Viper',
+    sprite: SPRITE.viper,
+    spriteHit: SPRITE.viperHit,
+    radius: 2,
+    health: 1,
+    damage: 0,
+    weapon: 'acid',
+    hulls: [
+      { base: SPRITE.viper, hit: SPRITE.viperHit },
+      { base: SPRITE.viperTube, hit: SPRITE.viperTubeHit },
+      { base: SPRITE.viperTubes, hit: SPRITE.viperTubesHit },
+    ],
+    shields: null,
+    // A hit ends the streak — 0653.
+    streak: 'unhit',
+    regen: null,
+    charge: null,
+    // 0666: striking — the fin coiled back, and then the head reared with the fin thrown forward.
+    dance: [
+      dancing([SPRITE.viper, SPRITE.viperDance1, SPRITE.viper, SPRITE.viperDance2], 6),
+      dancing([SPRITE.viperTube, SPRITE.viperTubeDance1, SPRITE.viperTube, SPRITE.viperTubeDance2], 6),
+      dancing([SPRITE.viperTubes, SPRITE.viperTubesDance1, SPRITE.viperTubes, SPRITE.viperTubesDance2], 6),
+    ],
+    // How far either side of the hull a borrowed gun's blades open from — the hull's half-height.
+    wingtip: 1.2,
+    // Her jaw, under the eye at the tip of the prow (`VIPER_MUZZLE` in the bake).
+    muzzle: VIPER_MUZZLE,
+    view: 'side',
+    // A borrowed gun stands on the head, ahead of the canopy, where a car's stands on its hood.
+    hardpoint: wheelAt(11.5, -1.8, 0, 1),
+    mountScale: 1,
+    // Each missile's nose in the face of the launcher on its back, between the canopy and the fin.
+    tubes: [[], [wheelAt(0.3, -4.25, 0, 1)], [wheelAt(0.9, -4.963, 0, 1), wheelAt(0.9, -3.537, 0, 1)]],
+    tubeLength: TURRET_NOSE,
+    tubeLook: 'nose',
+    hang: 'over',
+    // One engine, in the stern.
+    nozzles: [wheelAt(-15.8, 1.45, 0, 1)],
+    // Its canopy, the acid glass on its back.
+    cockpit: wheelAt(5.4, -2.6, 0, 1),
+    seat: null,
+    intro: { hangar: 1, outside: 1 },
+    // Fangs at the readout's corners: the Viper's green for the counts, the void's violet for the trim.
+    hud: { name: 'Fangs', motif: 'bracket', ink: { from: 'player', toward: 'pickup', by: 0.45 }, trim: { from: 'ally', toward: 'void', by: 0.4 } },
+    hangs: null,
+    wheels: null,
+    // 0666: the Wyrm-Ship's green as it came, a krait's bands, a diamondback's diamonds, and a lit venom line.
+    arts: ['wyrmGreen', 'kraitBands', 'diamondback', 'venomLine'],
+    // Scales shed off a snake's back, laid round it — 0666.
+    shield: SHELLS.scales.shell,
+    lamps: [],
+    /*
+      ⚠️ **THE STANDARD FLAME, AND THE INTRO'S VIOLET WAS WEIGHED — 0666.** The port's Viper burns `#b060c0`, three
+      degrees of hue off the serpent's void (`#e86bff`), and a trail behind the player's own ship in the colour of
+      a void blast is 0295's case exactly — `tests/flames.test.ts` refuses a flame that near a hostile shot. The
+      Nebula Burn is the violet that clears it, and Cosmo's sells it.
+    */
+    flame: 'standard',
+    // Her tubes throw the serpent's void, in the player's lavender — 0666.
+    tubeFire: 'venomVoid',
   },
 };
 

@@ -21,6 +21,7 @@ import type { LevelRow } from '../src/content/levels.ts';
 import { BOMB_KINDS, NONE_SHUT, PICKUP_KINDS, PICKUPS, drawFace, facesShut, weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, SHIP_KINDS, fitted, hullFor, type ShipKind } from '../src/content/ships.ts';
 import { SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
+import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SPRITE_KINDS, UNSEEN } from '../src/content/sprites.ts';
 import { PALETTES, DEFAULT_PALETTE } from '../src/content/palette.ts';
 import { drawKind } from '../src/render/bake.ts';
@@ -39,10 +40,12 @@ import { tracingPen } from './paths.ts';
 /*
   0595: MMXXVI's Water Cannon waits on its pilot as the War Dance waits on Unity, so the record these hold
   the dance against has MMXXVI open — what they ask is the dance's gate, and the cannon's is
-  `tests/duck.test.ts`'s.
+  `tests/duck.test.ts`'s. 0666: and Venoma's Red Lightning on her, so every tier is finished as well; its gate is
+  `tests/venoma.test.ts`'s.
 */
-const LOCKED = { ...pilotRecord(initialHangar), bought: GOLFERS.mmxxvi.opens.bought };
-const OPENED = { ...pilotRecord({ ...initialHangar, crashes: GOLFERS.unity.opens.crashes }), bought: GOLFERS.mmxxvi.opens.bought };
+const EVERY_TIER = Object.fromEntries(DIFFICULTY_KINDS.map((tier) => [tier, true])) as typeof initialHangar.finished;
+const LOCKED = { ...pilotRecord({ ...initialHangar, finished: EVERY_TIER }), bought: GOLFERS.mmxxvi.opens.bought };
+const OPENED = { ...pilotRecord({ ...initialHangar, crashes: GOLFERS.unity.opens.crashes, finished: EVERY_TIER }), bought: GOLFERS.mmxxvi.opens.bought };
 const DANCE_FACE = BOMB_KINDS.indexOf('warDance');
 const DANCE = SPECIALS.warDance.dance!;
 
@@ -61,7 +64,9 @@ describe('0594 — the War Dance is offered once Unity is open', () => {
     expect(SPECIALS.warDance.opensWith).toBe('unity');
     // 0595: and the Water Cannon on MMXXVI, on the same terms; every other special on nobody.
     expect(SPECIALS.waterCannon.opensWith).toBe('mmxxvi');
-    for (const kind of SPECIAL_KINDS) if (kind !== 'warDance' && kind !== 'waterCannon') expect(SPECIALS[kind].opensWith, kind).toBe(null);
+    // 0666: and Red Lightning on Venoma.
+    expect(SPECIALS.redLightning.opensWith).toBe('venoma');
+    for (const kind of SPECIAL_KINDS) if (kind !== 'warDance' && kind !== 'waterCannon' && kind !== 'redLightning') expect(SPECIALS[kind].opensWith, kind).toBe(null);
     expect(DANCE_FACE, 'the War Dance is no face of the bomb pickup at all').toBeGreaterThanOrEqual(0);
   });
 
@@ -88,7 +93,9 @@ describe('0594 — the War Dance is offered once Unity is open', () => {
   it('a run puts no bomb pickup on the War Dance while it is shut, through the real frame', () => {
     const level: LevelRow = {
       waves: [],
-      pickups: Array.from({ length: 60 }, (_, i) => ({ at: 120 + i * 40, lane: 50 })),
+      // 0666: a hundred and twenty, and it was sixty: an eleventh face on the bomb pickup moved the seeded draws, and
+      // the thirteen sixty gave never showed the dance with nothing shut — a sample too small for the claim it backs.
+      pickups: Array.from({ length: 120 }, (_, i) => ({ at: 120 + i * 40, lane: 50 })),
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -102,7 +109,7 @@ describe('0594 — the War Dance is offered once Unity is open', () => {
       const bomb = world.pickupKinds.bomb;
       const faces: number[] = [];
       const seen = new Set<number>();
-      for (let step = 0; step < 4000; step++) {
+      for (let step = 0; step < 8000; step++) {
         frame.step();
         for (let i = 0; i < world.pickups.size; i++) {
           const item = world.pickups.at(i);

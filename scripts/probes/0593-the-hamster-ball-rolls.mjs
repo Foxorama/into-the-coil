@@ -14,7 +14,8 @@ export const PROBES = [
     suite: 'tests/ball.test.ts',
     broke: 'Unity open from the first run, with no crash asked',
     guard: 'opens after ten lives lost to something flown into, and the band counts them down',
-    edit: { path: 'src/content/golfers.ts', find: '    opens: { after: [], crashes: 10, bought: 0 },', replace: '    opens: { after: [], crashes: 0, bought: 0 },' },
+    // Re-anchored by 0666, which added the tiers.
+    edit: { path: 'src/content/golfers.ts', find: '    opens: { after: [], crashes: 10, bought: 0, tiers: [] },', replace: '    opens: { after: [], crashes: 0, bought: 0, tiers: [] },' },
   },
   {
     decision: '0593',

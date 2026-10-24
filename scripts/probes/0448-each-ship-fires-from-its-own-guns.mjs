@@ -49,8 +49,9 @@ export const PROBES = [
     guard: 'THE TUBES: a missile leaves its own tube',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    reset(missile, w.ship.along + tube.along, w.ship.across + tube.across, row);',
-      replace: '    reset(missile, w.ship.along + 3, w.ship.across + 1.8 * side, row);',
+      // Re-anchored by 0666: what leaves the tube is `look`, the ship's own where its row says one.
+      find: '    reset(missile, w.ship.along + tube.along, w.ship.across + tube.across, look);',
+      replace: '    reset(missile, w.ship.along + 3, w.ship.across + 1.8 * side, look);',
     },
   },
   {

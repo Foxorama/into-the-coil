@@ -76,13 +76,15 @@ export interface Surface {
   bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, look?: BoltLook): void;
 }
 
-/** Which inks a bolt is stroked in — 0545. Closed: the player's, the enemy's, the flame's, and since 0595 the water's. */
-export type BoltTone = 0 | 1 | 2 | 3;
+/** Which inks a bolt is stroked in — 0545. Closed: the player's, the enemy's, the flame's, since 0595 the water's, and since 0666 Red Lightning's. */
+export type BoltTone = 0 | 1 | 2 | 3 | 4;
 export const BOLT_PLAYER: BoltTone = 0;
 export const BOLT_HOSTILE: BoltTone = 1;
 export const BOLT_FLAME: BoltTone = 2;
 /** The Water Cannon's jet — 0595: the frost's aquamarine round a white heart. */
 export const BOLT_WATER: BoltTone = 3;
+/** Red Lightning — 0666: a scarlet of its own round a white heart. */
+export const BOLT_SMITE: BoltTone = 4;
 
 /** Which stack a bolt is stroked in — 0470, 0549, 0610. Closed: a flash, a beam, a rope of fire, a strand of spray. */
 export type BoltLook = 0 | 1 | 2 | 3;

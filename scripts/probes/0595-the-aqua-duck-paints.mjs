@@ -9,7 +9,8 @@ export const PROBES = [
     suite: 'tests/duck.test.ts',
     broke: 'MMXXVI open from the first run, with nothing bought',
     guard: 'opens after five things bought at Cosmo’s, and the band counts them down',
-    edit: { path: 'src/content/golfers.ts', find: '    opens: { after: [], crashes: 0, bought: 5 },', replace: '    opens: { after: [], crashes: 0, bought: 0 },' },
+    // Re-anchored by 0666, which added the tiers.
+    edit: { path: 'src/content/golfers.ts', find: '    opens: { after: [], crashes: 0, bought: 5, tiers: [] },', replace: '    opens: { after: [], crashes: 0, bought: 0, tiers: [] },' },
   },
   {
     decision: '0595',

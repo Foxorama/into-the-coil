@@ -652,6 +652,8 @@ export function lockHint(lock: PilotLock, record: PilotRecord, name: string): st
   */
   if (left.crashes > 0) owed.push('lose ' + left.crashes + ' more ' + (left.crashes === 1 ? 'life' : 'lives') + ' to a crash');
   if (left.bought > 0) owed.push('buy ' + left.bought + ' more ' + (left.bought === 1 ? 'thing' : 'things') + ' at Cosmo’s');
+  // 0666: and the tiers still to finish, by the word the player says for each.
+  if (left.tiers.length > 0) owed.push('finish the game on ' + listed(left.tiers.map((tier) => DIFFICULTIES[tier].short)));
   if (owed.length === 0) return null;
   const said = listed(owed);
   return said.charAt(0).toUpperCase() + said.slice(1) + ' to fly ' + name;

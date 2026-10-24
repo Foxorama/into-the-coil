@@ -21,6 +21,7 @@ import {
 import { type HangarAction, type HangarState, initialHangar, reduceHangar } from './slices/hangar.ts';
 import { LEVEL_KINDS } from '../content/levels.ts';
 import { CREDITS } from '../content/credits.ts';
+import { GOLFERS, pilotOf } from '../content/golfers.ts';
 
 /** Every slice. Closed — a new one fails `State` to build until it has been given a shape below. */
 // 0521: and the hangar, which outlives every run as the settings do.
@@ -113,6 +114,8 @@ const SHOW_GAME_OVER: ScreenAction = { slice: 'screen', type: 'show', screen: 'g
 const SHOW_ENDED: ScreenAction = { slice: 'screen', type: 'show', screen: 'ended' };
 // The run finished goes to the finale, which expires into the victory screen — 0418.
 const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outro' };
+// Or, for a pilot the story is not told round, straight to the victory screen the finale expires into — 0666.
+const SHOW_VICTORY: ScreenAction = { slice: 'screen', type: 'show', screen: 'victory' };
 // A run that reaches the title is over — 0558.
 const END_RUN: RunAction = { slice: 'run', type: 'ended' };
 // A life lost to a body — 0592.
@@ -160,7 +163,8 @@ function agree(state: State): State {
   if (state.screen.current === 'cleared' && state.run.level >= LEVEL_KINDS.length) {
     const won = reduceHangar(state.hangar, { slice: 'hangar', type: 'won', ship: state.run.ship });
     const hangar = reduceHangar(won, { slice: 'hangar', type: 'finished', difficulty: state.run.difficulty });
-    return { ...state, screen: reduceScreen(state.screen, SHOW_FINALE), hangar };
+    // 0666: and the finale is the story's — a run flown by a pilot it is not told round goes to the victory screen.
+    return { ...state, screen: reduceScreen(state.screen, GOLFERS[pilotOf(state.run.ship)].story ? SHOW_FINALE : SHOW_VICTORY), hangar };
   }
   return state;
 }

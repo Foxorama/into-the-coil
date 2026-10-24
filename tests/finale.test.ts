@@ -224,14 +224,16 @@ describe('who was in the Viper, and what the two of them say — 0418, 0426', ()
     for (const chosen of GOLFER_KINDS) {
       const pool = rescuable(chosen);
       expect(pool, `${chosen} could be found in the Viper while flying the fighter`).not.toContain(chosen);
-      expect([...pool].sort(), `a golfer who was not chosen could never be the one found`).toEqual(GOLFER_KINDS.filter((k) => k !== chosen).sort());
+      // 0666: every golfer the story is told round — not Venoma, who is the Viper's pilot.
+      expect([...pool].sort(), `a golfer who was not chosen could never be the one found`).toEqual(GOLFER_KINDS.filter((k) => k !== chosen && GOLFERS[k].story).sort());
     }
   });
 
   it('gives every golfer lines of their own to say either way, each short enough to be read before its bubble goes', () => {
     // In SECONDS: a line types out at `LETTER_STEPS` a letter and must then stay up a second and a half.
     const heldFor = (bubble: { from: number; to: number }, line: string): number => (bubble.to - (bubble.from + line.length * LETTER_STEPS)) / STEPS_PER_SECOND;
-    for (const kind of GOLFER_KINDS) {
+    // 0666: every golfer who can be in the finale — one the story is not told round is never found and never finds.
+    for (const kind of GOLFER_KINDS.filter((k) => GOLFERS[k].story)) {
       const row = GOLFERS[kind];
       expect(row.saved.length, `${row.name} has nothing to say when found`).toBeGreaterThanOrEqual(3);
       expect(row.saving.length, `${row.name} has nothing to say as the rescuer`).toBeGreaterThanOrEqual(3);

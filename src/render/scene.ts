@@ -23,9 +23,9 @@ import { PLAYER_MARGIN, boxPastFor } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, BOLT_SPRAY, BOLT_WATER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, BOLT_SMITE, BOLT_SPRAY, BOLT_WATER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
 import { TETHER_BOLT_KIND } from '../content/weapons.ts';
-import { JET_BOLT_KIND, SPECIALS, SPECIAL_KINDS } from '../content/specials.ts';
+import { JET_BOLT_KIND, SMITE_BOLT_KIND, SPECIALS, SPECIAL_KINDS } from '../content/specials.ts';
 import { streamAcross, streamAlong, streamOldest, streamWidth, streamYoungest } from '../sim/stream.ts';
 
 /**
@@ -910,7 +910,8 @@ export function paintBolts(
     }
     const beam = e.kind === BEAM_BOLT_KIND;
     const hostile = e.kind === RAIN_BOLT_KIND || beam;
-    const tone = hostile ? BOLT_HOSTILE : BOLT_PLAYER;
+    // 0666: Red Lightning in its own scarlet, and never a warning line — the player's, landing as it is drawn.
+    const tone = hostile ? BOLT_HOSTILE : e.kind === SMITE_BOLT_KIND ? BOLT_SMITE : BOLT_PLAYER;
     const warning = hostile && e.lifeFor > (beam ? e.holdFor : BOLT_STEPS);
     /*
       ⚠️ **AND A JAGGED BEAM IS A ZIGZAG, WARNED ALONG THE SAME ZIGZAG — 0388.** *"A random jagged

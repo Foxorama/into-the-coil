@@ -14,8 +14,9 @@ export const PROBES = [
     guard: 'a run finished wins its ship, at the finale',
     edit: {
       path: 'src/state/root.ts',
-      find: '    return { ...state, screen: reduceScreen(state.screen, SHOW_FINALE), hangar };',
-      replace: '    return { ...state, screen: reduceScreen(state.screen, SHOW_FINALE) };',
+      // Re-anchored by 0666: a pilot with no story goes to the victory screen instead.
+      find: '    return { ...state, screen: reduceScreen(state.screen, GOLFERS[pilotOf(state.run.ship)].story ? SHOW_FINALE : SHOW_VICTORY), hangar };',
+      replace: '    return { ...state, screen: reduceScreen(state.screen, GOLFERS[pilotOf(state.run.ship)].story ? SHOW_FINALE : SHOW_VICTORY) };',
     },
   },
   {

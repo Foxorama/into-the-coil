@@ -195,7 +195,7 @@ export function waresBought(state: HangarState): number {
 
 /** What a pilot's lock is read against — 0592: the hangar's wins and crashes, and what has been bought. */
 export function pilotRecord(state: HangarState): PilotRecord {
-  return { won: state.won, crashes: state.crashes, bought: waresBought(state) };
+  return { won: state.won, crashes: state.crashes, bought: waresBought(state), finished: state.finished };
 }
 
 /**

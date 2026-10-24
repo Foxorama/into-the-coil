@@ -40,8 +40,9 @@ export const PROBES = [
     guard: 'is any golfer but the one flying',
     edit: {
       path: 'src/content/golfers.ts',
-      find: '  return GOLFER_KINDS.filter((kind) => kind !== chosen);',
-      replace: '  return GOLFER_KINDS.filter(() => chosen !== null);',
+      // Re-anchored by 0666, which leaves out a pilot the story is not told round.
+      find: '  return GOLFER_KINDS.filter((kind) => kind !== chosen && GOLFERS[kind].story);',
+      replace: '  return GOLFER_KINDS.filter((kind) => chosen !== null && GOLFERS[kind].story);',
     },
   },
   {
