@@ -1111,6 +1111,53 @@ ${each('-action-cursor')} {
   pointer-events: none;
 }
 .itc-playing-hud-shown { display: flex; }
+/*
+  ── THE PLACE A RUN OPENS IN — 0661 ──────────────────────────────────────────────────────────────
+
+  *"Level descriptions."* Every later place is named and said by its crossing (0340); the first is
+  flown into from the intro, and was never said at all. So a run's first seconds carry the crossing's
+  two lines, in its type, under the strip and clear of the middle where the ship is (0063's reason),
+  taking no pointer, and then fade by themselves. A pause or a menu takes them down.
+*/
+.itc-playing-arrival {
+  position: absolute;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35em;
+  width: min(90%, 40ch);
+  text-align: center;
+  font: 600 clamp(0.85rem, 2.6cqh, 1.25rem)/1.3 system-ui, sans-serif;
+  color: var(--itc-ink);
+  text-shadow: 0 0 0.4em var(--itc-void, #000), 0 0 0.15em var(--itc-void, #000);
+  pointer-events: none;
+}
+.itc-playing-arrival-shown { display: flex; animation: itc-arrival 4.5s ease-out both; }
+.itc-playing-arrival-place {
+  margin: 0;
+  font-size: clamp(1.1rem, min(4.4cqw, 7cqh), 2.3rem);
+  line-height: 1.1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  /* The crossing's name ink — its place's colour half way to white — written white-first, the same mix. */
+  color: color-mix(in srgb, white 55%, var(--itc-accent, var(--itc-ink)));
+  text-shadow: 0 0 0.7em color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 70%, transparent), 0 0 0.3em var(--itc-void, #000);
+}
+.itc-playing-arrival-voyage { margin: 0; font-weight: 400; opacity: 0.92; }
+@keyframes itc-arrival {
+  0% { opacity: 0; translate: 0 0.6em; }
+  12% { opacity: 1; translate: 0 0; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* For a player who asked for less motion, the same few seconds without the rise. */
+@keyframes itc-arrival-still { 0% { opacity: 0; } 8% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .itc-playing-arrival-shown { animation-name: itc-arrival-still; }
+}
 .itc-playing-hud-group { display: flex; gap: 0.4em; align-items: center; }
 /*
   On a touch screen the discs say the stacks' counts, so the readout's two say nothing new — 0437.
@@ -4634,6 +4681,16 @@ interface CrossingParts {
  * place is next or how a bake is going; `src/app/mount.ts` owns both and hands over what to say, on
  * the terms `setHud`, `setChoice` and `setNowPlaying` already state.
  */
+/**
+ * The place a run opens in, as a run's first seconds name it — 0661. The crossing's words for a place
+ * the run did not cross to: its title, its `voyage`, and its colour, all `src/content/themes.ts`'s.
+ */
+export interface Arrival {
+  place: string;
+  voyage: string;
+  accent: string;
+}
+
 export interface Crossing {
   /** The place being crossed to, in `src/content/themes.ts`'s own words. */
   place: string;
@@ -5024,6 +5081,12 @@ export interface Chrome {
    * caller decides the resolution, and there are two things here that can change in a whole crossing.
    */
   setCrossing(crossing: Crossing | null): void;
+  /**
+   * Name the place a run has just opened in, and say its line — 0661, *"level descriptions"*. Over the
+   * game, under the strip, for a few seconds, then gone by itself; `null` takes it down at once. Every
+   * later place is said by its crossing (0340), so the shell calls this only where a run begins.
+   */
+  setArrival(arrival: Arrival | null): void;
   /** Say on the Save tab where the save is kept and how safe it is there — 0641. One line a paragraph. */
   setNote(lines: readonly string[]): void;
   /**
@@ -6978,6 +7041,20 @@ export function makeChrome(
   strip.className = 'itc-playing-strip';
   strip.appendChild(hud);
   top.appendChild(strip);
+  /*
+    0661: the place a run opens in, named under the strip. Built once and written by `setArrival`; it
+    takes itself down when its own fade ends, so nothing has to time it.
+  */
+  const arrival = document.createElement('div');
+  arrival.className = 'itc-playing-arrival';
+  arrival.setAttribute('role', 'status');
+  const arrivalPlace = document.createElement('p');
+  arrivalPlace.className = 'itc-playing-arrival-place';
+  const arrivalVoyage = document.createElement('p');
+  arrivalVoyage.className = 'itc-playing-arrival-voyage';
+  arrival.append(arrivalPlace, arrivalVoyage);
+  arrival.addEventListener('animationend', () => arrival.classList.remove('itc-playing-arrival-shown'));
+  top.appendChild(arrival);
   elements.push(top);
 
   /*
@@ -8254,6 +8331,8 @@ export function makeChrome(
       }
       const fitting = screen !== null && SCREENS[screen].stand !== null;
       hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting || fitting));
+      // 0661: a place's name is over the run it opened, and goes with it — a pause or a menu takes it down.
+      if (screen === null || !SCREENS[screen].steps || !SCREENS[screen].inRun) arrival.classList.remove('itc-playing-arrival-shown');
       // The score with it, on its terms: up wherever the ship flies, the break and the burn too — 0428.
       scoreBox.classList.toggle('itc-playing-score-shown', screen !== null && ((SCREENS[screen].steps && SCREENS[screen].inRun) || counting));
       // 0511: the pause button where a pause is offered, and nowhere else.
@@ -8842,6 +8921,16 @@ export function makeChrome(
           return line;
         }),
       );
+    },
+    setArrival(said: Arrival | null): void {
+      arrival.classList.remove('itc-playing-arrival-shown');
+      if (said === null) return;
+      arrivalPlace.textContent = said.place;
+      arrivalVoyage.textContent = said.voyage;
+      arrival.style.setProperty('--itc-accent', said.accent);
+      // A read of the box between the two, so the fade starts over for a second run rather than resuming.
+      void arrival.offsetWidth;
+      arrival.classList.add('itc-playing-arrival-shown');
     },
     setCrossing(crossing: Crossing | null): void {
       const parts = panels.travel?.crossing;

@@ -5,7 +5,9 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { hudBar, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { fly, launch, openSettings, shown as shownScreen } from './title.ts';
+import { fly, launch, openRoom, openSettings, shown as shownScreen } from './title.ts';
+import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
@@ -833,6 +835,59 @@ describe.runIf(chromePath)('0465 — the chrome fits the phone', () => {
       const column = Math.max(...m.discs.map((d) => d.bottom)) - Math.min(...m.discs.map((d) => d.top));
       expect(column / height, `at ${at} the discs take ${((100 * column) / height).toFixed(1)} % of the height`).toBeLessThanOrEqual(0.5);
     }
+    await page.context().close();
+  });
+});
+
+describe.runIf(chromePath)('0661 — level descriptions', () => {
+  const opening = THEMES[LEVELS[LEVEL_KINDS[0]!].theme];
+
+  it('THE ASK, IN PIXELS: a run opens naming its place and saying its line, under the strip, clear of the ship, and gone in seconds', async () => {
+    const page = await open();
+    await fly(page);
+    // A claim, not a wait: the card is laid on with the run, so five seconds after the readout is up is plenty.
+    const up = await page.waitForSelector('.itc-playing-arrival-shown', { state: 'attached', timeout: 5_000 }).then(
+      () => true,
+      () => false,
+    );
+    expect(up, 'the run opened and nothing named its place').toBe(true);
+    const seen = await page.evaluate(() => {
+      const card = document.querySelector<HTMLElement>('.itc-playing-arrival');
+      const strip = document.querySelector<HTMLElement>('.itc-playing-strip');
+      if (card === null || strip === null) return null;
+      const box = card.getBoundingClientRect();
+      return {
+        place: card.querySelector('.itc-playing-arrival-place')?.textContent ?? '',
+        voyage: card.querySelector('.itc-playing-arrival-voyage')?.textContent ?? '',
+        top: box.top,
+        bottom: box.bottom,
+        middle: (box.left + box.right) / 2,
+        stripBottom: strip.getBoundingClientRect().bottom,
+        pointer: getComputedStyle(card).pointerEvents,
+      };
+    });
+    expect(seen, 'the arrival card is not on the page').not.toBeNull();
+    expect(seen!.place).toBe(opening.title);
+    expect(seen!.voyage).toBe(opening.voyage);
+    // Under the strip, and above the middle third of a 720 px screen, which is where the ship flies.
+    expect(seen!.top, 'the card is under the strip').toBeGreaterThanOrEqual(seen!.stripBottom);
+    expect(seen!.bottom, 'the card reaches into the middle of the screen').toBeLessThanOrEqual(720 / 3);
+    expect(Math.abs(seen!.middle - 640), 'the card is not centred across the screen').toBeLessThanOrEqual(2);
+    expect(seen!.pointer, 'the card takes the pointer from a thumb that is steering').toBe('none');
+    // Gone by itself: its fade is 4.5 s, so 8 s is a budget it cannot be in the middle of.
+    await page.waitForSelector('.itc-playing-arrival-shown', { state: 'detached', timeout: 8_000 });
+    expect(await page.locator('.itc-playing-arrival').isVisible(), 'the card is still up after its fade').toBe(false);
+    await page.context().close();
+  });
+
+  it('and the music room says every place’s line under its name', async () => {
+    const page = await open();
+    await openRoom(page);
+    const hints = await page.evaluate(
+      (p: string) => [...document.querySelectorAll<HTMLElement>(`.${p}action-hint`)].map((h) => h.textContent ?? ''),
+      prefixFor('music'),
+    );
+    for (const kind of THEME_KINDS) expect(hints, `${THEMES[kind].title} has no line in the room`).toContain(THEMES[kind].voyage);
     await page.context().close();
   });
 });

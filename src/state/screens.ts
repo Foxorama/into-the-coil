@@ -1787,7 +1787,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     leads: false,
     stand: null,
     actions: [
-      ...THEME_KINDS.map((kind) => ({ label: THEMES[kind].title, hint: '' })),
+      // 0661: and each place's line under its name, the one the crossing says of it — *"level descriptions"*.
+      ...THEME_KINDS.map((kind) => ({ label: THEMES[kind].title, hint: THEMES[kind].voyage })),
       { label: 'Play all', hint: 'each place in turn, then round again' },
       { label: 'Back', hint: '' },
     ],
