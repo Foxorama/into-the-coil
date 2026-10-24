@@ -2579,10 +2579,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     player who has seen it is one press from the run.
   */
   /**
-   * Whether a pointer's press on the highlighted pilot flies them: a pointer has chosen on the pilot
-   * screen, or a run has been flown. False at boot, so a thumb's first landing on a card is a look.
+   * Whether a press on the highlighted pilot flies them: a pointer has chosen on the pilot screen, the
+   * cursor has pressed the pilot it is on (0667), or a run has been flown. False at boot, so a thumb's
+   * first landing on a card is a look, and a pad's first A on the band is too; a step stands it down.
    */
   let pilotArmed = false;
+  /** Arm the highlighted pilot or stand them down, and say which on the title's band — 0667. */
+  const armPilot = (armed: boolean): void => {
+    pilotArmed = armed;
+    chrome.setArmed('pilot', armed);
+  };
   /**
    * Which of Cosmo's shelves is in view and which ware each has picked — 0523's window, and a shelf per
    * table since 0542. The shell's, and kept for nothing past the visit. The ware in the window is the
@@ -2776,7 +2782,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setBandShown('credits', state.hangar.finished[state.settings.difficulty]);
   }
   const startRun = (): void => {
-    pilotArmed = true;
+    armPilot(true);
     const ship = GOLFERS[state.settings.pilot].ship;
     // 0524: on the special the hangar fitted that ship with — its own, until a win lets it borrow one.
     // 0526: and with the gun it fitted — the ship's own, until a win lets it borrow one.
@@ -2972,7 +2978,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         pilot is looked at there to be fitted out, and *Fly* is the title's. Read off the shown row's band.
       */
       const takes = SCREENS[state.screen.current].choices.some((c) => c.name === 'pilot' && c.press === 'takes');
-      if (takes && kind === state.settings.pilot && (!pointer || pilotArmed)) {
+      /*
+        ⚠️ **AND THE CURSOR'S PRESS LOOKS FIRST TOO — 0667**, amending 0513's one-press rule for a pad and a
+        keyboard. A pad browsing a band of faces is the thumb's case: B from the hangar, down past the quiet row
+        onto the band, right, A — and a browse was a twenty-second intro. So a cursor's press on the pilot the
+        band is on arms them, and a second flies; a step along the band is a look and arms nothing.
+      */
+      const pressed = kind === state.settings.pilot;
+      if (takes && pressed && pilotArmed) {
         // 0659: the press that flies is a confirm, as *Fly* is.
         if (audioOut.ready()) speaker.play('confirm');
         fly();
@@ -2980,7 +2993,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       }
       dispatch({ slice: 'settings', type: 'pilot', pilot: kind });
       showPilot();
-      pilotArmed = true;
+      armPilot(pointer || (takes && pressed));
     }
     // 0512: the touch section's two. `HAND_KINDS` and `STEER_KINDS` ARE the orders they were built in.
     else if (name === 'hand') {

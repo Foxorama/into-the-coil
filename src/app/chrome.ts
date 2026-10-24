@@ -145,6 +145,13 @@ const BANDED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].ch
 const banded = (rule: (p: string) => string): string => BANDED.map((screen) => rule(prefixFor(screen))).join(', ');
 
 /**
+ * The screens that are tabs of one place and stand on no stand — Settings, Controls, How to play and Save
+ * (0667). Their strip is one strip to the player, so it stands at one height on every tab. Read off the
+ * rows, on `FACED`'s terms: the hangar's tabs have their stand, which lays them out, and are not these.
+ */
+const TABBED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].tabs.length > 0 && SCREENS[screen].stand === null);
+
+/**
  * The title's star sky — 0437: three layers, far to near, each a handful of soft dots on a tile of
  * its own size, drifting a whole number of tiles per loop at its own speed. Placed by a fixed hash
  * rather than a stream: it is the stylesheet's, written once at load, and the same sky every time.
@@ -292,6 +299,18 @@ ${each('-panel')} {
     class, so an extension fails as an unprefixed class name.)
   */
   font: 600 clamp(0.85rem, 5.4cqh, 1.25rem)/1.35 system-ui, sans-serif;
+}
+/*
+  ⚠️ **AND A PLACE'S TABS STAND AT THE TOP — 0667.** Centred on its own content, each tab's panel put its
+  strip at its own height: at 1280x720 it sat at 84, 92 and 189 px across three of the four, and a step
+  along the strip moved it out from under the cursor. A fixed margin above and the auto one below keep it
+  where it is, with the content filling down; it still falls back to the top and scrolls when it overflows.
+  On a phone's height the margin is the one thing on the screen with nothing to say: How to play scrolled by
+  10 px at 480x320 with it, and a touch Settings by 8 at 667x375, so there it is none.
+*/
+${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { margin-top: min(2rem, 6cqh); }
+@container (max-height: 460px) {
+  ${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { margin-top: 0; }
 }
 .itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem); letter-spacing: 0.02em; margin: 0; }
 /*
@@ -930,8 +949,11 @@ ${each('-action')} {
   The hint under a control's label. A block, so it takes its own line inside the button rather than
   running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
   glance, and the choice is the whole screen.
+
+  ⚠️ **EVERY SCREEN'S, BY each() — 0667.** It named four screens by hand, and Cosmo's was not one, so
+  its one hinted action read as a single run of words with no break between the label and the hint.
 */
-.itc-title-action-hint, .itc-music-action-hint, .itc-save-action-hint, .itc-controls-action-hint {
+${each('-action-hint')} {
   display: block;
   /* A floor, so the smallest phone's card does not set its hint at eight pixels — 0370. */
   font-size: max(0.62em, 0.7rem);
@@ -975,9 +997,6 @@ ${each('-action')} {
   for its reason: a row that holds by a margin of fonts is not a rule.
 */
 .itc-title-choices > :not(.itc-title-action-lead) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-${each('-action:hover')} {
-  background: rgba(255, 255, 255, 0.12);
-}
 /*
   ⚠️ An outline OFFSET from the border, not a colour change. A focus ring that only recolours is
   invisible to the high-contrast and colour-blind palettes 0024 promises, and those palettes exist
@@ -2036,6 +2055,28 @@ ${faced((p) => `.${p}pilot-line > .${p}pilot-name`)} { font-weight: 800; letter-
 ${faced((p) => `.${p}pilot-line > .${p}pilot-craft`)} { color: var(--itc-ally, var(--itc-ink)); font-weight: 700; }
 ${faced((p) => `.${p}pilot-line > .${p}pilot-gun`)} { opacity: 0.85; font-weight: 500; }
 ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.55em; color: var(--itc-ink); opacity: 0.5; }
+/*
+  ── ARMED — 0667 ─────────────────────────────────────────────────────────────────────────────────
+
+  A press on the pilot the band is on arms them, and the next flies. Said twice, so neither carries it
+  alone: a second ring round the face in the run's other ink, and the word at the line's head in a pill,
+  with no middot after it. The line's parts are inline by the rule above, so the hidden one is put away here.
+*/
+${faced((p) => `.${p}pilot-line > .${p}pilot-armed`)} {
+  margin-right: 0.6em;
+  padding: 0.05em 0.55em;
+  border-radius: 999px;
+  background: var(--itc-ally, var(--itc-ink));
+  color: var(--itc-void);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+${faced((p) => `.${p}pilot-line > .${p}pilot-armed[hidden]`)} { display: none; }
+${faced((p) => `.${p}pilot-line > .${p}pilot-armed + *::before`)} { content: none; }
+${faced((p) => `.${p}band-armed .${p}option-face.${p}option-on > canvas`)} {
+  box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0 6px var(--itc-ally, var(--itc-ink)), 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 70%, transparent);
+}
 /*
   ── THE TITLE'S TWO PLATES — 0538 ──────────────────────────────────────────────────────────────────
 
@@ -5187,6 +5228,11 @@ export interface Chrome {
   /** Whether a band is drawn and walked — 0565: the tone, which says nothing on the factory's paint. */
   setBandShown(name: ChoiceName, shown: boolean): void;
   /**
+   * Whether the option a band that takes is on is armed — 0667: pressed once, so the next press flies. Drawn as
+   * a second ring round the face and *Ready* on the line under the faces, on every screen the band is on.
+   */
+  setArmed(name: ChoiceName, armed: boolean): void;
+  /**
    * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
    * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
    * them, hung `above` or `below` it, with the speaker's `name` over the words beside a `mark` in their
@@ -5977,6 +6023,8 @@ export function makeChrome(
     bio: HTMLElement | null;
     craft: HTMLElement;
     gun: HTMLElement;
+    /** 0667: *Ready*, on a line, shown while the pilot is armed; `null` on a card. */
+    armed: HTMLElement | null;
     card: 'line' | 'whole';
   }
   /** Each screen's card under its band of faces — the title's (0513) and the hangar's (0521). */
@@ -6003,8 +6051,12 @@ export function makeChrome(
       const name = part('span', 'name');
       const craft = part('span', 'craft');
       const gun = part('span', 'gun');
-      root.append(name, craft, gun);
-      return { root, ship: null, name, who: null, bio: null, craft, gun, card };
+      // 0667: the word that says the next press flies, at the line's head, hidden until the pilot is armed.
+      const armed = part('span', 'armed');
+      armed.textContent = 'Ready';
+      armed.hidden = true;
+      root.append(armed, name, craft, gun);
+      return { root, ship: null, name, who: null, bio: null, craft, gun, armed, card };
     }
     const root = part('div', 'card');
     root.setAttribute('aria-hidden', 'true');
@@ -6025,7 +6077,7 @@ export function makeChrome(
     words.append(craft, gun);
     if (ship !== null) root.append(ship);
     root.append(words);
-    return { root, ship, name, who, bio, craft, gun, card };
+    return { root, ship, name, who, bio, craft, gun, armed: null, card };
   };
   /** Each card's two turning wheels — 0527, baked the first time a car on spinners is shown there. */
   const cardWheels: Partial<Record<Screen, { picture: SpriteKind; wheels: HTMLCanvasElement[] }>> = {};
@@ -8912,6 +8964,15 @@ export function makeChrome(
         if (panel === undefined || band === undefined || band.root.hidden === !shown) continue;
         band.root.hidden = !shown;
         if (asking === null) panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, panel.keys));
+      }
+    },
+    setArmed(name: ChoiceName, armed: boolean): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const band = panels[screen]?.bands.find((b) => b.name === name && b.press === 'takes');
+        if (band === undefined) continue;
+        band.root.classList.toggle(prefixFor(screen) + 'band-armed', armed);
+        const line = pilotCards[screen];
+        if (line !== undefined && line.armed !== null) line.armed.hidden = !armed;
       }
     },
     dismiss,

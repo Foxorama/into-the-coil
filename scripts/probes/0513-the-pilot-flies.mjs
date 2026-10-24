@@ -65,7 +65,8 @@ export const PROBES = [
     decision: '0513',
     suite: 'tests/menu.browser.test.ts',
     broke: 'A on the pilot band stepping to the next pilot, as every other band does',
-    guard: 'A on the pilot band flies the pilot it is on',
+    // ⚠️ Re-pointed by 0667: A on the band arms the pilot it is on, and a second flies them.
+    guard: 'THE WALK: A on the pilot band arms the pilot it is on',
     edit: {
       path: 'src/app/chrome.ts',
       find: "      if (band !== undefined && band.press === 'takes') onChoice(band.name, band.index, false);",
