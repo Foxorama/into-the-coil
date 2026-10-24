@@ -138,6 +138,12 @@ export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
    * already on the ward's trigger opens without these — `startingArsenal` reads the side, not a name.
    */
   opensWith: readonly SpecialKind[];
+  /**
+   * The share of pickups that appear at a full rack as their row's `whenFull` instead — 0652, a tier's since
+   * 0655. *"The missile supercharge item should have a 50% chance of being a shield … game can be hard on saviour
+   * and burn"*, and then *"Legend should keep the missile supercharge."* Zero is a tier that never swaps.
+   */
+  fullSwap: number;
 }
 
 /**
@@ -483,6 +489,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     shellLevel: 3,
     shellCap: 3,
     opensWith: [],
+    // Keeps every full rack's supercharge — 0655: *"Legend should keep the missile supercharge."*
+    fullSwap: 0,
     ...multipliersFor('legendary'),
     // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
     corridor: { narrowest: 56, slope: 0.25 },
@@ -518,6 +526,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     shellLevel: 1,
     shellCap: 3,
     opensWith: [],
+    // Half a full rack's missiles come as shields — 0652, the player's number.
+    fullSwap: 0.5,
     ...multipliersFor('savior'),
     // Never narrower than 44, turns at about 19° — 0350, the player's number.
     corridor: { narrowest: 44, slope: 0.35 },
@@ -561,6 +571,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     shellCap: 3,
     // One void to open on — 0447 — unless the ship's own special is already the ward's.
     opensWith: ['voidMissile'],
+    // As Savior's — 0652.
+    fullSwap: 0.5,
     ...multipliersFor('burn'),
     // Never narrower than 34, turns at about 30° — 0350, the player's number.
     corridor: { narrowest: 34, slope: 0.58 },
@@ -608,6 +620,8 @@ export const AUTHORED: DifficultyRow = {
   bossToughness: AS_TOUGH,
   // And their tails at their bars' — 0573, a tier's for the same reason.
   bossTail: NO_TAIL,
+  // The fixtures' half, so 0652's guards stand on the baseline as they did before 0655 moved it to the tiers.
+  fullSwap: 0.5,
 };
 
 /*

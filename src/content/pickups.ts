@@ -193,15 +193,15 @@ export interface PickupRow extends Body {
    */
   bare: PickupKind | null;
   /**
-   * What it is offered as instead, `share` of the time, when what it gives is already full — 0652. Left out,
-   * nothing: a pickup is what it was drawn as.
+   * What it is offered as instead, the tier's `fullSwap` of the time (0655), when what it gives is already full —
+   * 0652. Left out, nothing: a pickup is what it was drawn as.
    *
    * *"The missile supercharge item should have a 50% chance of being a shield instead of missiles. Game can be
    * hard on saviour and burn."* An upgrade is full when the rack has no empty tube, which is when a missile
    * pickup would have been a surge (`effectOf`); the swap is drawn when the piece appears, so the player sees
    * the shield it became rather than taking a missile and getting armour.
    */
-  whenFull?: { readonly kind: PickupKind; readonly share: number };
+  whenFull?: PickupKind;
 }
 
 /*
@@ -268,8 +268,8 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     drawn: true,
     spills: null,
     bare: null,
-    // 0652: at a full rack, half of them are a shield — the player's number.
-    whenFull: { kind: 'shield', share: 0.5 },
+    // 0652: at a full rack, a shield instead, as often as the tier says (`fullSwap`, 0655).
+    whenFull: 'shield',
   },
   /**
    * One more hit that never reaches the hull.

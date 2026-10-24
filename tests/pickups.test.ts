@@ -32,6 +32,7 @@ import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, dropPickups } from '.
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { NO_LEVEL, NO_SECTIONS, dealing, playableWorld } from './world.ts';
+import { DIFFICULTIES } from '../src/content/difficulty.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { Rng } from '../src/sim/rng.ts';
@@ -1648,6 +1649,21 @@ describe('0652 — at a full rack, half the missile pickups are a shield', () =>
     all while a tube is empty, where the missile is a tube and not a supercharge.
   */
   const FULL: MissileKind[] = ['straight', 'homing'];
+
+  it('0655 — THE ASK: Savior and Burn swap half, and Legend keeps every supercharge', () => {
+    // The player's words, which is why this names values: *"Legend should keep the missile supercharge."*
+    expect(DIFFICULTIES.legendary.fullSwap).toBe(0);
+    expect(DIFFICULTIES.savior.fullSwap).toBe(0.5);
+    expect(DIFFICULTIES.burn.fullSwap).toBe(0.5);
+    // And through the frame: on Legend's row, four hundred full-rack missiles stay missiles.
+    const { world } = playableWorld(NO_LEVEL, 'legendary');
+    world.weapon = weaponFor(world.shipRow, FULL);
+    for (let i = 0; i < 400; i++) {
+      world.pickups.clear();
+      dropPickups(world, world.ship.along + 40, ACROSS_SPAN / 2, ['missile']);
+      expect(world.pickups.at(0).kind, 'a Legend full rack was thrown a shield').toBe(world.pickupKinds.missile);
+    }
+  });
 
   it('THE ASK, ON THE MID-BOSS’S THROW: about half the missiles come up shields, and none with a tube empty', () => {
     for (const [tubes, low, high] of [[FULL, 0.4, 0.6], [['straight'] as MissileKind[], 0, 0]] as const) {

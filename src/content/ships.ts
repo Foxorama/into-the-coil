@@ -28,6 +28,7 @@ import type { DangleKind } from './dangles.ts';
 import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
 import type { FlameKind } from './flames.ts';
+import type { StreakRule } from './score.ts';
 import { SHELLS, SHELL_KINDS, type ShellKind, type ShieldShell } from './shells.ts';
 // 0612: who is aboard. `golfers.ts` imports this file for a type alone, so the two do not load each other.
 import { GOLFERS, figureOf, pilotOf, type Figure } from './golfers.ts';
@@ -62,6 +63,11 @@ export interface ShipRow extends Body {
    * `MAX_SHIELDS`, the shell pool's size (`tests/tier-shell.test.ts`).
    */
   shields: number | null;
+  /**
+   * What ends this ship's streak — 0653. Every row says its own: a gun that is hit as it lands keeps it by
+   * landing (`kept`), and one that is not loses it to a hit (`unhit`).
+   */
+  streak: StreakRule;
   /** How this ship's shields come back on their own, or `null` for a shell that is only ever flown for — 0609. */
   regen: Regen | null;
   /**
@@ -603,6 +609,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
     ],
     shields: null,
+    // A hit ends the streak — 0653.
+    streak: 'unhit',
     regen: null,
     charge: null,
     // 0594: a roll, one way and back and the other — the slowest of the six, because a roll is big.
@@ -661,6 +669,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.caddieTubes, hit: SPRITE.caddieTubesHit },
     ],
     shields: null,
+    // A hit ends the streak — 0653.
+    streak: 'unhit',
     regen: null,
     charge: null,
     // 0594: spinning up — its vents and lights a third of the way round and two thirds, so still, one and
@@ -742,6 +752,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
     ],
     shields: null,
+    // A hit ends the streak — 0653.
+    streak: 'unhit',
     regen: null,
     charge: null,
     // 0594: a launch and a stop — the nose up on its springs, then the tail, then level again.
@@ -804,6 +816,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.estateTubes, hit: SPRITE.estateTubesHit },
     ],
     shields: null,
+    // A hit ends the streak — 0653.
+    streak: 'unhit',
     regen: null,
     charge: null,
     // 0594: the lowrider hop — the body up on one side and then the other, on its wheels.
@@ -867,6 +881,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.thunderboltTubes, hit: SPRITE.thunderboltTubesHit },
     ],
     shields: null,
+    // A hit ends the streak — 0653.
+    streak: 'unhit',
     regen: null,
     charge: null,
     // 0594: leaning into it — the rider and the bars over to one side and then the other.
@@ -940,6 +956,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       and a run of mistakes still empties it. Neither has been played.
     */
     shields: 3,
+    // 0653: hit every time it rams, so it keeps its streak by landing, on 0647's clock.
+    streak: 'kept',
     regen: { rest: 120, every: 180 },
     /*
       ⚠️ **THE WAR DANCE IS EARNED, TWENTY-FOUR LANDINGS A BAR — 0613.** *"When you kill x amount of enemies or
@@ -960,8 +978,12 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       nearest landing. And a full bar no longer holds: it banks a War Dance on the gun trigger's stack and starts
       again from empty (`chargeRam`), so a ball that keeps ramming carries dances as every other ship carries its
       special.
+
+      ⚠️ **TWENTY-TWO SINCE 0654**: *"the hamster ball special charge just for the hamster ball needs to be 20%
+      slower as it now stores the specials and then keeps charging."* Eighteen over 0.8 is 22.5 and eighteen and a
+      fifth is 21.6; twenty-two is the one landing count both readings round to.
     */
-    charge: { fill: 18 },
+    charge: { fill: 22 },
     // 0594: the weasel war dance itself, Unity twisting one way and the other — the quickest, a frenzy.
     dance: [
       dancing([SPRITE.ball, SPRITE.ballDance1, SPRITE.ball, SPRITE.ballDance2], 4),
@@ -1025,6 +1047,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.duckTubes, hit: SPRITE.duckTubesHit },
     ],
     shields: null,
+    // A hit ends the streak — 0653.
+    streak: 'unhit',
     regen: null,
     charge: null,
     // 0595: bobbing — the head down to dabble and up again, and then the tail up and the head back.

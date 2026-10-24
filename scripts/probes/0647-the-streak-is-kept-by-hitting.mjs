@@ -5,13 +5,13 @@ export const PROBES = [
   {
     decision: '0647',
     suite: 'tests/score.test.ts',
-    // 0428's rule back: any hit the ship takes ends the streak, and the ball sits at ×1.
+    // 0428's rule back on every ship, the ball's too (0653 kept it for the others): the ball sits at ×1.
     broke: 'a hit taken ending the streak, as 0428 had it',
-    guard: '0647 — a shield taking a hit is a hit for the rank',
+    guard: '0647, 0653 — a shield taking a hit is a hit for the rank',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      if (w.ship.health < healthBefore) w.score.hits += 1;',
-      replace: '      if (w.ship.health < healthBefore) {\n        w.score.hits += 1;\n        w.score.streak = 0;\n      }',
+      find: "        if (w.shipRow.streak === 'unhit') w.score.streak = 0;",
+      replace: '        w.score.streak = 0;',
     },
   },
   {

@@ -2,7 +2,8 @@
 
 **Accepted 2026-10-24.** From [`the-notebook-pages`](../../reports/the-notebook-pages-2026-10-24.md), item 20,
 asked after the pages. Amends [0577](0577-the-tubes-are-full.md)'s *"any following missile powerups give them
-the supercharge"*: half of them, now.
+the supercharge"*: half of them, now. **Amended by [0655](0655-legend-keeps-the-supercharge.md)**: the share is the
+tier's, and Legend's is none.
 
 ## The ask
 

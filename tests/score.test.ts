@@ -3,6 +3,7 @@ import { GameFrame, resetCreditScore, resetLevelScore } from '../src/app/frame.t
 import type { LevelRow } from '../src/content/levels.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { BOSSES } from '../src/content/bosses.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { BONUSES, MULTIPLIER_CAP, STREAK_DECAY_SECONDS, STREAK_QUIET_SECONDS, STREAK_STEP, bonusFor, multiplierFor, rankFor, streakStepDown, tallyOf } from '../src/content/score.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { bankedBonus, bankedScore } from '../src/state/slices/run.ts';
@@ -84,29 +85,51 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
     expect(heard.length, 'the score was reported more often than it changed').toBeLessThanOrEqual(world.score.kills);
   });
 
-  it('0647 — a shield taking a hit is a hit for the rank, and the streak stands', () => {
-    const { world, cues } = playableWorld(DRIFTERS(1));
+  it('0653 — THE ASK: the Hamster Ball keeps its streak by landing, and every other ship loses it to a hit', () => {
+    // The player's words, which is why this names rows: *"that score multiplier reset should only apply to the hamster ball."*
+    for (const ship of SHIP_KINDS) {
+      expect(SHIPS[ship].streak, `the ${ship}'s streak`).toBe(ship === 'ball' ? 'kept' : 'unhit');
+    }
+  });
+
+  it('0647, 0653 — a shield taking a hit is a hit for the rank on every ship; it ends an unhit ship’s streak and not a kept one’s', () => {
+    for (const rule of ['kept', 'unhit'] as const) {
+      const { world, cues } = playableWorld(DRIFTERS(1));
+      world.shipRow = { ...world.shipRow, streak: rule };
+      const frame = new GameFrame(world);
+      for (let i = 0; i < STEPS_PER_SECOND * 30 && world.enemies.size === 0; i++) frame.step();
+      const body = world.enemies.at(0);
+      // A body that will not die to the guns, stood on the ship with a shield on its hull.
+      body.health = 9999;
+      world.ship.health = world.shipRow.health + 1;
+      world.score.streak = 37;
+      body.along = world.ship.along;
+      body.across = world.ship.across;
+      body.prevAlong = body.along;
+      body.prevAcross = body.across;
+      frame.step();
+      expect(world.ship.health, 'the shield did not take the hit').toBe(world.shipRow.health);
+      expect(cues, 'this was not a shield taking a hit').toContain('shield');
+      if (rule === 'kept') expect(world.score.streak, 'a hit taken ended a kept streak, and only a quiet spell does').toBe(37);
+      else expect(world.score.streak, 'a hit taken left an unhit streak standing').toBe(0);
+      expect(world.score.hits).toBe(1);
+    }
+  });
+
+  it('0653 — an unhit ship’s streak has no clock: nine quiet seconds and it stands', () => {
+    const { world } = playableWorld(DRIFTERS(0));
+    world.shipRow = { ...world.shipRow, streak: 'unhit' };
     const frame = new GameFrame(world);
-    for (let i = 0; i < STEPS_PER_SECOND * 30 && world.enemies.size === 0; i++) frame.step();
-    const body = world.enemies.at(0);
-    // A body that will not die to the guns, stood on the ship with a shield on its hull.
-    body.health = 9999;
-    world.ship.health = world.shipRow.health + 1;
-    world.score.streak = 37;
-    body.along = world.ship.along;
-    body.across = world.ship.across;
-    body.prevAlong = body.along;
-    body.prevAcross = body.across;
-    frame.step();
-    expect(world.ship.health, 'the shield did not take the hit').toBe(world.shipRow.health);
-    expect(cues, 'this was not a shield taking a hit').toContain('shield');
-    expect(world.score.streak, 'a hit taken ended the streak, and since 0647 only a quiet spell does').toBe(37);
-    expect(world.score.hits).toBe(1);
+    world.score.streak = STREAK_STEP * 4 + 5;
+    for (let i = 0; i < STREAK_QUIET_SECONDS * STEPS_PER_SECOND * 3; i++) frame.step();
+    expect(world.score.streak, 'a quiet spell took steps off a ship whose streak only a hit ends').toBe(STREAK_STEP * 4 + 5);
   });
 
   it('0647, 0649 — THE ASK: the streak falls after three seconds with nothing landing on an enemy, a step a second, and a landing puts the clock back', () => {
-    // Nothing on the field: the clock runs out, and then the multiplier ticks down a step a second — 0649.
+    // Nothing on the field: the clock runs out, and then the multiplier ticks down a step a second — 0649. On a
+    // ship whose streak is kept, which since 0653 is the ball's rule and not every ship's.
     const quiet = playableWorld(DRIFTERS(0)).world;
+    quiet.shipRow = { ...quiet.shipRow, streak: 'kept' };
     const idle = new GameFrame(quiet);
     quiet.score.streak = STREAK_STEP * 4 + 5;
     const steps = STREAK_QUIET_SECONDS * STEPS_PER_SECOND;
@@ -125,6 +148,7 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
 
     // A body the guns keep hitting and cannot kill: the clock never runs out.
     const { world } = playableWorld(DRIFTERS(1));
+    world.shipRow = { ...world.shipRow, streak: 'kept' };
     const frame = new GameFrame(world);
     world.tuning = { ...world.tuning, playerDamage: 0 };
     for (let i = 0; i < STEPS_PER_SECOND * 30 && world.enemies.size === 0; i++) frame.step();
@@ -144,6 +168,7 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
   it('0647 — THE ASK: the end boss’s death stops the clock, and the next level’s first kill starts it', () => {
     const level: LevelRow = { ...DRIFTERS(0), waves: [], bossAt: 700, midBoss: null, boss: 'jormungandr' };
     const { world } = playableWorld(level);
+    world.shipRow = { ...world.shipRow, streak: 'kept' };
     const frame = new GameFrame(world);
     for (let i = 0; i < 6000 && !world.bossBeaten; i++) {
       if (world.bossPool.size > 0 && world.bossEntering < 0) world.bossPool.at(0).health = 1;

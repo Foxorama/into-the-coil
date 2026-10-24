@@ -17,13 +17,21 @@ import type { Side } from './specials.ts';
 /**
  * Kills in a streak it takes to climb one step of the multiplier.
  *
- * ⚠️ **A STREAK IS KEPT BY HITTING, NOT BY NOT BEING HIT, SINCE 0647.** 0428 ended it on any hit the ship
- * took, in the ask's words — and the Hamster Ball, which is hit every time it rams, sat at ×1 for whole
- * runs: *"the ball is constantly getting hit so the score counter is continually at 1."* Asked instead:
- * *"x seconds after not hitting an enemy it resets – counter stops on boss death and restarts on first
- * enemy death of the next level."*
+ * ⚠️ **WHAT ENDS A STREAK IS THE SHIP'S, SINCE 0653** — `StreakRule`, on its row. 0647 made every ship's
+ * kept by hitting, for the Hamster Ball; the Little Green Caddie then sat at ×1 under that clock, and the
+ * player answered: *"that score multiplier reset should only apply to the hamster ball."*
  */
 export const STREAK_STEP = 10;
+
+/**
+ * What ends a ship's streak — 0653. Closed, per 0016: each is a way the frame keeps the streak.
+ *
+ *   **unhit**  any hit the ship takes ends it, a shield's included — 0428, the ask as it was first made
+ *   **kept**   a hit taken does not; three quiet seconds start it falling a step a second, and the end boss's
+ *              death stops that clock until the next level's first kill — 0647, 0649. The ball's, which is hit
+ *              every time it rams
+ */
+export type StreakRule = 'unhit' | 'kept';
 
 /**
  * How long the streak lives without anything of the player's landing on an enemy or a boss, in seconds —

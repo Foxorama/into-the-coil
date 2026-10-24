@@ -150,8 +150,16 @@ export interface Storm {
 export interface Rift {
   /** Its radius in world units: everything inside it but the ship and the boss is negated. */
   radius: number;
-  /** How long it stays open, in fixed steps — negating everything that enters, for all of it. */
+  /**
+   * How long it may stay open at most, in fixed steps — negating everything that enters, for all of it. Since 0656
+   * a rift that rolls is gone when it rolls off the screen, which comes first; this is the cap behind that.
+   */
   steps: number;
+  /**
+   * How fast it rolls up the lane once it opens, in world units a step in the camera's frame — 0656. *"Grav ball
+   * special needs to roll forward, not stay in one spot; roll forward off screen then disappear."* Zero stands.
+   */
+  roll: number;
   /** What it lands on a boss it reaches, as a share of the boss's full health, once. */
   bossShare: number;
 }
@@ -548,7 +556,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     surge: null,
     storm: null,
     whirl: null,
-    rift: { radius: 36, steps: 150, bossShare: 0.1 },
+    // 0656: it rolls on up the lane and off the top of the screen, about as long on it as it stood (0479's 2.5 s).
+    rift: { radius: 36, steps: 360, bossShare: 0.1, roll: 1 },
     nova: null,
     candle: null,
     dance: null,
