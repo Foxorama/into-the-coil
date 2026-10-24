@@ -48,7 +48,9 @@ noses, which show their kinds' inks ahead of the wings' leading edges.
   not paint on it.
 
 The probes in `scripts/probes/0662-the-fighter-hangs-its-arms.mjs` leave the layer where the mount built it, and make
-the bake ignore the row. 0582's probe is re-anchored, and 0525's names the gun-layer test by its new title. **0581's probe of the pulse's silhouette in the fighter's
+the bake ignore the row. 0582's probe is re-anchored, and 0525's names the gun-layer test by its new title.
+`tests/launchers.test.ts` holds 0630's brake on the fighter's drawn silhouette — the hull and the mount hanging under
+it — and 0630's probe breaks the brake the mount draws. **0581's probe of the pulse's silhouette in the fighter's
 outline is retired**: that silhouette is traced only for a fighter whose row stands its gun on top, no row does, so
 taking it out changes no picture and no guard could go red on it.
 

@@ -24,7 +24,10 @@ every place by name and said nothing of any.
   a half seconds, and a pause or a menu takes it down. Only where a run begins: every later place is said by its
   crossing, and saying it twice would be the crossing's words with a second banner after them.
 - **The music room says each place's line under its name** — the button's hint, on the screen row in
-  `src/state/screens.ts`, read off the same row, so a place added to the table arrives with its line.
+  `src/state/screens.ts`, read off the same row, so a place added to the table arrives with its line. A row of
+  buttons stands at one height, so three across still reads as three across. **Not on a short screen**: there each
+  button is one line (`white-space: nowrap`, for the reason written beside it), the line would be cut mid-word, and a
+  line half said is worse than none — a phone hears the place described by the crossing and the run's first seconds.
 
 ## Rejected
 
