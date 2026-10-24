@@ -34,13 +34,8 @@ export const PROBES = [
     guard: 'with another’s, fires it from its hardpoint plus the gun’s own mount',
     edit: { path: 'src/content/ships.ts', find: '  const s = row.mountScale;', replace: '  const s = 1;' },
   },
-  {
-    decision: '0581',
-    suite: 'tests/accents.test.ts',
-    broke: 'the fighter’s own pulse painted off its hull’s outline',
-    guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
-    edit: { path: 'src/render/bake.ts', find: '      if (own) trace(ctx, f, fighterPulseHull());\n', replace: '' },
-  },
+  // ⚠️ 0662: the probe that took the fighter's pulse out of its hull's outline is gone. The fighter hangs its gun
+  // under the hull since, the silhouette is traced only for a fighter that stands it on top, and no row does.
   {
     decision: '0581',
     suite: 'tests/weapons-sit.test.ts',

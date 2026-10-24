@@ -2684,6 +2684,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // 0584: and in the shell it wears.
       state.hangar.shell[ship],
     );
+    /*
+      0661: and the place it opens in, named and said — *"level descriptions"*. Every later place is said
+      by its crossing; this is the one a run flies into without one.
+    */
+    const opening = placeFor(0);
+    chrome.setArrival({ place: THEMES[opening].title, voyage: THEMES[opening].voyage, accent: THEMES[opening].glow[palette] });
   };
   function fly(): void {
     dispatch({ slice: 'screen', type: 'show', screen: 'intro' });

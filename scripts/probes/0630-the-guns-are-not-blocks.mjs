@@ -31,6 +31,11 @@ export const PROBES = [
     suite: 'tests/launchers.test.ts',
     broke: 'the fighter’s pulse a block to its mouth again, no brake',
     guard: 'draws the estate’s launcher as a drum',
-    edit: { path: 'src/render/bake.ts', find: '    at(mx - PULSE_BRAKE, -0.14),\n    at(mx, -0.14),\n    at(mx, 0.14),\n    at(mx - PULSE_BRAKE, 0.14),', replace: '    at(mx, -0.1),\n    at(mx, 0.1),' },
+    // ⚠️ Re-anchored by 0662: the fighter hangs its pulse under its hull, so the brake the player sees is the mount's.
+    edit: {
+      path: 'src/render/bake.ts',
+      find: '        p(mx - PULSE_BRAKE, -0.14),\n        p(mx, -0.14),\n        p(mx, 0.14),\n        p(mx - PULSE_BRAKE, 0.14),',
+      replace: '        p(mx - PULSE_BRAKE, -0.1),\n        p(mx, -0.1),\n        p(mx, 0.1),\n        p(mx - PULSE_BRAKE, 0.1),',
+    },
   },
 ];

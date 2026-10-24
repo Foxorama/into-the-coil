@@ -92,6 +92,27 @@ describe('a loaded tube', () => {
     expect(MISSILES.homing.loaded.dart.base).toBe(SPRITE.tubeSeeker);
   });
 
+  /*
+    0662: *"fighter → tubes + gun should be under + not over ship."* The tubes' layer stands just under the ship's
+    on a row that hangs them, and last on one that stands them on its hull — and comes back when the ship changes.
+  */
+  it('0662 — THE ASK: lies under the hull of a ship that hangs its tubes, and over one that stands them, whichever flew first', () => {
+    expect(SHIPS.fighter.hang, 'the fighter stands its tubes on its hull').toBe('under');
+    const { world } = playableWorld(NO_LEVEL);
+    const frame = new GameFrame(world);
+    for (const ship of [...SHIP_KINDS, ...SHIP_KINDS.slice().reverse()]) {
+      world.shipRow = SHIPS[ship];
+      world.weapon = weaponFor(world.shipRow, ['straight', 'homing']);
+      wearHull(world);
+      frame.step();
+      const tubes = world.layers.indexOf(world.loaded);
+      const hull = world.layers.indexOf(world.shipPool);
+      if (SHIPS[ship].hang === 'under') expect(tubes, `${ship}'s tubes are not drawn just under its hull`).toBe(hull - 1);
+      else expect(tubes, `${ship}'s tubes are not drawn over everything`).toBe(world.layers.length - 1);
+      expect(new Set(world.layers).size, `${ship}: a layer was lost or doubled moving the tubes`).toBe(world.layers.length);
+    }
+  });
+
   it('lays nothing on a bare ship, and one on a ship with one tube', () => {
     expect(flying('fighter', []).loaded.size).toBe(0);
     expect(flying('estate', ['homing']).loaded.size).toBe(1);

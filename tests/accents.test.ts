@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { INK_OF, MOUTH_INK, drawKind, withFit } from '../src/render/bake.ts';
+import { INK_OF, MOUTH_INK, drawKind, paintMount, withFit } from '../src/render/bake.ts';
 import { SHIPS, SHIP_KINDS, ownFit } from '../src/content/ships.ts';
 
 /*
@@ -419,11 +419,26 @@ const cssSize = (kind: SpriteKind): number => SPRITE_EXTENT[kind] * DESKTOP.scal
 /** The palette the game opens in. */
 const INK = PALETTES[DEFAULT_PALETTE];
 
-/** Trace one kind at a stated size, in a place. `passes[0]` is the hull; the rest is paint. */
+/**
+ * Trace one kind at a stated size, in a place. `passes[0]` is the hull; the rest is paint.
+ *
+ * ⚠️ **0662: A SHIP THAT HANGS ITS GUN LAYS THE MOUNT DOWN BEFORE ITS HULL**, so for its sprites the mount's own
+ * passes and strokes come first and are taken off here — they are under the hull, not paint on it, and what of
+ * them stands past the outline is the gun's mouth, held inside the sprite's box by `tests/gun-layer.test.ts`.
+ * Taken off only when they are exactly the mount's, traced alone at the same frame, so nothing else is.
+ */
 function traceAt(kind: SpriteKind, size: number, theme: ThemeKind = 'approach'): ReturnType<typeof tracingPen>['trace'] {
   const { pen, trace } = tracingPen();
   drawKind(pen, kind, INK, size, theme);
-  return trace;
+  const ship = SHIP_KINDS.find((k) => kind.startsWith(k));
+  if (ship === undefined || SHIPS[ship].hang !== 'under') return trace;
+  const mount = tracingPen();
+  paintMount(mount.pen, { half: size / 2, r: size * 0.42 }, INK, SHIPS[ship].weapon, ship);
+  const k = mount.trace.passes.length;
+  const s = mount.trace.inks.length;
+  if (JSON.stringify(trace.passes.slice(0, k)) !== JSON.stringify(mount.trace.passes)) return trace;
+  if (JSON.stringify(trace.inks.slice(0, s)) !== JSON.stringify(mount.trace.inks)) return trace;
+  return { ...trace, passes: trace.passes.slice(k), inks: trace.inks.slice(s) };
 }
 
 /**

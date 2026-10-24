@@ -1132,8 +1132,11 @@ export interface World {
    * always find it; shots sit above the enemies that fired them so a volley leaving a body reads as
    * leaving it. `src/sim/pool.ts` warns that release REORDERS, so nothing may depend on order
    * *within* a layer — between layers, this array is the whole statement.
+   *
+   * ⚠️ **One move in it is the frame's — 0662**: the loaded tubes stand just under the ship on a ship whose
+   * row hangs them there, and last on any other (`hangTubes`). Mutable for that move and nothing else.
    */
-  layers: readonly Pool<Entity>[];
+  layers: Pool<Entity>[];
   /**
    * The background, back to front. Built once at mount; empty for a scene that has none.
    *
@@ -7053,6 +7056,27 @@ function stepWheels(w: World): void {
 const LOADED_BODY = { sprite: SPRITE.tubeMissile, spriteHit: SPRITE.tubeMissileHit, radius: 0, health: 1, damage: 0 };
 
 /**
+ * Put the loaded tubes' layer where the ship's row hangs them — 0662: *"fighter → tubes + gun should be
+ * under + not over ship."* Just under the ship's own layer for `under`, and last, over everything, for
+ * `over`, as 0581 laid them. Moved in place, one slot at a time, and only when it is on the wrong side, so
+ * a step that changes nothing reads two indices and returns. Every ship a run, the stands and the tests set
+ * reaches it, because the tubes are stepped every step and this is the first thing that step does.
+ */
+function hangTubes(w: World): void {
+  const layers = w.layers;
+  const tubes = layers.indexOf(w.loaded);
+  const ship = layers.indexOf(w.shipPool);
+  if (tubes < 0 || ship < 0) return;
+  const under = w.shipRow.hang === 'under';
+  if (under === tubes < ship) return;
+  // Under: carried down into the ship's slot, which moves the ship up one. Over: carried up to the last slot.
+  const to = under ? ship : layers.length - 1;
+  const step = to > tubes ? 1 : -1;
+  for (let i = tubes; i !== to; i += step) layers[i] = layers[i + step]!;
+  layers[to] = w.loaded;
+}
+
+/**
  * The ship's loaded tubes — 0581. While the ship flies, one picture at each place its row names for the
  * tubes it carries (`tubes[n]`, where each missile leaves — 0448), in its own kind's ink: the n-th tube
  * the run carries at the n-th place. It wears the ship's hurt twin whenever the ship does, and swells to
@@ -7061,6 +7085,7 @@ const LOADED_BODY = { sprite: SPRITE.tubeMissile, spriteHit: SPRITE.tubeMissileH
  * ⚠️ **Carried by hand, as the wheels are**: nothing else steps this pool. Nothing allocates.
  */
 function stepLoaded(w: World): void {
+  hangTubes(w);
   const kinds = w.weapon.tubes;
   if (w.shipPool.size === 0 || kinds.length === 0) {
     w.loaded.clear();

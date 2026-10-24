@@ -4212,11 +4212,16 @@ export function drawPlayerShip(
 ): void {
   const own = gun === SHIPS[ship].weapon;
   // A borrowed gun stands on its mount, laid on last; 0581: and the fighter's own does too.
-  let mounted = !own;
+  const mounted = !own || ship === 'fighter';
+  /*
+    0662: or laid on FIRST, under the hull, on a ship whose row hangs what it carries — *"tubes + gun should be
+    under + not over ship."* The hull then closes over all of the mount but what stands past its outline.
+  */
+  const under = SHIPS[ship].hang === 'under';
+  if (mounted && under) paintMount(ctx, f, palette, gun, ship);
   ctx.beginPath();
   switch (ship) {
     case 'fighter': {
-      mounted = true;
       /*
         0594: its War Dance flaps its canards, one swept forward and the other back and then the other way
         about — a weasel's forelegs flailing. Their roots stay on the hull, so the outline never folds over
@@ -4234,8 +4239,9 @@ export function drawPlayerShip(
       trace(ctx, fh, SHIP_HULL);
       trace(ctx, fh, swept(SHIP_CANARD, sweeps.upper));
       trace(ctx, fh, swept(mirrored(SHIP_CANARD), sweeps.lower));
-      // 0581: its own pulse's silhouette on its nose, as the pods were in its outline before it.
-      if (own) trace(ctx, f, fighterPulseHull());
+      // 0581: its own pulse's silhouette on its nose, as the pods were in its outline before it; 0662: not
+      // when the gun hangs under the nose, where a silhouette of it in the hull's ink would paint over it.
+      if (own && !under) trace(ctx, f, fighterPulseHull());
       seal(ctx);
       // Lit from above and ahead before the livery goes on, so the hull has volume under it — 0461.
       // Deeper since 0463: lit to near white, the hull left the livery nothing to stand against.
@@ -4249,7 +4255,8 @@ export function drawPlayerShip(
       jazzFighter(ctx, fh, palette, false, art);
       // 0581: its pylons, one under each wing that carries a tube; the tube itself is the frame's (`stepTubes`).
       // Each under the tube's middle: the place is its nose, and the tube lies half its length behind it.
-      for (const place of SHIPS.fighter.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
+      // 0662: none when the tubes hang under the wing — a rail inside the chord is wholly under it too.
+      for (const place of under ? [] : SHIPS.fighter.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
         paintPylon(ctx, f, palette, [(place.along - SHIPS.fighter.tubeLength / 2) / BOX_R, place.across / BOX_R]);
       }
       break;
@@ -4282,7 +4289,7 @@ export function drawPlayerShip(
       return unhandled;
     }
   }
-  if (mounted) paintMount(ctx, f, palette, gun, ship);
+  if (mounted && !under) paintMount(ctx, f, palette, gun, ship);
 }
 
 /**

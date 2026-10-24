@@ -22,7 +22,8 @@ export const PROBES = [
     decision: '0525',
     suite: 'tests/gun-layer.test.ts',
     broke: 'a ship drawn with its own gun whatever it flies',
-    guard: 'drawn without its own, and with the mount laid on last',
+    // ⚠️ Renamed by 0662: the mount is laid on the side of the hull its row hangs it, last only on a standing one.
+    guard: 'drawn without its own, and with the mount on the side of the hull its row hangs it',
     edit: {
       path: 'src/render/bake.ts',
       find: '  const own = gun === SHIPS[ship].weapon;',

@@ -73,7 +73,12 @@ describe('the mount', () => {
     }
   });
 
-  it('a ship flying another’s gun is drawn without its own, and with the mount laid on last', () => {
+  /*
+    0662: the mount is laid on last on a ship that stands its gun on its hull, and FIRST on one whose row hangs it
+    under — *"tubes + gun should be under + not over ship."* Rewritten from *laid on last* for every ship: that was
+    the rule the ask changed, for the fighter.
+  */
+  it('a ship flying another’s gun is drawn without its own, and with the mount on the side of the hull its row hangs it', () => {
     const palette = PALETTES[DEFAULT_PALETTE];
     for (const [ship, gun] of BORROWED) {
       const own = tracingPen();
@@ -82,9 +87,17 @@ describe('the mount', () => {
       drawPlayerShip(borrowed.pen, F, palette, ship, 1, gun);
       const mount = tracingPen();
       paintMount(mount.pen, F, palette, gun, ship);
+      const k = mount.trace.passes.length;
+      if (SHIPS[ship].hang === 'under') {
+        expect(borrowed.trace.passes.slice(0, k), `${ship} with the ${gun}: the mount is not what is laid on first, under the hull`).toEqual(mount.trace.passes);
+        // Its own gun hangs under the hull too, so the hull over either is the same outline — nothing of the gun in it.
+        const ownMount = tracingPen();
+        paintMount(ownMount.pen, F, palette, SHIPS[ship].weapon, ship);
+        expect(borrowed.trace.passes[k], `${ship} with the ${gun}: the hull is not the same outline over every gun`).toEqual(own.trace.passes[ownMount.trace.passes.length]);
+        continue;
+      }
       // The hull is the first fill: its outline closes over where its own gun stood.
       expect(borrowed.trace.passes[0], `${ship} with the ${gun}: the hull still wears its own gun`).not.toEqual(own.trace.passes[0]);
-      const k = mount.trace.passes.length;
       expect(borrowed.trace.passes.slice(-k), `${ship} with the ${gun}: the mount is not what is laid on last`).toEqual(mount.trace.passes);
     }
   });

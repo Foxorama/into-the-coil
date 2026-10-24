@@ -140,6 +140,13 @@ export interface ShipRow extends Body {
    */
   tubeLook: TubeLook;
   /**
+   * Whether what it carries hangs under its hull or stands on it — 0662: a mounted gun and its loaded tubes,
+   * drawn before the hull (`under`) or after it (`over`). Played: *"fighter → tubes + gun should be under +
+   * not over ship."* The fighter's hang under its nose and wings; a car's turret is on its roof. Each row
+   * authors its own, on 0282's terms.
+   */
+  hang: Hang;
+  /**
    * Its engines: where each flame's root meets the hull — 0448, and it was one `tail` behind the centre.
    * The flame is baked as ONE jet and laid once per nozzle (`stepExhaust`), so the fighter and the saucer
    * burn two and a car burns one, at its pipe, low at its back bumper. Played: *"one thruster is fine for
@@ -316,6 +323,9 @@ export interface Mount {
 
 /** How a ship is drawn, and so how a gun on it is — 0525. Closed. */
 export type GunView = 'side' | 'top';
+
+/** Whether a ship's gun and tubes hang under its hull or stand on it — 0662. Closed. */
+export type Hang = 'under' | 'over';
 
 /**
  * How a ship is fitted, for everything that draws it — 0527: the gun it carries (0526) and the rim on its
@@ -630,6 +640,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     tubes: FIGHTER_TUBES,
     tubeLength: LOADED_TUBE,
     tubeLook: 'dart',
+    hang: 'under',
     // Its two nacelles: 0.78 of the 7-unit hull's radius back, 0.21 of it out (`SHIP_CORE` in the bake).
     nozzles: [
       { along: -2.29, across: -0.62 },
@@ -699,6 +710,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0581: the whole missile, lying in each pod with its warhead at the pod's mouth.
     tubeLength: LOADED_TUBE,
     tubeLook: 'dart',
+    hang: 'over',
     // Its two drives, on the back of the rim either side of the centreline — the pair it burns in the
     // fight, and since 0450 in the intro's chase too.
     nozzles: [
@@ -777,6 +789,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0581: the warhead at each turret's front, as tall as the orange nose 0461 painted there.
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
+    hang: 'over',
     // One pipe, low at the back bumper.
     nozzles: [{ along: -4.42, across: 0.47 }],
     // Its greenhouse, seen from the side: under the T-top, above the beltline (`drawFirebird` in the bake).
@@ -840,6 +853,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0581: the warhead at each turret's front, on the Firebird's terms.
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
+    hang: 'over',
     // One pipe, under the tailgate.
     nozzles: [{ along: -4.42, across: 0.75 }],
     // Its front glasshouse, seen from the side, behind the pillar (`drawEstate` in the bake).
@@ -908,6 +922,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0581: the warhead at each pod's front, on the Firebird's terms.
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
+    hang: 'over',
     // One pipe, swept back low past the rear wheel to behind its fender.
     nozzles: [wheelAt(-15.4, 3.5, 0, 1)],
     // Its seat: the intro's pilot drops on here.
@@ -1002,6 +1017,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     tubes: [[], [{ along: LOADED_TUBE / 2, across: -BALL_CRADLE }], [{ along: LOADED_TUBE / 2, across: -BALL_CRADLE }, { along: LOADED_TUBE / 2, across: BALL_CRADLE }]],
     tubeLength: LOADED_TUBE,
     tubeLook: 'dart',
+    hang: 'over',
     // The thruster pack strapped behind the ball.
     nozzles: [{ along: -BALL_RADIUS - 0.55, across: 0 }],
     // The middle of the ball, where its pilot runs.
@@ -1070,6 +1086,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     tubes: [[], [wheelAt(-6.3, -5.05, 0, 1)], [wheelAt(-5.7, -5.76, 0, 1), wheelAt(-5.7, -4.34, 0, 1)]],
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
+    hang: 'over',
     // One jet, low at the stern under the tail.
     nozzles: [wheelAt(-15.9, 2.6, 0, 1)],
     // Its porthole, on the flank behind the chest: the intro's duck drops in here.
