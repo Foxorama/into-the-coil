@@ -156,8 +156,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // Re-anchored by 0609, which re-weighed the ram on the same row.
-      find: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 3.84, paintball: 1.6 },',
-      replace: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 3.84, paintball: 4 },',
+      find: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 5.76, paintball: 1.6 },',
+      replace: '    gunWeights: { arc: 1.4, catherine: 0.5, ram: 5.76, paintball: 4 },',
     },
   },
 ];

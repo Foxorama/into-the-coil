@@ -114,7 +114,7 @@ import {
 } from '../content/pickups.ts';
 import { TETHER_BOLT_KIND, WEAPONS, WEAPON_KINDS, type CatherineWheel, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type Side, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import type { FeelKind } from '../content/feels.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
@@ -1262,8 +1262,8 @@ export interface World {
   readyFor: number;
   /**
    * The bar a ship whose row earns its special fills — 0613, in landings of its gun (`Charge`): from empty at
-   * 0 to full at the row's `fill`, where it holds until the shell throws it (`spendCharge`). A life opens on
-   * it empty; while the ship dances nothing fills it.
+   * 0 to the row's `fill`, where since 0648 it banks one of its special on the stack (`onEarned`) and starts
+   * again. A life opens on it empty; while the ship dances nothing fills it.
    */
   charge: number;
   /** Steps left of the ball's punch on a landing — 0613: drawn a little bigger, settling back. */
@@ -1659,6 +1659,11 @@ export interface World {
   shownCharge: number;
   /** The bar moved — a new quantum, full, spent, or the bar coming or going. Fired on a change only. */
   onCharge: (fraction: number) => void;
+  /**
+   * The bar filled, and banked what it was filling — 0648: the shell puts one of `special` on its trigger's
+   * stack, as a pickup's charge goes on, and the bar starts again from empty.
+   */
+  onEarned: (special: SpecialKind) => void;
   /**
    * What the readout's heat gauge and its mending shield last said — 0638, `shownCharge`'s terms: a share in
    * `CHARGE_BAR_STEPS`, or a negative number for a ship that does not heat, or no shield coming back.
@@ -4349,6 +4354,33 @@ export const RAM_KIND = 5;
 // @setup: the gauge's four pictures, coolest first.
 const RAM_HEAT = [SPRITE.ramHeat0, SPRITE.ramHeat1, SPRITE.ramHeat2, SPRITE.ramHeat3] as const;
 
+/** The gauge's stage, 0 cool to 3 at the edge of burning — its quarters, under the ball and on it. */
+function heatStage(heat: number): 0 | 1 | 2 | 3 {
+  return heat >= 0.75 ? 3 : heat >= 0.5 ? 2 : heat >= 0.25 ? 1 : 0;
+}
+
+// @setup: the heat ON the ball — 0648: yellow, amber, red, and the red's flare frame it throbs against.
+const RAM_GLOW = [SPRITE.ramGlow1, SPRITE.ramGlow2, SPRITE.ramGlow3, SPRITE.ramGlow4] as const;
+
+/**
+ * Steps the red-hot ball holds each of its two frames — 0648: a throb of two and a half a second, under 0024's
+ * three, as the readout's gauge pulses from the same quarter.
+ */
+const GLOW_THROB = 12;
+
+/**
+ * The picture of the heat laid over the ball this step, or `-1` for none — 0648: nothing while it is cool, while
+ * it dances (a dance heats nothing), while it comes apart, and on a ship whose gun is not a ram.
+ */
+function heatGlow(w: World): number {
+  if (WEAPONS[w.weapon.kind].ram === null || w.danceFor > 0 || w.dyingIn > 0) return -1;
+  const stage = heatStage(w.ramHeat);
+  if (stage === 0) return -1;
+  if (stage === 1) return RAM_GLOW[0];
+  if (stage === 2) return RAM_GLOW[1];
+  return Math.floor(w.steps / GLOW_THROB) % 2 === 0 ? RAM_GLOW[2] : RAM_GLOW[3];
+}
+
 /** The dance the ship is in, or `null`. */
 function danceOf(w: World): Dance | null {
   return w.danceKind === null || w.danceFor <= 0 ? null : SPECIALS[w.danceKind].dance;
@@ -4395,7 +4427,7 @@ function steerRam(w: World): void {
   body.health = row.health;
   // The gauge, as its picture: cool to the edge of burning, and cool for as long as a dance lasts.
   const heat = dance !== null ? 0 : w.ramHeat;
-  const stage = heat >= 0.75 ? 3 : heat >= 0.5 ? 2 : heat >= 0.25 ? 1 : 0;
+  const stage = heatStage(heat);
   // `sprite` itself is derived from these by `stepEntities`, which runs after this.
   // 0594: on a dancing ship that is not the ball, nothing — the ship's own dance is the picture of it.
   const picture = ram !== null ? RAM_HEAT[stage] : UNSEEN;
@@ -4486,32 +4518,6 @@ export function chargedSpecial(w: World): SpecialKind | null {
   return w.shipRow.charge === null ? null : WEAPONS[w.shipRow.weapon].special;
 }
 
-/** Whether the bar is full, so a press throws the earned special — 0613. */
-export function chargeFull(w: World): boolean {
-  const charge = w.shipRow.charge;
-  return charge !== null && w.charge >= charge.fill;
-}
-
-/** The bar thrown: empty again — 0613. */
-export function spendCharge(w: World): void {
-  w.charge = 0;
-}
-
-/**
- * A press of the trigger `side` asks the bar first — 0613: `'none'` when no full bar throws on it, so the
- * press goes to that trigger's stack as on every ship; `'refused'` when the bar is full and the special may
- * not leave yet (`canThrow`: a dance inside a dance), which costs nothing; `'thrown'` when it went, and the
- * bar is empty again. The shell asks this before the stack (`onSpecial`).
- */
-export function throwEarned(w: World, side: Side): 'none' | 'refused' | 'thrown' {
-  const earned = chargedSpecial(w);
-  if (earned === null || SPECIALS[earned].side !== side || !chargeFull(w)) return 'none';
-  if (!canThrow(w, earned)) return 'refused';
-  spendCharge(w);
-  launchSpecial(w, earned);
-  return 'thrown';
-}
-
 /** Steps the readout's bar is drawn in — 0613: twenty, a twentieth of the bar each, so it moves on a landing or two. */
 export const CHARGE_BAR_STEPS = 20;
 
@@ -4540,22 +4546,24 @@ export function mendShare(w: World): number {
 function chargeShare(w: World): number {
   const charge = w.shipRow.charge;
   if (charge === null) return -1;
-  if (w.charge >= charge.fill) return 1;
   return Math.floor((w.charge / charge.fill) * CHARGE_BAR_STEPS) / CHARGE_BAR_STEPS;
 }
 
 /**
  * Fill the bar by what the gun landed — 0613: each landing one, whatever it landed on — a kill is the landing
- * that made it. Not while the ship dances, so a dance never earns the next, and not past full, where it
- * holds until it is thrown. Filling it is heard (`danceReady`), felt, and seen: the readout's bar lights and
- * the dance's flare licks round the ship once (`stepAuras`).
+ * that made it. Not while the ship dances, so a dance never earns the next. Full, it no longer holds — 0648,
+ * *"war dance adds a spesh + starts charging again"*: it banks one of the special on its trigger's stack
+ * (`onEarned`) and starts again from empty, a landing past full carried into the next. Filling it is heard
+ * (`danceReady`), felt, and seen: the dance's flare licks round the ship once (`stepAuras`).
  */
 function chargeRam(w: World, landed: number): void {
   const charge = w.shipRow.charge;
-  if (charge === null || landed <= 0 || w.danceFor > 0 || w.shipPool.size === 0 || w.charge >= charge.fill) return;
+  const earned = chargedSpecial(w);
+  if (charge === null || earned === null || landed <= 0 || w.danceFor > 0 || w.shipPool.size === 0) return;
   w.charge += landed;
   if (w.charge < charge.fill) return;
-  w.charge = charge.fill;
+  w.charge = Math.min(w.charge - charge.fill, charge.fill - 1);
+  w.onEarned(earned);
   w.readyFor = READY_FLARE_STEPS;
   w.onCue('danceReady', w.ship.across);
   w.onFeel('ready');
@@ -6913,6 +6921,9 @@ const SPINNER_RADIUS = SPRITE_EXTENT.spinnerWheel * 0.42;
  * than it holds (`tests/lamps.test.ts`), and a car's wheels and a ship's lights are the same kind of thing to
  * the painter: a picture laid on the ship.
  *
+ * 0648: and last, the ram's heat on the ball (`heatGlow`) — a light of its own, laid over the plastic while the
+ * gauge is past its first quarter, swelled with the ball's punch.
+ *
  * ⚠️ **Carried by hand, as the exhaust is**: nothing else steps this pool. Nothing allocates.
  */
 function stepWheels(w: World): void {
@@ -6920,7 +6931,8 @@ function stepWheels(w: World): void {
   const row = wheels === null ? null : RIMS[wheels.rim].wheel;
   const lamps = w.shipRow.lamps;
   const turning = wheels === null || row === null ? 0 : wheels.at.length;
-  const wanted = turning + lamps.length;
+  const glowing = heatGlow(w);
+  const wanted = turning + lamps.length + (glowing < 0 ? 0 : 1);
   if (wanted === 0 || w.shipPool.size === 0) {
     w.wheels.clear();
     return;
@@ -6986,6 +6998,19 @@ function stepWheels(w: World): void {
     light.prevTurn = lampTurn(lamp, was);
     light.turn = lampTurn(lamp, now);
   }
+  const at = turning + lamps.length;
+  if (glowing < 0 || at >= w.wheels.size) return;
+  const heat = w.wheels.at(at);
+  heat.sprite = glowing;
+  heat.spriteBase = glowing;
+  heat.spriteHit = glowing;
+  heat.swell = w.ship.swell;
+  heat.prevAlong = heat.along;
+  heat.prevAcross = heat.across;
+  heat.along = w.ship.along;
+  heat.across = w.ship.across;
+  heat.prevTurn = 0;
+  heat.turn = 0;
 }
 
 /** What a loaded tube is as a body: a picture on the ship, hitting and hit by nothing — 0581, on the wheel's terms. */

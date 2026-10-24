@@ -1073,6 +1073,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   ramHeat1: 'player',
   ramHeat2: 'player',
   ramHeat3: 'player',
+  ramGlow1: 'player',
+  ramGlow2: 'player',
+  ramGlow3: 'player',
+  ramGlow4: 'player',
   // 0595: the paintball's glyph, its balls and its splats — the player's, as all its fire is; the paint's own colours are the row's.
   paintball: 'player',
   paintballPink: 'player',
@@ -4771,8 +4775,63 @@ function drawSplat(ctx: Pen, f: Frame, palette: Palette, ink: string, dry: boole
 function drawRamHeat(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
   const inks = [palette.player, palette.hazard, palette.bullet, palette.fire] as const;
   const ink = inks[stage] ?? palette.fire;
-  glow(ctx, f, ink, 0, 0, BALL_R * 0.95, [0.15, 0.35, 0.55, 0.8][stage] ?? 0.8);
+  glow(ctx, f, ink, 0, 0, BALL_R * 0.95, [0.15, 0.45, 0.65, 0.85][stage] ?? 0.85);
   if (stage >= 3) disc(ctx, f, shade(palette.fire, 0.4), 0, 0, BALL_R * 0.35, 0.6);
+}
+
+/**
+ * The ram's heat ON the ball — 0648: *"ball goes yellow, amber, red based on heat"*, and *"make sure the 'heat'
+ * glows look hella cool"*. The glow under it (`drawRamHeat`) is seen through the plastic and behind Unity, so the
+ * rim — what says *ball* — stayed the plastic's blue however hot it ran. This is laid OVER the ball by the frame,
+ * as its lights are (`stepWheels`): the rim lit in the stage's ink, a wash rising from clear at the middle to hot
+ * at the edge so Unity reads through it, a white-hot crescent where the light sits, and the heat-haze ripples
+ * inside the rim from amber. `stage` is 1 yellow (`hazard`), 2 amber (`bullet`), 3 red (`fire`), and 4 the red's
+ * flare frame — the frame swaps 3 and 4 so a ball at the edge of burning throbs.
+ *
+ * ⚠️ **INSIDE THE BALL'S OUTLINE**, as the glow under it is, so it covers no bullet the ball does not.
+ */
+function drawBallGlow(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+  const hot = stage >= 3;
+  const flare = stage === 4;
+  const ink = hot ? palette.fire : stage === 2 ? palette.bullet : palette.hazard;
+  const lit = shade(ink, 0.45);
+  const white = palette.impact;
+  const step = Math.min(stage, 3);
+  // The wash: clear in the middle where Unity runs, the stage's ink rising to the rim.
+  const cx = f.half;
+  const r = BALL_R * 0.97 * f.r;
+  const wash = ctx.createRadialGradient(cx, cx, 0, cx, cx, r);
+  wash.addColorStop(0, rgba(ink, 0));
+  wash.addColorStop(0.5, rgba(ink, [0, 0.06, 0.12, 0.2][step]! + (flare ? 0.06 : 0)));
+  wash.addColorStop(0.82, rgba(ink, [0, 0.34, 0.4, 0.5][step]! + (flare ? 0.1 : 0)));
+  wash.addColorStop(1, rgba(lit, [0, 0.5, 0.62, 0.75][step]! + (flare ? 0.1 : 0)));
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = wash;
+  ctx.beginPath();
+  ring(ctx, f, 0, 0, BALL_R * 0.97);
+  ctx.fill('evenodd');
+  // The rim itself, lit in the ink: the plastic's blue band goes the stage's colour.
+  // Opaque enough that the blue under it does not turn the yellow green — looked at in the bench (`heat`).
+  band(ctx, f, ink, 0, 0, BALL_R * 0.99, BALL_R * 0.87, [0, 0.82, 0.86, 0.92][step]!);
+  seam(ctx, f, lit, 0.035, roundel(0, 0, BALL_R * 0.86, 36, 0, Math.PI * 2), flare ? 0.95 : 0.75, true);
+  // From amber, the heat haze: six short ripples just inside the rim, turned a twelfth between the red's two frames.
+  if (step >= 2) {
+    const turn = flare ? Math.PI / 6 : 0;
+    for (let k = 0; k < 6; k++) {
+      const a = turn + (k * Math.PI) / 3;
+      seam(ctx, f, lit, 0.03, roundel(0, 0, BALL_R * 0.76, 6, a, a + 0.42), hot ? 0.7 : 0.5, true);
+    }
+  }
+  // The white-hot crescent where the light sits on the plastic, longer and brighter as it heats.
+  const reach = [0, 0.5, 0.7, 0.9][step]! + (flare ? 0.2 : 0);
+  seam(ctx, f, white, 0.06, roundel(0, 0, BALL_R * 0.92, 12, Math.PI * 1.05, Math.PI * (1.05 + reach)), hot ? 0.9 : 0.7, true);
+  // And red-hot, sparks on the rim: four embers spaced round it, the flare frame's further on and bigger.
+  if (hot) {
+    for (let k = 0; k < 4; k++) {
+      const a = (flare ? 0.4 : 0) + (k * Math.PI) / 2 + 0.3;
+      disc(ctx, f, white, Math.cos(a) * BALL_R * 0.93, Math.sin(a) * BALL_R * 0.93, flare ? 0.05 : 0.035, 0.9);
+    }
+  }
 }
 
 /**
@@ -17254,6 +17313,13 @@ export function drawKind(
     case 'ramHeat2':
     case 'ramHeat3':
       drawRamHeat(ctx, f, palette, Number(kind.slice(-1)));
+      return;
+    // 0648: and the heat on it, laid over the plastic.
+    case 'ramGlow1':
+    case 'ramGlow2':
+    case 'ramGlow3':
+    case 'ramGlow4':
+      drawBallGlow(ctx, f, palette, Number(kind.slice(-1)));
       return;
     // 0609: the War Dance's flare, a frame of it.
     case 'danceFlare0':

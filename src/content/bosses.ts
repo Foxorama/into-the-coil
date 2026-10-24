@@ -3668,7 +3668,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       0609: 1.5 — the ball never breaks now, so a held ram lands all fight: at 7, 6.5 s. At 1.4, 33.9 s; at
       1.5, 31.6 s, where 0593's seven had it at 31.1.
     */
-    gunWeights: { arc: 1, ray: 0.93, ram: 2.4 },
+    gunWeights: { arc: 1, ray: 0.93, ram: 3.6 },
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
       boss out of the player's half at the NEAR end of its swing, measured at `station − drift − rear
@@ -4926,7 +4926,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       0609: the ram at 2.4 — it never breaks now, so it lands all fight and she is fed nothing between: at 9,
       9.1 s; at 1.8, 68.5 s against 48–62 for the ram on every other boss; at 2.4, 44.4 s.
     */
-    gunWeights: { arc: 1.4, catherine: 0.5, ram: 3.84, paintball: 1.6 },
+    gunWeights: { arc: 1.4, catherine: 0.5, ram: 5.76, paintball: 1.6 },
     damage: 3,
     /*
       ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you

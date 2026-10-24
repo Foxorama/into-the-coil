@@ -105,6 +105,11 @@ const HULLLESS: readonly SpriteKind[] = [
   'ramHeat1',
   'ramHeat2',
   'ramHeat3',
+  // And the heat on the ball, laid over its plastic as a light — 0648.
+  'ramGlow1',
+  'ramGlow2',
+  'ramGlow3',
+  'ramGlow4',
   // And the War Dance's flare, flame round a dancing ship and no body of its own — 0609.
   'danceFlare0',
   'danceFlare1',

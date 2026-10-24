@@ -233,6 +233,7 @@ export function inertLevel(): {
   punchFor: number;
   shownCharge: number;
   onCharge: (fraction: number) => void;
+  onEarned: (special: SpecialKind) => void;
   shownHeat: number;
   shownMend: number;
   onHeat: (fraction: number) => void;
@@ -409,6 +410,7 @@ export function chargeParts(): {
   punchFor: number;
   shownCharge: number;
   onCharge: (fraction: number) => void;
+  onEarned: (special: SpecialKind) => void;
   shownHeat: number;
   shownMend: number;
   onHeat: (fraction: number) => void;
@@ -423,6 +425,8 @@ export function chargeParts(): {
     punchFor: 0,
     shownCharge: -1,
     onCharge: (): void => {},
+    // 0648: a banked dance goes nowhere until a fixture listens for it.
+    onEarned: (): void => {},
     // 0638: and the ball's heat and mending shield, drawn by nothing yet.
     shownHeat: -1,
     shownMend: -1,

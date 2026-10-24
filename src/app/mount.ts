@@ -124,9 +124,7 @@ import {
   firstVolleyIn,
   landmarksFor,
   canThrow,
-  chargeFull,
   chargedSpecial,
-  throwEarned,
   holdFinale,
   hushed,
   launchSpecial,
@@ -1488,6 +1486,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     onHeat: (): void => {},
     onMend: (): void => {},
     onCharge: (): void => {},
+    onEarned: (): void => {},
     onFeel: (): void => {},
     // Standing still at mount, and replaced below with the chrome — 0461, held once per swing by 0466.
     joltVel: 0,
@@ -1831,22 +1830,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * for the side over an empty one, so the readout never loses its icon — 0373, 0376.
    */
   /*
-    ⚠️ **AND A FULL BAR IS ONE MORE ON ITS TRIGGER, ON TOP — 0613**, since it is thrown first: `earned` is the
-    special a full bar holds, or `null`. Over an empty stack a ship that earns its special shows that special's
-    face rather than the side's stand-in, so the readout says what the bar is filling.
+    ⚠️ **AND OVER AN EMPTY STACK, THE FACE OF WHAT THE BAR IS FILLING — 0613**: `earned` is the special a ship
+    earns, or `null`, and it shows that special's face rather than the side's stand-in. Since 0648 a full bar
+    banks its charge on the stack itself (`onEarned`), so the count is the stack's and nothing is added to it.
   */
-  const stacksOf = (arsenal: Arsenal, earned: SpecialKind | null = null, full = false): { label: string; sprite: number; charges: number }[] => {
+  const stacksOf = (arsenal: Arsenal, earned: SpecialKind | null = null): { label: string; sprite: number; charges: number }[] => {
     const out: { label: string; sprite: number; charges: number }[] = [];
     for (const side of SIDES) {
       const stack = arsenal[side];
       const mine = earned !== null && SPECIALS[earned].side === side;
-      const row = SPECIALS[(mine && full ? earned : undefined) ?? stack[stack.length - 1] ?? (mine ? earned : undefined) ?? EMPTY_FACE[side]];
-      out.push({ label: row.label, sprite: row.face, charges: stack.length + (mine && full ? 1 : 0) });
+      const row = SPECIALS[stack[stack.length - 1] ?? (mine ? earned : undefined) ?? EMPTY_FACE[side]];
+      out.push({ label: row.label, sprite: row.face, charges: stack.length });
     }
     return out;
   };
-  /** The run's stacks as the readout shows them: with the bar of a special the ship earns — 0613. */
-  const runStacks = (): { label: string; sprite: number; charges: number }[] => stacksOf(state.run.arsenal, chargedSpecial(world), chargeFull(world));
+  /** The run's stacks as the readout shows them, with the face of a special the ship earns — 0613. */
+  const runStacks = (): { label: string; sprite: number; charges: number }[] => stacksOf(state.run.arsenal, chargedSpecial(world));
 
   /**
    * Whether this device has a place to press at all.
@@ -4770,17 +4769,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // The score — 0428: the frame says a kill or a hit moved it, and the run's banked levels are added here.
   world.onScore = syncScore;
   /*
-    The earned special's bar — 0613: drawn beside its trigger's count, and the count and face moved with it the
-    step it fills or is thrown, since a full bar is one more on that trigger.
+    The earned special's bar — 0613: drawn beside its trigger's count.
   */
-  let chargeWasFull = false;
   world.onCharge = (fraction: number): void => {
     const earned = chargedSpecial(world);
     chrome.setCharge(earned === null ? -1 : SIDES.indexOf(SPECIALS[earned].side), fraction);
-    const full = fraction >= 1;
-    if (full === chargeWasFull) return;
-    chargeWasFull = full;
-    syncHud();
+  };
+  // 0648: a full bar banks its special on its trigger's stack, as a pickup's charge goes on, and fills again.
+  world.onEarned = (special: SpecialKind): void => {
+    dispatch({ slice: 'run', type: 'took', special });
   };
   // The hands — 0613: the frame names what happened and the player's setting decides whether it is felt (0024).
   world.onFeel = (feel: FeelKind): void => {
@@ -5036,8 +5033,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surges included (0373).
   */
   world.onWreck = (): void => {
-    // 0613: and a full bar, which is a charge the ship was carrying as much as one on a stack.
-    detonateArsenal(world, chargesIn(state.run.arsenal) + (chargeFull(world) ? 1 : 0));
+    // 0613's full bar is a charge on the stack since 0648, so the stack is everything the ship was carrying.
+    detonateArsenal(world, chargesIn(state.run.arsenal));
   };
 
   world.onDeath = (cause): void => {
@@ -5089,18 +5086,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onSpecial = (slot: number): void => {
     const side = SIDES[slot];
     if (side === undefined) return;
-    /*
-      ⚠️ **AN EARNED SPECIAL'S FULL BAR IS THROWN FIRST — 0613**, before anything on its trigger's stack: it is
-      the ship's own special, as the ship's own pair is thrown before the tier's ward under it (`startingArsenal`).
-      A bar not full is no charge, so the press falls to the stack, and over an empty one it is silence —
-      today's empty-stock press. Refused inside a dance as every dance press is (`canThrow`), so it costs nothing.
-    */
-    const earned = throwEarned(world, side);
-    if (earned === 'refused') return;
-    if (earned === 'thrown') {
-      syncHud();
-      return;
-    }
+    // 0648: an earned special's full bar is on the stack already (`onEarned`), on top, so it is thrown next.
     const stack = state.run.arsenal[side];
     const next = stack[stack.length - 1];
     if (next === undefined) return;
