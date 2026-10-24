@@ -332,10 +332,16 @@ describe.runIf(chromePath)('the first flight plays the intro, heard, with the pi
     await begin(page);
     await watchFrames(page);
     await flyAs(page);
+    /*
+      ⚠️ **COUNTED FROM AFTER THE PRESS, BECAUSE THE PRESS IS HEARD SINCE 0659.** The menu's confirm is a
+      short buffer like every beat, so a count from nought was met by the press on *Fly* alone and the
+      intro's beats could go unplayed under it. The beats are played by the loop, never inside the click.
+    */
+    const pressed = await page.evaluate(() => window.__itcCues ?? 0);
     const started = Date.now();
     expect(await longestGap(page), 'the flight froze the page').toBeLessThan(FROZEN_MS);
     expect(await shown(page, SKIP_SHOWN), 'the intro opened without its skip, though the game had loaded').toBe(true);
-    await page.waitForFunction(() => (window.__itcCues ?? 0) > 0, null, { timeout: HANDOVER_MS });
+    await page.waitForFunction((before: number) => (window.__itcCues ?? 0) > before, pressed, { timeout: HANDOVER_MS });
     expect(await shown(page, HUD), 'the intro was over before any of it was heard').toBe(false);
     await page.waitForSelector(HUD, { timeout: HANDOVER_MS });
     expect(Date.now() - started, 'the run came up long before the intro could have ended').toBeGreaterThan((INTRO_STEPS / STEPS_PER_SECOND) * 1000 * 0.9);
