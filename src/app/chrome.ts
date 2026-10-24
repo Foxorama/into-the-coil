@@ -48,8 +48,8 @@ import { paintPortrait } from '../render/golfer-art.ts';
 import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import { SHELF_KINDS, SHELVES, type OwnableKind } from '../content/wares.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
-import { DEFAULT_BINDINGS } from '../content/actions.ts';
-import { PAD_SPECIAL_BUTTONS, slotsLeftToRight } from './pad.ts';
+import { DEFAULT_BINDINGS, DEFAULT_PAD_BUTTONS, PAD_BUTTON_NAMES, type KeyBindings } from '../content/actions.ts';
+import { slotsLeftToRight } from './pad.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
 // hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
 // that replaced the strip is `docs/decisions/0358-a-trigger-is-a-button.md`.
@@ -475,6 +475,18 @@ ${each('-choices')} {
   align-items: stretch;
 }
 .itc-music-action { width: min(100%, 18ch); }
+/*
+  0664: the Controls tab — twelve buttons, which a column cannot hold on a phone. Wrapped as the music room's
+  are, three or four to a row, each its name over what it is bound to.
+*/
+.itc-controls-choices {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: min(0.5rem, 1.6cqh) min(0.6rem, 1.5cqw);
+  max-width: min(100%, 76ch);
+}
+.itc-controls-action { width: min(100%, 22ch); padding: 0.4em 0.7em; }
 /*
   ── THE SPLASH — decision 0415, and a press since 0513 ───────────────────────────────────────────
 
@@ -919,7 +931,7 @@ ${each('-action')} {
   running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
   glance, and the choice is the whole screen.
 */
-.itc-title-action-hint, .itc-music-action-hint, .itc-save-action-hint {
+.itc-title-action-hint, .itc-music-action-hint, .itc-save-action-hint, .itc-controls-action-hint {
   display: block;
   /* A floor, so the smallest phone's card does not set its hint at eight pixels — 0370. */
   font-size: max(0.62em, 0.7rem);
@@ -2471,6 +2483,9 @@ ${each('-tab-key[hidden]')} { display: none; }
   sheet lost its title off the top.
 */
 @container (max-height: 460px) {
+  /* 0664: and the Controls tab four to a row, smaller, so its twelve stand in a phone's height. */
+  .itc-controls-choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(100%, 60em); max-width: 100%; }
+  .itc-controls-action { width: auto; font-size: 0.78em; padding: 0.3em 0.4em; }
   .itc-save-choices { display: grid; grid-template-columns: 1fr 1fr; width: min(100%, 34em); }
   /* 0642: Back beside Undo when it is up, and across both columns alone when it is not. */
   .itc-save-choices > [hidden] + :last-child { grid-column: 1 / -1; }
@@ -2585,6 +2600,13 @@ ${each('-tab')} {
   padding: 0.25em 1.1em;
   cursor: pointer;
   opacity: 0.75;
+  /* 0664: one line each — *How to play* wrapped to two at a phone's width once the strip held four. */
+  white-space: nowrap;
+}
+/* 0664: and on a narrow screen the strip's four stand closer, on less padding, so they fit on one line. */
+@container (max-width: 640px) {
+  ${each('-tabs')} { gap: 0.35em; }
+  ${each('-tab')} { padding: 0.25em 0.6em; }
 }
 ${each('-tab-on')} { background: var(--itc-ink); color: var(--itc-void); opacity: 1; }
 ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px solid currentColor; outline-offset: 3px; }
@@ -5086,6 +5108,8 @@ export interface Chrome {
    * caller decides the resolution, and there are two things here that can change in a whole crossing.
    */
   setCrossing(crossing: Crossing | null): void;
+  /** Say the player's bindings wherever a key or a button is named — 0664: How to play, and a face's sheet. */
+  setBindings(keys: KeyBindings, pad: readonly number[]): void;
   /**
    * Name the place a run has just opened in, and say its line — 0661, *"level descriptions"*. Over the
    * game, under the strip, for a few seconds, then gone by itself; `null` takes it down at once. Every
@@ -5328,26 +5352,41 @@ const GLYPHS: Record<GuideDevice, string> = {
   touch: '',
 };
 const GUIDE_DEVICE_LABELS: Record<GuideDevice, string> = { keyboard: 'Keyboard', pad: 'Pad', touch: 'Touch' };
-/** The standard mapping's face buttons by index, as an Xbox-style pad prints them. */
-const PAD_FACE_NAMES: readonly string[] = ['A', 'B', 'X', 'Y'];
 
 /** A key code as its cap says it: `KeyE` is E, `ShiftLeft` is Shift, `ArrowUp` is an arrow. */
-function keyCap(code: string): string {
+export function keyCap(code: string): string {
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Arrow')) return { Up: '↑', Down: '↓', Left: '←', Right: '→' }[code.slice(5)] ?? code;
   return code.replace(/(Left|Right)$/, '');
 }
-function keyCaps(codes: readonly string[]): string {
+export function keyCaps(codes: readonly string[]): string {
   return [...new Set(codes.map(keyCap))].join(' / ');
 }
 /**
  * What throws the trigger in `slot` on `device`, in its own words — How to play's controls, and since 0580 a
  * face's sheet, so the two say one thing. The discs stack up the leading edge in trigger order (0060).
  */
-function triggerIn(device: GuideDevice, slot: number): string {
-  if (device === 'keyboard') return keyCaps([DEFAULT_BINDINGS.special1, DEFAULT_BINDINGS.special2, DEFAULT_BINDINGS.special3][slot] ?? []);
-  if (device === 'pad') return PAD_FACE_NAMES[PAD_SPECIAL_BUTTONS[slot] ?? -1] ?? '';
+// 0664: on the player's bindings, the defaults until the Controls tab moves one (`setBindings`).
+function triggerIn(device: GuideDevice, slot: number, bound: Bound): string {
+  if (device === 'keyboard') return keyCaps([bound.keys.special1, bound.keys.special2, bound.keys.special3][slot] ?? []);
+  if (device === 'pad') return PAD_BUTTON_NAMES[bound.pad[slot] ?? -1] ?? '';
   return slot === 0 ? 'Lowest disc' : slot === SIDES.length - 1 ? 'Top disc' : 'Middle disc';
+}
+
+/** What every action and trigger is bound to — 0664, as the shell hands it over. */
+interface Bound {
+  keys: KeyBindings;
+  pad: readonly number[];
+}
+/** The bindings a game opens on, until the shell says the player's. */
+const DEFAULT_BOUND: Bound = { keys: DEFAULT_BINDINGS, pad: DEFAULT_PAD_BUTTONS };
+
+/** How to play's keys for flying — 0664: each way's first key, and the arrows where every way still has its arrow. */
+function flyKeys(keys: KeyBindings): string {
+  const ways = [keys.acrossMinus, keys.alongMinus, keys.acrossPlus, keys.alongPlus];
+  const arrows = ways.every((codes) => codes.some((code) => code.startsWith('Arrow')));
+  const firsts = ways.map((codes) => keyCap(codes.find((code) => !code.startsWith('Arrow')) ?? codes[0] ?? ''));
+  return firsts.join('') + (arrows && ways.some((codes) => codes.some((code) => !code.startsWith('Arrow'))) ? ' / arrows' : '');
 }
 
 /**
@@ -5397,6 +5436,8 @@ function buildGuide(
   listeners: (() => void)[],
   // 0594: each pickup's row as it is built, in `PICKUP_KINDS` order, so a face can be hidden later.
   guideRows: GuideRow[],
+  // 0664: the cells that say a binding, and what each says, so `setBindings` can write them again.
+  boundCells: { span: HTMLElement; say: (bound: Bound) => string }[],
 ): HTMLElement {
   const body = document.createElement('div');
   body.className = prefix + 'body';
@@ -5494,23 +5535,27 @@ function buildGuide(
   */
   const table = document.createElement('div');
   table.className = prefix + 'controls';
-  const cell = (text: string, part: string, device: GuideDevice | null): void => {
+  const cell = (text: string, part: string, device: GuideDevice | null): HTMLElement => {
     const span = document.createElement('span');
     span.className = prefix + part;
     span.textContent = text;
     if (device !== null) devices[device].push(span);
     table.appendChild(span);
+    return span;
+  };
+  /** A cell that says a binding — 0664, written now on the defaults and again by `setBindings`. */
+  const boundCell = (say: (bound: Bound) => string, device: GuideDevice): void => {
+    boundCells.push({ span: cell(say(DEFAULT_BOUND), 'controls-how', device), say });
   };
   cell('', 'controls-head', null);
   for (const device of GUIDE_DEVICES) cell(GUIDE_DEVICE_LABELS[device], 'controls-head', device);
-  const moves = [DEFAULT_BINDINGS.acrossMinus, DEFAULT_BINDINGS.alongMinus, DEFAULT_BINDINGS.acrossPlus, DEFAULT_BINDINGS.alongPlus];
   cell('Fly', 'controls-what', null);
-  cell(moves.map((codes) => keyCap(codes[0] ?? '')).join('') + ' / arrows', 'controls-how', 'keyboard');
+  boundCell((bound) => flyKeys(bound.keys), 'keyboard');
   cell('Left stick', 'controls-how', 'pad');
   cell('Drag anywhere', 'controls-how', 'touch');
   SIDES.forEach((side, slot) => {
     cell(SIDE_LABELS[side], 'controls-what', null);
-    for (const device of GUIDE_DEVICES) cell(triggerIn(device, slot), 'controls-how', device);
+    for (const device of GUIDE_DEVICES) boundCell((bound) => triggerIn(device, slot, bound), device);
   });
   section('CONTROLS').appendChild(table);
   return body;
@@ -6024,6 +6069,9 @@ export function makeChrome(
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
   /** How to play's pickup rows, in `PICKUP_KINDS` order — 0594, so a face not yet open is hidden. */
   const guideRows: GuideRow[] = [];
+  /** How to play's cells that say a binding — 0664 — and the bindings they say, which a sheet reads too. */
+  const boundCells: { span: HTMLElement; say: (bound: Bound) => string }[] = [];
+  let bound: Bound = DEFAULT_BOUND;
   /** The shoulder glyphs at every tab strip's ends — 0548 — and at a tab-less pilot band's arrows (0637), shown while the device in hand is a pad. */
   const tabKeys: HTMLElement[] = [];
 
@@ -6379,7 +6427,7 @@ export function makeChrome(
       board = { root: boardRoot, body };
       panel.appendChild(body);
     } else if (screen === 'guide') {
-      panel.appendChild(buildGuide(prefix, iconOf, guideDevices, keys, (kind, face, sprite) => tell(screen, kind, face, sprite), listeners, guideRows));
+      panel.appendChild(buildGuide(prefix, iconOf, guideDevices, keys, (kind, face, sprite) => tell(screen, kind, face, sprite), listeners, guideRows, boundCells));
       panel.appendChild(choices);
     } else {
       /*
@@ -7628,7 +7676,7 @@ export function makeChrome(
       lines.append(term, what);
     };
     for (const line of card.lines) add(line.label, line.value);
-    if (card.side !== null) add('Throw it', triggerIn(device, SIDES.indexOf(card.side)));
+    if (card.side !== null) add('Throw it', triggerIn(device, SIDES.indexOf(card.side), bound));
     const close = document.createElement('button');
     close.type = 'button';
     close.className = prefix + 'action ' + prefix + 'action-lead';
@@ -8922,6 +8970,10 @@ export function makeChrome(
           return line;
         }),
       );
+    },
+    setBindings(keys: KeyBindings, pad: readonly number[]): void {
+      bound = { keys, pad };
+      for (const cell of boundCells) cell.span.textContent = cell.say(bound);
     },
     setArrival(said: Arrival | null): void {
       arrival.classList.remove('itc-playing-arrival-shown');

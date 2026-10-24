@@ -23,7 +23,7 @@ save a run in progress.
 |---|---|---|
 | A copy of the page itself | Cache Storage, named `into-the-coil-<version>` | So the game still opens when you have no network |
 | The ten best runs: each one's score, which golfer flew it, the difficulty, how far it got, how many continues it took, and the date it ended | Local Storage, key `itc_scores` | So the title screen can show the high scores |
-| Your settings: sound on or off, rumble on or off, how long the crossing between places lasts, the difficulty last chosen, which hand you play in, how far the ship goes for a finger's travel on a touch screen, and whether runs may be continued | Local Storage, key `itc_settings` | So the game opens the way you left it |
+| Your settings: sound on or off, rumble on or off, how long the crossing between places lasts, the difficulty last chosen, which hand you play in, how far the ship goes for a finger's travel on a touch screen, whether runs may be continued, and which keys and pad buttons you bound to each control | Local Storage, key `itc_settings` | So the game opens the way you left it |
 | Your hangar: which ships you have won a run in, how each ship is fitted out, how many Star Shards you hold, what you have bought with them, which difficulties you have finished, and how many times your ship has been lost to something it flew into | Local Storage, key `itc_hangar` | So what you have unlocked stays unlocked |
 | The save as it was before you last loaded one over it — the three above, together — and when that was | Local Storage, key `itc_undo` | So **Undo the last load** can put it back |
 

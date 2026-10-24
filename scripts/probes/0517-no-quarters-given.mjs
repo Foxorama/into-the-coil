@@ -36,8 +36,9 @@ export const PROBES = [
     guard: 'Freeplay is kept between visits',
     edit: {
       path: 'src/save/settings.ts',
-      find: '    steer: settings.steer,\n    credits: settings.credits,\n  };',
-      replace: '    steer: settings.steer,\n  };',
+      // ⚠️ Re-anchored by 0664: the bindings are kept after the continues band.
+      find: '    steer: settings.steer,\n    credits: settings.credits,\n',
+      replace: '    steer: settings.steer,\n',
     },
   },
   {

@@ -372,8 +372,9 @@ describe('a screen that expires presses its own control, and says how long it wa
     // ⚠️ **AND COSMO'S SINCE 0523**, on the same terms: a player at a shelf is choosing.
     // ⚠️ **AND PAINT & PARTS SINCE 0527**, on the hangar's: a player dressing a ship is choosing.
     // ⚠️ **AND THE SAVE SINCE 0641**, on Settings' terms: a player there is reading a code or picking a file.
+    // ⚠️ **AND THE CONTROLS SINCE 0664**, on the same terms: a player there is pressing the key they want.
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['ended', 'guide', 'hangar', 'music', 'parts', 'paused', 'playing', 'quit', 'save', 'settings', 'shop', 'splash', 'title', 'travel', 'victory'].sort(),
+      ['controls', 'ended', 'guide', 'hangar', 'music', 'parts', 'paused', 'playing', 'quit', 'save', 'settings', 'shop', 'splash', 'title', 'travel', 'victory'].sort(),
     );
   });
 

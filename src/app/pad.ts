@@ -22,7 +22,7 @@
  * found. Everything this file adds on top allocates nothing.
  */
 
-import { SPECIAL_BINDINGS } from '../content/actions.js';
+import { DEFAULT_PAD_BUTTONS, SPECIAL_BINDINGS } from '../content/actions.js';
 import { FEELS, FEEL_GAP_MS, FEEL_KINDS, type FeelKind } from '../content/feels.js';
 import type { ScrollAxis } from '../sim/camera.js';
 import type { Intent } from '../sim/intent.js';
@@ -57,7 +57,8 @@ export const PAD_AXIS_Y = 1;
  */
 export const PAD_AIM_X = 2;
 export const PAD_AIM_Y = 3;
-export const PAD_SPECIAL_BUTTONS: readonly number[] = [0, 1, 2, 3];
+// 0664: the defaults — what a trigger is on until the Controls tab moves it (`buttons` below).
+export const PAD_SPECIAL_BUTTONS: readonly number[] = DEFAULT_PAD_BUTTONS;
 /**
  * Where each standard-mapping face button stands across the pad, left negative — 0574: the bottom
  * one (A) and the top one (Y) in the middle, the right one (B) right and the left one (X) left.
@@ -80,6 +81,8 @@ export function slotsLeftToRight(count: number): number[] {
  * *Resume*, which is where the cursor opens.
  */
 export const PAD_PAUSE_BUTTON = 9;
+/** The standard mapping's Back, which keeps a binding the Controls tab was listening to replace — 0664. */
+export const PAD_BACK_BUTTON = 8;
 
 export interface PadOptions {
   /** See `src/app/touch.ts` — the same reason, the same thread. */
@@ -91,6 +94,11 @@ export interface PadOptions {
    * the shell decides what it means; a pause is not an `Intent` because nothing in the sim may read it.
    */
   onPause?: () => void;
+  /**
+   * Each trigger's button, by slot — 0664: the player's bindings, read every step so a rebinding is heard at
+   * once. The defaults when none is given.
+   */
+  buttons?: () => readonly number[];
 }
 
 /**
@@ -102,6 +110,7 @@ export interface PadOptions {
 export function attachPad(options: PadOptions = {}): InputSource {
   // @setup: fixed at attach.
   const alongAxisOf = options.alongAxis ?? ((): ScrollAxis => 'x');
+  const buttonsOf = options.buttons ?? ((): readonly number[] => PAD_SPECIAL_BUTTONS);
   const readPads =
     options.pads ??
     ((): readonly (Gamepad | null)[] =>
@@ -125,6 +134,7 @@ export function attachPad(options: PadOptions = {}): InputSource {
   return {
     contribute(intent: Intent): void {
       const pads = readPads();
+      const buttons = buttonsOf();
       let ax = 0;
       let ay = 0;
       // 0588: the right stick, summed as the left is.
@@ -154,7 +164,7 @@ export function attachPad(options: PadOptions = {}): InputSource {
         }
 
         for (let i = 0; i < wasDown.length; i++) {
-          const button = pad.buttons[PAD_SPECIAL_BUTTONS[i] ?? -1];
+          const button = pad.buttons[buttons[i] ?? -1];
           const down = button !== undefined && button.pressed;
           // The edge, derived: a snapshot cannot tell you a press happened, only that a button is
           // down now. Holding must fire once, which is the same rule `src/app/input.ts` enforces
