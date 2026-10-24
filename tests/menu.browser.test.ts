@@ -710,15 +710,48 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await page.context().close();
   });
 
-  it('0513 — A on the pilot band flies the pilot it is on, where it used to step to the next', async () => {
+  it('0668 — THE WALK: A on the pilot band arms the pilot it is on, and a second A flies them', async () => {
+    /*
+      The review's walk (`reports/the-menus-reviewed-again-2026-10-24.md`, 1.1): into the hangar, B back to the
+      title, down from the quiet row round onto the pilot band, right, A — and a browse was the intro. 0513 gave
+      the cursor's press the one-press rule; 0668 gives it the thumb's. In what the player sees: the title still
+      up, the face stepped onto marked and armed, and only the second A shows the intro.
+    */
     const page = await open();
     await afterFrames(page, 8);
-    await nudge(page, MENU_DPAD_BUTTONS.up);
-    await nudge(page, MENU_DPAD_BUTTONS.up);
+    const p = prefixFor('title');
+    const filled = (): Promise<string> =>
+      page.evaluate(
+        ({ attr, panel }: { attr: string; panel: string }) => {
+          const on = document.querySelector(`.${panel} [${attr}="pilot"] [aria-pressed="true"]`);
+          return (on?.getAttribute('aria-label') ?? on?.textContent ?? '').trim();
+        },
+        { attr: SETTING_ATTR, panel: p + 'shown' },
+      );
+    const armed = (): Promise<boolean> => shown(page, `${shownScreen('title')} .${p}pilot-armed`);
+    // Fly, down to the quiet row's middle, which is the hangar's; A goes in, and B comes back to it.
+    await nudge(page, MENU_DPAD_BUTTONS.down);
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
-    // The first flight of a visit is the intro's, whose Skip is the sign it began.
-    await page.waitForSelector('.' + prefixFor('intro') + 'skip-shown', { timeout: 15_000 });
-    expect(await shown(page, shownScreen('title')), 'A on the pilot band left the title up').toBe(false);
+    await page.waitForSelector(shownScreen('hangar'), { timeout: 15_000 });
+    await nudge(page, MENU_BACK_BUTTONS[0]!);
+    await page.waitForSelector(shownScreen('title'), { timeout: 15_000 });
+    const was = await filled();
+    await nudge(page, MENU_DPAD_BUTTONS.down);
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    const second = await filled();
+    expect(second, 'down from the quiet row and right did not step the pilot band').not.toBe(was);
+    expect(await armed(), 'a step along the pilot band armed the pilot it landed on').toBe(false);
+    await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
+    expect(await shown(page, shownScreen('title')), 'the first A on the pilot band flew').toBe(true);
+    expect(await filled(), 'the first A on the pilot band moved off the pilot it was on').toBe(second);
+    expect(await armed(), 'the first A on the pilot band did not say the pilot is armed').toBe(true);
+    await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
+    /*
+      The intro's Skip, or the run's HUD, is the sign the flight began — this store has every tier finished, so
+      the pilot one step on may be Venoma, who has no intro (0666).
+    */
+    await page.waitForSelector(`.${prefixFor('intro')}skip-shown, .itc-playing-hud-shown`, { timeout: 15_000 });
+    expect(await shown(page, shownScreen('title')), 'the second A on the pilot band left the title up').toBe(false);
     await page.context().close();
   });
 });

@@ -12,6 +12,7 @@
 //   node scripts/shot-menus.mjs                 every screen, 1280x720 and 844x390, into shots/
 //   node scripts/shot-menus.mjs --out=menus     elsewhere under the repo
 //   node scripts/shot-menus.mjs --sizes=guard   at the layout guard's six sizes instead
+//   node scripts/shot-menus.mjs --sizes=wide    at 1920x1080 and 2560x1080, for the hangar family
 //   node scripts/shot-menus.mjs --only=title    the title alone
 //
 // The seeds are the documents the page reads: `itc_scores` (every field `entryFrom` in
@@ -86,7 +87,19 @@ const GUARD = [
   [1024, 768],
   [1280, 720],
 ].map(([width, height]) => ({ tag: `${width}x${height}`, width, height, phone: false }));
-const SIZES = arg('sizes', 'pair') === 'guard' ? GUARD : PAIR;
+/**
+ * `--sizes=wide`: the two larger desktops the hangar family is handed over at since 0668 — a 1080p monitor and
+ * an ultrawide, where the review found the plate one width at every size and its type barely grown.
+ */
+const WIDE = [
+  [1920, 1080],
+  [2560, 1080],
+].map(([width, height]) => ({ tag: `${width}x${height}`, width, height, phone: false }));
+const SIZES = { pair: PAIR, guard: GUARD, wide: WIDE }[arg('sizes', 'pair')];
+if (SIZES === undefined) {
+  console.error('--sizes is pair, guard or wide.');
+  process.exit(2);
+}
 
 /** A screen's shown panel, by the prefix src/app/chrome.ts gives it. Checked, not assumed: no panel, no picture. */
 const shown = (screen) => `.itc-${screen}-shown`;

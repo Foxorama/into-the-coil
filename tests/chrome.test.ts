@@ -263,6 +263,27 @@ describe('every screen owns its class prefix', () => {
       ).toBe(true);
     }
   });
+
+  it('0668 — every screen with a hinted action sets the hint on its own line', () => {
+    /*
+      Cosmo's *Show owned* read *"Show ownedPut what you own back on the shelves"* at every size: the rule that
+      puts a hint on a line of its own named four screens by hand, and not the shop. Walked off the rows, so a
+      screen that gives an action a hint is held whether or not anyone remembered the stylesheet.
+    */
+    const rules = [...STYLE.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+      selectors: m[1]!.split(',').map((s) => s.trim()),
+      body: m[2]!,
+    }));
+    const blocks = rules.filter((r) => /(^|;)\s*display:\s*block/.test(r.body));
+    for (const screen of SCREEN_KINDS) {
+      if (!SCREENS[screen].actions.some((action) => action.hint.length > 0)) continue;
+      const hint = `.${prefixFor(screen)}action-hint`;
+      expect(
+        blocks.some((r) => r.selectors.includes(hint)),
+        `${screen} gives an action a hint and no rule sets ${hint} on a line of its own`,
+      ).toBe(true);
+    }
+  });
 });
 
 /**

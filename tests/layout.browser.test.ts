@@ -960,3 +960,73 @@ describe.runIf(chromePath)('a screen that cannot fit stays reachable', () => {
     await page.context().close();
   });
 });
+
+describe.runIf(chromePath)('0668 — a place’s tab strip stands where it is on every tab', () => {
+  it('draws Settings, Controls, How to play and Save with their strip at one height, on every device', async () => {
+    /*
+      Measured in the review at 1280x720: 84 px on How to play, 92 on Save and 189 on Controls, because each
+      tab's panel was centred on its own content. A step along the strip moved it out from under the cursor.
+    */
+    const tabs = SCREENS.settings.tabs;
+    for (const viewport of VIEWPORTS) {
+      const page = await open(viewport);
+      const tops: string[] = [];
+      for (const tab of tabs) {
+        await showOnly(page, tab);
+        const top = await page.evaluate((p: string) => {
+          const strip = document.querySelector('.' + p + 'tabs');
+          return strip === null ? null : Math.round(strip.getBoundingClientRect().top);
+        }, prefixFor(tab));
+        expect(top, `${tab} has no tab strip to measure`).not.toBeNull();
+        tops.push(`${top}`);
+      }
+      expect(new Set(tops).size, `${viewport.what} (${viewport.width}x${viewport.height}): the strip stands at ${tops.join(', ')} px across ${tabs.join(', ')}`).toBe(1);
+      await page.context().close();
+    }
+  });
+});
+
+describe.runIf(chromePath)('0668 — a button under the pointer lifts and keeps its rim', () => {
+  it('draws the hovered Hangin’ Out no darker than Settings beside it, with as bright a rim', async () => {
+    /*
+      In the player's unit, a screenshot's luminance: the hovered button's glass against the resting one beside
+      it, and the top edge of each, which is the rim. The review read the hovered one as darker — a flat grey
+      with no rim, which is how a button that cannot be pressed looks.
+    */
+    const page = await open({ width: 1280, height: 720 });
+    await showOnly(page, 'title');
+    const button = (label: string) => page.locator(`${shown('title')} .${prefixFor('title')}action`, { hasText: label }).first();
+    const luminance = async (label: string, part: 'glass' | 'rim'): Promise<number> => {
+      const box = (await button(label).boundingBox())!;
+      const x = box.x + box.width * 0.3;
+      const clip = part === 'rim' ? { x, y: box.y, width: box.width * 0.4, height: 2 } : { x, y: box.y + 4, width: box.width * 0.4, height: box.height - 8 };
+      const png = await page.screenshot({ clip });
+      return page.evaluate(async (b64: string) => {
+        const img = new Image();
+        img.src = 'data:image/png;base64,' + b64;
+        await img.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const pen = canvas.getContext('2d')!;
+        pen.drawImage(img, 0, 0);
+        const d = pen.getImageData(0, 0, canvas.width, canvas.height).data;
+        let sum = 0;
+        for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
+        return sum / (d.length / 4);
+      }, png.toString('base64'));
+    };
+    const hangar = SCREENS.title.actions[1]!.label;
+    const settings = SCREENS.title.actions[2]!.label;
+    await button(hangar).hover();
+    // The rim's glow eases in over 0.15 s.
+    await page.waitForTimeout(400);
+    const glass = await luminance(hangar, 'glass');
+    const beside = await luminance(settings, 'glass');
+    expect(glass, `the hovered ${hangar} is ${glass.toFixed(1)} and ${settings} beside it ${beside.toFixed(1)}: the hover sank`).toBeGreaterThan(beside + 2);
+    const rim = await luminance(hangar, 'rim');
+    const besideRim = await luminance(settings, 'rim');
+    expect(rim, `the hovered ${hangar}'s rim is ${rim.toFixed(1)} and ${settings}'s ${besideRim.toFixed(1)}: the hover lost its rim`).toBeGreaterThanOrEqual(besideRim - 4);
+    await page.context().close();
+  });
+});
