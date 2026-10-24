@@ -5,8 +5,9 @@ working on the next set of feedback in the meantime."* Transcribed here because 
 [0029](../docs/decisions/0029-the-tracked-record-is-the-record.md). Words in quotes are the page's; a word
 I could not read with certainty is marked *(read as)*.
 
-**What checked `main`:** at `0ceba48` (#645), `npm run typecheck` and the whole `npx vitest run` on a fresh
-`npm ci` — the result is in the PR that lands this report. #646 (0648) merged during the work; it was opened
+**What checked `main`:** at `0ceba48` (#645), `npm run typecheck` on a fresh `npm ci`, green. The whole
+`npx vitest run` beside it was stopped by the container's thirty-minute limit before it finished, so it
+reported nothing, and the verdict below is CI's. #646 (0648) merged during the work; it was opened
 on `0ceba48`, and its run 40077265945 passed every suite shard, every proof shard and the joined `test` job
 before the merge, so `f3e8355` is the tree CI tested. It is merged into this branch; the one conflict was
 `docs/state-of-play.md`, both entries kept.
