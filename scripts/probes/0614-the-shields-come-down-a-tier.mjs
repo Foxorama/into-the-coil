@@ -12,22 +12,11 @@ export const PROBES = [
     guard: 'THE ASK: Legend opens every life full',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: '    shellOpen: 0,\n    shellLevel: 1,',
-      replace: '    shellOpen: 0,\n    shellLevel: 0,',
+      find: '    shellOpen: 1,\n    shellLevel: 1,',
+      replace: '    shellOpen: 1,\n    shellLevel: 0,',
     },
   },
-  {
-    decision: '0614',
-    suite: 'tests/tier-shell.test.ts',
-    // A Savior death handing the shield back: *"don't give saviour a shield on death"* undone.
-    broke: 'a Savior life after a death opening on a shield',
-    guard: 'THE ASK: Legend opens every life full',
-    edit: {
-      path: 'src/content/difficulty.ts',
-      find: '    shellOpen: 0,\n    shellLevel: 1,',
-      replace: '    shellOpen: 1,\n    shellLevel: 1,',
-    },
-  },
+  // *"Don't give saviour a shield on death"* was taken back by 0650, and its break moved there inverted.
   {
     decision: '0614',
     suite: 'tests/tier-shell.test.ts',

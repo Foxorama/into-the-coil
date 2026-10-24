@@ -103,7 +103,9 @@ export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
    * branch anywhere, it is arithmetic that adds nothing.
    *
    * ⚠️ **Since 0614 it is a LIFE's only — a death and a continue — and `shellLevel` is a level's.**
-   * *"Don't give saviour a shield on death — keep it to once per start of level."*
+   * *"Don't give saviour a shield on death — keep it to once per start of level."* 0650 gave Savior's
+   * death its shield back, on the player's later *"Savior → spawn w/ shield after death"*; the split stays,
+   * because the two numbers are still each a tier's to say.
    */
   shellOpen: number;
   /**
@@ -508,8 +510,11 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
       per start of level"* — 0614: a run's start and every boundary top the ship up to one, a death or a
       continue opens on the hull, and the rest are flown for. It was the hull everywhere (0355's *"no
       change to behaviour"*) until the game was played as *"quite hard"*.
+
+      0650 takes back the death's half on the player's next page: *"Savior → spawn w/ shield after
+      death"*. A life after a death or a continue opens on one, as a level does.
     */
-    shellOpen: 0,
+    shellOpen: 1,
     shellLevel: 1,
     shellCap: 3,
     opensWith: [],

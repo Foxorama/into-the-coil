@@ -49,12 +49,13 @@ function hit(world: World, frame: GameFrame): void {
 describe('0355 — the rows', () => {
   it('THE ASK: Legend opens every life full and renewed, Savior on one, Burn on the hull with three to fly for', () => {
     // The player's words, which is why this names values: they are the ask, not a hand's tuning.
-    // 0355 for Legend; 0614 for the other two: *"the game is quite hard"*.
+    // 0355 for Legend; 0614 for the other two: *"the game is quite hard"*; 0650 for Savior's death:
+    // *"Savior → spawn w/ shield after death"*.
     expect(DIFFICULTIES.legendary.shellOpen, 'a Legendary life does not open on a full shell').toBe(DIFFICULTIES.legendary.shellCap);
     expect(DIFFICULTIES.legendary.shellCap, 'a Legendary shell is not the whole readout').toBe(MAX_SHIELDS);
     expect(DIFFICULTIES.legendary.shellLevel, 'a Legendary level is not renewed to full').toBe(DIFFICULTIES.legendary.shellCap);
     expect(DIFFICULTIES.savior.shellLevel, 'a Savior level does not start with one shield').toBe(1);
-    expect(DIFFICULTIES.savior.shellOpen, 'a Savior life after a death opens wearing a shell').toBe(0);
+    expect(DIFFICULTIES.savior.shellOpen, 'a Savior life after a death does not open on one shield').toBe(1);
     expect(DIFFICULTIES.savior.shellCap, 'Savior can no longer carry a full shell').toBe(MAX_SHIELDS);
     expect(DIFFICULTIES.burn.shellLevel, 'a Burn level opens wearing a shell').toBe(0);
     expect(DIFFICULTIES.burn.shellOpen, 'a Burn life opens wearing a shell').toBe(0);

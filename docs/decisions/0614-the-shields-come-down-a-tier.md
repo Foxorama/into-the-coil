@@ -3,7 +3,7 @@
 **Accepted 2026-10-17.** Amends [0355](0355-a-tier-opens-on-a-shell.md): Savior's and Burn's counts, and a
 third count on every tier — the shell a LEVEL opens on, split from the one a life after a death opens on.
 Leaves [0447](0447-the-ward-is-a-third-trigger.md)'s ward as the default for a shell of zero, which no tier
-has now.
+has now. **Amended by [0650](0650-a-savior-death-opens-on-a-shield.md)**: a Savior death opens on one shield.
 
 ## The ask
 

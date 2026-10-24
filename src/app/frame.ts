@@ -120,7 +120,7 @@ import type { FeelKind } from '../content/feels.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { STEP_MS, type Frame } from './loop.ts';
-import { STREAK_QUIET_SECONDS, multiplierFor } from '../content/score.ts';
+import { STREAK_DECAY_SECONDS, STREAK_QUIET_SECONDS, multiplierFor, streakStepDown } from '../content/score.ts';
 import type { DeathCause } from '../state/slices/run.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -11691,7 +11691,12 @@ function layChain(w: World): void {
   if (w.bossPool.size === 0) {
     // 0627: a body that slumps comes down on its own once the head has gone; any other goes with it.
     if (w.slumpFor >= 0) slumpChain(w);
-    else w.bossBody.clear();
+    /*
+      ⚠️ **0651: NOT ON THE STEP THE HEAD DIED, WHEN THE BODY SLUMPS.** The arc strikes as it fires, before
+      this, so a lightning kill emptied the pool here and the body went before the death below could start
+      its slump: the far roots stood. Every other gun kills after this and never saw it.
+    */
+    else if (w.bossRow.slump === undefined || !bossJustDied(w)) w.bossBody.clear();
     return;
   }
   const head = w.bossPool.at(0);
@@ -13446,6 +13451,9 @@ function beginScript(w: World): void {
 /** How many steps the streak lives with nothing of the player's landing — 0647. */
 const STREAK_QUIET_STEPS = Math.round((STREAK_QUIET_SECONDS * 1000) / STEP_MS);
 
+/** How many steps apart the multiplier comes down once the quiet has run out — 0649. */
+const STREAK_DECAY_STEPS = Math.round((STREAK_DECAY_SECONDS * 1000) / STEP_MS);
+
 /** Whether anything in `pool` was struck in the last flash's worth of steps — `struckIn`, set by every landing (0334). */
 function anyStruck(pool: Pool<Entity>): boolean {
   for (let i = 0; i < pool.size; i++) if (pool.at(i).struckIn > 0) return true;
@@ -13470,7 +13478,9 @@ function stepStreak(w: World): void {
     return;
   }
   score.quiet += 1;
-  if (score.quiet >= STREAK_QUIET_STEPS) score.streak = 0;
+  // 0649: the quiet run out, then a step down every second until something lands — never the whole streak at once.
+  const over = score.quiet - STREAK_QUIET_STEPS;
+  if (over >= 0 && over % STREAK_DECAY_STEPS === 0) score.streak = streakStepDown(score.streak);
 }
 
 /**

@@ -32,6 +32,13 @@ export const STREAK_STEP = 10;
  */
 export const STREAK_QUIET_SECONDS = 3;
 
+/**
+ * How often the multiplier comes down a step once the quiet has run out, in seconds — 0649. Asked for:
+ * *"point decay should be 3 sec, and then it ticks down per sec till a hit happens."* Until 0649 the
+ * quiet ended the streak whole.
+ */
+export const STREAK_DECAY_SECONDS = 1;
+
 /** The most the streak can multiply a kill by. Reached at `STREAK_STEP × (cap − 1)` kills. */
 export const MULTIPLIER_CAP = 8;
 
@@ -50,6 +57,15 @@ export function shardsFor(points: number): number {
 /** What a kill is multiplied by, `streak` kills into the streak. */
 export function multiplierFor(streak: number): number {
   return Math.min(MULTIPLIER_CAP, 1 + Math.floor(Math.max(0, streak) / STREAK_STEP));
+}
+
+/**
+ * The streak one multiplier step down — 0649: the first kill of the step below, so the next kill climbs
+ * from there. A streak past the cap comes down from the cap, never from kills the cap had stopped counting.
+ */
+export function streakStepDown(streak: number): number {
+  const step = Math.min(MULTIPLIER_CAP - 1, Math.floor(Math.max(0, streak) / STREAK_STEP));
+  return Math.max(0, (step - 1) * STREAK_STEP);
 }
 
 /**

@@ -1,6 +1,7 @@
 # 0647 — The streak is kept by hitting
 
-**Accepted 2026-10-20.** Amends [0428](0428-the-score-is-kept.md)'s streak.
+**Accepted 2026-10-20.** Amends [0428](0428-the-score-is-kept.md)'s streak. **Amended by
+[0649](0649-the-streak-ticks-down.md)**: the quiet takes a step a second, not the whole streak.
 
 ## The ask
 

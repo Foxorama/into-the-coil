@@ -19,7 +19,7 @@ export const PROBES = [
     suite: 'tests/score.test.ts',
     // A landing that does not put the clock back: the streak runs out under a body being hit.
     broke: 'a clock that only a kill puts back',
-    guard: '0647 — THE ASK: the streak ends after three seconds',
+    guard: '0647, 0649 — THE ASK: the streak falls after three seconds',
     edit: {
       path: 'src/app/frame.ts',
       find: '  if (w.deaths.count > 0 || anyStruck(w.enemies) || anyStruck(w.bossPool) || anyStruck(w.bossBody)) {',
