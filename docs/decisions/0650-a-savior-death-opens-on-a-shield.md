@@ -31,6 +31,12 @@ The probe in `scripts/probes/0650-a-savior-death-opens-on-a-shield.mjs` puts 061
 probe of a death handing the shield back is retired, since that is now the rule, and its probe of a level
 opening on the hull is re-anchored.
 
+**No shipped tier says two different numbers now** — Legend 3 and 3, Savior 1 and 1, Burn 0 and 0 — so 0614's
+guards over the shipped tiers could no longer see a run's start or a boundary read off the life's count; CI's
+proof found both of its probes green. The split is kept, because each count is still a tier's to say
+([0282](0282-a-mechanism-for-every-instance-makes-them-one-instance.md)), and it is held in
+`tests/tier-shell.test.ts` on a row that says two, *a tier whose two counts differ*, which both probes now name.
+
 ## Not held by any guard
 
 - **Whether one is the right number.** The page says *"w/ shield"*; one is the count a Savior level opens on,

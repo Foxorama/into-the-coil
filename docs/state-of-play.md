@@ -1163,11 +1163,12 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE NOTEBOOK PAGES ARE A QUEUE OF NINETEEN: THREE BUILT, FOUR OWED AN ANSWER — 2026-10-24
+### ⚠️ THE NOTEBOOK PAGES ARE A QUEUE OF TWENTY: FOUR BUILT, FOUR OWED AN ANSWER — 2026-10-24
 
-[`the-notebook-pages`](../reports/the-notebook-pages-2026-10-24.md) is every item on four handwritten pages, each with
-its status. Built: [0649](decisions/0649-the-streak-ticks-down.md), [0650](decisions/0650-a-savior-death-opens-on-a-shield.md)
-and [0651](decisions/0651-the-arc-lets-the-serpent-fall.md). **Next is the report's *Owed to the player***, then its
+[`the-notebook-pages`](../reports/the-notebook-pages-2026-10-24.md) is every item on four handwritten pages and one
+asked after them, each with its status. Built: [0649](decisions/0649-the-streak-ticks-down.md),
+[0650](decisions/0650-a-savior-death-opens-on-a-shield.md), [0651](decisions/0651-the-arc-lets-the-serpent-fall.md)
+and [0652](decisions/0652-a-full-rack-throws-a-shield.md). **Next is the report's *Owed to the player***, then its
 items with a cause found (3, 14, 15, 19), each of which amends a decision the report names.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24

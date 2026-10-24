@@ -35,7 +35,11 @@ without being told to.
 ## What guards it
 
 `tests/serpent.test.ts`, *0651*: the serpent killed by the Thunderbolt's own arc through the real trigger,
-and its body falling, breaking a far trunk and leaving the screen within 0627's three seconds. The probe in
+and its body falling, breaking a far trunk and leaving the screen within 0627's three seconds. The ship is put
+within half the arc's reach of the head every step, with no shot in flight: **the guard's first version stood
+the ship where the serpent fixture leaves it, and CI's proof found it green on the old code** — the head was out
+of the arc's reach, so it died to something landing in the collisions, the one order that never broke. The arc
+strikes only the head (`fireArc` searches `bossPool`), so reach is the whole condition. The probe in
 `scripts/probes/0651-the-arc-lets-the-serpent-fall.mjs` puts the old clear back.
 
 ## Not held by any guard

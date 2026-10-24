@@ -3415,9 +3415,17 @@ describe('0627 — the roots are walls, and the serpent breaks a way through the
     wearHull(world);
     world.bossPool.at(0).health = 0.001;
     world.bossPool.at(0).fireIn = 999;
+    // Within the arc's reach of the head, which is the one part of the serpent the arc strikes, and nothing in flight:
+    // a shot that reached the body would kill it through the body, in the collisions — the order that never broke.
     for (let i = 0; i < 3 * STEPS_PER_SECOND && world.bossPool.size > 0; i++) {
+      const head = world.bossPool.at(0);
+      world.ship.along = head.along - world.weapon.reach * 0.5;
+      world.ship.across = head.across;
+      world.ship.prevAlong = world.ship.along;
+      world.ship.prevAcross = world.ship.across;
       world.ship.health = world.shipRow.health;
       world.ship.invulnFor = 2;
+      world.playerShots.clear();
       frame.step();
     }
     expect(world.bossPool.size, 'the arc never killed the serpent').toBe(0);

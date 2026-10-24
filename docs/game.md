@@ -216,7 +216,7 @@ seconds.
 | | a face buys | tiers | a level's places | the mid-boss drops | the end boss |
 |---|---|---|---|---|---|
 | **`bomb`** | one charge of the gun special its face shows — bomb, storm, whirlpool or candle | — | drawn | 1 | — |
-| **`missile`** | a tube of the kind its face shows, at the full rate, into the next empty one of two; with both fitted, a charge of that kind's surge | — | drawn | 1 | — |
+| **`missile`** | a tube of the kind its face shows, at the full rate, into the next empty one of two; with both fitted, a charge of that kind's surge — and while both are fitted, half the missile pickups that appear come as a shield instead ([0652](decisions/0652-a-full-rack-throws-a-shield.md)) | — | drawn | 1 | — |
 | **`shield`** | one hit that never reaches the hull, capped by the tier — 3 on every tier since [0614](decisions/0614-the-shields-come-down-a-tier.md) — or a charge of the void or the nova on the ward's trigger | — | drawn | 1; the `ward` in its place where the shell is zero | — |
 | **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | a shield drawn on a shell of zero | only where the shell is zero, as the shield — no tier since 0614 | — |
 

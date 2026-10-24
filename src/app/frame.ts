@@ -108,6 +108,7 @@ import {
   PICKUPS,
   drawFace,
   drawKind,
+  tubeRoom,
   type PickupKind,
   type PickupRow,
   type Weapon,
@@ -10045,7 +10046,8 @@ export function dropPickups(w: World, along: number, across: number, kinds: read
   for (let i = 0; i < kinds.length && thrown < pieces; i++) {
     const kind = offeredAs(w, kinds[i]!);
     if (kind === null) continue;
-    throwPiece(w, along, across, kind, thrown, pieces);
+    // 0652: drawn once, on the throw and never on the count, so the count is what is thrown.
+    throwPiece(w, along, across, fullAs(w, kind), thrown, pieces);
     thrown++;
   }
 }
@@ -10069,6 +10071,24 @@ function offeredAs(w: World, kind: PickupKind): PickupKind | null {
   // 0609: what the SHIP may carry on this tier — the Hamster Ball carries three on Burn too, so it is offered them.
   if (row === undefined || row.effect !== 'shield' || shellCapFor(w.shipRow, w.difficulty) > 0) return kind;
   return row.bare;
+}
+
+/**
+ * What a pickup of `kind` is offered as when what it gives is already full — 0652: its row's `whenFull`,
+ * that share of the time, on the pickups' own stream; itself otherwise.
+ *
+ * ⚠️ **AN UPGRADE IS FULL WHEN NO TUBE IS EMPTY**, which is `effectOf`'s own test for a missile pickup turning
+ * into a surge. What it becomes is put through `offeredAs` as well, so a shield on a tier that wears none is
+ * still that tier's `bare` — and where that is nothing, the piece stays what it was.
+ *
+ * ⚠️ **Read when the piece appears, never when it is taken.** The player decides from the face they see.
+ */
+function fullAs(w: World, kind: PickupKind): PickupKind {
+  const row = w.pickupRows[w.pickupKinds[kind]];
+  const swap = row?.whenFull;
+  if (row === undefined || swap === undefined || row.effect !== 'upgrade' || tubeRoom(w.weapon.tubes)) return kind;
+  if (!w.pickupRng.bool(swap.share)) return kind;
+  return offeredAs(w, swap.kind) ?? kind;
 }
 
 /**
@@ -10163,8 +10183,9 @@ function spawnPickup(w: World, index: number): void {
     the drop's is — 0355, 0447: *"burn doesn't get shields still."* Since 0614 no tier wears none, and
     Burn draws the shield here too: *"add shields back into the random item drop pool for burn."*
   */
-  const offered = offeredAs(w, drawKind(w.pickupRng));
-  if (offered === null) return;
+  const drawn = offeredAs(w, drawKind(w.pickupRng));
+  if (drawn === null) return;
+  const offered = fullAs(w, drawn);
   const kind = w.pickupKinds[offered];
   const row = w.pickupRows[kind];
   if (row === undefined) return;

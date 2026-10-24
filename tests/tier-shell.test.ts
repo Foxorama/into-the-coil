@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GameFrame, advanceLevel, respawn, takeShield, type World } from '../src/app/frame.ts';
+import { GameFrame, advanceLevel, resetScene, respawn, takeShield, type World } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { AUTHORED, BOSS_FIGHTS, DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind, type DifficultyRow } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
@@ -159,6 +159,25 @@ describe('0355 — a life opens on its tier’s shell', () => {
       expect(shields(world), `a ${tier} ${ship} continue opens on the wrong shell`).toBe(row.shellOpen);
       expect(world.shieldOrbs.size, `a ${tier} ${ship} continue wears the wrong number of marks`).toBe(row.shellOpen);
     }
+  });
+});
+
+describe('0614, 0650 — a life’s shell and a level’s are read apart', () => {
+  it('a tier whose two counts differ opens a run and a boundary on the level’s, and a death on the life’s', () => {
+    /*
+      0650 gave Savior's death the shield its level opens on, so no shipped tier says two numbers now, and the guards
+      above walk the shipped tiers. The split is still each tier's to say (0282: a feature lands when it can differ
+      per instance), so it is held here on a row that says two.
+    */
+    const split: DifficultyRow = { ...DIFFICULTIES.savior, shellOpen: 0, shellLevel: 2 };
+    const { world } = playableWorld(NO_LEVEL);
+    world.difficulty = split;
+    resetScene(world);
+    expect(shields(world), 'a run’s start opened on the life’s shell, not the level’s').toBe(split.shellLevel);
+    respawn(world);
+    expect(shields(world), 'a death opened on the level’s shell, not the life’s').toBe(split.shellOpen);
+    advanceLevel(world, NO_LEVEL, 1);
+    expect(shields(world), 'a boundary renewed to the life’s shell, not the level’s').toBe(split.shellLevel);
   });
 });
 

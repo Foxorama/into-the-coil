@@ -192,6 +192,16 @@ export interface PickupRow extends Body {
    * faces, and the frame throws that.
    */
   bare: PickupKind | null;
+  /**
+   * What it is offered as instead, `share` of the time, when what it gives is already full — 0652. Left out,
+   * nothing: a pickup is what it was drawn as.
+   *
+   * *"The missile supercharge item should have a 50% chance of being a shield instead of missiles. Game can be
+   * hard on saviour and burn."* An upgrade is full when the rack has no empty tube, which is when a missile
+   * pickup would have been a surge (`effectOf`); the swap is drawn when the piece appears, so the player sees
+   * the shield it became rather than taking a missile and getting armour.
+   */
+  whenFull?: { readonly kind: PickupKind; readonly share: number };
 }
 
 /*
@@ -258,6 +268,8 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     drawn: true,
     spills: null,
     bare: null,
+    // 0652: at a full rack, half of them are a shield — the player's number.
+    whenFull: { kind: 'shield', share: 0.5 },
   },
   /**
    * One more hit that never reaches the hull.

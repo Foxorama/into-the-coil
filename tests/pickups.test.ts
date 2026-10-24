@@ -31,7 +31,7 @@ import {
 import { GameFrame, PICKUP_LINGER_STEPS, SHIP_START_ALONG, dropPickups } from '../src/app/frame.ts';
 import { initialState, reduce } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
-import { NO_SECTIONS, dealing, playableWorld } from './world.ts';
+import { NO_LEVEL, NO_SECTIONS, dealing, playableWorld } from './world.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { Rng } from '../src/sim/rng.ts';
@@ -1638,5 +1638,60 @@ describe('collecting one, in the real frame', () => {
       world.ship.invulnFor = 60;
     });
     expect(taken.length, 'a pickup passed through an invulnerable ship').toBe(1);
+  });
+});
+
+describe('0652 — at a full rack, half the missile pickups are a shield', () => {
+  /*
+    *"The missile supercharge item should have a 50% chance of being a shield instead of missiles. Game can be hard
+    on saviour and burn."* Counted over many pieces on the run's own stream: a share near the row's, and none at
+    all while a tube is empty, where the missile is a tube and not a supercharge.
+  */
+  const FULL: MissileKind[] = ['straight', 'homing'];
+
+  it('THE ASK, ON THE MID-BOSS’S THROW: about half the missiles come up shields, and none with a tube empty', () => {
+    for (const [tubes, low, high] of [[FULL, 0.4, 0.6], [['straight'] as MissileKind[], 0, 0]] as const) {
+      const { world } = playableWorld(NO_LEVEL);
+      world.weapon = weaponFor(world.shipRow, tubes);
+      let shields = 0;
+      const throws = 400;
+      for (let i = 0; i < throws; i++) {
+        world.pickups.clear();
+        dropPickups(world, world.ship.along + 40, ACROSS_SPAN / 2, ['missile']);
+        expect(world.pickups.size, 'the throw dropped nothing').toBe(1);
+        if (world.pickups.at(0).kind === world.pickupKinds.shield) shields++;
+      }
+      const share = shields / throws;
+      expect(share, `with ${tubes.length} tubes fitted ${shields} of ${throws} missiles came up shields`).toBeGreaterThanOrEqual(low);
+      expect(share, `with ${tubes.length} tubes fitted ${shields} of ${throws} missiles came up shields`).toBeLessThanOrEqual(high);
+    }
+  });
+
+  it('THE ASK, ON A LEVEL’S OWN PICKUPS: a full rack is dealt about half the missiles an empty tube is', () => {
+    const missilesSpawned = (tubes: readonly MissileKind[]): number => {
+      const level = { ...NO_LEVEL, pickups: Array.from({ length: 80 }, (_, i) => ({ at: 60 + i * 30, lane: 50 })) };
+      const { world } = playableWorld(level);
+      const frame = new GameFrame(world);
+      world.weapon = weaponFor(world.shipRow, tubes);
+      let seen = 0;
+      let missiles = 0;
+      // Emptied every step, so the small pool never refuses a piece and every one counted is this step's.
+      for (let i = 0; i < STEPS_PER_SECOND * 120 && seen < 80; i++) {
+        world.pickups.clear();
+        world.weapon = weaponFor(world.shipRow, tubes);
+        frame.step();
+        for (let p = 0; p < world.pickups.size; p++) {
+          seen++;
+          if (world.pickups.at(p).kind === world.pickupKinds.missile) missiles++;
+        }
+      }
+      expect(seen, 'the level did not spawn its pickups').toBeGreaterThan(60);
+      return missiles;
+    };
+    const room = missilesSpawned(['straight']);
+    const full = missilesSpawned(FULL);
+    expect(room, 'the level drew too few missiles to measure a share of').toBeGreaterThan(12);
+    expect(full / room, `a full rack was dealt ${full} missiles where a tube empty was dealt ${room}`).toBeGreaterThan(0.25);
+    expect(full / room, `a full rack was dealt ${full} missiles where a tube empty was dealt ${room}`).toBeLessThan(0.75);
   });
 });

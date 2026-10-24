@@ -40,12 +40,13 @@ ones not built, the cause found in the code (with where) or what would establish
 | 17 | *"Menu nav just sucks on gamepad overall."* | **Not built — owed a play** naming where. 14 and 15 are two of it |
 | 18 | *"'Owned' menus should only show unlocked items & not everything with a lock."* | **Not built — a reversal.** [0561](../docs/decisions/0561-the-cursor-tries-on.md) keeps a shut option standing so it can be tried on, and [0521](../docs/decisions/0521-the-hangar-opens.md), [0523](../docs/decisions/0523-cosmo-opens.md) and [0527](../docs/decisions/0527-the-wheels-turn.md) show what is locked on purpose. Hiding is `hidden` on the button by index, so no index moves |
 | 19 | *"Bubble jets *(read as; the page says 'dets')* has wrong icon + kept disappearing from menu."* | **Not built — causes found.** The icon: every flame's picture is a jet tongue whatever its `look` (`wareArt`, `src/app/chrome.ts`). Disappearing: it is the duck's own flame, shut on any other ship until both are won (`flameOpen`, `src/state/slices/hangar.ts`), and a phone shows a band's fitted chip only; Cosmo's never shelves it, having no price. Which of the two was seen is unknown |
+| 20 | *(asked after the pages)* *"The missile supercharge item should have a 50% chance of being a shield instead of missiles. Game can be hard on saviour and burn."* | **Built — [0652](../docs/decisions/0652-a-full-rack-throws-a-shield.md)** |
 
 ---
 
 ## Built in this PR, and why these first
 
-2, 7 and 11: each is a change whose rule the page states whole, and which the code could be shown to break
+2, 7, 11 and 20: each is a change whose rule the page states whole, and which the code could be shown to break
 and then not to. The rest is either a design call the page leaves open (1, 4, 5, 10, 13, 16, 18), a
 reversal of a decision that wants the player's yes (3, 14, 18), sound work (8, 9, 12), or unknown (6).
 
