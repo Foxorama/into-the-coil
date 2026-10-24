@@ -37,7 +37,7 @@ import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
 import { SHELL_KINDS } from '../content/shells.ts';
-import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS } from '../content/racks.ts';
+import { TUBE_SLOT_OPTIONS, TUBE_WARES, TUBE_WARE_KINDS } from '../content/racks.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
 import { bakeAtlas, bakeGlyph, bakeRim, bakeShell, bakeShipFit, chartTileX, chartTileY, drawChart, flameInks, mix, shade, withFit } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
@@ -4406,9 +4406,7 @@ ${each('-action[hidden]')} { display: none; }
   /* The wheels and the art: the ship wearing them, as large as the card's picture box, over the name. */
   .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option.itc-parts-option-thumbed { justify-content: flex-start; min-height: 4.6em; padding-top: 0.3em; }
   .itc-parts-option-thumbed .itc-parts-option-thumb { width: 100%; height: 2.5em; margin: 0 0 0.1em; object-fit: contain; flex: none; }
-  /* 0578: a rack, on Paint & Parts — its tubes side by side, each its pickup's face; none an empty ring. */
-  .itc-parts-option-pic-rack { gap: 0.2em; }
-  .itc-parts-option-pic-rack > canvas { width: auto; height: auto; max-width: 40%; max-height: 100%; }
+  /* 0578: no tube, an empty ring. 0663: a slot's tube is one face, drawn as any option's picture is. */
   .itc-parts-option-pic-none::before { content: ''; width: 1em; height: 1em; border: 2px dashed currentColor; border-radius: 50%; opacity: 0.6; }
   /* The empty hook: a hook and nothing on it. */
   .itc-hangar-option-pic-hook::before { content: ''; width: 0.7em; height: 1.1em; border: 2px solid currentColor; border-top: 0; border-radius: 0 0 0.5em 0.5em; opacity: 0.6; clip-path: inset(0.3em 0 0 0); }
@@ -7312,22 +7310,18 @@ export function makeChrome(
         return holder;
       }
       /*
-        0578: the tubes, on Paint & Parts — each tube the rack carries, drawn as its missile pickup's face,
-        side by side; none an empty ring.
+        0578: the tubes — drawn as its missile pickup's face; none an empty ring. 0663: one tube per slot, so
+        one face per option, where a rack's option drew each tube it carried side by side.
       */
-      if (band === 'rack') {
-        const rack = RACK_KINDS[i];
-        if (rack === undefined) return null;
-        const tubes = RACKS[rack].tubes;
-        if (tubes.length === 0) {
+      if (band === 'tubeLeft' || band === 'tubeRight') {
+        const tube = TUBE_SLOT_OPTIONS[i];
+        if (tube === undefined) return null;
+        if (tube === null) {
           holder.classList.add(prefix + 'option-pic-none');
           return holder;
         }
-        holder.classList.add(prefix + 'option-pic-rack');
-        for (const tube of tubes) {
-          const glyph = SPRITE_KINDS[MISSILES[tube].pickup];
-          if (glyph !== undefined) holder.appendChild(bakeGlyph(glyph, colours, CARD_PIC_PIXELS / tubes.length / SPRITE_EXTENT[glyph]));
-        }
+        const glyph = SPRITE_KINDS[MISSILES[tube].pickup];
+        if (glyph !== undefined) holder.appendChild(bakeGlyph(glyph, colours, CARD_PIC_PIXELS / SPRITE_EXTENT[glyph]));
         return holder;
       }
       return null;

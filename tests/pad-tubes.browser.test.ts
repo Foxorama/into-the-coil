@@ -10,7 +10,7 @@ import { seeded } from './seed.ts';
 import { samePhase } from './stand.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
-import { RACK_KINDS } from '../src/content/racks.ts';
+import { TUBE_SLOT_OPTIONS } from '../src/content/racks.ts';
 
 /**
  * THE PAD WEARS ITS TUBES, IN THE PAGE — `docs/decisions/0582-the-pad-wears-its-tubes.md`.
@@ -41,10 +41,14 @@ describe.runIf(chromePath)('0582 — the tubes fitted are on the ship on the pad
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);
-    await inView(page, 'hangar', 'rack');
-    const { noise, change } = await samePhase(page, 'hangar', () =>
-      page.locator(`${shown('hangar')} [${SETTING_ATTR}="rack"] .${prefixFor('hangar')}option >> nth=${RACK_KINDS.indexOf('mixed')}`).dispatchEvent('click'),
-    );
+    await inView(page, 'hangar', 'tubeLeft');
+    // 0663: one of each is a straight tube in the left slot and a seeker in the right.
+    const slot = (name: 'tubeLeft' | 'tubeRight', tube: 'straight' | 'homing') =>
+      page.locator(`${shown('hangar')} [${SETTING_ATTR}="${name}"] .${prefixFor('hangar')}option >> nth=${TUBE_SLOT_OPTIONS.indexOf(tube)}`).dispatchEvent('click');
+    const { noise, change } = await samePhase(page, 'hangar', async () => {
+      await slot('tubeLeft', 'straight');
+      await slot('tubeRight', 'homing');
+    });
     const kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(Object.values(kept.rack), 'one of each was not fitted').toContain('mixed');
     expect(change, `the ship on the pad is still bare: ${change.toFixed(4)} of the stand moved, against ${noise.toFixed(4)} standing still`).toBeGreaterThan(Math.max(3 * noise, 0.002));

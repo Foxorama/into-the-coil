@@ -38,12 +38,12 @@ import { HUES, TONES } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
 import { SHELLS, SHELL_KINDS } from '../content/shells.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
-import { RACKS, RACK_KINDS, TUBE_WARE_KINDS } from '../content/racks.ts';
+import { TUBE_SLOT_OPTIONS, TUBE_WARE_KINDS } from '../content/racks.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SIDE_LABELS, SPECIALS, type Side } from '../content/specials.ts';
 import { PICKUPS, bombFaceOf, missileFaceOf, wardFaceOf, type PickupKind } from '../content/pickups.ts';
-import { MISSILES } from '../content/missiles.ts';
+import { MISSILES, type MissileKind } from '../content/missiles.ts';
 import { SHOTS } from '../content/shots.ts';
 import { ACROSS_SPAN, REFERENCE_ASPECT } from '../sim/camera.ts';
 
@@ -122,7 +122,8 @@ export type SettingName = 'difficulty' | 'sound' | 'rumble' | 'travel' | 'pilot'
 // 0530: and what its engines burn.
 // 0578: and the tubes it carries into a run — `rack`, since `tubes` is the shelf they are sold on.
 // 0584: and the shell its shields wear — `shell`, since `shields` is the shelf they are sold on.
-export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame', 'rack', 'shell'] as const;
+// 0663: the tubes as two slots, the left and the right, where 0578's `rack` was one band of every pair.
+export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame', 'tubeLeft', 'tubeRight', 'shell'] as const;
 export type SlotName = (typeof SLOT_NAMES)[number];
 /** Whether a band's name is a slot of the ship — 0561, so the shell can fit or try on any slot in one arm. */
 export function isSlot(name: ChoiceName): name is SlotName {
@@ -596,7 +597,7 @@ const PARTS_STAND: StandRow = {
 const HANGAR_STAND: StandRow = {
   groups: [
     // 0579: and the tubes, which are loadout as the gun and the special are.
-    { label: 'Loadout', bands: ['gun', 'special', 'rack'] },
+    { label: 'Loadout', bands: ['gun', 'special', 'tubeLeft', 'tubeRight'] },
     // 0561: *Cockpit*, answered 2026-10-07 — a band named *Dash* stood under a heading named *Dash*.
     { label: 'Cockpit', bands: ['plate', 'dangle'] },
   ],
@@ -706,6 +707,27 @@ export function rackWhy(boughtAny: boolean): string | null {
   return boughtAny ? null : 'Tubes are sold at Cosmo’s — without them, missile pickups fit yours';
 }
 
+/** What each kind says on a tube slot — 0663, one line about the tube in it. */
+const TUBE_SLOT_HINT: Record<MissileKind, string> = {
+  straight: 'A tube that fires straight',
+  homing: 'A tube that hunts',
+};
+
+/** A tube slot's band — 0663: none, then each kind of tube, in `TUBE_SLOT_OPTIONS`' order. */
+function tubeSlot(name: 'tubeLeft' | 'tubeRight', label: string): ScreenChoice {
+  return {
+    name,
+    label,
+    options: TUBE_SLOT_OPTIONS.map((tube) =>
+      tube === null ? { label: 'None', hint: 'Empty — a missile pickup fills it' } : { label: MISSILES[tube].label, hint: TUBE_SLOT_HINT[tube] },
+    ),
+    faces: 'words',
+    on: 'all',
+    press: 'tries',
+    ends: 'round',
+  };
+}
+
 /**
  * What the shield band says while it offers nothing but the ship's own — 0584: the dash's sentence, and
  * Cosmo's, since either opens some.
@@ -783,8 +805,10 @@ export function optionWhy(name: SlotName, ship: ShipKind, index: number, won: Re
       return 'Beat the jellyfish in the ' + plainLabel(from) + ' to borrow its shield';
     }
     // 0578: a rack wants tubes, and Cosmo's sells them — since 0579 two tabs over, so not *the next tab*.
-    case 'rack':
-      return 'Buy the tubes for it at Cosmo’s';
+    // 0663: a slot wants a tube the other slot is not already carrying.
+    case 'tubeLeft':
+    case 'tubeRight':
+      return 'Buy another at Cosmo’s — you may carry two of each';
     // The band's own sentence covers these: a ship not yet won, or a factory paint with no tone.
     case 'art':
     case 'livery':
@@ -823,7 +847,8 @@ export function dangleWhy(boughtAny: boolean): string | null {
 export function wareWhy(ware: OwnableKind, owned: boolean, shards: number, waiting: OwnableKind | null = null): string | null {
   if (owned && DANGLE_KINDS.some((dangle) => dangle === ware)) return 'Yours — hang it in the hangar';
   if (owned) return TUBE_WARE_KINDS.some((tube) => tube === ware) ? 'Yours — fit it in the hangar' : 'Yours — fit it in Paint & Parts';
-  if (waiting !== null) return 'Buy the ' + OWNABLES[waiting].name + ' first';
+  // 0663: a second tube is called what its first is, so it says which it is waiting for rather than its own name.
+  if (waiting !== null) return OWNABLES[waiting].name === OWNABLES[ware].name ? 'Your second — buy the first one before it' : 'Buy the ' + OWNABLES[waiting].name + ' first';
   const price = OWNABLES[ware].price ?? 0;
   return shards < price ? 'Need ' + String(price - shards) + ' more Star Shards' : null;
 }
@@ -1214,15 +1239,13 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         ones the tubes owned are not enough for shut and saying where to buy them. Built by walking
         `RACK_KINDS`. 0579: on Hangin' Out, under *Loadout*.
       */
-      {
-        name: 'rack',
-        label: 'Tubes',
-        options: RACK_KINDS.map((kind) => ({ label: RACKS[kind].label, hint: RACKS[kind].hint })),
-        faces: 'words',
-        on: 'all',
-        press: 'tries',
-        ends: 'round',
-      },
+      /*
+        0663: two slots, where 0578 had one band of every rack — *"missile tubes should be individual and have a
+        left/right slot … the two tubes + one of each is way overengineering it."* Each is none or a tube of a
+        kind, `TUBE_SLOT_OPTIONS` in order; the pair the two say is the ship's rack.
+      */
+      tubeSlot('tubeLeft', 'Left tube'),
+      tubeSlot('tubeRight', 'Right tube'),
     ],
     steps: false,
     // 0540: the port stands behind it, so the screen shows the picture rather than painting over it.

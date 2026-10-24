@@ -79,7 +79,7 @@ import {
   type PickupKind,
   weaponFor,
 } from '../content/pickups.ts';
-import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS, rackCarrying, tubesOf } from '../content/racks.ts';
+import { RACKS, TUBE_SLOT_OPTIONS, TUBE_WARES, TUBE_WARE_KINDS, rackOf, rackWith, tubesOf } from '../content/racks.ts';
 import { AUTHORED, DIFFICULTIES, DIFFICULTY_KINDS, TUNED } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_RUMBLE, RUMBLES, RUMBLE_KINDS } from '../content/rumble.ts';
@@ -2579,10 +2579,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         const from = SHIP_KINDS[index];
         return from === undefined ? null : { slice: 'hangar', type: name, ship, from };
       }
-      // 0578: the tubes, `RACK_KINDS` in order.
-      case 'rack': {
-        const rack = RACK_KINDS[index];
-        return rack === undefined ? null : { slice: 'hangar', type: 'rack', ship, rack };
+      // 0663: a tube slot, `TUBE_SLOT_OPTIONS` in order — the rack that pairs it with what the other slot holds.
+      case 'tubeLeft':
+      case 'tubeRight': {
+        const tube = TUBE_SLOT_OPTIONS[index];
+        if (tube === undefined) return null;
+        const [left, right] = RACKS[state.hangar.rack[ship]].slots;
+        return { slice: 'hangar', type: 'rack', ship, rack: name === 'tubeLeft' ? rackOf(tube, right) : rackOf(left, tube) };
       }
       // 0584: the shell, `SHELL_KINDS` in order.
       case 'shell': {
@@ -2627,15 +2630,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const shell = SHELL_KINDS.find((kind) => kind === ware);
     if (shell !== undefined) return { slice: 'hangar', type: 'shell', ship, shell };
     /*
-      0578: a tube goes into the ship's rack — beside what is fitted while there is room, else in place of
-      the bottom tube — as the rack of that shape. `null` where no rack is that shape.
+      0578: a tube goes into the ship's rack; 0663: into the left slot if it is empty, else the right, else in
+      place of the right — so what is fitted keeps its side (`rackWith`).
     */
     const tube = TUBE_WARE_KINDS.find((kind) => kind === ware);
     if (tube === undefined) return null;
-    const fitted = RACKS[state.hangar.rack[ship]].tubes;
-    const kept = fitted.length < MAX_LAUNCHERS ? fitted : fitted.slice(0, MAX_LAUNCHERS - 1);
-    const rack = rackCarrying([...kept, TUBE_WARES[tube].tube]);
-    return rack === null ? null : { slice: 'hangar', type: 'rack', ship, rack };
+    return { slice: 'hangar', type: 'rack', ship, rack: rackWith(state.hangar.rack[ship], TUBE_WARES[tube].tube) };
   }
   /** 0564: whether `ship` has `ware` on already. 0578: a tube is on when the rack carries that many of its kind. */
   function wears(ware: OwnableKind, ship: ShipKind): boolean {
@@ -3020,10 +3020,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const lent = SHIP_KINDS.some((from, i) => from !== ship && guns[i] === true);
     fitSlot('gun', guns, gunWhy(ship, state.hangar.won[ship], lent), whysOf('gun', guns));
     chrome.setChoice('gun', SHIP_KINDS.indexOf(state.hangar.gun[ship]));
-    // 0578: the tubes — none always, and every rack the tubes owned are enough for, on any ship.
-    const racks = RACK_KINDS.map((rack) => rackOpen(state.hangar, rack));
-    fitSlot('rack', racks, rackWhy(TUBE_WARE_KINDS.some((kind) => state.hangar.owned[kind])), whysOf('rack', racks));
-    chrome.setChoice('rack', RACK_KINDS.indexOf(state.hangar.rack[ship]));
+    /*
+      0578: the tubes — none always, and every rack the tubes owned are enough for, on any ship. 0663: as two
+      slots, each open to a tube the tubes owned are enough for beside what the other slot holds.
+    */
+    const [leftTube, rightTube] = RACKS[state.hangar.rack[ship]].slots;
+    const boughtTubes = rackWhy(TUBE_WARE_KINDS.some((kind) => state.hangar.owned[kind]));
+    const lefts = TUBE_SLOT_OPTIONS.map((tube) => rackOpen(state.hangar, rackOf(tube, rightTube)));
+    fitSlot('tubeLeft', lefts, boughtTubes, whysOf('tubeLeft', lefts));
+    chrome.setChoice('tubeLeft', TUBE_SLOT_OPTIONS.indexOf(leftTube));
+    const rights = TUBE_SLOT_OPTIONS.map((tube) => rackOpen(state.hangar, rackOf(leftTube, tube)));
+    fitSlot('tubeRight', rights, boughtTubes, whysOf('tubeRight', rights));
+    chrome.setChoice('tubeRight', TUBE_SLOT_OPTIONS.indexOf(rightTube));
     /*
       0527: the wheels, on Paint & Parts — every rim open to this car, why the rest are shut, and the one
       it wears. A ship with none shows every rim shut and says so, with no rim marked.

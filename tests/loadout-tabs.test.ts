@@ -27,7 +27,7 @@ describe('a tabbed stand', () => {
     const stand = SCREENS.hangar.stand;
     expect(stand?.tabbed).toBe(true);
     expect(stand?.groups.map((g) => [g.label, [...g.bands]])).toEqual([
-      ['Loadout', ['gun', 'special', 'rack']],
+      ['Loadout', ['gun', 'special', 'tubeLeft', 'tubeRight']],
       ['Cockpit', ['plate', 'dangle']],
     ]);
   });

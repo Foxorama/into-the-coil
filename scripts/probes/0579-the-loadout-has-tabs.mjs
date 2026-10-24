@@ -24,7 +24,8 @@ export const PROBES = [
     suite: 'tests/loadout-tabs.test.ts',
     broke: 'the tubes under both tabs',
     guard: 'puts every slot band on a tabbed stand under exactly one tab',
-    edit: { path: 'src/state/screens.ts', find: "{ label: 'Cockpit', bands: ['plate', 'dangle'] },", replace: "{ label: 'Cockpit', bands: ['plate', 'dangle', 'rack'] }," },
+    // ⚠️ 0663: the tubes are `tubeLeft` and `tubeRight` since, and a band named `rack` is no band at all.
+    edit: { path: 'src/state/screens.ts', find: "{ label: 'Cockpit', bands: ['plate', 'dangle'] },", replace: "{ label: 'Cockpit', bands: ['plate', 'dangle', 'tubeLeft'] }," },
   },
   {
     decision: '0579',
@@ -67,7 +68,8 @@ export const PROBES = [
     decision: '0579',
     suite: 'tests/tube-shop.test.ts',
     broke: 'Cosmo’s sending an owned tube to Paint & Parts, where it is not fitted',
-    guard: 'is a band on Hangin’ Out under Loadout',
+    // ⚠️ Renamed by 0663: the tubes are two slots on the loadout, not one band.
+    guard: 'is a left slot and a right slot on Hangin’ Out under Loadout',
     edit: { path: 'src/state/screens.ts', find: "'Yours — fit it in the hangar'", replace: "'Yours — fit it in Paint & Parts'" },
   },
 ];

@@ -232,9 +232,11 @@ survives a cap.
 ladder: a ship has two tube places, each empty, straight or homing, and a fitted tube fires at the full
 rate from the moment it is fitted. The first two missile pickups of a run fill the empty places with the
 kind their faces show, so a ship may carry one of each; a mixed rack fires one of each in a volley. A
-death and a continue keep them. **Tubes bought at Cosmo's are fitted on Paint & Parts and carried in from
+death and a continue keep them. **Tubes bought at Cosmo's are fitted in the hangar and carried in from
 the start** — [0578](decisions/0578-the-tubes-are-sold.md); the pickups fill only what the rack leaves
-empty. **Every face of a pickup is its own glyph in its own ink**, inside the one
+empty. Up to two of each kind are sold, and a ship has a left slot and a right slot, each fitted on its own;
+a lone tube flies from the ship's one-tube place, whichever slot holds it —
+[0663](decisions/0663-the-tubes-have-sides.md). **Every face of a pickup is its own glyph in its own ink**, inside the one
 bubble that says *pickup*:
 [0239](decisions/0239-the-guns-answer-the-third-play-test.md) and
 [0240](decisions/0240-the-blades-reach-the-boss.md).
