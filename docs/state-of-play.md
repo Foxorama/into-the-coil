@@ -1178,6 +1178,15 @@ the tubes' look, [0665](decisions/0665-the-tubes-are-missiles.md), the controls,
 [0664](decisions/0664-the-controls-are-bound.md), and Venoma, [0666](decisions/0666-venoma-flies-the-viper.md).
 **Next is the play** of all of it, which also names what else on the menus is wrong (17).
 
+⚠️ **17 IS ANSWERED FROM THE BUILT PAGE, NOT YET FROM A HAND — 2026-10-24.**
+[`the-menus-reviewed-again`](../reports/the-menus-reviewed-again-2026-10-24.md) is every menu photographed at a
+desktop, a phone and three larger desktops, a stubbed pad walked through the title and the hangar, and the type
+and targets measured: ten findings, desktop first, and a suggested order. Beside it
+[`the-port-is-a-cutout`](../reports/the-port-is-a-cutout-2026-10-24.md) reads the intro's hangar, the station
+outside and the dock as pictures, says why each reads flat, and holds nine recommendations in the order each
+buys the most. Neither is built; each is a plan's raw material, and each ends with the questions it leaves to the
+player.
+
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
 
 A handwritten page of Hamster Ball notes, read in and built in one PR:
