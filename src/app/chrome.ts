@@ -1182,6 +1182,7 @@ ${each('-action-cursor')} {
   transform-origin: left center;
   transform: scaleX(0);
 }
+.itc-playing-hud-heat-warm { color: var(--itc-heat-warm); }
 .itc-playing-hud-heat-hot { color: var(--itc-heat-hot); animation: itc-playing-hud-heat-hot 0.5s ease-in-out infinite alternate; }
 @keyframes itc-playing-hud-heat-hot { from { filter: drop-shadow(0 0 0.1em currentColor); } to { filter: drop-shadow(0 0 0.5em currentColor); } }
 /*
@@ -3938,12 +3939,88 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
   filter: drop-shadow(0 0 0.2em var(--itc-ally));
   animation: itc-hud-crackle 2.6s steps(1) infinite;
 }
+/*
+  The Hamster Ball — 0648: *"same kind of interior console for the weasel to pilot with … needs to look super cool."*
+  The wheel Unity runs in, face-on and spinning behind the ship's face at the plate's leading end — hub, six spokes,
+  two rims and the rungs between them — and its rungs running back under the counts as a treadmill does. The
+  wheel is the trim's plastic blue until the ball heats, then goes the ball's yellow, amber and red with it and
+  spins faster (data-heat, set by setHeat).
+*/
+.itc-playing-hud-wheel {
+  --itc-wheel-ink: var(--itc-ally);
+  --itc-wheel-spin: 2.4s;
+  border-radius: 1.6em 0.75em 0.75em 1.6em;
+  background:
+    linear-gradient(var(--itc-glass), var(--itc-glass)) padding-box,
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--itc-ally) 22%, transparent) 0 2px, transparent 2px 0.9em) 0 0 / 0.9em 100% padding-box,
+    linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
+  animation: itc-hud-tread 0.75s linear infinite;
+}
+/*
+  The wheel hangs on the ship's own group and not on the plate, so it stays round the ship's face wherever the
+  plate wraps — the cockpit monitor's three rows put the plate's middle on the second. Every size in it is in
+  its own em, so the hangar's swatch of the dash scales it down by its font size alone. Centred on the ship's
+  face: 2.2em wide, pulled 0.1em in each side, so its middle is 1em in.
+*/
+.itc-playing-hud-wheel .itc-playing-hud-lives { position: relative; }
+.itc-playing-hud-wheel .itc-playing-hud-lives::before, .itc-playing-hud-wheel .itc-playing-hud-lives::after,
+.itc-hangar-option-plate.itc-playing-hud-wheel::before, .itc-hangar-option-plate.itc-playing-hud-wheel::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  left: -0.35em;
+  top: calc(50% - 1.35em);
+  width: 2.7em;
+  height: 2.7em;
+  border-radius: 50%;
+  animation: itc-hud-wheel var(--itc-wheel-spin) linear infinite;
+}
+.itc-hangar-option-plate.itc-playing-hud-wheel::before, .itc-hangar-option-plate.itc-playing-hud-wheel::after { font-size: 0.55em; left: 0.3em; }
+/* The hub, the spokes and the two rims, with the glass behind them so the wheel reads over the stars. */
+.itc-playing-hud-wheel .itc-playing-hud-lives::before, .itc-hangar-option-plate.itc-playing-hud-wheel::before {
+  background:
+    radial-gradient(circle, var(--itc-wheel-ink) 0 0.17em, color-mix(in srgb, var(--itc-wheel-ink) 40%, transparent) 0.17em 0.24em, transparent 0.25em),
+    radial-gradient(circle, transparent 0 0.98em, var(--itc-wheel-ink) 0.99em 1.07em, transparent 1.08em 1.26em, var(--itc-wheel-ink) 1.27em 1.35em, transparent 1.36em),
+    repeating-conic-gradient(color-mix(in srgb, var(--itc-wheel-ink) 70%, transparent) 0 4deg, transparent 4deg 60deg),
+    radial-gradient(circle, color-mix(in srgb, var(--itc-void) 70%, transparent) 0 1.3em, transparent 1.32em);
+  -webkit-mask-image: radial-gradient(circle, #000 0 1.36em, transparent 1.37em);
+  mask-image: radial-gradient(circle, #000 0 1.36em, transparent 1.37em);
+  filter: drop-shadow(0 0 0.25em var(--itc-wheel-ink));
+}
+/* The rungs, between the rims, that Unity's paws land on. */
+.itc-playing-hud-wheel .itc-playing-hud-lives::after, .itc-hangar-option-plate.itc-playing-hud-wheel::after {
+  background: repeating-conic-gradient(var(--itc-wheel-ink) 0 5deg, transparent 5deg 20deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 1.06em, #000 1.08em 1.27em, transparent 1.28em);
+  mask-image: radial-gradient(circle, transparent 0 1.06em, #000 1.08em 1.27em, transparent 1.28em);
+  opacity: 0.85;
+}
+.itc-playing-hud-wheel[data-heat='1'] { --itc-wheel-ink: var(--itc-heat); --itc-wheel-spin: 1.6s; }
+.itc-playing-hud-wheel[data-heat='2'] { --itc-wheel-ink: var(--itc-heat-warm); --itc-wheel-spin: 1.1s; }
+.itc-playing-hud-wheel[data-heat='3'] { --itc-wheel-ink: var(--itc-heat-hot); --itc-wheel-spin: 0.7s; }
+@keyframes itc-hud-wheel { to { transform: rotate(360deg); } }
+@keyframes itc-hud-tread { to { background-position: 0 0, -0.9em 0, 0 0; } }
+/*
+  0648: and on any plate the ball wears, its heat glows round it — the ball's yellow, amber, and a red that
+  breathes — so the console heats as the ball does.
+*/
+.itc-playing-hud[data-heat='1'] { box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-heat) 40%, transparent), inset 0 0 0.6em color-mix(in srgb, var(--itc-heat) 18%, transparent); }
+.itc-playing-hud[data-heat='2'] { box-shadow: 0 0 1.1em color-mix(in srgb, var(--itc-heat-warm) 50%, transparent), inset 0 0 0.7em color-mix(in srgb, var(--itc-heat-warm) 24%, transparent); }
+.itc-playing-hud[data-heat='3'] { animation: itc-hud-overheat 0.5s ease-in-out infinite alternate; }
+.itc-playing-hud-wheel[data-heat='3'] { animation: itc-hud-tread 0.3s linear infinite, itc-hud-overheat 0.5s ease-in-out infinite alternate; }
+@keyframes itc-hud-overheat {
+  from { box-shadow: 0 0 0.8em color-mix(in srgb, var(--itc-heat-hot) 45%, transparent), inset 0 0 0.6em color-mix(in srgb, var(--itc-heat-hot) 22%, transparent); }
+  to { box-shadow: 0 0 1.6em color-mix(in srgb, var(--itc-heat-hot) 75%, transparent), inset 0 0 1em color-mix(in srgb, var(--itc-heat-hot) 38%, transparent); }
+}
 @keyframes itc-hud-flicker { from { opacity: 0.55; } to { opacity: 0.85; } }
 @keyframes itc-hud-crackle { 0%, 62% { opacity: 1; } 64% { opacity: 0.25; } 68% { opacity: 1; } 71% { opacity: 0.4; } 74%, 100% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .itc-playing-hud-orbit::before, .itc-playing-hud-orbit::after, .itc-playing-hud-hanging .itc-playing-hud-dice,
   .itc-playing-hud-dice-back-a, .itc-playing-hud-dice-back-b, .itc-playing-hud-dice-fore-a, .itc-playing-hud-dice-fore-b,
-  .itc-playing-hud-hotrod::before, .itc-playing-hud-hotrod::after { animation: none; }
+  .itc-playing-hud-hotrod::before, .itc-playing-hud-hotrod::after,
+  .itc-playing-hud-wheel, .itc-playing-hud-wheel .itc-playing-hud-lives::before, .itc-playing-hud-wheel .itc-playing-hud-lives::after,
+  .itc-hangar-option-plate.itc-playing-hud-wheel::before, .itc-hangar-option-plate.itc-playing-hud-wheel::after, .itc-playing-hud[data-heat='3'] { animation: none; }
+  .itc-playing-hud[data-heat='3'] { box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-heat-hot) 60%, transparent), inset 0 0 0.8em color-mix(in srgb, var(--itc-heat-hot) 30%, transparent); }
 }
 .itc-playing-boss { filter: none; padding: 0 0.9em; }
 .itc-playing-boss-shown { display: flex; align-items: center; }
@@ -6730,7 +6807,8 @@ export function makeChrome(
   hud.style.setProperty('--itc-void', colours.space);
 
   const livesGroup = document.createElement('div');
-  livesGroup.className = 'itc-playing-hud-group';
+  // 0648: named, so the ball's dash can hang its wheel round the ship's face.
+  livesGroup.className = 'itc-playing-hud-group itc-playing-hud-lives';
   /*
     ⚠️ **A LIFE IS A SHIP, SO THE COUNTER IS THE SHIP** — 0430: *"the top left row of 'life' should be
     the ship with an x and the number of lives."* It was a plus, left over from the extra-life pickup
@@ -6840,8 +6918,13 @@ export function makeChrome(
   heatGroup.className = 'itc-playing-hud-group itc-playing-hud-heat';
   heatGroup.setAttribute('role', 'img');
   heatGroup.hidden = true;
-  heatGroup.style.setProperty('--itc-heat', colours.hazard);
-  heatGroup.style.setProperty('--itc-heat-hot', colours.bullet);
+  /*
+    0648: the ball's own three — yellow, amber, red (`drawBallGlow`) — on the plate, so the gauge and the plate's
+    glow go the colour the ball does, at the same quarters.
+  */
+  hud.style.setProperty('--itc-heat', colours.hazard);
+  hud.style.setProperty('--itc-heat-warm', colours.bullet);
+  hud.style.setProperty('--itc-heat-hot', colours.fire);
   const heatWord = document.createElement('span');
   heatWord.className = 'itc-playing-hud-heat-word';
   heatWord.textContent = 'HEAT';
@@ -7921,11 +8004,20 @@ export function makeChrome(
     },
     setHeat(fraction: number): void {
       heatGroup.hidden = fraction < 0;
-      if (fraction < 0) return;
+      if (fraction < 0) {
+        hud.dataset['heat'] = '0';
+        return;
+      }
       const shown = fraction > 1 ? 1 : fraction;
       heatFill.style.transform = 'scaleX(' + String(shown) + ')';
-      // 0638: hot from three quarters, where the glow under the ball turns red (`steerRam`'s last stage).
-      heatGroup.classList.toggle('itc-playing-hud-heat-hot', shown >= 0.75);
+      /*
+        0638: hot from three quarters, where the glow under the ball turns red (`steerRam`'s last stage). 0648: amber
+        from half, as the ball is, and the plate's glow goes the ball's colour from its first quarter (`data-heat`).
+      */
+      const stage = shown >= 0.75 ? 3 : shown >= 0.5 ? 2 : shown >= 0.25 ? 1 : 0;
+      heatGroup.classList.toggle('itc-playing-hud-heat-warm', stage === 2);
+      heatGroup.classList.toggle('itc-playing-hud-heat-hot', stage === 3);
+      hud.dataset['heat'] = String(stage);
       heatGroup.setAttribute('aria-label', 'Heat ' + String(Math.round(shown * 100)) + '%');
     },
     setMend(fraction: number): void {

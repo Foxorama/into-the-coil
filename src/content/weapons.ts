@@ -691,8 +691,12 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       do, so 0260's floor no longer flies the ram (`tests/boss-floor.ts`). Held, the end bosses went from 32–52 s to
       20–32 s (`scripts/weigh-boss.mjs`, Savior); a ball that backs off to cool takes longer, by however long the
       player waits. The serpent's and the jellyfish's own entries move by the same share.
+
+      ⚠️ **AND 4.56 SINCE 0648, HALF AGAIN — THE MID-BOSSES STILL KEEP 1.9.** The next play: *"+50% boss damage."*
+      The serpent's and the jellyfish's own entries move by the same half. 0646 kept the mid-bosses out as asked,
+      and nothing in this ask brings them back in.
     */
-    bossWeight: 3.04,
+    bossWeight: 4.56,
     landGap: 6,
     special: 'warDance',
     // Never drawn: no other ship flies it (`lends`). The ball's own front, from either view, so a reader
@@ -706,10 +710,14 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     wheel: null,
     ram: {
       reach: 3,
-      heat: 0.15,
-      // 0639: eight landings on a boss before a burn, where it was six or seven.
-      bossHeat: 0.11,
-      scrape: 0.01,
+      /*
+        0648: *"heat gauge +10% slower to fill"* — every way the gauge fills, divided by 1.1: a landing 0.15 → 0.136,
+        a boss's 0.11 → 0.1, a scrape 0.01 → 0.009. How it cools is not touched.
+      */
+      heat: 0.136,
+      // 0639: eight landings on a boss before a burn, where it was six or seven; ten since 0648.
+      bossHeat: 0.1,
+      scrape: 0.009,
       cool: 30,
       drain: 0.01,
       /*

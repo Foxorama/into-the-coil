@@ -1163,6 +1163,12 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
+
+A handwritten page of Hamster Ball notes, read in and built in one PR:
+[0648](decisions/0648-the-ball-runs-hot.md). **Next is the play** its *Not held by any guard* lists — the dash and
+the heat on the ball are looked at, not played.
+
 ### ⚠️ THE MORNING PLAY: ALL FOUR BUILT — OWED A PLAY — 2026-10-19
 
 [`the-morning-play`](../reports/the-morning-play-2026-10-18.md) is the first play of the two pages below, and four

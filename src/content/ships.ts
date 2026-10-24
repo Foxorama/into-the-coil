@@ -263,11 +263,12 @@ export interface HudInk {
  *   **checker**  a chequered flag down its leading end and a carbon weave: a racer's dash
  *   **walnut**   walnut grain, a chrome lip and fuzzy dice: the wagon's woody dash
  *   **hotrod**   raked corners, flames licking its lower edge and a fork of lightning: the chopper's (0545)
+ *   **wheel**    a hamster wheel spinning behind the ship and its rungs running under the counts: the ball's (0648)
  */
-export type HudMotif = 'bracket' | 'orbit' | 'checker' | 'walnut' | 'hotrod';
+export type HudMotif = 'bracket' | 'orbit' | 'checker' | 'walnut' | 'hotrod' | 'wheel';
 
 /** Written out rather than derived, so the chrome can take every motif's class off before it puts one on. */
-export const HUD_MOTIFS: readonly HudMotif[] = ['bracket', 'orbit', 'checker', 'walnut', 'hotrod'];
+export const HUD_MOTIFS: readonly HudMotif[] = ['bracket', 'orbit', 'checker', 'walnut', 'hotrod', 'wheel'];
 
 /**
  * The walnut dash's fuzzy dice — `docs/decisions/0466-the-dice-swing-once.md`. Played on 0461's
@@ -954,8 +955,13 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       pilot lands about two thirds as often on a boss — 0.9 to 1.9 a second where it was 1.1 to 2.7 — and twenty
       puts it back near the ask's window: eleven to sixteen seconds a bar against every boss but the lattice
       (twenty-two, as it was) and the hydra, and ten to nineteen in a level. 0615 has the table.
+
+      ⚠️ **EIGHTEEN SINCE 0648**: *"war dance +10% charge meter"* — a tenth quicker to fill, twenty over 1.1 to the
+      nearest landing. And a full bar no longer holds: it banks a War Dance on the gun trigger's stack and starts
+      again from empty (`chargeRam`), so a ball that keeps ramming carries dances as every other ship carries its
+      special.
     */
-    charge: { fill: 20 },
+    charge: { fill: 18 },
     // 0594: the weasel war dance itself, Unity twisting one way and the other — the quickest, a frenzy.
     dance: [
       dancing([SPRITE.ball, SPRITE.ballDance1, SPRITE.ball, SPRITE.ballDance2], 4),
@@ -981,8 +987,13 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // 0612: its pilot runs inside it, seen through the plastic.
     seat: 'inside',
     intro: { hangar: 1, outside: 1 },
-    // A hamster wheel turning round its readout: seed-husk amber for the counts, the plastic's blue for the trim.
-    hud: { name: 'Hamster wheel', motif: 'orbit', ink: { from: 'hazard', lift: 0.15 }, trim: { from: 'player', lift: 0.25 } },
+    /*
+      A hamster wheel turning round its readout: seed-husk amber for the counts, the plastic's blue for the trim.
+      0648: its own plate — *"same kind of interior console for the weasel to pilot with … needs to look super
+      cool"* — where it wore the saucer's orbit: the wheel Unity runs in, spinning behind the ship's face, and its
+      rungs running under the counts.
+    */
+    hud: { name: 'Hamster wheel', motif: 'wheel', ink: { from: 'hazard', lift: 0.15 }, trim: { from: 'player', lift: 0.25 } },
     hangs: null,
     wheels: null,
     // 0593: clear plastic, a sunflower on its crown, an amber tint, and speed stripes.

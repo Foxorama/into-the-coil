@@ -1353,6 +1353,14 @@ export const SPRITE_KINDS = [
   'ramHeat2',
   'ramHeat3',
   /*
+    And the heat ON the ball — 0648: laid over the plastic as a light is, yellow, amber and red, and the red's
+    flare frame it throbs against.
+  */
+  'ramGlow1',
+  'ramGlow2',
+  'ramGlow3',
+  'ramGlow4',
+  /*
     The War Dance's flaring aura — 0609: a corona of flame tongues round any dancing ship, four frames of it
     turning and flaring, laid in the aura's layer under every shot (0373).
   */
@@ -3004,6 +3012,11 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   ramHeat1: SHIP_BOX,
   ramHeat2: SHIP_BOX,
   ramHeat3: SHIP_BOX,
+  // 0648: and the heat on it, at the same box, so it lies on the ball's own outline.
+  ramGlow1: SHIP_BOX,
+  ramGlow2: SHIP_BOX,
+  ramGlow3: SHIP_BOX,
+  ramGlow4: SHIP_BOX,
   /*
     0609: the War Dance's flare, its tongues reaching about eight units out — past the shell's plates (5.6
     and their width), so it reads round a ship wearing three. Its frame's radius is 0.42 of this.

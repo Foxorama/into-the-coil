@@ -46,7 +46,7 @@ export const PROBES = [
     guard: 'the heat is drawn: the ram under the ball wears the gauge’s stage',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const stage = heat >= 0.75 ? 3 : heat >= 0.5 ? 2 : heat >= 0.25 ? 1 : 0;',
+      find: '  const stage = heatStage(heat);',
       replace: '  const stage = 0;',
     },
   },
