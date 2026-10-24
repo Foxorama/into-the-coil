@@ -22,7 +22,7 @@
  * the same rule.
  */
 
-import { ACTIONS, ACTION_NAMES, AXES, DEFAULT_BINDINGS, type Action, type Axis } from '../content/actions.js';
+import { ACTIONS, ACTION_NAMES, AXES, DEFAULT_BINDINGS, type Action, type Axis, type KeyBindings } from '../content/actions.js';
 import type { Intent } from '../sim/intent.js';
 
 /** What a caller gets back: a way to add to an intent, and a way to stop listening. */
@@ -65,7 +65,13 @@ export interface InputSource {
 }
 
 /** The bindings a session is running with. Defaults today; a settings slice later. */
-export type Bindings = Record<Action, readonly string[]>;
+export type Bindings = KeyBindings;
+
+/** The keyboard's source, which may be bound again — 0664, the Controls tab. */
+export interface KeyboardSource extends InputSource {
+  /** Read `bindings` from the next key on. Every key is let go, so nothing stays held under a binding it no longer has. */
+  rebind(bindings: Bindings): void;
+}
 
 /**
  * Invert the binding table into the lookup a keydown needs.
@@ -89,9 +95,9 @@ function indexBindings(bindings: Bindings): Map<string, Action> {
  * silently fight over one document — `docs/decisions/0015-the-layer-ladder.md` grants this layer the
  * DOM, it does not make a global the right way to find it.
  */
-export function attachInput(target: EventTarget, bindings: Bindings = DEFAULT_BINDINGS): InputSource {
+export function attachInput(target: EventTarget, bindings: Bindings = DEFAULT_BINDINGS): KeyboardSource {
   // @setup: every buffer this source will ever use, built once at attach.
-  const byCode = indexBindings(bindings);
+  let byCode = indexBindings(bindings);
   // @setup: held state per action, and presses awaiting a step. Fixed size, mutated in place.
   const held: Record<Action, boolean> = Object.create(null);
   // @setup: press counts, drained by `sample`.
@@ -149,6 +155,13 @@ export function attachInput(target: EventTarget, bindings: Bindings = DEFAULT_BI
     */
     spend(): void {
       for (const action of ACTION_NAMES) pressed[action] = 0;
+    },
+    rebind(next: Bindings): void {
+      byCode = indexBindings(next);
+      for (const action of ACTION_NAMES) {
+        held[action] = false;
+        pressed[action] = 0;
+      }
     },
     release(): void {
       target.removeEventListener('keydown', onKeyDown);

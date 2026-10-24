@@ -40,8 +40,9 @@ export const PROBES = [
     guard: 'drains, so a press is consumed exactly once',
     edit: {
       path: 'src/app/input.ts',
-      find: '        pressed[action] = 0;',
-      replace: '        pressed[action] += 0;',
+      // ⚠️ Re-anchored by 0664: `rebind` drains the presses too, so the step's own drain is named by the line before it.
+      find: '          intent.specials[slot] = (intent.specials[slot] ?? 0) + pressed[action];\n        }\n        pressed[action] = 0;',
+      replace: '          intent.specials[slot] = (intent.specials[slot] ?? 0) + pressed[action];\n        }\n        pressed[action] += 0;',
     },
   },
   {

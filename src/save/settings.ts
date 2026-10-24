@@ -21,6 +21,7 @@ import { RUMBLE_KINDS } from '../content/rumble.ts';
 import { TRAVEL_KINDS } from '../content/travel.ts';
 import { HAND_KINDS, STEER_KINDS } from '../content/touch.ts';
 import { CREDIT_KINDS } from '../content/credits.ts';
+import { ACTION_NAMES, BINDABLE_PAD_BUTTONS, KEY_CODE, RESERVED_KEYS, SPECIAL_BINDINGS, type Action, type KeyBindings } from '../content/actions.ts';
 import type { SettingsState } from '../state/slices/settings.ts';
 import { type Lift, type Store, lifted } from './store.ts';
 
@@ -47,6 +48,41 @@ function oneOf<K extends string>(kinds: readonly K[], raw: unknown, fallback: K)
   return kinds.find((k) => k === raw) ?? fallback;
 }
 
+/**
+ * The keys a document binds, or `fallback` — 0664. All or nothing: every action one or two keys of a code's
+ * shape, none reserved, and no key on two actions. A binding read half-right is a game some key does not work in,
+ * and the defaults are a game every key does.
+ */
+function keysFrom(raw: unknown, fallback: KeyBindings): KeyBindings {
+  if (typeof raw !== 'object' || raw === null) return fallback;
+  const doc = raw as Partial<Record<Action, unknown>>;
+  const keys = {} as Record<Action, readonly string[]>;
+  const seen: string[] = [];
+  for (const action of ACTION_NAMES) {
+    const codes = doc[action];
+    if (!Array.isArray(codes) || codes.length < 1 || codes.length > 2) return fallback;
+    const read: string[] = [];
+    for (const code of codes) {
+      if (typeof code !== 'string' || !KEY_CODE.test(code) || RESERVED_KEYS.includes(code) || seen.includes(code)) return fallback;
+      seen.push(code);
+      read.push(code);
+    }
+    keys[action] = read;
+  }
+  return keys;
+}
+
+/** The pad buttons a document binds, or `fallback` — 0664, on `keysFrom`'s all-or-nothing terms. */
+function padFrom(raw: unknown, fallback: readonly number[]): readonly number[] {
+  if (!Array.isArray(raw) || raw.length !== SPECIAL_BINDINGS) return fallback;
+  const read: number[] = [];
+  for (const button of raw) {
+    if (typeof button !== 'number' || !BINDABLE_PAD_BUTTONS.includes(button) || read.includes(button)) return fallback;
+    read.push(button);
+  }
+  return read;
+}
+
 /** The fields of `settings` that are kept. */
 export function keptOf(settings: SettingsState): KeptSettings {
   return {
@@ -57,6 +93,9 @@ export function keptOf(settings: SettingsState): KeptSettings {
     hand: settings.hand,
     steer: settings.steer,
     credits: settings.credits,
+    // 0664: the bindings.
+    keys: settings.keys,
+    pad: settings.pad,
   };
 }
 
@@ -98,6 +137,12 @@ export function settingsFrom(text: string | null, base: SettingsState): Settings
       written before it has no field and reads as no quarters, on 0512's per-field terms.
     */
     credits: oneOf(CREDIT_KINDS, doc.credits, base.credits),
+    /*
+      0664: the bindings, on 0512's per-field terms — a document written before them reads as the defaults, and an
+      older build reading one with them ignores the fields.
+    */
+    keys: keysFrom(doc.keys, base.keys),
+    pad: padFrom(doc.pad, base.pad),
     pilot: base.pilot,
   };
 }

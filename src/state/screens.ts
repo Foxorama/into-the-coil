@@ -41,7 +41,8 @@ import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from
 import { TUBE_SLOT_OPTIONS, TUBE_WARE_KINDS } from '../content/racks.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import { WEAPONS } from '../content/weapons.ts';
-import { SIDE_LABELS, SPECIALS, type Side } from '../content/specials.ts';
+import { SIDES, SIDE_LABELS, SPECIALS, type Side } from '../content/specials.ts';
+import { ACTIONS, type Action } from '../content/actions.ts';
 import { PICKUPS, bombFaceOf, missileFaceOf, wardFaceOf, type PickupKind } from '../content/pickups.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
 import { SHOTS } from '../content/shots.ts';
@@ -53,6 +54,8 @@ export const SCREEN_KINDS = [
   'intro',
   'title',
   'settings',
+  // 0664: the controls, a tab of Settings.
+  'controls',
   'hangar',
   'parts',
   'shop',
@@ -707,6 +710,35 @@ export function rackWhy(boughtAny: boolean): string | null {
   return boughtAny ? null : 'Tubes are sold at Cosmo’s — without them, missile pickups fit yours';
 }
 
+/**
+ * What the Controls tab's buttons bind, in their order — 0664: each keyboard action, then each trigger's pad
+ * button. The movement first in the order a hand reads it, then the triggers in `SIDES`' order.
+ */
+export type ControlRow = { readonly device: 'keys'; readonly action: Action } | { readonly device: 'pad'; readonly slot: number };
+export const CONTROL_ROWS: readonly ControlRow[] = [
+  { device: 'keys', action: 'acrossMinus' },
+  { device: 'keys', action: 'acrossPlus' },
+  { device: 'keys', action: 'alongMinus' },
+  { device: 'keys', action: 'alongPlus' },
+  { device: 'keys', action: 'special1' },
+  { device: 'keys', action: 'special2' },
+  { device: 'keys', action: 'special3' },
+  ...SIDES.map((_, slot) => ({ device: 'pad' as const, slot })),
+];
+
+/**
+ * The way each movement flies on the landscape screen — 0664, as `ACTIONS` says up and down. Not *back* and
+ * *forward*: a row called *Fly back* beside the tab's *Back* is two buttons that answer to one word.
+ */
+const FLY_WAYS: Partial<Record<Action, string>> = { acrossMinus: 'Fly up', acrossPlus: 'Fly down', alongMinus: 'Fly left', alongPlus: 'Fly right' };
+
+/** What a Controls button is called — 0664: the movement by its way, a trigger by its side and the hand that throws it. */
+export function controlLabel(row: ControlRow): string {
+  if (row.device === 'pad') return SIDE_LABELS[SIDES[row.slot] ?? 'gun'] + ' · pad';
+  const slot = ACTIONS[row.action].slot;
+  return slot === null ? (FLY_WAYS[row.action] ?? ACTIONS[row.action].label) : SIDE_LABELS[SIDES[slot] ?? 'gun'] + ' · keys';
+}
+
 /** What each kind says on a tube slot — 0663, one line about the tube in it. */
 const TUBE_SLOT_HINT: Record<MissileKind, string> = {
   straight: 'A tube that fires straight',
@@ -1144,7 +1176,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     inRun: false,
     back: 'opener',
     // 0641: and the save, a tab of the same place.
-    tabs: ['settings', 'guide', 'save'],
+    tabs: ['settings', 'controls', 'guide', 'save'],
     opensOn: 'choice',
   },
   /**
@@ -1483,7 +1515,29 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     inRun: false,
     back: 'opener',
-    tabs: ['settings', 'guide', 'save'],
+    tabs: ['settings', 'controls', 'guide', 'save'],
+    opensOn: 'action',
+  },
+  /**
+   * The controls — 0664. Asked for: *"controls config for keyboard + gamepad in settings. Need to make sure it
+   * saves properly."* A button per thing a hand can be bound to, in `CONTROL_ROWS`' order: a press listens for
+   * the next key or pad button, which `src/app/mount.ts` binds. The button's hint is what it is bound to now.
+   */
+  controls: {
+    heading: 'Controls',
+    pause: null,
+    leads: false,
+    stand: null,
+    actions: [...CONTROL_ROWS.map((row) => ({ label: controlLabel(row), hint: '' })), { label: 'Reset to defaults', hint: 'Every key and button as it came' }, { label: 'Back', hint: '' }],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: false,
+    back: 'opener',
+    tabs: ['settings', 'controls', 'guide', 'save'],
     opensOn: 'action',
   },
   /**
@@ -1522,7 +1576,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     inRun: false,
     back: 'opener',
-    tabs: ['settings', 'guide', 'save'],
+    tabs: ['settings', 'controls', 'guide', 'save'],
     opensOn: 'action',
   },
   // `pushed: false` — the HUD is pushed at it, and the HUD is not a panel: `src/app/chrome.ts` builds

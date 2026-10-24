@@ -126,3 +126,51 @@ export const DEFAULT_BINDINGS: Record<Action, readonly string[]> = {
   */
   special3: ['KeyE', 'KeyX'],
 };
+
+/** What every action is bound to on the keyboard — 0664: `DEFAULT_BINDINGS` until the player changes one. */
+export type KeyBindings = Readonly<Record<Action, readonly string[]>>;
+
+/**
+ * The keys a binding may not take — 0664. Escape is Back and the pause, P is the pause, and Tab walks the
+ * page's focus; bound to a trigger, each would do two things at once.
+ */
+export const RESERVED_KEYS: readonly string[] = ['Escape', 'KeyP', 'Tab'];
+
+/** A key code's shape, as a saved binding may hold one: `KeyboardEvent.code` is letters and digits. */
+export const KEY_CODE = /^[A-Za-z0-9]{1,24}$/;
+
+/**
+ * `keys` with `action` bound to `code` alone — 0664. Another action that held `code` gives it up; one left with
+ * nothing takes what `action` had, so a key is never on two actions and no action is left with none.
+ */
+export function bindKey(keys: KeyBindings, action: Action, code: string): KeyBindings {
+  const before = keys[action].filter((held) => held !== code);
+  const next: Record<Action, readonly string[]> = { ...keys, [action]: [code] };
+  for (const other of ACTION_NAMES) {
+    if (other === action || !keys[other].includes(code)) continue;
+    const kept = keys[other].filter((held) => held !== code);
+    next[other] = kept.length > 0 ? kept : before;
+  }
+  return next;
+}
+
+/**
+ * Which pad button throws each trigger, by slot — 0664. The standard mapping's A, B and X: the buttons the pad
+ * always threw them on (`PAD_SPECIAL_BUTTONS` in `src/app/pad.ts` was this list).
+ */
+export const DEFAULT_PAD_BUTTONS: readonly number[] = [0, 1, 2];
+
+/**
+ * The standard mapping's buttons a trigger may be bound to — 0664: the four faces, the bumpers and triggers, and
+ * the stick presses. Not Back and Start, which are the menu's, and not the pad's cross, which walks it.
+ */
+export const BINDABLE_PAD_BUTTONS: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7, 10, 11];
+
+/** The standard mapping's buttons by index, as an Xbox-style pad prints them — 0664. */
+export const PAD_BUTTON_NAMES: readonly string[] = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Back', 'Start', 'L3', 'R3'];
+
+/** `pad` with the trigger in `slot` on `button` — 0664. A trigger that was on it takes the button `slot` had. */
+export function bindButton(pad: readonly number[], slot: number, button: number): readonly number[] {
+  const before = pad[slot];
+  return pad.map((held, i) => (i === slot ? button : held === button && before !== undefined ? before : held));
+}

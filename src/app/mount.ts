@@ -47,7 +47,7 @@ import { DEFAULT_HAND, DEFAULT_STEER, HANDS, HAND_KINDS, STEERS, STEER_KINDS } f
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
 import { MOTE_BAND, flythroughSteps, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
 import { DEBRIS } from '../content/debris.ts';
-import { SPECIAL_BINDINGS } from '../content/actions.ts';
+import { BINDABLE_PAD_BUTTONS, KEY_CODE, PAD_BUTTON_NAMES, RESERVED_KEYS, SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SIDES, SPECIALS, type Side, type SpecialKind } from '../content/specials.ts';
 import { chargesIn, livesFor, ownSpecial, startingArsenal, type Arsenal } from '../state/slices/run.ts';
 
@@ -137,7 +137,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, lockHint, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rackWhy, rimWhy, shellWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
+import { CONTROL_ROWS, SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, lockHint, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rackWhy, rimWhy, shellWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor, liveryInk } from '../content/livery.ts';
@@ -147,7 +147,7 @@ import type { WeaponKind } from '../content/weapons.ts';
 import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, WARES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
 import { COSMO, KEEPERS, KEEPER_KINDS, drawSpots, type KeeperKind } from '../content/keepers.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
-import { hudBar, makeChrome } from './chrome.ts';
+import { hudBar, keyCap, keyCaps, makeChrome } from './chrome.ts';
 import {
   boardLines,
   creditEnded,
@@ -173,7 +173,7 @@ import { artOpen, creditsFor, flameOpen, gunOpen, needsFirst, pilotRecord, plate
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
-import { attachPad, attachRumble } from './pad.ts';
+import { PAD_BACK_BUTTON, PAD_PAUSE_BUTTON, attachPad, attachRumble } from './pad.ts';
 import { attachTouch } from './touch.ts';
 import { STEP_MS, runLoop } from './loop.ts';
 
@@ -1115,6 +1115,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // Whether the pad's Start was pressed since the last tick — 0511. Set from inside the step, spent in `onTick`.
   let pauseAsked = false;
 
+  // 0664: held, so the Controls tab can bind it again; the player's keys from the moment the settings are read.
+  const keyboard = attachInput(window);
   const world: World = {
     /*
       DRAW ORDER, back to front, and it is a decision rather than whichever pool came first.
@@ -1434,7 +1436,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       here, at boot, because this file is the one allowed to (0025).
     */
     input: combineDevices([
-      attachInput(window),
+      keyboard,
       /*
         ⚠️ **`bands` is what the ship OWNS, not what the binding table budgets for** — 0060. The
         strip used to be `SPECIAL_BINDINGS` bands wide unconditionally, so with one special owned
@@ -1456,6 +1458,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // 0511: Start asks for a pause, and the shell hears it on the next tick (`pauseAsked`).
       attachPad({
         alongAxis: () => view.alongAxis,
+        // 0664: the triggers' buttons, as the Controls tab left them.
+        buttons: () => state.settings.pad,
         onPause: () => {
           pauseAsked = true;
         },
@@ -1539,6 +1543,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     settings: readSettings(keptStore, initialState.settings),
     hangar: readHangar(keptStore, initialState.hangar),
   };
+  keyboard.rebind(state.settings.keys);
+  // 0664: the Controls row listening for its key or button, or `null` — up here, because a screen change ends it.
+  let listening: number | null = null;
+  /** The pad buttons down when listening began, so the button that pressed the row is not its answer. */
+  let listenHeld: readonly boolean[] = [];
   // 0594: what this player may not be offered yet, from the hangar just read.
   world.pickupShut = shutFor(state.hangar);
   /** Whether the viewport is one the game may be played in at all — the orientation gate's answer. */
@@ -1706,6 +1715,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     travelSteps = 0;
     travelLandingAt = -1;
     travelSwapped = false;
+    // 0664: a row listening on the Controls tab stops listening when the tab goes, and the tab says its bindings as it comes.
+    listening = null;
+    if (screen === 'controls') sayControls();
     /*
       ⚠️ **AND THE ENGINES ARE PUT OUT HERE AS WELL AS WHERE THE BURN ENDS.** A run that dies or is
       abandoned mid-burn leaves `travel` by a path `stepCrossing` never sees, and a `warp` left above
@@ -2206,6 +2218,94 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else goBack();
   }
 
+  /*
+    ── THE CONTROLS — 0664 ──────────────────────────────────────────────────────────────────────────
+
+    *"Controls config for keyboard + gamepad in settings. Need to make sure it saves properly."* A press on a row
+    listens; the next key, or the next pad button on a pad row, is bound (`bindKey`, `bindButton` in the settings
+    slice) and kept with the settings. Escape, or the pad's Back or Start, keeps what was there.
+  */
+  /** What `row` is bound to now, in the words of the hand that holds it. */
+  function boundTo(index: number): string {
+    const row = CONTROL_ROWS[index];
+    if (row === undefined) return '';
+    if (row.device === 'keys') return keyCaps(state.settings.keys[row.action]);
+    return PAD_BUTTON_NAMES[state.settings.pad[row.slot] ?? -1] ?? '';
+  }
+  /** Every row's hint: what it is bound to, or what it is waiting for. */
+  function sayControls(): void {
+    CONTROL_ROWS.forEach((row, i) => {
+      const waiting = row.device === 'keys' ? 'Press a key — Esc keeps ' + boundTo(i) : 'Press a pad button — Back keeps ' + boundTo(i);
+      chrome.setActionHint('controls', i, i === listening ? waiting : boundTo(i));
+    });
+  }
+  /** Which of the pad's buttons are down, on every pad, by index — read only while a row listens. */
+  function padsDown(): boolean[] {
+    const down: boolean[] = [];
+    const pads = typeof navigator === 'undefined' || !navigator.getGamepads ? [] : navigator.getGamepads();
+    for (const pad of pads) {
+      if (pad === null || !pad.connected) continue;
+      pad.buttons.forEach((button, i) => {
+        if (button.pressed) down[i] = true;
+      });
+    }
+    return down;
+  }
+  function onControls(index: number): void {
+    if (index < CONTROL_ROWS.length) {
+      listening = index;
+      listenHeld = padsDown();
+      sayControls();
+    } else if (index === CONTROL_ROWS.length) {
+      listening = null;
+      dispatch({ slice: 'settings', type: 'controlsReset' });
+      sayControls();
+    } else goBack();
+  }
+  /*
+    ⚠️ **IN THE CAPTURE PHASE, AND IT STOPS THE KEY THERE.** A key the Controls tab is listening for is its answer
+    and nothing else's: not the menu's step, not Back, not a trigger the keyboard source would count.
+  */
+  const bindKeyPress = (e: KeyboardEvent): void => {
+    if (listening === null || state.screen.current !== 'controls') return;
+    const row = CONTROL_ROWS[listening];
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.code === 'Escape' || row === undefined) {
+      listening = null;
+      sayControls();
+      return;
+    }
+    if (row.device !== 'keys') return;
+    if (RESERVED_KEYS.includes(e.code) || !KEY_CODE.test(e.code)) {
+      chrome.setActionHint('controls', listening, keyCap(e.code) + ' is the menu’s — press another, or Esc');
+      return;
+    }
+    listening = null;
+    dispatch({ slice: 'settings', type: 'key', action: row.action, code: e.code });
+    sayControls();
+  };
+  window.addEventListener('keydown', bindKeyPress, { capture: true });
+  /** A pad row listening: the first bindable button pressed since it began, or Back or Start to keep it. */
+  function listenPad(): void {
+    const down = padsDown();
+    const fresh = down.map((d, i) => d && listenHeld[i] !== true);
+    listenHeld = down;
+    const row = listening === null ? undefined : CONTROL_ROWS[listening];
+    if (row === undefined) return;
+    if (fresh[PAD_BACK_BUTTON] === true || fresh[PAD_PAUSE_BUTTON] === true) {
+      listening = null;
+      sayControls();
+      return;
+    }
+    if (row.device !== 'pad') return;
+    const button = BINDABLE_PAD_BUTTONS.find((b) => fresh[b] === true);
+    if (button === undefined) return;
+    listening = null;
+    dispatch({ slice: 'settings', type: 'button', slot: row.slot, button });
+    sayControls();
+  }
+
   /** Whether a run has begun since the shell last left one — 0558. Set when a run begins, spent by `leaveRun`. */
   let runOnField = false;
   /*
@@ -2317,7 +2417,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       next.settings !== state.settings && serialiseSettings(next.settings) !== serialiseSettings(state.settings);
     // 0521: the slice keeps its identity when nothing moved, so a changed hangar is a changed reference.
     const hangarChanged = next.hangar !== state.hangar;
+    // 0664: a key bound on the Controls tab, heard from the next press.
+    const keysChanged = next.settings.keys !== state.settings.keys;
+    const padChanged = next.settings.pad !== state.settings.pad;
     state = next;
+    if (keysChanged) keyboard.rebind(state.settings.keys);
+    if (keysChanged || padChanged) chrome.setBindings(state.settings.keys, state.settings.pad);
     /*
       ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
       walks the whole upgrade list, which is right for a pure function of saved state and wrong to do
@@ -2792,6 +2897,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     } else if (screen === 'guide') goBack();
     // 0641: the Save tab's own four, and Back.
     else if (screen === 'save') onSave(index);
+    // 0664: the Controls tab's rows, its reset, and Back.
+    else if (screen === 'controls') onControls(index);
     /*
       ⚠️ **THE PAUSE — 0511**, in the order its row lists them: *Resume* goes through the count-in, as
       Back does; *Settings* and *How to play* are the title's own two screens, opened from here so their
@@ -4856,6 +4963,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onMend = chrome.setMend;
   // And the table the title rolls, as this browser kept it — 0429.
   chrome.setBoard(boardLines(scoreTable), -1);
+  // 0664: and the bindings this browser kept, wherever a key or a button is named.
+  chrome.setBindings(state.settings.keys, state.settings.pad);
 
   /*
     ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
@@ -4869,6 +4978,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     double the one call in the game that genuinely allocates.
   */
   world.onIdle = (): void => {
+    /*
+      0664: a Controls row listening hears the pad first, and the menu does not hear it at all — the press is the
+      binding's, and the menu learns what is held once it is let go of (`spend`).
+    */
+    if (listening !== null && state.screen.current === 'controls') {
+      listenPad();
+      menuPad.spend();
+      return;
+    }
     menuPad.read(menuAsk);
     // On the intro the pad is a key like any other — 0412: confirm skips once the game has loaded, and
     // anything before that asks for the sound, which a pad can only have if the page was touched.

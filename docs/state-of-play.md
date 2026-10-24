@@ -1163,7 +1163,7 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE NOTEBOOK PAGES ARE A QUEUE OF TWENTY-ONE: EIGHTEEN BUILT — OWED A PLAY — 2026-10-24
+### ⚠️ THE NOTEBOOK PAGES ARE A QUEUE OF TWENTY-ONE: NINETEEN BUILT — OWED A PLAY — 2026-10-24
 
 [`the-notebook-pages`](../reports/the-notebook-pages-2026-10-24.md) is every item on four handwritten pages and two
 asked after them, each with its status, and the player's answers. Built: [0649](decisions/0649-the-streak-ticks-down.md),
@@ -1174,9 +1174,9 @@ asked after them, each with its status, and the player's answers. Built: [0649](
 three sounds: [0658](decisions/0658-every-shell-pops-its-own.md), [0659](decisions/0659-a-menu-press-is-heard.md) and
 [0660](decisions/0660-the-pterodactyl-screams.md), the places described, [0661](decisions/0661-the-places-are-described.md), the fighter's arms hung under it,
 [0662](decisions/0662-the-fighter-hangs-its-arms.md), the tubes' sides, [0663](decisions/0663-the-tubes-have-sides.md),
-and the tubes' look, [0665](decisions/0665-the-tubes-are-missiles.md). **Next is the play** of all of it, which also names what else on the
-menus is wrong (17); meanwhile the rest of the queue in the report's order of cost — the
-controls (16), and Venoma (1).
+the tubes' look, [0665](decisions/0665-the-tubes-are-missiles.md), and the controls,
+[0664](decisions/0664-the-controls-are-bound.md). **Next is the play** of all of it, which also names what else on the
+menus is wrong (17); meanwhile the last of the queue — Venoma (1).
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
 

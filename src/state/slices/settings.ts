@@ -27,6 +27,7 @@ import { TUNED, type DifficultyKind } from '../../content/difficulty.ts';
 import { DEFAULT_HAND, DEFAULT_STEER, type HandKind, type SteerKind } from '../../content/touch.ts';
 import { DEFAULT_CREDIT, type CreditKind } from '../../content/credits.ts';
 import { type SettingName } from '../screens.ts';
+import { DEFAULT_BINDINGS, DEFAULT_PAD_BUTTONS, bindButton, bindKey, type Action, type KeyBindings } from '../../content/actions.ts';
 
 /**
  * What each setting holds.
@@ -116,7 +117,22 @@ interface SettingValue {
  * state without a name fails here — so *what can be chosen* and *what can be stored* cannot drift
  * apart, which is the thing a settings menu gets wrong first.
  */
-export type SettingsState = { readonly [K in SettingName]: SettingValue[K] };
+export type SettingsState = { readonly [K in SettingName]: SettingValue[K] } & ControlsState;
+
+/**
+ * What every action is bound to — 0664, *"controls config for keyboard + gamepad in settings. Need to make sure it
+ * saves properly."* Not a band, so not a `SettingName`: the Controls tab sets them a press at a time.
+ *
+ * ⚠️ **IT REACHES THE SHELL'S INPUT AND NOTHING ELSE**, on `sound`'s terms: the keyboard source and the pad read
+ * them where a press becomes an intent (`src/app/input.ts`, `src/app/pad.ts`), and the frame is handed the
+ * intent and never learns what was pressed.
+ */
+interface ControlsState {
+  /** Each action's keys, as `KeyboardEvent.code`. */
+  readonly keys: KeyBindings;
+  /** Each trigger's pad button, by slot, as the standard mapping numbers them. */
+  readonly pad: readonly number[];
+}
 
 /**
  * ⚠️ **Every action names its slice**, per 0017, so the root dispatches by looking the slice up
@@ -130,7 +146,11 @@ export type SettingsAction =
   | { slice: 'settings'; type: 'difficulty'; difficulty: DifficultyKind }
   | { slice: 'settings'; type: 'hand'; hand: HandKind }
   | { slice: 'settings'; type: 'steer'; steer: SteerKind }
-  | { slice: 'settings'; type: 'credits'; credits: CreditKind };
+  | { slice: 'settings'; type: 'credits'; credits: CreditKind }
+  // 0664: a key bound to an action, a pad button to a trigger, and every binding put back.
+  | { slice: 'settings'; type: 'key'; action: Action; code: string }
+  | { slice: 'settings'; type: 'button'; slot: number; button: number }
+  | { slice: 'settings'; type: 'controlsReset' };
 
 /**
  * What a player who has chosen nothing has. The default IS the game — 0024. The band opens on the
@@ -145,6 +165,8 @@ export const initialSettings: SettingsState = {
   hand: DEFAULT_HAND,
   steer: DEFAULT_STEER,
   credits: DEFAULT_CREDIT,
+  keys: DEFAULT_BINDINGS,
+  pad: DEFAULT_PAD_BUTTONS,
 };
 
 export function reduceSettings(state: SettingsState, action: SettingsAction): SettingsState {
@@ -176,6 +198,16 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
     // 0517: the continues band, on the same shape.
     case 'credits':
       return state.credits === action.credits ? state : { ...state, credits: action.credits };
+    /*
+      0664: a binding, on the same shape — the same key on the same action, or the same button on the same
+      trigger, is no change. What a binding does to the others is `bindKey`'s and `bindButton`'s.
+    */
+    case 'key':
+      return state.keys[action.action].length === 1 && state.keys[action.action][0] === action.code ? state : { ...state, keys: bindKey(state.keys, action.action, action.code) };
+    case 'button':
+      return state.pad[action.slot] === action.button ? state : { ...state, pad: bindButton(state.pad, action.slot, action.button) };
+    case 'controlsReset':
+      return state.keys === DEFAULT_BINDINGS && state.pad === DEFAULT_PAD_BUTTONS ? state : { ...state, keys: DEFAULT_BINDINGS, pad: DEFAULT_PAD_BUTTONS };
     default: {
       /*
         Adding a member to `SettingsAction` fails to compile HERE, per

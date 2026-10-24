@@ -16,6 +16,7 @@ import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { GOLFER_KINDS } from '../src/content/golfers.ts';
 import { HAND_KINDS, STEER_KINDS } from '../src/content/touch.ts';
 import { CREDIT_KINDS } from '../src/content/credits.ts';
+import { ACTION_NAMES, DEFAULT_BINDINGS, DEFAULT_PAD_BUTTONS, bindButton, bindKey } from '../src/content/actions.ts';
 
 /**
  * THE SETTINGS ARE KEPT — `docs/decisions/0510-the-settings-are-kept.md`, and the second `itc_*` key.
@@ -49,6 +50,69 @@ const moved = (): SettingsState => ({
   hand: HAND_KINDS.find((k) => k !== initialSettings.hand)!,
   steer: STEER_KINDS.find((k) => k !== initialSettings.steer)!,
   credits: CREDIT_KINDS.find((k) => k !== initialSettings.credits)!,
+  // 0664: and the bindings — the first trigger on K and the third on the pad's RB.
+  keys: bindKey(initialSettings.keys, 'special1', 'KeyK'),
+  pad: bindButton(initialSettings.pad, 2, 5),
+});
+
+describe('0664 — the controls are kept', () => {
+  it('THE ASK: *"make sure it saves properly"* — a key and a pad button rebound read back as they were left', () => {
+    const store = memory();
+    const chosen = moved();
+    writeSettings(store, chosen);
+    const back = readSettings(store, initialSettings);
+    expect(back.keys.special1, 'the key was forgotten').toEqual(['KeyK']);
+    expect(back.keys, 'the bindings read back other than they were written').toEqual(chosen.keys);
+    expect(back.pad, 'the pad was forgotten').toEqual([0, 1, 5]);
+  });
+
+  it('a document from before the controls reads as the defaults', () => {
+    const before = JSON.stringify({ v: SETTINGS_VERSION, sound: 'off' });
+    const old = settingsFrom(before, initialSettings);
+    expect(old.keys).toBe(DEFAULT_BINDINGS);
+    expect(old.pad).toBe(DEFAULT_PAD_BUTTONS);
+  });
+
+  it('a forged or broken binding reads as the defaults, whole', () => {
+    const doc = (keys: unknown, pad: unknown): string => JSON.stringify({ v: SETTINGS_VERSION, keys, pad });
+    const good = { ...DEFAULT_BINDINGS };
+    const cases: [string, unknown, unknown][] = [
+      ['a key on two actions', { ...good, special1: ['KeyD'] }, DEFAULT_PAD_BUTTONS],
+      ['a reserved key', { ...good, special1: ['Escape'] }, DEFAULT_PAD_BUTTONS],
+      ['an action with no key', { ...good, special1: [] }, DEFAULT_PAD_BUTTONS],
+      ['an action missing', { alongPlus: ['KeyD'] }, DEFAULT_PAD_BUTTONS],
+      ['a code that is not one', { ...good, special1: ['<script>'] }, DEFAULT_PAD_BUTTONS],
+    ];
+    for (const [what, keys, pad] of cases) expect(settingsFrom(doc(keys, pad), initialSettings).keys, what).toBe(DEFAULT_BINDINGS);
+    const pads: [string, unknown][] = [
+      ['Start on a trigger', [9, 1, 2]],
+      ['a button on two triggers', [0, 0, 2]],
+      ['two triggers', [0, 1]],
+      ['not a list', 'A'],
+    ];
+    for (const [what, pad] of pads) expect(settingsFrom(doc(good, pad), initialSettings).pad, what).toBe(DEFAULT_PAD_BUTTONS);
+  });
+});
+
+describe('0664 — a binding never leaves a key on two actions or an action on none', () => {
+  it('a key taken from another action leaves it what the rebound one had', () => {
+    const keys = bindKey(DEFAULT_BINDINGS, 'special1', 'KeyD');
+    expect(keys.special1).toEqual(['KeyD']);
+    expect(keys.alongPlus, 'Forward kept D, or lost its arrow').toEqual(['ArrowRight']);
+    const lone = bindKey(DEFAULT_BINDINGS, 'special2', 'Space');
+    expect(lone.special2).toEqual(['Space']);
+    expect(lone.special1, 'the first trigger was left with no key').toEqual(['ShiftLeft', 'ShiftRight']);
+    for (const binding of [keys, lone]) {
+      const all = ACTION_NAMES.flatMap((action) => binding[action]);
+      expect(new Set(all).size, 'a key is on two actions').toBe(all.length);
+      for (const action of ACTION_NAMES) expect(binding[action].length, `${action} has no key`).toBeGreaterThan(0);
+    }
+  });
+
+  it('a pad button taken from another trigger swaps with it', () => {
+    expect(bindButton(DEFAULT_PAD_BUTTONS, 0, 1)).toEqual([1, 0, 2]);
+    expect(bindButton(DEFAULT_PAD_BUTTONS, 2, 5)).toEqual([0, 1, 5]);
+  });
 });
 
 describe('0510 — the settings are kept', () => {

@@ -14,8 +14,9 @@ export const PROBES = [
     guard: 'the pilot is not kept',
     edit: {
       path: 'src/save/settings.ts',
-      find: '    credits: settings.credits,\n  };',
-      replace: '    credits: settings.credits,\n    pilot: settings.pilot,\n  };',
+      // ⚠️ Re-anchored by 0664: the bindings are kept after the continues band.
+      find: '    credits: settings.credits,\n',
+      replace: '    credits: settings.credits,\n    pilot: settings.pilot,\n',
     },
   },
   {
