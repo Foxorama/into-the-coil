@@ -88,20 +88,29 @@ describe.runIf(chromePath)('0561 — the cursor tries on, and only a press fits'
     await page.context().close();
   });
 
-  it('stands on a shut gun, says what opens it, and refuses a press on it', async () => {
+  it('0657 — a shut gun is off the band: not drawn, never stepped onto, and the way round is what is open', async () => {
+    /*
+      *"Locked items should be hidden on every equippable screen."* 0561 let the cursor stand on a shut gun to read
+      what opens it; the player asked for it gone. The Thunderbolt is not won, so its gun is shut on the Firebird.
+    */
     const page = await opened();
     // 0579: past the sub-tabs to the gun.
     await press(page, 'ArrowDown');
     await press(page, 'ArrowDown');
-    // Past every open gun to the Thunderbolt's, which is shut: the cursor stands on it. Counted from the
-    // Firebird's place to the Thunderbolt's — 0593 put a sixth ship after it, whose gun is shut on another rule.
-    await press(page, 'ArrowRight', SHIP_KINDS.indexOf('thunderbolt') - SHIP_KINDS.indexOf('firebird'));
-    const tried = page.locator(`${guns} .${HANGAR}option-look`);
-    expect(await tried.count(), 'the cursor could not stand on a shut gun').toBe(1);
-    expect(await tried.getAttribute('aria-disabled'), 'the gun tried on is not the shut one').toBe('true');
-    expect(await page.locator(`${guns} ~ .${HANGAR}band-hint`).textContent(), 'the shut gun did not say what opens it').toContain('Thunderbolt');
-    await press(page, 'Enter');
-    expect(await fittedGun(page), 'a press fitted a shut gun').toBe('firebird');
+    const options = page.locator(`${guns} .${HANGAR}option`);
+    expect(await options.nth(SHIP_KINDS.indexOf('thunderbolt')).isHidden(), 'the Thunderbolt’s gun, shut, is drawn on the band').toBe(true);
+    const drawn = await options.evaluateAll((all) => all.filter((o) => !(o as HTMLElement).hidden).length);
+    expect(drawn, 'no gun but the fitted one is drawn, so this asks nothing of a step').toBeGreaterThan(1);
+    // Round the band once: every step lands on a drawn gun, and as many steps as there are drawn guns come home.
+    for (let step = 1; step < drawn; step++) {
+      await press(page, 'ArrowRight');
+      const tried = page.locator(`${guns} .${HANGAR}option-look`);
+      expect(await tried.count(), `step ${String(step)} tried nothing on`).toBe(1);
+      expect(await tried.isHidden(), `step ${String(step)} stood on a gun the band does not draw`).toBe(false);
+    }
+    await press(page, 'ArrowRight');
+    expect(await page.locator(`${guns} .${HANGAR}option-look`).count(), 'the drawn guns did not come round to the fitted one').toBe(0);
+    expect(await fittedGun(page), 'a step fitted a gun').toBe('firebird');
     await page.context().close();
   });
 });

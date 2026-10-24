@@ -2,7 +2,8 @@
 
 **Accepted 2026-10-07.** Item 2 of the queue in
 [the hangar family, reviewed](../../reports/the-hangar-family-reviewed-2026-10-07.md). Amends 0521's
-*a step skips what is shut*, and the press of every slot band on Hangin' Out and Paint & Parts.
+*a step skips what is shut*, and the press of every slot band on Hangin' Out and Paint & Parts. **Amended by
+[0657](0657-the-menus-show-what-you-have.md)**: a shut option is hidden, and a step skips it again.
 
 ## The ask
 

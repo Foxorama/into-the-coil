@@ -7,6 +7,9 @@ import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar, shown } from './title.ts';
 import { SCREENS, SCREEN_KINDS } from '../src/state/screens.ts';
+import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
+import { initialHangar } from '../src/state/slices/hangar.ts';
+import { SHIP_KINDS } from '../src/content/ships.ts';
 
 /**
  * THE DOCK IS DRESSED — `docs/decisions/0572-the-dock-is-dressed.md`.
@@ -32,10 +35,24 @@ afterAll(async () => {
   await browser?.close();
 });
 
-async function opened(width: number, height: number): Promise<Page> {
+async function opened(width: number, height: number, everyWon = false): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
   const page = await context.newPage();
+  // 0657: a band that fits draws only what is open, so a step has something to try on only once a ship is won.
+  if (everyWon) {
+    const won = Object.fromEntries(SHIP_KINDS.map((kind) => [kind, true])) as typeof initialHangar.won;
+    await page.addInitScript(
+      ([key, text]) => {
+        try {
+          localStorage.setItem(key, text);
+        } catch {
+          // A page that cannot keep it opens on nothing won, and the step finds nothing to try on.
+        }
+      },
+      [HANGAR_KEY, serialiseHangar({ ...initialHangar, won })] as const,
+    );
+  }
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   await pastIntro(page);
@@ -194,7 +211,7 @@ describe.runIf(chromePath)('0572 — the dock is dressed', () => {
   });
 
   it('says what each band has on under the band, and a step says what was tried on', async () => {
-    const page = await opened(1280, 720);
+    const page = await opened(1280, 720, true);
     const caption = (name: string): string => `${shown('hangar')} .${HANGAR}band:has([${SETTING_ATTR}="${name}"]) .${HANGAR}band-said`;
     for (const name of ['gun', 'special'] as const) {
       const band = await box(page, `${shown('hangar')} .${HANGAR}band:has([${SETTING_ATTR}="${name}"])`);

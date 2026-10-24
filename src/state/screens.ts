@@ -212,10 +212,14 @@ interface ChoiceRow {
    *
    * `'tries'` since 0561 is a slot of the ship on a stand: a step puts the option on the ship and fits
    * nothing, a press fits the one tried on, and leaving the band puts the fitted one back — *"seeing how
-   * it immediately looks is good, but it shouldn't auto-equip when scrolling menus."* A step reaches a
-   * shut option too, so the player can see what it is and read what opens it.
+   * it immediately looks is good, but it shouldn't auto-equip when scrolling menus."* Since 0657 a shut
+   * option on it is not shown and not stepped onto: *"locked items should be hidden on every equippable
+   * screen."*
+   *
+   * `'acts'` since 0657 presses the screen's first action — Cosmo's shelves, where it is *Buy*: *"A button on
+   * game console goes to next item in stores, it should confirm just like it does on main menu."*
    */
-  press: 'steps' | 'takes' | 'tries';
+  press: 'steps' | 'takes' | 'tries' | 'acts';
   /**
    * What a step past the band's last option does — 0607. `'round'` comes round to its first, and the
    * other way round to its last, so its arrows and a held direction go on for ever: *"full cycle the
@@ -1378,6 +1382,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     actions: [
       { label: 'Buy', hint: '' },
       { label: 'Back', hint: '' },
+      // 0657: what the player owns is off the shelves until this is ticked — its box written by the shell.
+      { label: 'Show owned', hint: 'Put what you own back on the shelves' },
     ],
     /*
       0542: the aisle, which steps the shelf in view, and a shelf per table — each its own wares, named with
@@ -1414,7 +1420,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
           options: SHELVES[kind].wares.map((ware) => ({ label: OWNABLES[ware].name, hint: OWNABLES[ware].hint })),
           faces: 'words',
           on: 'all',
-          press: 'steps',
+          // 0657: a press buys the ware in the window, through Buy's own sheet, as A flies a pilot on the title.
+          press: 'acts',
           ends: 'round',
         }),
       ),

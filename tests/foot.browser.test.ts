@@ -6,6 +6,9 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar, shown } from './title.ts';
+import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
+import { initialHangar } from '../src/state/slices/hangar.ts';
+import { SHIP_KINDS } from '../src/content/ships.ts';
 
 /**
  * THE PLATE GROWS, AND HAS A FOOT — `docs/decisions/0562-the-plate-grows.md`.
@@ -28,10 +31,24 @@ afterAll(async () => {
   await browser?.close();
 });
 
-async function opened(width: number, height: number): Promise<Page> {
+async function opened(width: number, height: number, everyWon = false): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 });
   const page = await context.newPage();
+  // 0657: a band that fits draws only what is open, so a step has something to try on only once a ship is won.
+  if (everyWon) {
+    const won = Object.fromEntries(SHIP_KINDS.map((kind) => [kind, true])) as typeof initialHangar.won;
+    await page.addInitScript(
+      ([key, text]) => {
+        try {
+          localStorage.setItem(key, text);
+        } catch {
+          // A page that cannot keep it opens on nothing won, and the step finds nothing to try on.
+        }
+      },
+      [HANGAR_KEY, serialiseHangar({ ...initialHangar, won })] as const,
+    );
+  }
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   await pastIntro(page);
@@ -65,7 +82,7 @@ describe.runIf(chromePath)('0562 and 0568 — the plate is one size, and its foo
     beside Back. So the card is asked where the player sees it, a phone held sideways.
   */
   it('names the option tried on, on a phone’s card, and follows the cursor down', async () => {
-    const page = await opened(667, 375);
+    const page = await opened(667, 375, true);
     // 0579: down past the sub-tabs, which stand between the pilots and the Loadout's first band.
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
