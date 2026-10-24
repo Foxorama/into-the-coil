@@ -83,14 +83,14 @@ export const PROBES = [
     suite: 'tests/charge.test.ts',
     broke: 'a bar of sixty landings, so a level waits forty seconds for a dance',
     guard: 'in the first level, while no boss is up',
-    edit: { path: 'src/content/ships.ts', find: '    charge: { fill: 18 },', replace: '    charge: { fill: 60 },' },
+    edit: { path: 'src/content/ships.ts', find: '    charge: { fill: 22 },', replace: '    charge: { fill: 60 },' },
   },
   {
     decision: '0613',
     suite: 'tests/charge.test.ts',
     broke: 'a bar of eight landings, so a boss fight is a dance every few seconds',
     guard: 'against the first level’s end boss, alone',
-    edit: { path: 'src/content/ships.ts', find: '    charge: { fill: 18 },', replace: '    charge: { fill: 8 },' },
+    edit: { path: 'src/content/ships.ts', find: '    charge: { fill: 22 },', replace: '    charge: { fill: 8 },' },
   },
   {
     decision: '0613',

@@ -204,27 +204,54 @@ describe('0377 — the rift negates everything but the ship and the boss', () =>
     expect(rifts(world).length, 'the rift outlived the ship that threw it').toBe(0);
   });
 
-  it('is drawn at exactly the radius it negates at, and negates for exactly as long as the row says', () => {
+  it('is drawn at exactly the radius it negates at, rolls up the screen at its row’s pace, and closes once wholly past its top — 0656', () => {
+    /*
+      *"Grav ball special needs to roll forward, not stay in one spot; roll forward off screen then disappear."* In
+      the camera's frame, which is the screen: `roll` a step, and gone within a step of its whole disc being past the
+      top edge — never on the screen, and never on its `steps` cap, which is only behind that.
+    */
     expect(SPRITE_EXTENT.riftZone, 'the rift is drawn at a different size from the one it negates at').toBe(RIFT.radius * 2);
     const { world, frame } = quiet();
     const rift = openOne(world, frame);
     expect(rift.sprite, 'the rift is not drawn as a rift').toBe(SPRITE.riftZone);
     expect(rift.radius, 'the rift negates at a radius other than its row’s').toBe(RIFT.radius);
+    const opened = rift.along - world.cameraAlong;
     let open = 1;
-    while (rifts(world).length > 0 && open < RIFT.steps * 2) {
+    while (rifts(world).includes(rift) && open < RIFT.steps) {
+      const before = rift.along - world.cameraAlong;
       step(world, frame);
+      if (!rifts(world).includes(rift)) break;
+      expect(rift.along - world.cameraAlong - before, 'the rift did not roll up the screen at its row’s pace').toBeCloseTo(RIFT.roll, 6);
+      expect(rift.along - RIFT.radius, 'the rift is still open wholly past the top of the screen').toBeLessThanOrEqual(world.cameraAlong + world.view.alongSpan + RIFT.roll);
       open++;
     }
-    expect(Math.abs(open - RIFT.steps), `the rift was open ${open} steps against its row’s ${RIFT.steps}`).toBeLessThanOrEqual(1);
+    expect(rifts(world).includes(rift), `the rift ran out its ${RIFT.steps}-step cap still on the screen`).toBe(false);
+    const toLeave = (world.view.alongSpan + RIFT.radius - opened) / RIFT.roll;
+    expect(Math.abs(open - toLeave), `the rift was open ${open} steps and took ${toLeave.toFixed(1)} to leave the screen`).toBeLessThanOrEqual(2);
   });
 
   it('a salvo thrown as fast as the triggers allow opens every rift it throws, all at once', () => {
     /*
       ⚠️ **A SALVO, because 0372 keeps every charge.** A rift is a body in the blast pool; a pool too
       small for a banked salvo would swallow the last voids of it and open nothing where they landed.
+      Since 0656 a rift is open as long as it takes to roll off the screen, which is measured, not its cap — and on the
+      widest view a screen can have, where it rolls furthest and a salvo holds the most of them at once.
     */
+    const widest = viewOf(ACROSS_SPAN * MAX_ASPECT * 10, ACROSS_SPAN * 10);
+    const life = (() => {
+      const one = quiet();
+      one.world.view = widest;
+      openOne(one.world, one.frame);
+      let n = 1;
+      while (rifts(one.world).length > 0 && n < RIFT.steps) {
+        step(one.world, one.frame);
+        n++;
+      }
+      return n;
+    })();
     const { world, frame } = quiet();
-    const throws = Math.ceil(RIFT.steps / THROW_GAP_STEPS);
+    world.view = widest;
+    const throws = Math.ceil(life / THROW_GAP_STEPS);
     const seen = new Set<Entity>();
     let most = 0;
     for (let t = 0; t < throws; t++) {
@@ -235,7 +262,7 @@ describe('0377 — the rift negates everything but the ship and the boss', () =>
         most = Math.max(most, rifts(world).length);
       }
     }
-    for (let i = 0; i < RIFT.steps; i++) {
+    for (let i = 0; i < life; i++) {
       step(world, frame);
       for (const r of rifts(world)) seen.add(r);
       most = Math.max(most, rifts(world).length);
@@ -385,9 +412,10 @@ describe('0377 — a thrown special goes off on the screen, wherever it was thro
       for (let i = 0; i < 200 && !wentOff; i++) {
         step(world, frame);
         const edge = world.cameraAlong + world.view.alongSpan;
+        // Where it went off, which is where it was before this step moved it: a rift rolls on from there — 0656.
         for (let k = 0; k < world.blasts.size; k++) {
           wentOff = true;
-          onScreen = onScreen && world.blasts.at(k).along <= edge;
+          onScreen = onScreen && world.blasts.at(k).prevAlong <= edge;
         }
         if (world.stormFor > 0) wentOff = true;
       }
@@ -455,5 +483,35 @@ describe('0377 — the rift lands its share on a boss, once', () => {
     expect(before - world.bossPool.at(0).health, 'the rift landed something other than its share').toBeCloseTo(expected, 5);
     while (rifts(world).length > 0) step(world, frame);
     expect(before - world.bossPool.at(0).health, 'the rift landed on the boss again while it was open').toBeCloseTo(expected, 5);
+  });
+
+  it('0656 — a rift that opens short of the boss and rolls into it lands its share there, once', () => {
+    const level = LEVELS.approach;
+    const arena: LevelRow = { ...NO_LEVEL, bossAt: 200, midBoss: null, sections: NO_SECTIONS, boss: 'volans', theme: level.theme };
+    const { world, frame } = quiet(arena);
+    let arrived = -1;
+    for (let i = 0; i < 4000 && (arrived < 0 || i < arrived + 60); i++) {
+      step(world, frame);
+      if (arrived < 0 && world.bossPool.size > 0 && world.bossEntering < 0) arrived = i;
+    }
+    expect(world.bossPool.size, 'the boss never arrived').toBe(1);
+    const head = world.bossPool.at(0);
+    head.fireIn = NEVER;
+    const before = head.health;
+    const open = openBy(phaseFor(world.bossRow, head.health, world.bossFullHealth));
+    // Thrown from far enough back that the rift opens clear of the boss, and only rolling reaches it.
+    let rift: Entity | undefined;
+    for (let i = 0; i < 400 && rift === undefined; i++) {
+      world.ship.across = head.across;
+      world.ship.along = head.along - SPECIALS.voidMissile.reach - RIFT.radius - head.radius - 20;
+      world.ship.prevAlong = world.ship.along;
+      if (i === 0) launchSpecial(world, 'voidMissile');
+      step(world, frame);
+      rift = rifts(world)[0];
+    }
+    expect(rift, 'the void never opened').toBeDefined();
+    expect(world.bossPool.at(0).health, 'the rift opened on the boss, so this asks nothing of the roll').toBe(before);
+    while (rifts(world).length > 0) step(world, frame);
+    expect(before - world.bossPool.at(0).health, 'the rift rolled through the boss and landed nothing, or more than its share').toBeCloseTo(RIFT.bossShare * world.bossFullHealth * open, 5);
   });
 });

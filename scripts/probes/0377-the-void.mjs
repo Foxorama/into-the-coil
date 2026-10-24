@@ -93,9 +93,10 @@ export const PROBES = [
   {
     decision: '0377',
     suite: 'tests/void.test.ts',
-    broke: 'a rift that closes halfway through its row’s steps',
-    guard: 'negates for exactly as long as the row says',
-    edit: { path: 'src/app/frame.ts', find: '  body.lifeFor = rift.steps;', replace: '  body.lifeFor = rift.steps / 2;' },
+    // Since 0656 it is open until it rolls off the screen; a cap that runs out first closes it on the screen.
+    broke: 'a rift that closes a quarter of the way through its row’s steps',
+    guard: 'rolls up the screen at its row’s pace',
+    edit: { path: 'src/app/frame.ts', find: '  body.lifeFor = rift.steps;', replace: '  body.lifeFor = rift.steps / 4;' },
   },
   {
     decision: '0377',
@@ -164,8 +165,9 @@ export const PROBES = [
     guard: 'a tenth of its full health, as it opens',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      strike(w.bossPool, 0, rift.bossShare * w.bossFullHealth * open,',
-      replace: '      strike(w.bossPool, 0, 2 * rift.bossShare * w.bossFullHealth * open,',
+      // Re-anchored by 0656, which moved the share into `riftOnBoss`.
+      find: '  strike(w.bossPool, 0, rift.bossShare * w.bossFullHealth * open,',
+      replace: '  strike(w.bossPool, 0, 2 * rift.bossShare * w.bossFullHealth * open,',
     },
   },
   {
@@ -188,7 +190,7 @@ export const PROBES = [
     guard: 'every row is exactly one of the two shapes',
     edit: {
       path: 'src/content/specials.ts',
-      find: '    rift: { radius: 36, steps: 150, bossShare: 0.1 },',
+      find: '    rift: { radius: 36, steps: 360, bossShare: 0.1, roll: 1 },',
       replace: '    rift: null,',
     },
   },

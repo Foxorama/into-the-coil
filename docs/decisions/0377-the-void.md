@@ -2,7 +2,8 @@
 
 **Accepted 2026-09-26.** A shield taken when the shell is already full becomes a **void missile** on
 the tubes' trigger. It is thrown up the lane, and where its fuse runs out it opens a **rift**: a disc
-72 units across, open for a second and a half. While it is open it removes:
+72 units across, open for a second and a half (**amended by [0656](0656-the-void-rolls.md)**: it rolls up the screen
+and is gone past its top). While it is open it removes:
 - every hostile shot inside it;
 - every body inside it, as a kill;
 - a boss's lightning that crosses it.

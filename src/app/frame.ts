@@ -2937,10 +2937,14 @@ export class GameFrame implements Frame {
         A hit taken is counted for the rank, a shield's as much as the hull's — 0428 — here, after the
         one-hit cap, so a step that met three bullets is one hit as it is one mark off the shell.
 
-        ⚠️ **IT NO LONGER ENDS THE STREAK — 0647.** The Hamster Ball is hit every time it rams, and sat at ×1
-        for whole runs; the streak is kept by hitting now, on `stepStreak`'s clock.
+        ⚠️ **AND IT ENDS THE STREAK ON A SHIP WHOSE ROW SAYS SO — 0653.** 0647 stopped it ending any ship's, for
+        the Hamster Ball, which is hit every time it rams; the ball keeps its streak on `stepStreak`'s clock, and
+        every other ship loses it to a hit again, as 0428 asked.
       */
-      if (w.ship.health < healthBefore) w.score.hits += 1;
+      if (w.ship.health < healthBefore) {
+        w.score.hits += 1;
+        if (w.shipRow.streak === 'unhit') w.score.streak = 0;
+      }
     }
     /*
       A blast lands ONCE. Everything above has now seen it, so it spends itself here and what remains
@@ -5953,6 +5957,12 @@ function openRift(w: World, along: number, across: number, rift: Rift, sound: Cu
   body.radius = rift.radius;
   body.lifeFor = rift.steps;
   /*
+    ⚠️ **IT ROLLS — 0656.** *"Roll forward off screen then disappear."* Up the lane at its row's `roll` in the
+    camera's frame (0034), so the leading cull takes it once it is past the top of any screen; `steps` is the cap
+    behind that.
+  */
+  body.velAlong = w.scrollPerStep + rift.roll;
+  /*
     ⚠️ **WHICH SPECIAL OPENED IT, ON `face`** — 0378. `kind` is taken by `RIFT_KIND`, which is how the
     pool tells a rift from an explosion; `face` is a pickup's and a blast body never reads it. The
     hush asks the row whether a rift that is open silences the game, rather than every rift doing so.
@@ -5960,17 +5970,25 @@ function openRift(w: World, along: number, across: number, rift: Rift, sound: Cu
   body.face = special;
   // Its row's own — 0378. It borrowed the bomb's blast.
   if (sound !== null) w.onCue(sound, across);
+  // Only where it opens, as 0377 has it: rolling on, it carves no tunnel through the stone ahead — 0656.
   carveStone(w, along, across, rift.radius);
-  // The boss's share, once, if the rift reaches its head or any part of its body — 0372's shape.
-  if (bossTargetable(w)) {
-    const head = w.bossPool.at(0);
-    let reaches = inRift(body, head, head.radius);
-    for (let i = 0; !reaches && i < w.bossBody.size; i++) reaches = inRift(body, w.bossBody.at(i), w.bossBody.at(i).radius);
-    if (reaches && head.invulnFor <= 0) {
-      const open = landsOn(w.bossRow, head.health, w.bossFullHealth, w.difficulty, fightOf(w));
-      strike(w.bossPool, 0, rift.bossShare * w.bossFullHealth * open, IMPACT_FLASH_STEPS, w.bossDeaths);
-    }
-  }
+  riftOnBoss(w, body, rift);
+}
+
+/**
+ * The boss's share, once, the first step the rift reaches its head or any part of its body — 0372's shape. Since
+ * 0656 the rift rolls, so a boss it rolls into takes the share there, not only one it opened on; `health` on the
+ * rift's body says whether it is still unspent.
+ */
+function riftOnBoss(w: World, body: Entity, rift: Rift): void {
+  if (body.health <= 0 || !bossTargetable(w)) return;
+  const head = w.bossPool.at(0);
+  let reaches = inRift(body, head, head.radius);
+  for (let i = 0; !reaches && i < w.bossBody.size; i++) reaches = inRift(body, w.bossBody.at(i), w.bossBody.at(i).radius);
+  if (!reaches || head.invulnFor > 0) return;
+  body.health = 0;
+  const open = landsOn(w.bossRow, head.health, w.bossFullHealth, w.difficulty, fightOf(w));
+  strike(w.bossPool, 0, rift.bossShare * w.bossFullHealth * open, IMPACT_FLASH_STEPS, w.bossDeaths);
 }
 
 /** Whether a body of `reach` at its place overlaps `rift`. */
@@ -5983,9 +6001,22 @@ function inRift(rift: Entity, e: Entity, reach: number): boolean {
 
 /** Every open rift negating what is inside it, every step it is open. */
 function stepRift(w: World): void {
-  for (let k = 0; k < w.blasts.size; k++) {
+  // Backwards, because a rift that has rolled off the screen is released here.
+  const edge = cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan);
+  for (let k = w.blasts.size - 1; k >= 0; k--) {
     const rift = w.blasts.at(k);
     if (rift.kind !== RIFT_KIND) continue;
+    /*
+      ⚠️ **GONE ONCE IT IS WHOLLY PAST THE TOP OF THE SCREEN — 0656**, on the player's shot cull: *"you can shoot what
+      you can see"* (0048). The content's leading cull is placed for the widest view any device has, and a rift left
+      to it would negate the next wave before the player had seen it.
+    */
+    if (rift.along - rift.radius > edge) {
+      w.blasts.releaseAt(k);
+      continue;
+    }
+    const row = SPECIALS[SPECIAL_KINDS[rift.face] ?? 'voidMissile'].rift;
+    if (row !== null) riftOnBoss(w, rift, row);
     for (let i = w.enemyShots.size - 1; i >= 0; i--) {
       const shot = w.enemyShots.at(i);
       if (inRift(rift, shot, shot.radius)) w.enemyShots.releaseAt(i);
@@ -10075,7 +10106,8 @@ function offeredAs(w: World, kind: PickupKind): PickupKind | null {
 
 /**
  * What a pickup of `kind` is offered as when what it gives is already full — 0652: its row's `whenFull`,
- * that share of the time, on the pickups' own stream; itself otherwise.
+ * the tier's `fullSwap` of the time (0655), on the pickups' own stream; itself otherwise. A tier that never
+ * swaps draws nothing, so its stream is the one it was before 0652.
  *
  * ⚠️ **AN UPGRADE IS FULL WHEN NO TUBE IS EMPTY**, which is `effectOf`'s own test for a missile pickup turning
  * into a surge. What it becomes is put through `offeredAs` as well, so a shield on a tier that wears none is
@@ -10086,9 +10118,10 @@ function offeredAs(w: World, kind: PickupKind): PickupKind | null {
 function fullAs(w: World, kind: PickupKind): PickupKind {
   const row = w.pickupRows[w.pickupKinds[kind]];
   const swap = row?.whenFull;
-  if (row === undefined || swap === undefined || row.effect !== 'upgrade' || tubeRoom(w.weapon.tubes)) return kind;
-  if (!w.pickupRng.bool(swap.share)) return kind;
-  return offeredAs(w, swap.kind) ?? kind;
+  const share = w.difficulty.fullSwap;
+  if (row === undefined || swap === undefined || share <= 0 || row.effect !== 'upgrade' || tubeRoom(w.weapon.tubes)) return kind;
+  if (!w.pickupRng.bool(share)) return kind;
+  return offeredAs(w, swap) ?? kind;
 }
 
 /**
@@ -13513,8 +13546,12 @@ function anyStruck(pool: Pool<Entity>): boolean {
  * ⚠️ **IT READS WHAT WAS STRUCK, NOT WHAT STRUCK IT.** Seven guns, ten specials, the tubes and the ram each land by a
  * path of their own; every one of them ends in a target's `struckIn` (`src/sim/collide.ts`), so the clock asks the
  * pools and not the guns, and a gun added later keeps the streak alive without being told to.
+ *
+ * ⚠️ **ONLY ON A SHIP WHOSE STREAK IS `kept` — 0653.** *"That score multiplier reset should only apply to the hamster
+ * ball"*: the caddie's ray sat at ×1 under it. Every other ship's streak ends on a hit taken, and has no clock.
  */
 function stepStreak(w: World): void {
+  if (w.shipRow.streak !== 'kept') return;
   const score = w.score;
   // The first kill of the next level starts the clock the end boss's death stopped.
   if (w.deaths.count > 0) score.held = false;

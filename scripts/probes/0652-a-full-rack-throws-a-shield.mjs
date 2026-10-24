@@ -10,8 +10,8 @@ export const PROBES = [
     guard: 'THE ASK, ON THE MID-BOSS’S THROW',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (!w.pickupRng.bool(swap.share)) return kind;',
-      replace: '  if (swap.share >= 0) return kind;',
+      find: '  if (!w.pickupRng.bool(share)) return kind;',
+      replace: '  if (share >= 0) return kind;',
     },
   },
   {

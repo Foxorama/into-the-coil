@@ -1,7 +1,8 @@
 # 0647 — The streak is kept by hitting
 
 **Accepted 2026-10-20.** Amends [0428](0428-the-score-is-kept.md)'s streak. **Amended by
-[0649](0649-the-streak-ticks-down.md)**: the quiet takes a step a second, not the whole streak.
+[0649](0649-the-streak-ticks-down.md)**: the quiet takes a step a second, not the whole streak. **Amended by
+[0653](0653-the-clock-is-the-balls.md)**: all of this is the Hamster Ball's; every other ship loses its streak to a hit.
 
 ## The ask
 

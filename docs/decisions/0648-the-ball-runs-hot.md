@@ -4,7 +4,8 @@
 [0646](0646-the-ball-hits-the-boss-harder.md)'s 3.04, [0613](0613-the-dance-is-earned.md)'s full bar that holds and
 [0615](0615-the-ball-is-solid.md)'s twenty, [0639](0639-a-boss-heats-the-ball-less.md)'s and
 [0593](0593-the-hamster-ball-rolls.md)'s heats, [0638](0638-the-ball-says-its-heat.md)'s gauge colours, and the
-ball's dash, which was the saucer's orbit.
+ball's dash, which was the saucer's orbit. **Amended by [0654](0654-the-dance-charges-slower.md)**: the bar fills in
+twenty-two landings, not eighteen.
 
 ## The ask
 

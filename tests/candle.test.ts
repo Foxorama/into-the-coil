@@ -6,7 +6,7 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
 import { BOMB_KINDS } from '../src/content/pickups.ts';
-import { ACROSS_SPAN, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MAX_ASPECT, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -217,9 +217,30 @@ describe('0537 — the roman candle', () => {
     expect(mostStars, 'more stars aloft than leave a bomb its slot').toBeLessThanOrEqual(CAPACITY.bombs - 1);
     expect(mostFireworks).toBeLessThanOrEqual(4);
     // The salvo `tests/void.test.ts` throws, then the candle the moment the gap opens.
+    /*
+      Since 0656 a rift is open as long as it takes to roll off the screen, measured, with its row's cap behind that —
+      so on the widest view a screen can have, where it rolls furthest and the salvo holds the most of them at once.
+      That is the case the pool has to fit.
+    */
+    const widest = viewOf(ACROSS_SPAN * MAX_ASPECT * 10, ACROSS_SPAN * 10);
     const salvo = quiet();
+    salvo.world.view = widest;
     const rift = SPECIALS.voidMissile.rift!;
-    const throws = Math.ceil(rift.steps / THROW_GAP_STEPS);
+    const life = (() => {
+      const one = quiet();
+      one.world.view = widest;
+      launchSpecial(one.world, 'voidMissile');
+      const open = (): number => {
+        let n = 0;
+        for (let i = 0; i < one.world.blasts.size; i++) if (one.world.blasts.at(i).kind === RIFT_KIND) n++;
+        return n;
+      };
+      for (let i = 0; i < rift.steps && open() === 0; i++) step(one.world, one.frame);
+      let n = 0;
+      for (; n < rift.steps && open() > 0; n++) step(one.world, one.frame);
+      return n;
+    })();
+    const throws = Math.ceil(life / THROW_GAP_STEPS);
     for (let t = 0; t < throws; t++) {
       launchSpecial(salvo.world, 'voidMissile');
       for (let i = 0; i < THROW_GAP_STEPS; i++) step(salvo.world, salvo.frame);

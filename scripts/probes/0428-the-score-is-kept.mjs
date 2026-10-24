@@ -22,11 +22,12 @@ export const PROBES = [
     suite: 'tests/score.test.ts',
     // The ask's own sentence: a shield's hit is a hit. Since 0647 it is a hit for the rank and not for the streak.
     broke: 'a hit counted only on a death, so a shield taking a hit went unranked',
-    guard: '0647 — a shield taking a hit is a hit for the rank',
+    guard: '0647, 0653 — a shield taking a hit is a hit for the rank',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      if (w.ship.health < healthBefore) w.score.hits += 1;',
-      replace: '      if (w.ship.health < healthBefore && w.ship.health <= 0) w.score.hits += 1;',
+      // Re-anchored by 0653, which put the streak's end beside the count.
+      find: '        w.score.hits += 1;\n        if (w.shipRow.streak',
+      replace: '        if (w.ship.health <= 0) w.score.hits += 1;\n        if (w.shipRow.streak',
     },
   },
   {
