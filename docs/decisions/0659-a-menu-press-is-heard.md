@@ -24,7 +24,9 @@ than calling an action, plays it too.
 
 `tests/sound.browser.test.ts`, *0659 — THE ASK*: on the built page, a press on Cosmo's *Show owned* adds one cue
 voice, and a step along a band adds none. The test counting the music's voices with the sound Off now subtracts the
-cue voices it heard, since a menu press is now one of them. The probe in
+cue voices it heard, since a menu press is now one of them. And `tests/intro.browser.test.ts`'s ask (0412) counts
+the intro's beats from after the press on *Fly*: it counted every short buffer from nought, the confirm met it alone,
+and CI's proof of 0412 found the probe that silences the beats green. The probe in
 `scripts/probes/0659-a-menu-press-is-heard.mjs` takes the line out.
 
 ## Rollback
