@@ -13,6 +13,7 @@ import { weaponFor } from '../src/content/pickups.ts';
 import { RIMS, RIM_KINDS } from '../src/content/rims.ts';
 import { SHIPS, SHIP_KINDS, fitted, lampFrame, type ShipKind } from '../src/content/ships.ts';
 import { SPRITE } from '../src/content/sprites.ts';
+import { WEAPONS } from '../src/content/weapons.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -33,7 +34,9 @@ describe('0586 — the ships are lit', () => {
       for (const rim of [null, ...RIM_KINDS]) {
         const row = fitted(SHIPS[ship], SHIPS[ship].weapon, rim ?? undefined);
         const turning = row.wheels !== null && RIMS[row.wheels.rim].wheel !== null ? row.wheels.at.length : 0;
-        expect(turning + row.lamps.length, `${ship} on ${String(rim)}`).toBeLessThanOrEqual(CAPACITY.wheels);
+        // 0648: and the ram's heat laid on the ball, one more picture in the same pool.
+        const heat = WEAPONS[row.weapon].ram === null ? 0 : 1;
+        expect(turning + row.lamps.length + heat, `${ship} on ${String(rim)}`).toBeLessThanOrEqual(CAPACITY.wheels);
       }
     }
   });

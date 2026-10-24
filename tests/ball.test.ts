@@ -171,6 +171,48 @@ describe('0593 — the ram lands on what the ball flies into', () => {
     expect(ramBody(world)?.sprite, `at ${world.ramHeat.toFixed(2)} of the gauge the heat under the ball is not drawn`).toBe(SPRITE.ramHeat3);
   });
 
+  /** The heat laid over the ball this step — 0648 — or `null` for none. */
+  function glowOn(world: World): number | null {
+    const glows: number[] = [SPRITE.ramGlow1, SPRITE.ramGlow2, SPRITE.ramGlow3, SPRITE.ramGlow4];
+    for (let i = 0; i < world.wheels.size; i++) if (glows.includes(world.wheels.at(i).sprite)) return world.wheels.at(i).sprite;
+    return null;
+  }
+
+  it('0648: the ball itself goes yellow, amber and red with its heat, and nothing while it is cool', () => {
+    const { world, frame } = inTheBall();
+    const at = (heat: number): number | null => {
+      world.ramHeat = heat;
+      frame.step();
+      return glowOn(world);
+    };
+    expect(at(0.1), 'a cool ball wore a glow').toBe(null);
+    expect(at(0.3), 'a quarter hot and not yellow').toBe(SPRITE.ramGlow1);
+    expect(at(0.6), 'half hot and not amber').toBe(SPRITE.ramGlow2);
+    expect([SPRITE.ramGlow3, SPRITE.ramGlow4], 'three quarters hot and not red').toContain(at(0.9));
+    const glow = world.wheels.at(0);
+    expect(glow.along, 'the glow is not on the ball').toBe(world.ship.along);
+    expect(glow.across).toBe(world.ship.across);
+  });
+
+  it('0648: red-hot, it throbs between its two frames slower than three times a second and faster than once', () => {
+    const { world, frame } = inTheBall();
+    let swaps = 0;
+    let was: number | null = null;
+    const steps = 4 * STEPS_PER_SECOND;
+    for (let i = 0; i < steps; i++) {
+      world.ramHeat = 0.9;
+      frame.step();
+      const now = glowOn(world);
+      expect(now === SPRITE.ramGlow3 || now === SPRITE.ramGlow4, 'red-hot and not red').toBe(true);
+      if (was !== null && now !== was) swaps++;
+      was = now;
+    }
+    // Two swaps a throb.
+    const perSecond = swaps / 2 / 4;
+    expect(perSecond, `${perSecond} throbs a second`).toBeLessThan(3);
+    expect(perSecond, `${perSecond} throbs a second`).toBeGreaterThan(1);
+  });
+
   it('fire still lands on the ball: it is only bodies the ball shrugs off', () => {
     const { world, frame } = inTheBall();
     world.ship.invulnFor = 0;

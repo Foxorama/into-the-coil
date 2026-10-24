@@ -60,8 +60,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // Re-anchored by 0609, which re-weighed the ram on the same row; the break still takes only the ray's.
-      find: '    gunWeights: { arc: 1, ray: 0.93, ram: 2.4 },',
-      replace: '    gunWeights: { arc: 1, ram: 2.4 },',
+      find: '    gunWeights: { arc: 1, ray: 0.93, ram: 3.6 },',
+      replace: '    gunWeights: { arc: 1, ram: 3.6 },',
     },
   },
   {

@@ -19,7 +19,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, WAVE_KIND, chargeFull, launchSpecial, respawn, throwEarned, wearHull, type World } from '../src/app/frame.ts';
+import { GameFrame, WAVE_KIND, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { attachRumble } from '../src/app/pad.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import type { CueKind } from '../src/content/cues.ts';
@@ -29,7 +29,7 @@ import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, SHIP_KINDS, fitted, type ShipKind } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPECIALS } from '../src/content/specials.ts';
+import { SPECIALS, type SpecialKind } from '../src/content/specials.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { reset } from '../src/sim/entity.ts';
@@ -54,13 +54,18 @@ function flying(ship: ShipKind = 'ball', level: LevelRow = NO_LEVEL, tier?: Para
   wearHull(built.world);
   const cues: CueKind[] = [];
   const feels: FeelKind[] = [];
+  // 0648: what a full bar banked, in order — the shell puts each on its trigger's stack.
+  const banked: SpecialKind[] = [];
   built.world.onCue = (kind) => {
     cues.push(kind);
   };
   built.world.onFeel = (feel) => {
     feels.push(feel);
   };
-  return { ...built, frame: new GameFrame(built.world), cues, feels };
+  built.world.onEarned = (special) => {
+    banked.push(special);
+  };
+  return { ...built, frame: new GameFrame(built.world), cues, feels, banked };
 }
 
 /** A body planted on the ship, riding the camera and holding its fire — `health` of it. */
@@ -80,18 +85,34 @@ function waves(world: World) {
   return out;
 }
 
+/**
+ * What the bar gained over a step that started at `before` — 0648: a bar that filled banked a dance and started
+ * again, so what it gained is the fill on top of where it stands now.
+ */
+function gained(world: World, before: number, banks: number): number {
+  return world.charge - before + banks * CHARGE.fill;
+}
+
 /** Land `count` rams on a body that never dies, the ball held cool so its heat says nothing here. */
 function landRams(world: World, frame: GameFrame, count: number): void {
   const body = bodyOn(world, 1e9);
+  const was = world.onEarned;
+  let banks = 0;
+  world.onEarned = (special) => {
+    banks++;
+    was(special);
+  };
   let landed = 0;
   for (let step = 0; landed < count && step < count * 20; step++) {
     world.ramHeat = 0;
     const before = world.charge;
+    banks = 0;
     frame.step();
-    landed += world.charge - before;
+    landed += gained(world, before, banks);
     body.along = world.ship.along;
     body.across = world.ship.across;
   }
+  world.onEarned = was;
 }
 
 describe('0613 — the War Dance is a bar the ball fills', () => {
@@ -109,18 +130,16 @@ describe('0613 — the War Dance is a bar the ball fills', () => {
     expect(startingArsenal('ball', 'savior', 'bomb').gun).toEqual([]);
   });
 
-  it('a press on an empty or part-full bar throws nothing and costs nothing, and the stack is asked instead', () => {
-    const { world, frame } = flying();
-    expect(throwEarned(world, 'gun'), 'an empty bar threw').toBe('none');
+  it('a part-full bar banks nothing — 0648', () => {
+    const { world, frame, banked } = flying();
     landRams(world, frame, CHARGE.fill - 1);
-    expect(chargeFull(world)).toBe(false);
-    expect(throwEarned(world, 'gun'), 'a bar one short threw').toBe('none');
+    expect(banked, 'a bar one short banked a dance').toEqual([]);
     expect(world.danceFor).toBe(0);
-    expect(world.charge, 'a refused press spent the bar').toBe(CHARGE.fill - 1);
+    expect(world.charge).toBe(CHARGE.fill - 1);
   });
 
-  it('each landing is one, on a body or a boss alike, and a full bar holds until it is thrown', () => {
-    const { world, frame, cues } = flying();
+  it('each landing is one, on a body or a boss alike, and a full bar banks a War Dance and starts again — 0648', () => {
+    const { world, frame, cues, banked } = flying();
     landRams(world, frame, 5);
     expect(world.charge, 'five landings on a body did not fill five').toBe(5);
     // A boss counts the same coin: a landing, whatever its weight or its window (0613).
@@ -141,19 +160,15 @@ describe('0613 — the War Dance is a bar the ball fills', () => {
     expect(world.charge, 'five landings on the boss were not five').toBe(10);
     world.bossPool.clear();
     landRams(world, frame, CHARGE.fill - world.charge);
-    expect(world.charge, 'the bar went past full').toBe(CHARGE.fill);
-    expect(chargeFull(world)).toBe(true);
-    // Held: more landings on a full bar fill nothing more and say nothing more.
-    const ready = cues.filter((c) => c === 'danceReady').length;
-    const body = bodyOn(world, 1e9);
-    for (let i = 0; i < 60; i++) {
-      world.ramHeat = 0;
-      body.along = world.ship.along;
-      body.across = world.ship.across;
-      frame.step();
-    }
-    expect(world.charge).toBe(CHARGE.fill);
-    expect(cues.filter((c) => c === 'danceReady').length, 'a full bar filled again').toBe(ready);
+    // *"war dance adds a spesh + starts charging again"*: one dance banked, and the bar empty and filling.
+    expect(banked, 'a full bar banked no War Dance').toEqual(['warDance']);
+    expect(world.charge, 'a full bar did not start again').toBe(0);
+    expect(cues.filter((c) => c === 'danceReady').length).toBe(1);
+    landRams(world, frame, 3);
+    expect(world.charge, 'the bar did not fill again after it banked').toBe(3);
+    landRams(world, frame, CHARGE.fill - 3);
+    expect(banked, 'the second bar banked no second dance').toEqual(['warDance', 'warDance']);
+    expect(cues.filter((c) => c === 'danceReady').length, 'the second bar filled unheard').toBe(2);
   });
 
   it('a full bar is heard, felt and seen: the cue, the feel, the readout and the flare round the ship', () => {
@@ -162,32 +177,33 @@ describe('0613 — the War Dance is a bar the ball fills', () => {
     world.onCharge = (f) => {
       shown.push(f);
     };
-    landRams(world, frame, CHARGE.fill);
+    landRams(world, frame, CHARGE.fill - 1);
+    expect(shown[shown.length - 1], 'the readout did not climb with the bar').toBeGreaterThanOrEqual(Math.floor(((CHARGE.fill - 1) / CHARGE.fill) * 20) / 20);
+    expect(shown.every((f, i) => i === 0 || f >= shown[i - 1]!), 'the readout went back down while it filled').toBe(true);
+    landRams(world, frame, 1);
     expect(cues.filter((c) => c === 'danceReady').length, 'the bar filled unheard').toBe(1);
     expect(feels, 'the bar filled unfelt').toContain('ready');
-    expect(shown[shown.length - 1], 'the readout never showed the bar full').toBe(1);
-    expect(shown.every((f, i) => i === 0 || f >= shown[i - 1]!), 'the readout went back down while it filled').toBe(true);
     // The dance's flare, lit round a ship that is not dancing.
     frame.step();
+    expect(shown[shown.length - 1], 'the readout did not empty with the bar it banked').toBe(0);
     let lit = false;
     for (let i = 0; i < world.aura.size; i++) if (DANCE.flare.includes(world.aura.at(i).sprite)) lit = true;
     expect(lit, 'the full bar was not seen on the ship').toBe(true);
   });
 
-  it('thrown, the bar is empty and the ball dances — and nothing it lands while it dances fills the next', () => {
-    const { world, frame } = flying();
-    landRams(world, frame, CHARGE.fill);
-    expect(throwEarned(world, 'gun')).toBe('thrown');
-    expect(world.danceFor, 'the bar was spent and the ball did not dance').toBeGreaterThan(0);
-    expect(world.charge).toBe(0);
-    // A press inside the dance is refused and costs nothing, as every dance press is.
+  it('nothing the ball lands while it dances fills the next', () => {
+    const { world, frame, banked } = flying();
+    landRams(world, frame, 4);
+    launchSpecial(world, 'warDance');
+    expect(world.danceFor, 'the ball did not dance').toBeGreaterThan(0);
     const body = bodyOn(world, 1e9);
     for (let i = 0; i < DANCE.steps - 2; i++) {
       body.along = world.ship.along;
       body.across = world.ship.across;
       frame.step();
     }
-    expect(world.charge, 'the dance filled the bar it was thrown from').toBe(0);
+    expect(world.charge, 'the dance filled the bar').toBe(4);
+    expect(banked).toEqual([]);
   });
 
   it('a life opens on an empty bar', () => {
@@ -196,14 +212,6 @@ describe('0613 — the War Dance is a bar the ball fills', () => {
     expect(world.charge).toBeGreaterThan(0);
     respawn(world);
     expect(world.charge).toBe(0);
-  });
-
-  it('only the trigger the special throws on asks the bar', () => {
-    const { world, frame } = flying();
-    landRams(world, frame, CHARGE.fill);
-    expect(throwEarned(world, 'tubes')).toBe('none');
-    expect(throwEarned(world, 'ward')).toBe('none');
-    expect(chargeFull(world), 'a press of another trigger spent the bar').toBe(true);
   });
 
   it('the hangar fits the ball with no other special, and says why; every other ship still borrows the ball’s', () => {
@@ -226,10 +234,10 @@ describe('0613 — the War Dance is a bar the ball fills', () => {
 describe('0613 — a ball that keeps ramming fills its bar in the ask’s window', () => {
   /**
    * Seconds a bar takes while `counted` holds, flown by the heat-minding pilot: the bar's fill over the landings
-   * a second it counted — the bar emptied as it fills, so it never holds and every landing is counted.
+   * a second it counted — since 0648 the bar banks and starts again as it fills, so every landing is counted.
    */
   function secondsPerBar(level: LevelRow, seconds: number, counted: (world: World) => boolean): number {
-    const { world, frame, stick } = flying('ball', level, 'savior');
+    const { world, frame, stick, banked } = flying('ball', level, 'savior');
     let backing = false;
     let steps = 0;
     let landed = 0;
@@ -273,13 +281,13 @@ describe('0613 — a ball that keeps ramming fills its bar in the ask’s window
       }
       const counting = counted(world);
       const before = world.charge;
+      const banks = banked.length;
       frame.step();
       if (counting) {
         steps++;
-        landed += world.charge - before;
+        landed += gained(world, before, banked.length - banks);
       }
-      // Thrown the moment it fills, so the bar never holds; the dance itself is not flown.
-      if (chargeFull(world)) world.charge = 0;
+      // The banked dance is never thrown, so the dance itself is not flown.
     }
     // Enough landings that a rate is a rate, whatever the bar is set to.
     expect(landed, 'too little landed to measure a bar').toBeGreaterThan(40);

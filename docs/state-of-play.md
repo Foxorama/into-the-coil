@@ -1170,6 +1170,12 @@ its status. Built: [0649](decisions/0649-the-streak-ticks-down.md), [0650](decis
 and [0651](decisions/0651-the-arc-lets-the-serpent-fall.md). **Next is the report's *Owed to the player***, then its
 items with a cause found (3, 14, 15, 19), each of which amends a decision the report names.
 
+### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
+
+A handwritten page of Hamster Ball notes, read in and built in one PR:
+[0648](decisions/0648-the-ball-runs-hot.md). **Next is the play** its *Not held by any guard* lists — the dash and
+the heat on the ball are looked at, not played.
+
 ### ⚠️ THE MORNING PLAY: ALL FOUR BUILT — OWED A PLAY — 2026-10-19
 
 [`the-morning-play`](../reports/the-morning-play-2026-10-18.md) is the first play of the two pages below, and four

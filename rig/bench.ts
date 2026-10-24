@@ -58,7 +58,7 @@ const { world, dispatch, lifecycle } = mounted.rig;
 */
 declare global {
   interface Window {
-    __bench?: { throwSpecial: (kind: SpecialKind) => boolean };
+    __bench?: { throwSpecial: (kind: SpecialKind) => boolean; heat: (share: number) => void };
   }
 }
 window.__bench = {
@@ -66,6 +66,18 @@ window.__bench = {
     if (!canThrow(world, kind)) return false;
     launchSpecial(world, kind);
     return true;
+  },
+  /*
+    0648: the ram's gauge put at `share` and held there, so the heat on the ball can be photographed at each of
+    its stages without ramming it there. Only the gauge is the bench's; the picture of it is the frame's own.
+  */
+  heat: (share: number): void => {
+    const hold = (): void => {
+      world.ramHeat = share;
+      world.ramCoolIn = Number.MAX_SAFE_INTEGER;
+      requestAnimationFrame(hold);
+    };
+    hold();
   },
 };
 
