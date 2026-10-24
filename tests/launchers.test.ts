@@ -9,9 +9,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { carMounts, drawKind } from '../src/render/bake.ts';
+import { carMounts, drawKind, paintMount } from '../src/render/bake.ts';
 import { SHIP_BOX, SPRITE_EXTENT, type SpriteKind } from '../src/content/sprites.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -72,14 +72,28 @@ describe('0629 — each car’s tubes are a launcher, not a box', () => {
   under it and its box's front corner taken in; the fighter's pulse with a brake wider than the barrels behind it.
 */
 describe('0630 — the guns are not blocks', () => {
-  /** A ship's drawn hull at the fight's camera, asked whether a point in its frame is on it. */
+  /**
+   * A ship's drawn silhouette at the fight's camera, asked whether a point in its frame is on it.
+   *
+   * ⚠️ **0662: THE HULL, AND A HANGING MOUNT UNDER IT.** The fighter lays its gun down before its hull since, and
+   * the hull's outline no longer carries the gun's shape — what the player sees past the nose is the mount's own.
+   * So a ship whose row hangs its gun is its first pass after the mount's, or any of the mount's passes.
+   */
   function hullOf(kind: SpriteKind): { solid: (x: number, y: number) => boolean } {
     const size = SPRITE_EXTENT[kind] * DESKTOP.scale;
     const { pen, trace } = tracingPen();
     drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
-    const hull = edgeIndex(trace.passes[0]!);
+    const ship = SHIP_KINDS.find((k) => k === kind);
+    const hung = ship !== undefined && SHIPS[ship].hang === 'under' ? tracedMount(ship, size) : [];
+    const outlines = [trace.passes[hung.length]!, ...hung].map((pass) => edgeIndex(pass));
     // `x`, `y` in the box's radius, as the ship's frame draws.
-    return { solid: (x, y) => hull.inside([size / 2 + x * size * 0.42, size / 2 + y * size * 0.42]) };
+    return { solid: (x, y) => outlines.some((outline) => outline.inside([size / 2 + x * size * 0.42, size / 2 + y * size * 0.42])) };
+  }
+  /** The passes `ship`'s own gun's mount paints in a box `size` across — 0662. */
+  function tracedMount(ship: (typeof SHIP_KINDS)[number], size: number): ReturnType<typeof tracingPen>['trace']['passes'] {
+    const { pen, trace } = tracingPen();
+    paintMount(pen, { half: size / 2, r: size * 0.42 }, PALETTES[DEFAULT_PALETTE], SHIPS[ship].weapon, ship);
+    return trace.passes;
   }
   /** A point in the cars' side-on frame (`inBox` about (0, 1), 0.062 a unit) in the box's radius. */
   const side = (x: number, y: number): [number, number] => [x * 0.062, (y - 1) * 0.062];

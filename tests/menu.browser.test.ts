@@ -374,9 +374,10 @@ describe.runIf(chromePath)('the level break is a banner rather than a wall', () 
  */
 describe.runIf(chromePath)('the music room reads as the grid it is drawn as', () => {
   /** Which control the focus ring is on, by its label. */
+  // The ringed button's name — its own first text, without the place's line under it (0661).
   const focused = (page: Page): Promise<string> =>
     page.evaluate(
-      (selector: string) => (document.querySelector(selector)?.textContent ?? '').trim(),
+      (selector: string) => (document.querySelector(selector)?.firstChild?.textContent ?? '').trim(),
       '.' + prefixFor('music') + 'action-cursor',
     );
 
@@ -500,7 +501,6 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     */
     await page.getByRole('button', { name: /^Play all/ }).click();
     const playing = '.' + prefixFor('music') + 'action-playing';
-    const cursor = '.' + prefixFor('music') + 'action-cursor';
     await page.locator(playing).waitFor({ state: 'attached', timeout: 30_000 });
     expect(await focused(page), 'the ring did not go to the place Play all opened on').toBe(first);
 
@@ -515,9 +515,10 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     */
     await page.locator('.' + prefixFor('music') + 'now-bar').focus();
     await page.keyboard.press('End');
-    await expect.poll(() => page.locator(playing).textContent()).toBe(THEMES[THEME_KINDS[1]!].title);
+    // Each button's name, without the place's line under it (0661).
+    await expect.poll(() => page.evaluate((s: string) => (document.querySelector(s)?.firstChild?.textContent ?? '').trim(), playing)).toBe(THEMES[THEME_KINDS[1]!].title);
     expect(
-      await page.locator(cursor).textContent(),
+      await focused(page),
       'the walk took the focus ring back after the player had moved it',
     ).toBe(moved);
     await page.context().close();

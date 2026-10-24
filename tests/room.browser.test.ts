@@ -96,6 +96,11 @@ async function open(): Promise<Page> {
 const MUSIC = '.' + prefixFor('music').slice(0, -1);
 const NOW = '.' + prefixFor('music') + 'now';
 /**
+ * A place button's name — its own first text, without the place's line under it (0661, a hint inside the button).
+ */
+const labelOf = (page: Page, selector: string): Promise<string> =>
+  page.evaluate((s: string) => (document.querySelector(s)?.firstChild?.textContent ?? '').trim(), selector);
+/**
  * Press a control on the shown screen by its visible label.
  *
  * ⚠️ **ANCHORED AT THE START RATHER THAN EXACT, BECAUSE A CONTROL'S HINT IS PART OF ITS NAME.**
@@ -258,7 +263,7 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
     */
     const playing = '.' + prefixFor('music') + 'action-playing';
     expect(await page.locator(playing).count(), 'no place is marked as playing').toBe(1);
-    expect(await page.locator(playing).textContent(), 'the marked button is not the place the readout names').toBe(
+    expect(await labelOf(page, playing), 'the marked button is not the place the readout names').toBe(
       THEMES[THEME_KINDS[0]!].title,
     );
 
@@ -329,10 +334,10 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
       change that dropped one while keeping the other would be half the fix.
     */
     await expect
-      .poll(() => page.locator('.' + prefixFor('music') + 'action-playing').textContent())
+      .poll(() => labelOf(page, '.' + prefixFor('music') + 'action-playing'))
       .toBe(THEMES[THEME_KINDS[1]!].title);
     expect(
-      await page.locator('.' + prefixFor('music') + 'action-cursor').textContent(),
+      await labelOf(page, '.' + prefixFor('music') + 'action-cursor'),
       'the focus ring did not follow the walk onto the next place',
     ).toBe(THEMES[THEME_KINDS[1]!].title);
 

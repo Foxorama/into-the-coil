@@ -471,6 +471,8 @@ ${each('-choices')} {
   justify-content: center;
   gap: min(0.6rem, 2cqh) min(0.6rem, 1.5cqw);
   max-width: min(100%, 60ch);
+  /* 0661: each place's line under its name makes some buttons taller; a row is one height, so it reads as one row. */
+  align-items: stretch;
 }
 .itc-music-action { width: min(100%, 18ch); }
 /*
@@ -3243,6 +3245,11 @@ ${each('-band[hidden]')} { display: none; }
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  /*
+    0661: and a place's line goes, here only. One line per button cuts it mid-word — a line half said is worse
+    than none — and a phone hears the place described by the crossing and the run's first seconds.
+  */
+  .itc-music-action-hint { display: none; }
   /*
     The last 15px on a 480x320, and it comes out of the buttons' own padding rather than anything
     the player reads. 0.55em to 0.35em is four pixels a button at this type size, over four buttons
