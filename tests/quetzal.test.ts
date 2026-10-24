@@ -914,8 +914,14 @@ describe('0625 — every laser is heard charging and firing', () => {
       drawn hears the charge, and the step its beams first burn — the warning's length later, as `strikeShip`
       reads it — hears the zap. One of each, however many beams the volley has.
     */
+    /*
+      0660: in the quetzal's own voice, and then with its voice taken off the row — every beam's, which the hydra and
+      the medusa fly on — so 0625's fallback is still flown here and not only read.
+    */
+    for (const own of [true, false])
     for (const fraction of [0.7, 0.45, 0.2]) {
       const d = quetzalAt(fraction);
+      if (!own) d.world.bossRow = { ...d.world.bossRow, zap: undefined, phases: d.world.bossRow.phases.map((p) => ({ ...p, cue: undefined })) };
       const heard: { kind: string; at: number }[] = [];
       let step = 0;
       d.world.onCue = (kind): void => {
@@ -930,8 +936,10 @@ describe('0625 — every laser is heard charging and firing', () => {
         d.world.ship.invulnFor = 999;
         d.frame.step();
       }
-      const charges = heard.filter((h) => h.kind === 'laserCharge');
-      const zaps = heard.filter((h) => h.kind === 'laserZap');
+      const phase = phaseFor(d.world.bossRow, d.world.bossPool.at(0).health, d.world.bossFullHealth);
+      const charges = heard.filter((h) => h.kind === (phase.cue ?? 'laserCharge'));
+      const zaps = heard.filter((h) => h.kind === (d.world.bossRow.zap ?? 'laserZap'));
+      if (!own) expect([phase.cue, d.world.bossRow.zap], 'the row’s voice was not taken off').toEqual([undefined, undefined]);
       expect(charges.length, `at ${fraction}: ${charges.length} charges for one volley`).toBe(1);
       expect(zaps.length, `at ${fraction}: ${zaps.length} zaps for one volley of ${attack.from.length}`).toBe(1);
       expect(heard.some((h) => h.kind === 'bossShot'), `at ${fraction}: the laser still crashes as a shot does`).toBe(false);
@@ -946,13 +954,20 @@ describe('0625 — every laser is heard charging and firing', () => {
     }
   });
 
-  it('and it is every laser’s: no row names another sound for a beam, so the fallback is what all of them play', () => {
+  it('0625, 0660 — every laser charges and zaps: the hydra and the medusa on every beam’s voice, and the pterodactyl on its own', () => {
+    /*
+      0625 asked for *"all lazers"* to be heard, which the fallback holds; 0660 asked for the pterodactyl's own —
+      *"pterodactyl lazer noise"* — which its row says. So a beam names nothing or names its own; here, by name.
+    */
+    const voices = { quetzal: ['pteroCharge', 'pteroZap'], hydra: ['laserCharge', 'laserZap'], medusa: ['laserCharge', 'laserZap'] } as const;
     for (const kind of ['quetzal', 'hydra', 'medusa'] as const) {
       expect(beams(kind).length, `${kind} fires no laser`).toBeGreaterThan(0);
+      const [charge, zap] = voices[kind];
+      expect(BOSSES[kind].zap ?? 'laserZap', `${kind}'s lasers burn in the wrong voice`).toBe(zap);
       for (const phase of BOSSES[kind].phases) {
         const attack = phase.attack ?? BOSSES[kind].attack;
-        if (attack.kind === 'beam') expect(phase.cue ?? 'laserCharge', `${kind}'s laser at ${phase.upTo} names its own sound`).toBe('laserCharge');
-        if (attack.kind === 'heads') for (const head of attack.heads) if (head.attack.kind === 'beam') expect(head.cue ?? 'laserCharge', `${kind}'s laser head names its own sound`).toBe('laserCharge');
+        if (attack.kind === 'beam') expect(phase.cue ?? 'laserCharge', `${kind}'s laser at ${phase.upTo} charges in the wrong voice`).toBe(charge);
+        if (attack.kind === 'heads') for (const head of attack.heads) if (head.attack.kind === 'beam') expect(head.cue ?? 'laserCharge', `${kind}'s laser head charges in the wrong voice`).toBe(charge);
       }
     }
   });

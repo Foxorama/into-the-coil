@@ -19,7 +19,7 @@ import { PAN_BUCKETS, velocitiesOf } from '../src/app/sound.ts';
  */
 const BAKED_BUFFERS = CUE_KINDS.reduce((total, kind) => total + velocitiesOf(CUES[kind]).length, 0) + MUSIC_LAYERS.length;
 import { SOUND_KINDS } from '../src/content/sound.ts';
-import { back, openSettings } from './title.ts';
+import { back, openHangar, openSettings } from './title.ts';
 import { TITLE_PARTS } from '../src/content/title-track.ts';
 
 /**
@@ -168,6 +168,9 @@ async function open(skipIntro = true): Promise<Page> {
 
 const tally = (page: Page): Promise<AudioTally> =>
   page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [], cues: [], edges: [] });
+
+/** How many cue sources have sounded — each counted once, however many nodes it is wired into. */
+const cueVoices = (t: AudioTally): number => new Set(t.cues.map(([id]) => id)).size;
 
 /** The cue bus's impulse response — one buffer, built on the same gesture. `THE WHOLE CHAIN` argues it. */
 const ROOM_IMPULSE = 1;
@@ -407,12 +410,14 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     const menu = await settled(page, BAKED_TOTAL + TITLE);
     expect(menu.buffers, 'the menu did not bake its place and its title track, each once').toBe(BAKED_TOTAL + TITLE);
     // …and on the air: its seven sources are made the frame after it lands, which a read can come before.
+    // 0659: less the cues — the press that opened Settings is heard now, one short source that is not a loop.
     let playing = menu;
-    for (let i = 0; i < 240 && (playing.voices - TITLE) % MUSIC_LAYERS.length !== 0; i++) {
+    const loops = (t: AudioTally): number => t.voices - TITLE - cueVoices(t);
+    for (let i = 0; i < 240 && loops(playing) % MUSIC_LAYERS.length !== 0; i++) {
       await page.waitForTimeout(250);
       playing = await tally(page);
     }
-    expect((playing.voices - TITLE) % MUSIC_LAYERS.length, 'the menu’s title never took over').toBe(0);
+    expect(loops(playing) % MUSIC_LAYERS.length, 'the menu’s title never took over').toBe(0);
     await page.click(soundOption('off'));
     await back(page, 'settings');
     await page.click(startButton);
@@ -469,10 +474,11 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
         }),
     );
     const heard = await tally(page);
-    expect(heard.into, 'sound is off and the game played a cue anyway').toEqual([]);
+    // 0659: past the press that opened Settings, which was heard with the sound still on — nothing since *Off*.
+    expect(heard.into.slice(playing.into.length), 'sound is off and the game played a cue anyway').toEqual([]);
     // 0597: and the one pass of the menu's title that played before *Off*, which was waited for above.
     expect(
-      (after.voices - TITLE) % MUSIC_LAYERS.length,
+      (after.voices - TITLE - cueVoices(after)) % MUSIC_LAYERS.length,
       `sound is off and ${after.voices} sources exist, which is not a whole number of music sets and one pass of ` +
         'the menu’s title — something else sounded',
     ).toBe(0);
@@ -542,5 +548,28 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.context().close();
     // ⚠️ Room for the wait above to run out, as the *Off* test has — 0597: 0119's probe leaves the loops unstarted,
     // so the count never arrives, and the file's sixty seconds cut the test off before it said so.
+  }, 150_000);
+
+  it('0659 — THE ASK: a press on a menu’s button is heard, one cue, and a step along a band is not', async () => {
+    /*
+      *"Confirm noise on menus."* Cosmo's *Show owned* is the press here because it does nothing else that sounds: it
+      puts wares on the shelves and takes them off. A tab step, which is looking and not taking, is heard as nothing.
+    */
+    const page = await open();
+    await openHangar(page);
+    await settled(page);
+    await page.locator(`.${prefixFor('hangar')}tab`, { hasText: 'Cosmo' }).filter({ visible: true }).first().click();
+    await page.waitForTimeout(400);
+    const before = cueVoices(await tally(page));
+    await page.locator(`.${prefixFor('shop')}action`, { hasText: 'Show owned' }).filter({ visible: true }).first().click();
+    let after = cueVoices(await tally(page));
+    for (let i = 0; i < 20 && after === before; i++) {
+      await page.waitForTimeout(100);
+      after = cueVoices(await tally(page));
+    }
+    await page.waitForTimeout(300);
+    after = cueVoices(await tally(page));
+    expect(after - before, 'a press on a menu button made no sound, or more than one').toBe(1);
+    await page.context().close();
   }, 150_000);
 });

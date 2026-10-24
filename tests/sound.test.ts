@@ -2322,13 +2322,17 @@ describe('every cue is played by something, and every cue the frame plays exists
 
       ⚠️ **AND `src/content/specials.ts` SINCE 0378, ON THE SAME TERMS.** A special names its press and
       what it sounds like going off on its row, and the frame plays `row.cue` and `row.lands`.
+
+      ⚠️ **AND `src/content/shells.ts` SINCE 0658, ON THE SAME TERMS.** A shell names the sound of it taking a hit
+      on its row, and the frame plays the worn shell's `pop`.
     */
     const sources =
       read('src/app/frame.ts') +
       read('src/app/boss.ts') +
       read('src/app/mount.ts') +
       read('src/content/bosses.ts') +
-      read('src/content/specials.ts');
+      read('src/content/specials.ts') +
+      read('src/content/shells.ts');
     /*
       ⚠️ **AND THE ROWS OF `INTRO_CUES` SINCE 0412 — READ AS ROWS, NOT AS A FILE.** The intro's beats
       name their cues there and the shell plays `row.cue` as the intro passes each one. Reading the

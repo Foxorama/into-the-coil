@@ -66,8 +66,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // Re-anchored by 0452, which put the mouth's root in the throat, and 0453, which gave it a path.
-      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },",
-      replace: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT] } },",
+      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE }, cue: 'pteroCharge' },",
+      replace: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT] }, cue: 'pteroCharge' },",
     },
   },
 ];

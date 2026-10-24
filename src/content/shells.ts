@@ -19,6 +19,7 @@
 import { SPRITE } from './sprites.ts';
 import { priced } from './prices.ts';
 import type { ShipKind } from './ships.ts';
+import type { CueKind } from './cues.ts';
 
 /**
  * Every shell. Closed, per 0016 — each is a draw in `src/render/bake.ts`, and the first five are the
@@ -47,6 +48,11 @@ export type ShieldFrames = readonly [number, number, number];
  */
 export interface ShieldShell {
   readonly look: ShieldLook;
+  /**
+   * What it sounds like taking a hit — 0658: *"sheild pop noise is bad + should be specific per shield."* Every shell
+   * says its own, in its own material; the honeycomb's is the game's `shield`.
+   */
+  readonly pop: CueKind;
   readonly places: readonly [ShieldFrames, ShieldFrames, ShieldFrames, ShieldFrames];
   /**
    * How far from the ship's centre this shell stands, in world units, when not `SHIELD_ORBIT` — 0557.
@@ -81,6 +87,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: null,
     shell: {
       look: 'honeycomb',
+      pop: 'shield',
       places: [
         [SPRITE.shield0a, SPRITE.shield0b, SPRITE.shield0c],
         [SPRITE.shield120a, SPRITE.shield120b, SPRITE.shield120c],
@@ -97,6 +104,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: null,
     shell: {
       look: 'bubble',
+      pop: 'shieldBubble',
       places: [
         [SPRITE.shieldBubble0a, SPRITE.shieldBubble0b, SPRITE.shieldBubble0c],
         [SPRITE.shieldBubble120a, SPRITE.shieldBubble120b, SPRITE.shieldBubble120c],
@@ -113,6 +121,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: null,
     shell: {
       look: 'plumes',
+      pop: 'shieldPlumes',
       places: [
         [SPRITE.shieldPlume0a, SPRITE.shieldPlume0b, SPRITE.shieldPlume0c],
         [SPRITE.shieldPlume120a, SPRITE.shieldPlume120b, SPRITE.shieldPlume120c],
@@ -129,6 +138,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: null,
     shell: {
       look: 'lattice',
+      pop: 'shieldLattice',
       places: [
         [SPRITE.shieldLattice0a, SPRITE.shieldLattice0b, SPRITE.shieldLattice0c],
         [SPRITE.shieldLattice120a, SPRITE.shieldLattice120b, SPRITE.shieldLattice120c],
@@ -145,6 +155,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: null,
     shell: {
       look: 'storm',
+      pop: 'shieldStorm',
       orbit: 7.1,
       places: [
         [SPRITE.shieldStorm0a, SPRITE.shieldStorm0b, SPRITE.shieldStorm0c],
@@ -162,6 +173,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: null,
     shell: {
       look: 'seeds',
+      pop: 'shieldSeeds',
       places: [
         [SPRITE.shieldSeed0a, SPRITE.shieldSeed0b, SPRITE.shieldSeed0c],
         [SPRITE.shieldSeed120a, SPRITE.shieldSeed120b, SPRITE.shieldSeed120c],
@@ -178,6 +190,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: null,
     shell: {
       look: 'drips',
+      pop: 'shieldDrips',
       places: [
         [SPRITE.shieldDrip0a, SPRITE.shieldDrip0b, SPRITE.shieldDrip0c],
         [SPRITE.shieldDrip120a, SPRITE.shieldDrip120b, SPRITE.shieldDrip120c],
@@ -197,6 +210,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: priced(750),
     shell: {
       look: 'aurora',
+      pop: 'shieldAurora',
       places: [
         [SPRITE.shieldAurora0a, SPRITE.shieldAurora0b, SPRITE.shieldAurora0c],
         [SPRITE.shieldAurora120a, SPRITE.shieldAurora120b, SPRITE.shieldAurora120c],
@@ -212,6 +226,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: priced(600),
     shell: {
       look: 'runes',
+      pop: 'shieldRunes',
       places: [
         [SPRITE.shieldRunes0a, SPRITE.shieldRunes0b, SPRITE.shieldRunes0c],
         [SPRITE.shieldRunes120a, SPRITE.shieldRunes120b, SPRITE.shieldRunes120c],
@@ -227,6 +242,7 @@ export const SHELLS: Record<ShellKind, ShellRow> = {
     price: priced(900),
     shell: {
       look: 'disco',
+      pop: 'shieldDisco',
       places: [
         [SPRITE.shieldDisco0a, SPRITE.shieldDisco0b, SPRITE.shieldDisco0c],
         [SPRITE.shieldDisco120a, SPRITE.shieldDisco120b, SPRITE.shieldDisco120c],

@@ -2046,6 +2046,11 @@ export interface BossRow extends Body {
    * rather than optional, as `uncoil` is.
    */
   fall: Fall | null;
+  /**
+   * What its lasers sound like as they ignite — 0660, or absent for every beam's (`laserZap`, 0625). The charge is a
+   * phase's `cue` already; this is the burn's, which `pinBeams` plays. The pterodactyl's screams.
+   */
+  zap?: CueKind;
   /** The cold its hull carries, or `null` — 0253. Required, on `uncoil`'s and `fall`'s terms. */
   chill: Chill | null;
   /**
@@ -4188,6 +4193,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // The volcanoes — 0251: two rocks every second and a half, from the top of the screen, through
     // the whole fight.
     fall: { kind: 'shot', shot: 'rock', every: 90, count: 2, from: 1 },
+    // 0660: its lasers scream as they burn, and shriek as they charge (each beam phase's `cue`).
+    zap: 'pteroZap',
     chill: null,
     muzzle: null,
     chain: null,
@@ -4243,16 +4250,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // Four quills, two off each wing — 0398: three shared between two wings would throw lopsided.
       { upTo: 1, fireEvery: 72, shots: 4, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: { face: QUETZAL_FACE, aura: beating(6) }, shot: null, attack: null },
       // The shoulder cannons: 0.3 s of warning, 0.4 s of beam, three units wide each.
-      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(5) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [LEFT_CANNON, RIGHT_CANNON], jag: QUETZAL_PAIR } },
+      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(5) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [LEFT_CANNON, RIGHT_CANNON], jag: QUETZAL_PAIR }, cue: 'pteroCharge' },
       // The throat cannon: half a second of warning, half a second of beam, twelve units wide.
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(5) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(5) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE }, cue: 'pteroCharge' },
       /*
         Everything: the throat and both shoulders, on the mouth's timing, each five units wide. 0398
         brought the shoulders in from eighteen to eleven, so what the three leave between them is two
         gaps of six units rather than two of thirteen — a thing a player can thread and not be sure of,
         with open lane either side of the brace for the player who would rather go round.
       */
-      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [LEFT_CANNON, THROAT, RIGHT_CANNON], jag: QUETZAL_FAN } },
+      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [LEFT_CANNON, THROAT, RIGHT_CANNON], jag: QUETZAL_FAN }, cue: 'pteroCharge' },
     ],
   },
   /**

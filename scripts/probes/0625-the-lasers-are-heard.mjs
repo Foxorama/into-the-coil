@@ -23,7 +23,8 @@ export const PROBES = [
     guard: 'THE ASK, IN SECONDS: the charge sounds as the line appears',
     edit: {
       path: 'src/app/frame.ts',
-      find: "  if (!Number.isNaN(ignited)) w.onCue('laserZap', ignited);",
+      // Re-anchored by 0660, which reads the row's own zap first.
+      find: "  if (!Number.isNaN(ignited)) w.onCue(w.bossRow.zap ?? 'laserZap', ignited);",
       replace: '  void ignited;',
     },
   },

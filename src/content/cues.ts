@@ -130,6 +130,9 @@ export const CUE_KINDS = [
   // A laser charging while its line is drawn, and its zap and hiss when it fires — 0625, every beam's.
   'laserCharge',
   'laserZap',
+  // The pterodactyl's own: a shriek building with the charge, and a screaming zap — 0660, on the quetzal's row.
+  'pteroCharge',
+  'pteroZap',
   // A root of the serpent's room breaking as its body falls through it — 0627.
   'rootsBreak',
   // The fish going through the edge of the lane on its entrance — 0313.
@@ -166,10 +169,23 @@ export const CUE_KINDS = [
   'spray',
   'douse',
   'splat',
+  // A shield taking a hit, in the voice of the shell that took it — 0658: `shield` is the honeycomb's, and each other
+  // shell names its own on its row in `src/content/shells.ts`.
   'shield',
+  'shieldBubble',
+  'shieldPlumes',
+  'shieldLattice',
+  'shieldStorm',
+  'shieldSeeds',
+  'shieldDrips',
+  'shieldAurora',
+  'shieldRunes',
+  'shieldDisco',
   'death',
   'pickup',
   'chime',
+  // A press that takes something on a menu — 0659.
+  'confirm',
   // The intro's own — 0412. Played on its beats and by nothing else.
   'ignite',
   'launch',
@@ -1856,6 +1872,49 @@ export const CUES: Record<CueKind, CueRow> = {
     ],
   },
   /*
+    ⚠️ **THE PTERODACTYL'S OWN — 0660.** *"Pterodactyl lazer noise."* Its cannons charged and fired on every beam's
+    voice (0625), a capacitor and a zap, so the one animal in the game with lasers in it sounded like a machine. Its
+    charge is a shriek building — a reedy saw climbing two octaves through a narrowing filter, wobbling as a throat
+    does — over the hum; its zap screams down into the burn. Named on the quetzal's row: the phases' `cue` and the
+    row's `zap`, with 0625's two still every other beam's.
+  */
+  pteroCharge: {
+    twin: 'warning-appears',
+    air: 0.3,
+    hold: 8,
+    gain: 0.36,
+    glue: 0.12,
+    layers: [
+      // The shriek: a saw from A4 to A6, wobbling, its filter opening as it climbs.
+      { wave: 'saw', from: inKey(21), to: inKey(35), seconds: 0.4, gain: 0.26, attack: 0.18, curve: 0.7, lowFrom: 1200, lowTo: 6400, highFrom: 600, q: 3, vibrato: 32, release: 0.05 },
+      // The hum under it, as every laser's charge has.
+      { wave: 'sine', from: inKey(14), to: inKey(28), seconds: 0.4, gain: 0.36, attack: 0.28, curve: 0.4, release: 0.06 },
+      // Breath through the beak, rising.
+      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.32, gain: 0.08, attack: 0.18, curve: 1, lowFrom: 4000, lowTo: 9000, highFrom: 1800, highTo: 4200, q: 1.2, release: 0.05 },
+    ],
+  },
+  pteroZap: {
+    twin: 'beam-appears',
+    air: 0.34,
+    hold: 10,
+    gain: 0.42,
+    glue: 0.16,
+    figure: [1, 0.86, 0.94, 0.82],
+    layers: [
+      // The crack of the discharge.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.025, gain: 0.5, attack: 0.0003, curve: 8, lowFrom: 12000, lowTo: 6000, highFrom: 1800 },
+      // The scream: a saw falling from A6 to E4, wobbling hard, driven.
+      { wave: 'saw', from: inKey(35), to: inKey(18), seconds: 0.2, gain: 0.3, attack: 0.002, curve: 2.6, lowFrom: 8000, lowTo: 2000, highFrom: 300, q: 2, vibrato: 40, drive: 0.35 },
+      // The laser's dive under it.
+      { wave: 'square', from: inKey(28), to: inKey(14), seconds: 0.12, gain: 0.2, attack: 0.001, curve: 3, lowFrom: 6000, lowTo: 1600, drive: 0.3 },
+      // The body on the root.
+      { wave: 'saw', from: inKey(14), to: inKey(7), seconds: 0.22, gain: 0.2, attack: 0.002, curve: 3.5, lowFrom: 1600, lowTo: 400, highFrom: 50, drive: 0.3 },
+      // The hiss of the burn, either side.
+      { wave: 'noise', from: 0, to: 0, at: 0.01, seconds: 0.45, gain: 0.14, attack: 0.01, curve: 1.6, lowFrom: 11000, lowTo: 5200, highFrom: 3200, highTo: 2400, q: 0.7, pan: -0.45, panTo: -0.2, release: 0.08 },
+      { wave: 'noise', from: 0, to: 0, at: 0.01, seconds: 0.45, gain: 0.14, attack: 0.01, curve: 1.6, lowFrom: 11000, lowTo: 5200, highFrom: 3200, highTo: 2400, q: 0.7, pan: 0.45, panTo: 0.2, release: 0.08 },
+    ],
+  },
+  /*
     ⚠️ **THE ROOTS BREAK — 0627.** A trunk of the world tree snapping as the serpent's body falls through it: once or
     twice a level, so it may take the bar over for a moment and duck the bed under it. Wood, not an explosion — a
     crack, the splinters of it in a stutter of bright noise, and a low thud of the wall giving way, on the root.
@@ -2653,25 +2712,169 @@ export const CUES: Record<CueKind, CueRow> = {
    * cue that sounded the same for both would make the most important fact in the game the one the
    * ear cannot check, which is the exact shape 0036 warns about.
    */
+  /*
+    ⚠️ **THE HONEYCOMB'S, AND EVERY SHELL HAS ITS OWN SINCE 0658.** *"Sheild pop noise is bad + should be specific per
+    shield."* It was a chord of octaves rising through a square and two bands of noise — a buzz more than a pop. It is
+    a cell of glass struck now: a clean high tink rising a fourth onto the root, a glint an octave over it, the body
+    rising under it and the same low lean into the root. Still RISING, for the reason above. The other nine below are
+    each their shell's material, named on its row (`pop` in `src/content/shells.ts`), and every one of them rises.
+  */
   shield: {
     twin: 'shell-mark',
-    // Rising, and the tail is what carries the rise past its own 0.2 s.
     air: 0.34,
     onGrid: true,
     hold: 6,
-    gain: 0.323,
+    gain: 0.3,
     glue: 0.08,
     layers: [
-      // A4 → A5, A3 → A4, C4 → C5: octaves of the ROOT and of the minor third, rising. Everything
-      // the player gains rises an octave, and this is the one they gain by surviving.
-      { wave: 'sine', from: inKey(21), to: inKey(28), seconds: 0.16, gain: 0.62, attack: 0.002, curve: 4, pan: -0.25 },
-      { wave: 'square', from: inKey(14), to: inKey(21), seconds: 0.14, gain: 0.26, attack: 0.002, curve: 5, lowFrom: 4500, lowTo: 7000, highFrom: 300, q: 1.2 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.1, gain: 0.161, attack: 0.001, curve: 6, lowFrom: 11000, highFrom: 2400, highTo: 5000, pan: -0.45, panTo: -0.7 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.1, gain: 0.161, attack: 0.001, curve: 6, lowFrom: 11000, highFrom: 2400, highTo: 5000, pan: 0.45, panTo: 0.7 },
-      { wave: 'tri', from: inKey(16), to: inKey(23), seconds: 0.18, gain: 0.34, attack: 0.002, curve: 3.8, pan: 0.25 },
-      // G2 → A2, which is the only step in the table smaller than an octave: the low body leans one
-      // degree up into the root rather than sitting on a fixed note under a rising cue.
-      { wave: 'sine', from: inKey(6), to: inKey(7), seconds: 0.2, gain: 0.5, attack: 0.002, curve: 3.4 },
+      // The tink: E5 → A5, a struck cell, quick and clean.
+      { wave: 'sine', from: inKey(25), to: inKey(28), seconds: 0.12, gain: 0.6, attack: 0.001, curve: 4.5, pan: -0.15 },
+      // The glint an octave over it, either side.
+      { wave: 'tri', from: inKey(32), to: inKey(35), seconds: 0.09, gain: 0.2, attack: 0.001, curve: 5, pan: 0.35, panTo: -0.35 },
+      // The body rising under it, A3 → A4.
+      { wave: 'sine', from: inKey(14), to: inKey(21), seconds: 0.14, gain: 0.38, attack: 0.002, curve: 4 },
+      // A breath of bright noise, the cell's edge.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.1, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 4200, pan: 0.2 },
+      // G2 → A2: the low body leans one degree up into the root.
+      { wave: 'sine', from: inKey(6), to: inKey(7), seconds: 0.16, gain: 0.38, attack: 0.002, curve: 3.4 },
+    ],
+  },
+  /** The soap bubble's — 0658: a bloop up two octaves and the pop of the film going, a plink at the top. */
+  shieldBubble: {
+    twin: 'shell-mark',
+    air: 0.3,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'sine', from: inKey(14), to: inKey(28), seconds: 0.08, gain: 0.6, attack: 0.001, curve: 3.5 },
+      { wave: 'noise', from: 0, to: 0, at: 0.06, seconds: 0.02, gain: 0.22, attack: 0.0005, curve: 7, lowFrom: 9000, highFrom: 2000 },
+      { wave: 'sine', from: inKey(30), to: inKey(35), at: 0.07, seconds: 0.08, gain: 0.26, attack: 0.001, curve: 5, pan: 0.3 },
+      { wave: 'sine', from: inKey(7), to: inKey(9), seconds: 0.1, gain: 0.3, attack: 0.002, curve: 4 },
+    ],
+  },
+  /** The phoenix plumes' — 0658: a sweep of feathers through the air and a warm reed rising under it. */
+  shieldPlumes: {
+    twin: 'shell-mark',
+    air: 0.4,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.1,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.22, gain: 0.34, attack: 0.03, curve: 2.4, lowFrom: 1400, lowTo: 6500, highFrom: 400, highTo: 1800, q: 1.4, pan: -0.5, panTo: 0.5 },
+      { wave: 'tri', from: inKey(16), to: inKey(21), seconds: 0.2, gain: 0.44, attack: 0.01, curve: 3, vibrato: 6 },
+      { wave: 'saw', from: inKey(9), to: inKey(14), seconds: 0.18, gain: 0.16, attack: 0.008, curve: 3.5, lowFrom: 1200, lowTo: 2600, highFrom: 120 },
+    ],
+  },
+  /** The lattice's — 0658: a struck grate of metal, ringing, with the click of the strike on its front. */
+  shieldLattice: {
+    twin: 'shell-mark',
+    air: 0.36,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.012, gain: 0.3, attack: 0.0003, curve: 8, lowFrom: 10000, highFrom: 3000 },
+      { wave: 'tri', from: inKey(21), to: inKey(23), seconds: 0.34, gain: 0.48, attack: 0.001, curve: 2.6, pan: -0.2 },
+      { wave: 'square', from: inKey(29), to: inKey(31), seconds: 0.26, gain: 0.12, attack: 0.001, curve: 3, lowFrom: 6000, lowTo: 3000, highFrom: 1500, q: 3, pan: 0.25 },
+      { wave: 'sine', from: inKey(12), to: inKey(14), seconds: 0.2, gain: 0.32, attack: 0.002, curve: 3.6 },
+    ],
+  },
+  /** The storm cage's — 0658: a crackle of static and a driven zap climbing out of it. */
+  shieldStorm: {
+    twin: 'shell-mark',
+    air: 0.32,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.1,
+    layers: [
+      { wave: 'square', from: inKey(18), to: inKey(28), seconds: 0.1, gain: 0.28, attack: 0.001, curve: 3, lowFrom: 6000, lowTo: 2400, drive: 0.5 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.3, attack: 0.0005, curve: 7, lowFrom: 12000, highFrom: 3000, pan: -0.5 },
+      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.03, gain: 0.24, attack: 0.0005, curve: 7, lowFrom: 12000, highFrom: 3200, pan: 0.45 },
+      { wave: 'noise', from: 0, to: 0, at: 0.11, seconds: 0.025, gain: 0.18, attack: 0.0005, curve: 7, lowFrom: 12000, highFrom: 3400, pan: -0.1 },
+      { wave: 'sine', from: inKey(7), to: inKey(14), seconds: 0.12, gain: 0.34, attack: 0.002, curve: 3.6 },
+    ],
+  },
+  /** The seed pods' — 0658: a rattle of dry seeds, three shakes, over a wooden knock rising a step. */
+  shieldSeeds: {
+    twin: 'shell-mark',
+    air: 0.26,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.3, attack: 0.001, curve: 6, lowFrom: 7000, highFrom: 1800, q: 1.6, pan: -0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.045, seconds: 0.03, gain: 0.26, attack: 0.001, curve: 6, lowFrom: 7400, highFrom: 2000, q: 1.6, pan: 0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.09, seconds: 0.03, gain: 0.22, attack: 0.001, curve: 6, lowFrom: 7800, highFrom: 2200, q: 1.6 },
+      { wave: 'tri', from: inKey(16), to: inKey(18), seconds: 0.08, gain: 0.5, attack: 0.001, curve: 6 },
+      { wave: 'sine', from: inKey(9), to: inKey(11), seconds: 0.07, gain: 0.3, attack: 0.001, curve: 6 },
+    ],
+  },
+  /** The drips' — 0658: a drop landing in water, the plop rising, and a smaller one after it. */
+  shieldDrips: {
+    twin: 'shell-mark',
+    air: 0.42,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'sine', from: inKey(14), to: inKey(21), seconds: 0.07, gain: 0.6, attack: 0.001, curve: 4 },
+      { wave: 'sine', from: inKey(21), to: inKey(28), at: 0.09, seconds: 0.06, gain: 0.32, attack: 0.001, curve: 4.5, pan: 0.3 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.08, attack: 0.001, curve: 5, lowFrom: 3000, highFrom: 600 },
+      { wave: 'sine', from: inKey(5), to: inKey(7), seconds: 0.12, gain: 0.28, attack: 0.002, curve: 4 },
+    ],
+  },
+  /** The aurora's — 0658: a shimmer of the key's own chord rising together, its curtains moving either side. */
+  shieldAurora: {
+    twin: 'shell-mark',
+    air: 0.5,
+    onGrid: true,
+    hold: 6,
+    gain: 0.28,
+    glue: 0.1,
+    layers: [
+      { wave: 'sine', from: inKey(21), to: inKey(28), seconds: 0.38, gain: 0.34, attack: 0.03, curve: 2.2, vibrato: 7, pan: -0.4, panTo: 0.2 },
+      { wave: 'sine', from: inKey(23), to: inKey(30), seconds: 0.36, gain: 0.26, attack: 0.04, curve: 2.2, vibrato: 7, pan: 0.4, panTo: -0.2 },
+      { wave: 'sine', from: inKey(25), to: inKey(32), seconds: 0.34, gain: 0.22, attack: 0.05, curve: 2.2, vibrato: 7 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.06, attack: 0.05, curve: 2, lowFrom: 12000, highFrom: 6000, pan: 0.5, panTo: -0.5 },
+      { wave: 'sine', from: inKey(7), to: inKey(14), seconds: 0.2, gain: 0.3, attack: 0.01, curve: 3 },
+    ],
+  },
+  /** The runes' — 0658: a stone struck, a low gong of it rising onto the root, and the rune ringing over. */
+  shieldRunes: {
+    twin: 'shell-mark',
+    air: 0.55,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.12,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.26, attack: 0.0005, curve: 6, lowFrom: 2400, highFrom: 200 },
+      { wave: 'tri', from: inKey(6), to: inKey(7), seconds: 0.36, gain: 0.5, attack: 0.002, curve: 2.6 },
+      { wave: 'sine', from: inKey(13), to: inKey(14), seconds: 0.34, gain: 0.3, attack: 0.002, curve: 2.6 },
+      { wave: 'sine', from: inKey(23), to: inKey(25), at: 0.02, seconds: 0.32, gain: 0.18, attack: 0.004, curve: 2.8, vibrato: 4, pan: 0.3 },
+    ],
+  },
+  /** The disco ball's — 0658: a glittering ting and a wah climbing a fifth under it. */
+  shieldDisco: {
+    twin: 'shell-mark',
+    air: 0.38,
+    onGrid: true,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      { wave: 'saw', from: inKey(14), to: inKey(18), seconds: 0.2, gain: 0.3, attack: 0.004, curve: 3, lowFrom: 600, lowTo: 3600, highFrom: 150, q: 3 },
+      { wave: 'sine', from: inKey(30), to: inKey(32), seconds: 0.1, gain: 0.32, attack: 0.001, curve: 5, pan: -0.35 },
+      { wave: 'sine', from: inKey(32), to: inKey(35), at: 0.05, seconds: 0.1, gain: 0.26, attack: 0.001, curve: 5, pan: 0.35 },
+      { wave: 'noise', from: 0, to: 0, at: 0.02, seconds: 0.08, gain: 0.08, attack: 0.002, curve: 4, lowFrom: 12000, highFrom: 6000, pan: 0.5, panTo: -0.5 },
+      { wave: 'sine', from: inKey(7), to: inKey(11), seconds: 0.14, gain: 0.3, attack: 0.002, curve: 3.6 },
     ],
   },
   /**
@@ -2797,6 +3000,28 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'tri', from: inKey(33), to: inKey(37), seconds: 0.1, gain: 0.16, attack: 0.003, curve: 5, pan: 0.45, panTo: -0.45 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.087, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3600, highTo: 7000, pan: -0.45, panTo: -0.7 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.087, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3600, highTo: 7000, pan: 0.45, panTo: 0.7 },
+    ],
+  },
+  /**
+   * A press on a menu took something — 0659. *"Confirm noise on menus."* An action pressed, an option fitted, a
+   * pilot chosen: two quick blips stepping up a third and a fourth onto the root, small and dry, so it answers the
+   * thumb and never sits over the title track. Not on a step along a band, which is looking, not taking.
+   *
+   * ⚠️ **NOT AN EVENT THE MODEL RESOLVES, ON `chime`'s TERMS.** It is the answer to *did that press take*, which the
+   * chosen option filling (its twin) also says; the shell plays it, as it plays `chime`.
+   */
+  confirm: {
+    twin: 'chooser-fill',
+    air: 0.18,
+    hold: 4,
+    // Over the gun's, as every cue the player has to notice is — 0145; the quietest thing on the menu after the pulse.
+    gain: 0.26,
+    glue: 0.04,
+    layers: [
+      { wave: 'sine', from: inKey(21), to: inKey(23), seconds: 0.05, gain: 0.5, attack: 0.001, curve: 5 },
+      { wave: 'sine', from: inKey(25), to: inKey(28), at: 0.045, seconds: 0.08, gain: 0.55, attack: 0.001, curve: 4.5 },
+      { wave: 'tri', from: inKey(14), to: inKey(16), seconds: 0.05, gain: 0.2, attack: 0.001, curve: 5 },
+      { wave: 'tri', from: inKey(18), to: inKey(21), at: 0.045, seconds: 0.08, gain: 0.2, attack: 0.001, curve: 4.5 },
     ],
   },
   /*
