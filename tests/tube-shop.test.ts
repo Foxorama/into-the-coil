@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { priced } from '../src/content/prices.ts';
 import { OWNABLES, SHELF_KINDS, SHELVES, WARES } from '../src/content/wares.ts';
-import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS, rackCarrying, type RackKind } from '../src/content/racks.ts';
+import { RACKS, RACK_KINDS, TUBE_SLOT_OPTIONS, TUBE_WARES, TUBE_WARE_KINDS, rackCarrying, rackOf, rackWith, type RackKind } from '../src/content/racks.ts';
+import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
 import { SHIP_KINDS } from '../src/content/ships.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { canBuy, initialHangar, needsFirst, rackOpen } from '../src/state/slices/hangar.ts';
@@ -40,12 +41,20 @@ describe('the shelf', () => {
     expect(kinds.filter((k) => k === 'homing'), '*"1-2 of both"* is two of each').toHaveLength(2);
   });
 
+  // 0663: *"not have a '2nd tube'. You can buy up to two of each tube."*
+  it('0663 — sells no *second* tube: the second of a kind is called what the first is', () => {
+    expect(TUBE_WARES.secondStraightTube.name).toBe(TUBE_WARES.straightTube.name);
+    expect(TUBE_WARES.secondHomingTube.name).toBe(TUBE_WARES.homingTube.name);
+    for (const ware of TUBE_WARE_KINDS) expect(TUBE_WARES[ware].name, `${ware} is still sold as a second`).not.toMatch(/second|2nd/i);
+  });
+
   it('sells the second of a kind only once the first is owned, and says so', () => {
     const rich = holding(10_000);
     expect(needsFirst(rich.hangar, 'secondHomingTube')).toBe('homingTube');
     expect(canBuy(rich.hangar, 'secondHomingTube'), 'the second tube was sold before the first').toBe(false);
     expect(reduce(rich, { slice: 'hangar', type: 'bought', ware: 'secondHomingTube' }), 'the second tube was bought first').toBe(rich);
-    expect(wareWhy('secondHomingTube', false, 10_000, 'homingTube')).toBe('Buy the ' + OWNABLES.homingTube.name + ' first');
+    // 0663: the second is called what the first is, so it says it is the second rather than naming itself.
+    expect(wareWhy('secondHomingTube', false, 10_000, 'homingTube')).toBe('Your second — buy the first one before it');
     const first = reduce(rich, { slice: 'hangar', type: 'bought', ware: 'homingTube' });
     expect(first.hangar.shards).toBe(10_000 - priced(500));
     expect(canBuy(first.hangar, 'secondHomingTube'), 'the second tube was refused with the first owned').toBe(true);
@@ -55,18 +64,36 @@ describe('the shelf', () => {
 });
 
 describe('the rack', () => {
-  it('every rack *"1 homing, 1 regular, 2 homing, 2 regular etc"* — none, one of each, two of each, and one and one', () => {
-    const shapes = RACK_KINDS.map((rack) => [...RACKS[rack].tubes].sort().join('+'));
-    expect(shapes.sort()).toEqual(['', 'homing', 'homing+homing', 'homing+straight', 'straight', 'straight+straight'].sort());
-    for (const rack of RACK_KINDS) expect(rackCarrying(RACKS[rack].tubes), `${rack} is not the rack of its own shape`).toBe(rack);
-    expect(rackCarrying(['homing', 'straight']), 'a rack is found by its shape, in either order').toBe('mixed');
+  /*
+    0663: *"missile tubes should be individual and have a left/right slot … equip them however you like."* A rack
+    is what the two slots hold: every pair of none, a straight tube and a seeker, once each — nine, where 0578's
+    six were shapes with no sides.
+  */
+  it('0663 — THE ASK: one rack for every pair the left slot and the right slot may hold, and its tubes are those, left first', () => {
+    const pairs = RACK_KINDS.map((rack) => RACKS[rack].slots.map((tube) => tube ?? '-').join('|'));
+    const every = TUBE_SLOT_OPTIONS.flatMap((left) => TUBE_SLOT_OPTIONS.map((right) => `${left ?? '-'}|${right ?? '-'}`));
+    expect(pairs.slice().sort(), 'a pair of slots has no rack, or two').toEqual(every.slice().sort());
+    for (const rack of RACK_KINDS) {
+      const [left, right] = RACKS[rack].slots;
+      expect(rackOf(left, right), `${rack} is not the rack of its own slots`).toBe(rack);
+      expect(RACKS[rack].tubes, `${rack} carries other than its slots`).toEqual([left, right].filter((t) => t !== null));
+    }
+    expect(rackOf('homing', 'straight'), 'a seeker on the left and a straight tube on the right is one of each the other way').toBe('mixedSwapped');
+    expect(rackCarrying(['homing', 'straight']), 'a run’s tubes are read left first').toBe('mixedSwapped');
+  });
+
+  it('0663: a tube fitted from Cosmo’s goes into the empty slot, and what is fitted keeps its side', () => {
+    expect(rackWith('bare', 'homing')).toBe('homing');
+    expect(rackWith('straightRight', 'homing'), 'the straight tube on the right was moved').toBe('mixedSwapped');
+    expect(rackWith('straight', 'homing'), 'the straight tube on the left was moved').toBe('mixed');
+    expect(rackWith('straightPair', 'homing'), 'a full rack keeps its left tube').toBe('mixed');
   });
 
   it('is open only when the tubes owned are enough of each kind for it, and none always', () => {
     const open = (state: State): RackKind[] => RACK_KINDS.filter((rack) => rackOpen(state.hangar, rack));
     expect(open(holding(0)), 'a rack was open with no tube owned').toEqual(['bare']);
-    expect(open(holding(0, 'straightTube'))).toEqual(['bare', 'straight']);
-    expect(open(holding(0, 'straightTube', 'homingTube'))).toEqual(['bare', 'straight', 'homing', 'mixed']);
+    expect(open(holding(0, 'straightTube'))).toEqual(['bare', 'straight', 'straightRight']);
+    expect(open(holding(0, 'straightTube', 'homingTube'))).toEqual(['bare', 'straight', 'homing', 'mixed', 'straightRight', 'homingRight', 'mixedSwapped']);
     expect(open(holding(0, 'straightTube', 'secondStraightTube', 'homingTube', 'secondHomingTube'))).toEqual([...RACK_KINDS]);
   });
 
@@ -79,15 +106,19 @@ describe('the rack', () => {
   });
 
   // 0579: on Hangin' Out under *Loadout*, where 0578 had it on Paint & Parts for want of the height.
-  it('is a band on Hangin’ Out under Loadout beside the gun and the special, in the table’s order, and says where tubes are sold', () => {
-    const band = SCREENS.hangar.choices.find((c) => c.name === 'rack');
-    expect(band?.options.map((o) => o.label)).toEqual(RACK_KINDS.map((rack) => RACKS[rack].label));
-    expect(SCREENS.hangar.stand?.groups.find((g) => g.bands.includes('gun'))?.bands, 'the tubes are not in the loadout').toContain('rack');
-    expect(SCREENS.parts.choices.some((c) => c.name === 'rack'), 'the tubes are still on Paint & Parts too').toBe(false);
+  // 0663: two bands, the left slot and the right, each none and then every kind of tube.
+  it('0663 — is a left slot and a right slot on Hangin’ Out under Loadout beside the gun and the special, and says where tubes are sold', () => {
+    for (const name of ['tubeLeft', 'tubeRight'] as const) {
+      const band = SCREENS.hangar.choices.find((c) => c.name === name);
+      expect(band?.options.map((o) => o.label), `${name} is not none and then each tube`).toEqual(['None', ...MISSILE_KINDS.map((kind) => MISSILES[kind].label)]);
+      expect(SCREENS.hangar.stand?.groups.find((g) => g.bands.includes('gun'))?.bands, `${name} is not in the loadout`).toContain(name);
+      expect(SCREENS.parts.choices.some((c) => c.name === name), `${name} is on Paint & Parts too`).toBe(false);
+      expect(optionWhy(name, 'fighter', 1, initialHangar.won)).toContain('Cosmo');
+    }
+    expect(SCREENS.hangar.choices.some((c) => c.label.includes('One of each') || c.options.some((o) => o.label === 'One of each')), 'a band still offers *one of each*').toBe(false);
     expect(wareWhy('homingTube', true, 0), 'Cosmo’s says to fit a tube somewhere else').toBe('Yours — fit it in the hangar');
     expect(rackWhy(false)).toContain('Cosmo');
     expect(rackWhy(true)).toBe(null);
-    expect(optionWhy('rack', 'fighter', 1, initialHangar.won)).toContain('Cosmo');
   });
 });
 
@@ -105,6 +136,10 @@ describe('the key', () => {
     let state = holding(1_000, 'straightTube', 'homingTube');
     state = reduce(state, { slice: 'hangar', type: 'rack', ship: 'caddie', rack: 'mixed' });
     state = reduce(state, { slice: 'hangar', type: 'rack', ship: 'estate', rack: 'homing' });
+    // 0663: and the racks with sides, which a save before it never held.
+    state = reduce(state, { slice: 'hangar', type: 'rack', ship: 'fighter', rack: 'mixedSwapped' });
+    state = reduce(state, { slice: 'hangar', type: 'rack', ship: 'duck', rack: 'homingRight' });
+    expect(state.hangar.rack.fighter, 'the swapped pair was not fitted, so this proves nothing').toBe('mixedSwapped');
     expect(hangarFrom(serialiseHangar(state.hangar), initialHangar)).toEqual(state.hangar);
   });
 

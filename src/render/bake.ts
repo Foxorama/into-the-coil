@@ -2568,17 +2568,38 @@ type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt' | 'b
   and where its missile leaves are one number. The bake draws what holds it: under each wing, a pylon.
 */
 
-/** A loaded tube's outline, nose +x at 1, fins at −1 — 0581. Its widest are the fins, 0.5 of its radius out. */
+/**
+ * A loaded tube's outline, nose +x at 1, fins at −1 — 0581; 0665's: a pointed nose, a pair of canards behind the
+ * warhead and swept tail fins, where it was a lozenge with a fin at each corner. *"Missile tubes need to look way
+ * cooler."* At the fight's camera a tube is nine pixels long, so its silhouette is most of what it can say there,
+ * and the shape is where the change is. Its widest are still the fins, 0.56 of its radius out.
+ */
 const LOADED_TUBE_HULL: readonly Pt[] = [
   [1, 0],
-  [0.62, -0.27],
-  [-0.62, -0.27],
-  [-1, -0.52],
-  [-0.96, -0.08],
-  [-0.96, 0.08],
-  [-1, 0.52],
-  [-0.62, 0.27],
-  [0.62, 0.27],
+  [0.78, -0.17],
+  [0.58, -0.27],
+  // The canards, small and swept back.
+  [0.44, -0.27],
+  [0.32, -0.42],
+  [0.2, -0.42],
+  [0.22, -0.27],
+  [-0.5, -0.27],
+  // The tail fins, swept.
+  [-0.82, -0.56],
+  [-1, -0.56],
+  [-0.9, -0.27],
+  [-0.96, -0.14],
+  [-0.96, 0.14],
+  [-0.9, 0.27],
+  [-1, 0.56],
+  [-0.82, 0.56],
+  [-0.5, 0.27],
+  [0.22, 0.27],
+  [0.2, 0.42],
+  [0.32, 0.42],
+  [0.44, 0.27],
+  [0.58, 0.27],
+  [0.78, 0.17],
 ];
 
 /**
@@ -2592,7 +2613,7 @@ const LOADED_TUBE_HULL: readonly Pt[] = [
   0582: about `at`, `k` of the frame's radius long each way — the frame's own sprite at the defaults, and a
   tube laid on a ship's picture (`paintLoadedTubes`) at its place and its length in that picture's box.
 */
-function drawLoadedTube(ctx: Pen, f: Frame, ink: string, at: Pt = [0, 0], k = 1): void {
+function drawLoadedTube(ctx: Pen, f: Frame, palette: Palette, ink: string, at: Pt = [0, 0], k = 1): void {
   const p = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => [at[0] + x * k, at[1] + y * k]);
   const hull = p(LOADED_TUBE_HULL);
   ctx.fillStyle = ink;
@@ -2611,12 +2632,20 @@ function drawLoadedTube(ctx: Pen, f: Frame, ink: string, at: Pt = [0, 0], k = 1)
     shade(ink, 0.55),
     p([
       [1, 0],
-      [0.62, -0.27],
+      [0.78, -0.17],
+      [0.58, -0.27],
       [0.5, -0.27],
       [0.5, 0.27],
-      [0.62, 0.27],
+      [0.58, 0.27],
+      [0.78, 0.17],
     ]),
   );
+  /*
+    0665: and its motor, hot in the hazard ink at its tail — translucent, so at nine pixels it still reads as a lit
+    engine. No band or stripe is painted on it: 0106's floor, which the body's own marks only just clear, is why.
+  */
+  const [tail] = p([[-0.88, 0]]);
+  glow(ctx, f, palette.hazard, tail![0], tail![1], 0.2 * k, 0.7);
 }
 
 /** A turret's warhead, tip +x at 1 as the tube's nose is, its base 1.65 of its radius back — 0581. */
@@ -2631,7 +2660,7 @@ const LOADED_NOSE_HULL: readonly Pt[] = [
  * in the missile's orange whatever they fired (0461), now in its kind's ink and laid on by the frame, lit
  * along its top and its tip the brightest thing on it.
  */
-function drawLoadedNose(ctx: Pen, f: Frame, ink: string, at: Pt = [0, 0], k = 1): void {
+function drawLoadedNose(ctx: Pen, f: Frame, palette: Palette, ink: string, at: Pt = [0, 0], k = 1): void {
   const p = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => [at[0] + x * k, at[1] + y * k]);
   const hull = p(LOADED_NOSE_HULL);
   ctx.fillStyle = ink;
@@ -2653,6 +2682,9 @@ function drawLoadedNose(ctx: Pen, f: Frame, ink: string, at: Pt = [0, 0], k = 1)
       [0.3, 0.4],
     ]),
   );
+  // 0665: and its tip lit, armed — translucent, as the dart's motor is, and for the same floor.
+  const [tip] = p([[0.7, 0]]);
+  glow(ctx, f, palette.impact, tip![0], tip![1], 0.3 * k, 0.6);
 }
 
 /**
@@ -2671,8 +2703,8 @@ export function paintLoadedTubes(ctx: Pen, f: Frame, palette: Palette, ship: Shi
     const sprite = SPRITE_KINDS[MISSILES[kind].loaded[row.tubeLook].base]!;
     const ink = palette[INK_OF[sprite]];
     const at: Pt = [(place.along - row.tubeLength / 2) / BOX_R, (place.across * across) / BOX_R];
-    if (row.tubeLook === 'dart') drawLoadedTube(ctx, f, ink, at, k);
-    else drawLoadedNose(ctx, f, ink, at, k);
+    if (row.tubeLook === 'dart') drawLoadedTube(ctx, f, palette, ink, at, k);
+    else drawLoadedNose(ctx, f, palette, ink, at, k);
   });
 }
 
@@ -17481,19 +17513,19 @@ export function drawKind(
     // 0581: a loaded tube of each kind, each its own body on the spinner's terms; the frame lays it on the ship.
     case 'tubeMissile':
     case 'tubeMissileHit':
-      drawLoadedTube(ctx, f, palette.bullet);
+      drawLoadedTube(ctx, f, palette, palette.bullet);
       return;
     case 'tubeSeeker':
     case 'tubeSeekerHit':
-      drawLoadedTube(ctx, f, palette.ally);
+      drawLoadedTube(ctx, f, palette, palette.ally);
       return;
     case 'noseMissile':
     case 'noseMissileHit':
-      drawLoadedNose(ctx, f, palette.bullet);
+      drawLoadedNose(ctx, f, palette, palette.bullet);
       return;
     case 'noseSeeker':
     case 'noseSeekerHit':
-      drawLoadedNose(ctx, f, palette.ally);
+      drawLoadedNose(ctx, f, palette, palette.ally);
       return;
     /*
       ⚠️ **EACH FRAME OF A CYCLE IS ITS OWN ARM, AND THE ARM NAMES ITS INDEX — 0410.** Reading the index

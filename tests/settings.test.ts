@@ -97,7 +97,7 @@ describe('the settings screen is its tables', () => {
     // 0590: and no longer the look.
     // 0613: and the rumble, on Settings with the sound.
     expect([...where.keys()].sort()).toEqual(
-      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rack', 'rim', 'rumble', 'shell', 'sound', 'special', 'steer', 'tone', 'travel', 'aisle', 'section', ...SHELF_KINDS].sort(),
+      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rim', 'rumble', 'shell', 'sound', 'special', 'steer', 'tone', 'travel', 'tubeLeft', 'tubeRight', 'aisle', 'section', ...SHELF_KINDS].sort(),
     );
   });
 });
