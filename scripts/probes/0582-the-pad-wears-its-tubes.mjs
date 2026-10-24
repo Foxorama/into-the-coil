@@ -13,7 +13,7 @@ export const PROBES = [
     guard: 'fits one of each on Hangin’ Out, and the ship on the pad changes as it does',
     edit: {
       path: 'src/render/port-bake.ts',
-      find: '  drawPlayerShip(ctx, f, palette, ship, tubes.length);\n  paintLoadedTubes(ctx, f, palette, ship, tubes);',
+      find: '  if (under) paintLoadedTubes(ctx, f, palette, ship, tubes);\n  drawPlayerShip(ctx, f, palette, ship, tubes.length);\n  if (!under) paintLoadedTubes(ctx, f, palette, ship, tubes);',
       replace: '  drawPlayerShip(ctx, f, palette, ship, 0);',
     },
   },

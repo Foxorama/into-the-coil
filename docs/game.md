@@ -136,7 +136,9 @@ with one hurtbox, so what tells them apart is the gun:
 
 A ship opens a run on its whole gun and two charges of the special fitted to it in the hangar — its own
 gun's, until the ship and another have both been won in and it borrows theirs
-([0524](decisions/0524-the-special-is-fitted.md)) — and carries its missile tubes on its own hull.
+([0524](decisions/0524-the-special-is-fitted.md)) — and carries its missile tubes on its own hull: the
+fighter hangs its gun and its tubes under its nose and wings, and every other ship stands them on top —
+[0662](decisions/0662-the-fighter-hangs-its-arms.md).
 
 ## Controls
 

@@ -1920,8 +1920,11 @@ function paintBlue(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, si
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.014);
   const tubes = fitNow(ship).tubes;
+  // 0662: under the hull first, on a ship whose row hangs them there — the frame's own order.
+  const under = SHIPS[ship].hang === 'under';
+  if (under) paintLoadedTubes(ctx, f, palette, ship, tubes);
   drawPlayerShip(ctx, f, palette, ship, tubes.length);
-  paintLoadedTubes(ctx, f, palette, ship, tubes);
+  if (!under) paintLoadedTubes(ctx, f, palette, ship, tubes);
 }
 
 /*
