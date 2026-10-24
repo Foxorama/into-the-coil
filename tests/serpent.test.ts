@@ -3402,4 +3402,41 @@ describe('0627 — the roots are walls, and the serpent breaks a way through the
       expect(trunks, `killed after ${wait} steps, a broken trunk is still drawn`).toBeLessThanOrEqual(standing);
     }
   });
+
+  it('0651 — killed by the lightning gun, which strikes as it fires, its body still falls and breaks the far wall', () => {
+    /*
+      *"Snake died to lightning gun and roots didn't disappear, no idea why."* The arc lands inside the volley, before
+      the chain is laid; the kill above lands in the collisions, after it. Flown through the real trigger, so the arc
+      is what kills it.
+    */
+    const { world, frame } = serpentAt(1);
+    world.shipRow = SHIPS[shipCarrying('arc')];
+    world.weapon = weaponFor(world.shipRow, []);
+    wearHull(world);
+    world.bossPool.at(0).health = 0.001;
+    world.bossPool.at(0).fireIn = 999;
+    // Within the arc's reach of the head, which is the one part of the serpent the arc strikes, and nothing in flight:
+    // a shot that reached the body would kill it through the body, in the collisions — the order that never broke.
+    for (let i = 0; i < 3 * STEPS_PER_SECOND && world.bossPool.size > 0; i++) {
+      const head = world.bossPool.at(0);
+      world.ship.along = head.along - world.weapon.reach * 0.5;
+      world.ship.across = head.across;
+      world.ship.prevAlong = world.ship.along;
+      world.ship.prevAcross = world.ship.across;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.playerShots.clear();
+      frame.step();
+    }
+    expect(world.bossPool.size, 'the arc never killed the serpent').toBe(0);
+    expect(world.slumpFor, 'killed by the arc, its body never began to fall').toBeGreaterThanOrEqual(0);
+    for (let i = 0; i < 3 * STEPS_PER_SECOND; i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      frame.step();
+    }
+    const broken = ROOM.pieces!.filter((p, i) => p.breaks && world.roots.broken[i] === 1);
+    expect(broken.length, 'killed by the arc, its body broke no far root').toBeGreaterThan(0);
+    expect(world.bossBody.size, 'killed by the arc, its body was still on the screen three seconds on').toBe(0);
+  });
 });

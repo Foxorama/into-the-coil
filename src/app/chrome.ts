@@ -8083,8 +8083,8 @@ export function makeChrome(
         scoreShown = points;
         scoreValue.style.setProperty('--itc-playing-points', String(points));
       }
-      // A streak that went back to nothing from a multiplier worth having is a hit, and it shakes.
-      // Not when the points went down with it: that is a new run starting, and nothing was hit.
+      // A streak that fell from a multiplier worth having shakes — since 0649 once for each step the quiet takes
+      // off it, so a falling streak is seen falling. Not when the points went down with it: that is a new run starting.
       const broke = streak < streakShown && multiplierFor(streakShown) > 1 && points >= pointsBefore;
       if (broke) {
         scoreBox.classList.remove('itc-playing-score-broke');

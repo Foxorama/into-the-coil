@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GameFrame, advanceLevel, respawn, takeShield, type World } from '../src/app/frame.ts';
+import { GameFrame, advanceLevel, resetScene, respawn, takeShield, type World } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { AUTHORED, BOSS_FIGHTS, DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind, type DifficultyRow } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
@@ -49,12 +49,13 @@ function hit(world: World, frame: GameFrame): void {
 describe('0355 — the rows', () => {
   it('THE ASK: Legend opens every life full and renewed, Savior on one, Burn on the hull with three to fly for', () => {
     // The player's words, which is why this names values: they are the ask, not a hand's tuning.
-    // 0355 for Legend; 0614 for the other two: *"the game is quite hard"*.
+    // 0355 for Legend; 0614 for the other two: *"the game is quite hard"*; 0650 for Savior's death:
+    // *"Savior → spawn w/ shield after death"*.
     expect(DIFFICULTIES.legendary.shellOpen, 'a Legendary life does not open on a full shell').toBe(DIFFICULTIES.legendary.shellCap);
     expect(DIFFICULTIES.legendary.shellCap, 'a Legendary shell is not the whole readout').toBe(MAX_SHIELDS);
     expect(DIFFICULTIES.legendary.shellLevel, 'a Legendary level is not renewed to full').toBe(DIFFICULTIES.legendary.shellCap);
     expect(DIFFICULTIES.savior.shellLevel, 'a Savior level does not start with one shield').toBe(1);
-    expect(DIFFICULTIES.savior.shellOpen, 'a Savior life after a death opens wearing a shell').toBe(0);
+    expect(DIFFICULTIES.savior.shellOpen, 'a Savior life after a death does not open on one shield').toBe(1);
     expect(DIFFICULTIES.savior.shellCap, 'Savior can no longer carry a full shell').toBe(MAX_SHIELDS);
     expect(DIFFICULTIES.burn.shellLevel, 'a Burn level opens wearing a shell').toBe(0);
     expect(DIFFICULTIES.burn.shellOpen, 'a Burn life opens wearing a shell').toBe(0);
@@ -158,6 +159,25 @@ describe('0355 — a life opens on its tier’s shell', () => {
       expect(shields(world), `a ${tier} ${ship} continue opens on the wrong shell`).toBe(row.shellOpen);
       expect(world.shieldOrbs.size, `a ${tier} ${ship} continue wears the wrong number of marks`).toBe(row.shellOpen);
     }
+  });
+});
+
+describe('0614, 0650 — a life’s shell and a level’s are read apart', () => {
+  it('a tier whose two counts differ opens a run and a boundary on the level’s, and a death on the life’s', () => {
+    /*
+      0650 gave Savior's death the shield its level opens on, so no shipped tier says two numbers now, and the guards
+      above walk the shipped tiers. The split is still each tier's to say (0282: a feature lands when it can differ
+      per instance), so it is held here on a row that says two.
+    */
+    const split: DifficultyRow = { ...DIFFICULTIES.savior, shellOpen: 0, shellLevel: 2 };
+    const { world } = playableWorld(NO_LEVEL);
+    world.difficulty = split;
+    resetScene(world);
+    expect(shields(world), 'a run’s start opened on the life’s shell, not the level’s').toBe(split.shellLevel);
+    respawn(world);
+    expect(shields(world), 'a death opened on the level’s shell, not the life’s').toBe(split.shellOpen);
+    advanceLevel(world, NO_LEVEL, 1);
+    expect(shields(world), 'a boundary renewed to the life’s shell, not the level’s').toBe(split.shellLevel);
   });
 });
 

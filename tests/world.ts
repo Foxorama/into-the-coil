@@ -75,6 +75,8 @@ export function dealing(kind: PickupKind, face = 0): Rng {
   let next = 0;
   const rigged = makeRng('dealt');
   rigged.int = (): number => answers[next++ % answers.length]!;
+  // 0652: and a dealt kind stays what it was dealt — a full rack's missile never comes up as its row's `whenFull`.
+  rigged.bool = (): boolean => false;
   return rigged;
 }
 

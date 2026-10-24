@@ -12,28 +12,17 @@ export const PROBES = [
     guard: 'THE ASK: Legend opens every life full',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: '    shellOpen: 0,\n    shellLevel: 1,',
-      replace: '    shellOpen: 0,\n    shellLevel: 0,',
+      find: '    shellOpen: 1,\n    shellLevel: 1,',
+      replace: '    shellOpen: 1,\n    shellLevel: 0,',
     },
   },
+  // *"Don't give saviour a shield on death"* was taken back by 0650, and its break moved there inverted.
   {
     decision: '0614',
     suite: 'tests/tier-shell.test.ts',
-    // A Savior death handing the shield back: *"don't give saviour a shield on death"* undone.
-    broke: 'a Savior life after a death opening on a shield',
-    guard: 'THE ASK: Legend opens every life full',
-    edit: {
-      path: 'src/content/difficulty.ts',
-      find: '    shellOpen: 0,\n    shellLevel: 1,',
-      replace: '    shellOpen: 1,\n    shellLevel: 1,',
-    },
-  },
-  {
-    decision: '0614',
-    suite: 'tests/tier-shell.test.ts',
-    // A run's start left on a life's shell, so Savior's first level opens on the hull.
+    // A run's start left on a life's shell. Since 0650 no shipped tier tells the two apart, so the guard is a row that does.
     broke: 'a run’s start opening on the life’s shell rather than the level’s',
-    guard: 'at the run’s start, after a death and after a continue',
+    guard: 'a tier whose two counts differ',
     edit: {
       path: 'src/app/frame.ts',
       find: '  w.ship.health = levelHealthFor(w.shipRow, w.difficulty);\n  w.regenSeen = w.ship.health;\n}',
@@ -43,9 +32,9 @@ export const PROBES = [
   {
     decision: '0614',
     suite: 'tests/tier-shell.test.ts',
-    // A boundary renewing to a life's shell: Savior's later levels open on the hull.
+    // A boundary renewing to a life's shell — held on the split row, as above.
     broke: 'a level boundary renewing to the life’s shell',
-    guard: 'raises what the ship carries to the tier’s opening shell',
+    guard: 'a tier whose two counts differ',
     edit: {
       path: 'src/app/frame.ts',
       find: '  const opens = levelHealthFor(w.shipRow, w.difficulty);',
@@ -72,8 +61,8 @@ export const PROBES = [
     guard: 'the random pickups draw a shield on every tier that can carry one',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const offered = offeredAs(w, drawKind(w.pickupRng));',
-      replace: '  const drawn = drawKind(w.pickupRng);\n  const offered = w.pickupRows[w.pickupKinds[drawn]]?.effect === \'shield\' ? w.pickupRows[w.pickupKinds[drawn]]!.bare : drawn;',
+      find: '  const drawn = offeredAs(w, drawKind(w.pickupRng));',
+      replace: '  const dealt = drawKind(w.pickupRng);\n  const drawn = w.pickupRows[w.pickupKinds[dealt]]?.effect === \'shield\' ? w.pickupRows[w.pickupKinds[dealt]]!.bare : dealt;',
     },
   },
 ];

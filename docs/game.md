@@ -216,7 +216,7 @@ seconds.
 | | a face buys | tiers | a level's places | the mid-boss drops | the end boss |
 |---|---|---|---|---|---|
 | **`bomb`** | one charge of the gun special its face shows — bomb, storm, whirlpool or candle | — | drawn | 1 | — |
-| **`missile`** | a tube of the kind its face shows, at the full rate, into the next empty one of two; with both fitted, a charge of that kind's surge | — | drawn | 1 | — |
+| **`missile`** | a tube of the kind its face shows, at the full rate, into the next empty one of two; with both fitted, a charge of that kind's surge — and while both are fitted, half the missile pickups that appear come as a shield instead ([0652](decisions/0652-a-full-rack-throws-a-shield.md)) | — | drawn | 1 | — |
 | **`shield`** | one hit that never reaches the hull, capped by the tier — 3 on every tier since [0614](decisions/0614-the-shields-come-down-a-tier.md) — or a charge of the void or the nova on the ward's trigger | — | drawn | 1; the `ward` in its place where the shell is zero | — |
 | **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | a shield drawn on a shell of zero | only where the shell is zero, as the shield — no tier since 0614 | — |
 
@@ -318,8 +318,8 @@ scripts.
 
 **A tier also sets the shell** — [0355](decisions/0355-a-tier-opens-on-a-shell.md). On *Legendary
 Pilot* every life opens on three shields and every level renews them; on *Savior of the Galaxy* every
-level opens on at least one, a life after a death opens on the hull, and the rest are flown for up to
-three; on *Let the Galaxy Burn* every level and life opens on the hull and three are flown for, from the
+level and every life after a death opens on at least one
+([0650](decisions/0650-a-savior-death-opens-on-a-shield.md)), and the rest are flown for up to three; on *Let the Galaxy Burn* every level and life opens on the hull and three are flown for, from the
 mid-boss and the level's pickups alike
 ([0614](decisions/0614-the-shields-come-down-a-tier.md)), and a run opens with one
 void unless its ship opens on novas ([0447](decisions/0447-the-ward-is-a-third-trigger.md)).
@@ -438,7 +438,7 @@ its best credit**, once, when it ends — [0522](decisions/0522-the-score-pays-i
 
 | | |
 |---|---|
-| **the streak** | kills without a hit, ×1 up to ×8, one step every ten kills. **Any hit ends it, a shield's included.** A level boundary does not |
+| **the streak** | kills, ×1 up to ×8, one step every ten kills. **It is kept by hitting**: three seconds with nothing landing on an enemy or a boss and the multiplier comes down a step, then another every second until something lands ([0647](decisions/0647-the-streak-is-kept-by-hitting.md), [0649](decisions/0649-the-streak-ticks-down.md)). A hit taken does not end it; the end boss's death stops its clock until the next level's first kill |
 | **in play** | top right: the run's score, the multiplier and the way to the next step |
 | **the break** | the level's points, its rank (S–D, by the share killed and the hits taken), the bonus for each shield, each bomb (the gun's charges) and each missile powerup (the tubes' charges) held, the level's total and the run's |
 | **the end** | the victory shows every level's rank, the points, the bonuses and the final score; the run over shows the score, the level reached and where it lands on the table; both ends say the Star Shards paid, and the run over what stopping would pay |

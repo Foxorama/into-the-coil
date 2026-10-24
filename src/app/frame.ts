@@ -108,6 +108,7 @@ import {
   PICKUPS,
   drawFace,
   drawKind,
+  tubeRoom,
   type PickupKind,
   type PickupRow,
   type Weapon,
@@ -120,7 +121,7 @@ import type { FeelKind } from '../content/feels.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { STEP_MS, type Frame } from './loop.ts';
-import { STREAK_QUIET_SECONDS, multiplierFor } from '../content/score.ts';
+import { STREAK_DECAY_SECONDS, STREAK_QUIET_SECONDS, multiplierFor, streakStepDown } from '../content/score.ts';
 import type { DeathCause } from '../state/slices/run.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -10045,7 +10046,8 @@ export function dropPickups(w: World, along: number, across: number, kinds: read
   for (let i = 0; i < kinds.length && thrown < pieces; i++) {
     const kind = offeredAs(w, kinds[i]!);
     if (kind === null) continue;
-    throwPiece(w, along, across, kind, thrown, pieces);
+    // 0652: drawn once, on the throw and never on the count, so the count is what is thrown.
+    throwPiece(w, along, across, fullAs(w, kind), thrown, pieces);
     thrown++;
   }
 }
@@ -10069,6 +10071,24 @@ function offeredAs(w: World, kind: PickupKind): PickupKind | null {
   // 0609: what the SHIP may carry on this tier — the Hamster Ball carries three on Burn too, so it is offered them.
   if (row === undefined || row.effect !== 'shield' || shellCapFor(w.shipRow, w.difficulty) > 0) return kind;
   return row.bare;
+}
+
+/**
+ * What a pickup of `kind` is offered as when what it gives is already full — 0652: its row's `whenFull`,
+ * that share of the time, on the pickups' own stream; itself otherwise.
+ *
+ * ⚠️ **AN UPGRADE IS FULL WHEN NO TUBE IS EMPTY**, which is `effectOf`'s own test for a missile pickup turning
+ * into a surge. What it becomes is put through `offeredAs` as well, so a shield on a tier that wears none is
+ * still that tier's `bare` — and where that is nothing, the piece stays what it was.
+ *
+ * ⚠️ **Read when the piece appears, never when it is taken.** The player decides from the face they see.
+ */
+function fullAs(w: World, kind: PickupKind): PickupKind {
+  const row = w.pickupRows[w.pickupKinds[kind]];
+  const swap = row?.whenFull;
+  if (row === undefined || swap === undefined || row.effect !== 'upgrade' || tubeRoom(w.weapon.tubes)) return kind;
+  if (!w.pickupRng.bool(swap.share)) return kind;
+  return offeredAs(w, swap.kind) ?? kind;
 }
 
 /**
@@ -10163,8 +10183,9 @@ function spawnPickup(w: World, index: number): void {
     the drop's is — 0355, 0447: *"burn doesn't get shields still."* Since 0614 no tier wears none, and
     Burn draws the shield here too: *"add shields back into the random item drop pool for burn."*
   */
-  const offered = offeredAs(w, drawKind(w.pickupRng));
-  if (offered === null) return;
+  const drawn = offeredAs(w, drawKind(w.pickupRng));
+  if (drawn === null) return;
+  const offered = fullAs(w, drawn);
   const kind = w.pickupKinds[offered];
   const row = w.pickupRows[kind];
   if (row === undefined) return;
@@ -11716,7 +11737,12 @@ function layChain(w: World): void {
   if (w.bossPool.size === 0) {
     // 0627: a body that slumps comes down on its own once the head has gone; any other goes with it.
     if (w.slumpFor >= 0) slumpChain(w);
-    else w.bossBody.clear();
+    /*
+      ⚠️ **0651: NOT ON THE STEP THE HEAD DIED, WHEN THE BODY SLUMPS.** The arc strikes as it fires, before
+      this, so a lightning kill emptied the pool here and the body went before the death below could start
+      its slump: the far roots stood. Every other gun kills after this and never saw it.
+    */
+    else if (w.bossRow.slump === undefined || !bossJustDied(w)) w.bossBody.clear();
     return;
   }
   const head = w.bossPool.at(0);
@@ -13471,6 +13497,9 @@ function beginScript(w: World): void {
 /** How many steps the streak lives with nothing of the player's landing — 0647. */
 const STREAK_QUIET_STEPS = Math.round((STREAK_QUIET_SECONDS * 1000) / STEP_MS);
 
+/** How many steps apart the multiplier comes down once the quiet has run out — 0649. */
+const STREAK_DECAY_STEPS = Math.round((STREAK_DECAY_SECONDS * 1000) / STEP_MS);
+
 /** Whether anything in `pool` was struck in the last flash's worth of steps — `struckIn`, set by every landing (0334). */
 function anyStruck(pool: Pool<Entity>): boolean {
   for (let i = 0; i < pool.size; i++) if (pool.at(i).struckIn > 0) return true;
@@ -13495,7 +13524,9 @@ function stepStreak(w: World): void {
     return;
   }
   score.quiet += 1;
-  if (score.quiet >= STREAK_QUIET_STEPS) score.streak = 0;
+  // 0649: the quiet run out, then a step down every second until something lands — never the whole streak at once.
+  const over = score.quiet - STREAK_QUIET_STEPS;
+  if (over >= 0 && over % STREAK_DECAY_STEPS === 0) score.streak = streakStepDown(score.streak);
 }
 
 /**

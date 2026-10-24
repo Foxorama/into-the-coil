@@ -3,7 +3,7 @@ import { GameFrame, resetCreditScore, resetLevelScore } from '../src/app/frame.t
 import type { LevelRow } from '../src/content/levels.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { BOSSES } from '../src/content/bosses.ts';
-import { BONUSES, MULTIPLIER_CAP, STREAK_QUIET_SECONDS, STREAK_STEP, bonusFor, multiplierFor, rankFor, tallyOf } from '../src/content/score.ts';
+import { BONUSES, MULTIPLIER_CAP, STREAK_DECAY_SECONDS, STREAK_QUIET_SECONDS, STREAK_STEP, bonusFor, multiplierFor, rankFor, streakStepDown, tallyOf } from '../src/content/score.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { bankedBonus, bankedScore } from '../src/state/slices/run.ts';
 import { boardLines, entryOf, levelSheet, overSheet, runSheet, tallyAtClear } from '../src/app/score.ts';
@@ -55,6 +55,15 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
     expect(multiplierFor(STREAK_STEP * 1000)).toBe(MULTIPLIER_CAP);
   });
 
+  it('0649 — a step down is one multiplier lower, at its first kill, and a streak past the cap comes down from the cap', () => {
+    expect(streakStepDown(0)).toBe(0);
+    expect(streakStepDown(STREAK_STEP - 1), '×1 has nowhere lower to go').toBe(0);
+    expect(streakStepDown(STREAK_STEP * 2 + 7)).toBe(STREAK_STEP);
+    for (let streak = 0; streak < STREAK_STEP * 12; streak++) {
+      expect(multiplierFor(streakStepDown(streak)), `${streak} kills`).toBe(Math.max(1, multiplierFor(streak) - 1));
+    }
+  });
+
   it('THE ASK: a kill scores its row’s points times the streak it lands on, through the real frame', () => {
     const { world } = playableWorld(DRIFTERS(14));
     const frame = new GameFrame(world);
@@ -95,16 +104,24 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
     expect(world.score.hits).toBe(1);
   });
 
-  it('0647 — THE ASK: the streak ends after three seconds with nothing landing on an enemy, and a landing puts the clock back', () => {
-    // Nothing on the field: the clock runs out.
+  it('0647, 0649 — THE ASK: the streak falls after three seconds with nothing landing on an enemy, a step a second, and a landing puts the clock back', () => {
+    // Nothing on the field: the clock runs out, and then the multiplier ticks down a step a second — 0649.
     const quiet = playableWorld(DRIFTERS(0)).world;
     const idle = new GameFrame(quiet);
-    quiet.score.streak = 20;
+    quiet.score.streak = STREAK_STEP * 4 + 5;
     const steps = STREAK_QUIET_SECONDS * STEPS_PER_SECOND;
     for (let i = 0; i < steps - 1; i++) idle.step();
-    expect(quiet.score.streak, 'the streak ended before its three seconds were up').toBe(20);
+    expect(multiplierFor(quiet.score.streak), 'the streak fell before its three seconds were up').toBe(5);
     for (let i = 0; i < 2; i++) idle.step();
-    expect(quiet.score.streak, 'three seconds with nothing landing left the streak standing').toBe(0);
+    expect(multiplierFor(quiet.score.streak), 'three seconds with nothing landing left the multiplier standing').toBe(4);
+    for (let i = 0; i < STREAK_DECAY_SECONDS * STEPS_PER_SECOND - 2; i++) idle.step();
+    expect(multiplierFor(quiet.score.streak), 'the multiplier fell again before a second was up').toBe(4);
+    for (let i = 0; i < 2; i++) idle.step();
+    expect(multiplierFor(quiet.score.streak), 'a fourth second with nothing landing did not take the next step off').toBe(3);
+    for (let i = 0; i < STREAK_DECAY_SECONDS * STEPS_PER_SECOND * 2; i++) idle.step();
+    expect(quiet.score.streak, 'two more seconds did not bring the multiplier to ×1').toBe(0);
+    for (let i = 0; i < STREAK_DECAY_SECONDS * STEPS_PER_SECOND * 3; i++) idle.step();
+    expect(quiet.score.streak, 'the streak fell under nothing').toBe(0);
 
     // A body the guns keep hitting and cannot kill: the clock never runs out.
     const { world } = playableWorld(DRIFTERS(1));
