@@ -87,8 +87,18 @@ describe.runIf(chromePath)('no quarters given', () => {
     expect(await chipShown(page), 'Freeplay is offered before any tier has been finished').toBe(false);
     await launch(page, QUICKEST);
 
-    await page.waitForSelector(shown('ended'), { timeout: 90_000 });
-    expect(await page.$(shown('gameOver')), 'the run-over screen came up on no quarters').toBeNull();
+    /*
+      Whichever screen ends the run, and then which it was. It waited for `ended` alone, so a break that flew the
+      kept Freeplay — whose run ends on the run-over screen with a continue — went red only when the 90 s wait ran
+      out, and under CI's load past the test's own 120 s: *FAILED WITHOUT MAKING ITS CLAIM* (0044, 0019). Asked
+      this way it answers on the step the run ends, broken or not.
+    */
+    const over = await page.waitForFunction(
+      ([ended, gameOver]: [string, string]) => (document.querySelector(ended) !== null ? 'ended' : document.querySelector(gameOver) !== null ? 'gameOver' : null),
+      [shown('ended'), shown('gameOver')] as [string, string],
+      { timeout: 90_000 },
+    );
+    expect(await over.jsonValue(), 'the run-over screen came up on no quarters').toBe('ended');
 
     const actions = await page.locator(shown('ended') + ' .' + prefixFor('ended') + 'action').allTextContents();
     expect(actions.join(' '), 'the game over offers a continue').not.toContain(SCREENS.gameOver.actions[0]!.label);
