@@ -25,7 +25,8 @@ export const PROBES = [
     guard: 'THE WALK: A on the pilot band arms the pilot it is on',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '        if (line !== undefined && line.armed !== null) line.armed.hidden = !armed;\n',
+      // ⚠️ Re-anchored by 0669, whose look at a shut pilot stands *Ready* down a while.
+      find: '        if (line !== undefined && line.armed !== null) line.armed.hidden = !armed || band.look >= 0;\n',
       replace: '',
     },
   },

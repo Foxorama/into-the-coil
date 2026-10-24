@@ -264,6 +264,38 @@ describe('every screen owns its class prefix', () => {
     }
   });
 
+  it('0669 — the cursor is the brackets on every screen, and no cursor rule draws a ring', () => {
+    /*
+      Three cursors were drawn: the brackets, a cyan ring on every other control, and a dark outline on a hangar
+      tab. Held on the stylesheet's own rules: every screen with a panel has a rule laying the brackets over a
+      control the cursor is on, and no rule whose selector is a cursor or a focus state draws an outline or a
+      shadow, which is what a ring is.
+    */
+    const rules = [...STYLE.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+      selectors: m[1]!.split(',').map((s) => s.trim()),
+      body: m[2]!,
+    }));
+    for (const screen of SCREEN_KINDS) {
+      const row = SCREENS[screen];
+      if (row.heading === '' && row.actions.length === 0) continue;
+      const p = prefixFor(screen);
+      expect(
+        rules.some((r) => r.selectors.includes(`.${p}action-cursor:not(.${p}band)::before`) && r.body.includes('--itc-bracket')),
+        `${screen}'s cursor is not drawn as the brackets`,
+      ).toBe(true);
+    }
+    /*
+      The three controls no menu's cursor walks — the intro's Skip and the pause button in a run, each taken by a
+      key or a press of its own, and a shop in the dock's picture, lit under the pointer (0572) while the strip is
+      the pad's way across — keep their own light, and are named rather than matched.
+    */
+    const walked = (s: string): boolean => !s.startsWith('.itc-intro-skip') && !s.startsWith('.itc-playing-pause') && !s.includes('shop-door');
+    const rings = rules
+      .filter((r) => r.selectors.some((s) => /action-cursor|:focus-visible/.test(s) && walked(s) && SCREEN_KINDS.some((screen) => s.includes('.' + prefixFor(screen)))))
+      .filter((r) => /(^|;)\s*box-shadow:|(^|;)\s*outline(-color)?:(?!\s*none)/.test(r.body));
+    expect(rings.map((r) => r.selectors.join(', ').slice(0, 120)), 'a cursor drawn as a ring').toEqual([]);
+  });
+
   it('0668 — every screen with a hinted action sets the hint on its own line', () => {
     /*
       Cosmo's *Show owned* read *"Show ownedPut what you own back on the shelves"* at every size: the rule that

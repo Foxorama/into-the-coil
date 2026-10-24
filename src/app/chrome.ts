@@ -145,6 +145,22 @@ const BANDED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].ch
 const banded = (rule: (p: string) => string): string => BANDED.map((screen) => rule(prefixFor(screen))).join(', ');
 
 /**
+ * The cursor — 0571's four white corner brackets, and since 0669 the one cursor on every screen: a band's
+ * option wears them, and every other control. Declarations for a before- or after-box laid over the control.
+ */
+const BRACKETS = `--itc-bracket: #ffffff;
+  background:
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top left / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top left / 0.16em 0.7em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top right / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top right / 0.16em 0.7em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom left / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom left / 0.16em 0.7em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom right / 0.7em 0.16em no-repeat,
+    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom right / 0.16em 0.7em no-repeat;
+  filter: drop-shadow(0 0 0.2em color-mix(in srgb, var(--itc-ink) 70%, transparent));`;
+
+/**
  * The screens that are tabs of one place and stand on no stand — Settings, Controls, How to play and Save
  * (0668). Their strip is one strip to the player, so it stands at one height on every tab. Read off the
  * rows, on `FACED`'s terms: the hangar's tabs have their stand, which lays them out, and are not these.
@@ -998,7 +1014,7 @@ ${each('-action-hint')} {
 */
 .itc-title-choices > :not(.itc-title-action-lead) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /*
-  ⚠️ An outline OFFSET from the border, not a colour change. A focus ring that only recolours is
+  ⚠️ A shape OFFSET from the border, not a colour change (an outline until 0669). A focus ring that only recolours is
   invisible to the high-contrast and colour-blind palettes 0024 promises, and those palettes exist
   precisely so no cue is carried by colour alone.
 
@@ -1015,11 +1031,28 @@ ${each('-action-hint')} {
   string; and the prefix guard reads every dotted token in this block as a CSS class, so a path with
   an extension on it fails as an unprefixed class name. Both were hit while writing this comment.
 */
-${each('-action:focus-visible')},
-${each('-action-cursor')} {
-  outline: 3px solid currentColor;
-  outline-offset: 3px;
+/*
+  ⚠️ **AND SINCE 0669 IT IS THE BRACKETS AND NOT A RING.** Three cursors were drawn: white
+  corner brackets on a hangar option and the pilot band (0561, 0571), a cyan ring on every other button,
+  band and tab, and a dark outline on a hangar tab. The brackets are the one: they breathe, they survive a
+  filled option, and they do not look like a chosen state. A control that is not a band wears them on its
+  before-box; a band wears them on the option it is on, further down. The fill means chosen and nothing else.
+*/
+${PANELLED.map((s) => `.${prefixFor(s)}action:focus-visible, .${prefixFor(s)}action-cursor:not(.${prefixFor(s)}band), .${prefixFor(s)}tab:focus-visible`).join(', ')} {
+  outline: none;
+  position: relative;
 }
+${PANELLED.map((s) => `.${prefixFor(s)}action:focus-visible::before, .${prefixFor(s)}action-cursor:not(.${prefixFor(s)}band)::before, .${prefixFor(s)}tab:focus-visible::before`).join(', ')} {
+  content: '';
+  position: absolute;
+  inset: 0.08em;
+  pointer-events: none;
+  ${BRACKETS}
+}
+@media (prefers-reduced-motion: no-preference) {
+  ${PANELLED.map((s) => `.${prefixFor(s)}action:focus-visible::before, .${prefixFor(s)}action-cursor:not(.${prefixFor(s)}band)::before, .${prefixFor(s)}tab:focus-visible::before`).join(', ')} { animation: itc-bracket-wide 1.1s ease-in-out infinite alternate; }
+}
+@keyframes itc-bracket-wide { to { inset: 0.2em; } }
 /*
   The countdown on a screen that expires. Small and beneath the control, because it is a fact about
   the screen rather than something to do — the voice rule in the product definition: say the one
@@ -1856,17 +1889,7 @@ ${banded((p) => `.${p}band.${p}action-cursor:not(:has(.${p}option-look)) .${p}op
   position: absolute;
   inset: -0.32em;
   pointer-events: none;
-  --itc-bracket: #ffffff;
-  background:
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top left / 0.7em 0.16em no-repeat,
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top left / 0.16em 0.7em no-repeat,
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top right / 0.7em 0.16em no-repeat,
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) top right / 0.16em 0.7em no-repeat,
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom left / 0.7em 0.16em no-repeat,
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom left / 0.16em 0.7em no-repeat,
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom right / 0.7em 0.16em no-repeat,
-    linear-gradient(var(--itc-bracket), var(--itc-bracket)) bottom right / 0.16em 0.7em no-repeat;
-  filter: drop-shadow(0 0 0.2em color-mix(in srgb, var(--itc-ink) 70%, transparent));
+  ${BRACKETS}
 }
 @media (prefers-reduced-motion: no-preference) {
   ${banded((p) => `.${p}band.${p}action-cursor .${p}option-look::after`)},
@@ -2072,7 +2095,7 @@ ${faced((p) => `.${p}pilot-line > .${p}pilot-armed`)} {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-${faced((p) => `.${p}pilot-line > .${p}pilot-armed[hidden]`)} { display: none; }
+${faced((p) => `.${p}pilot-line > [hidden]`)} { display: none; }
 ${faced((p) => `.${p}pilot-line > .${p}pilot-armed + *::before`)} { content: none; }
 ${faced((p) => `.${p}band-armed .${p}option-face.${p}option-on > canvas`)} {
   box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0 6px var(--itc-ally, var(--itc-ink)), 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 70%, transparent);
@@ -2650,7 +2673,8 @@ ${each('-tab')} {
   ${each('-tab')} { padding: 0.25em 0.6em; }
 }
 ${each('-tab-on')} { background: var(--itc-ink); color: var(--itc-void); opacity: 1; }
-${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px solid currentColor; outline-offset: 3px; }
+/* 0669: a band's cursor is the brackets on its option, and a tab's its own brackets, so neither is ringed. */
+${each('-band:focus-visible')} { outline: none; }
 /*
   0527: the hangar's strip holds three since Paint & Parts, and on a phone each wrapped to two lines and
   put Back under the fold. One line each, the strip sized to the width a little more tightly; on a
@@ -2671,11 +2695,6 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
 }
 .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { white-space: nowrap; padding: 0.35em 0.9em 0.3em; border-radius: 0.55em 0.55em 0 0; border-bottom-width: 0; }
 .itc-hangar-tab:not(.itc-hangar-tab-on), .itc-parts-tab:not(.itc-parts-tab-on), .itc-shop-tab:not(.itc-shop-tab-on) { opacity: 0.6; }
-/*
-  0561: the cursor on the open tab is the ring every other control wears. The ring is the text's colour,
-  and the open tab's text is the void, so it was drawn black.
-*/
-.itc-hangar-tab-on.itc-hangar-action-cursor, .itc-parts-tab-on.itc-parts-action-cursor, .itc-shop-tab-on.itc-shop-action-cursor { outline-color: var(--itc-ink); }
 /* Settings' bands and its two buttons, at the title's column width. */
 .itc-settings-settings-box, .itc-settings-choices { width: min(100%, 34em); }
 .itc-settings-choices { flex-direction: row; justify-content: center; gap: min(0.8rem, 2cqw); }
@@ -7845,6 +7864,25 @@ export function makeChrome(
     }
     band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
     paintCardOf(band);
+    if (band.press === 'takes' && band.faces === 'portraits') sayLook(band);
+  };
+  /** Whether the pilot on a band that takes is armed — 0667's `setArmed`, kept so a look can stand it down a while. */
+  let armedNow = false;
+  /**
+   * 0669: the line under a band that takes says the pilot the cursor is on: the one chosen, or a shut one it is
+   * looking at — their name and what opens them, in place of the ship and the gun. *Ready* stands down meanwhile.
+   */
+  const sayLook = (band: Band): void => {
+    for (const screen of Object.keys(panels) as Screen[]) {
+      if (panels[screen]?.bands.includes(band) !== true) continue;
+      const card = pilotCards[screen];
+      if (card === undefined) return;
+      const looking = band.look >= 0;
+      paintPilot(screen, GOLFER_KINDS[looking ? band.look : band.index]);
+      card.craft.hidden = looking;
+      if (looking) card.gun.textContent = band.whys[band.look] ?? band.why ?? '';
+      if (card.armed !== null) card.armed.hidden = looking || !armedNow;
+    }
   };
   /** Which of Cosmo's shelves is in view, by screen — 0542's `setInView`, kept since 0562 for the card. */
   const inView: Partial<Record<Screen, ChoiceName>> = {};
@@ -7994,6 +8032,13 @@ export function makeChrome(
     sayBand(band);
     onLook(band.name, -1);
   };
+  /** 0669: let go of a look on a band that takes — the shell never heard of it, so nothing is called back. */
+  const lookAway = (band: Band): void => {
+    if (band.look < 0) return;
+    band.look = -1;
+    paintLook(band);
+    sayBand(band);
+  };
   /** A press on a shut option is refused, and seen to be — 0561: the band shakes once. */
   const refuse = (band: Band): void => {
     const shake = band.root.className.split(' ')[0] + '-refused';
@@ -8019,6 +8064,32 @@ export function makeChrome(
         if (band.hidden[next] !== true) break;
       }
       if (next !== from && band.hidden[next] !== true) tryOn(band, next, true);
+      return;
+    }
+    /*
+      0669: a band that takes, under the cursor, may stand on a shut option to look at it — the title's locked
+      pilots, whose line then says what opens them. Nothing is chosen, and a press there is refused. Off the
+      cursor (a trigger stepping the pilot) it skips them, as every other band does.
+    */
+    if (band.press === 'takes' && atCursor() === band.root) {
+      const from = band.look >= 0 ? band.look : band.index;
+      let next = from;
+      for (let tried = 0; tried < count; tried++) {
+        let at = next + delta;
+        if (rounds) at = (at + count) % count;
+        else if (at < 0 || at >= count) return;
+        next = at;
+        if (band.hidden[next] !== true) break;
+      }
+      if (next === from || band.hidden[next] === true) return;
+      if (band.open[next] === false) {
+        band.look = next;
+        paintLook(band, true);
+        sayBand(band);
+        return;
+      }
+      lookAway(band);
+      if (next !== band.index) onChoice(band.name, next, false);
       return;
     }
     // 0657: and every other band to the next option that is open and shown.
@@ -8566,8 +8637,9 @@ export function makeChrome(
           return;
         }
       }
-      // 0561: leaving a band that tries puts back what is fitted — only a press fits.
+      // 0561: leaving a band that tries puts back what is fitted — only a press fits. 0669: and a look is let go.
       if (found !== undefined && found.press === 'tries') putBack(found);
+      else if (found !== undefined && found.press === 'takes') lookAway(found);
       // Off the row, to the next one up or down, round the ends — a ring of rows, as the list was.
       const from = atCursor()?.getBoundingClientRect();
       /*
@@ -8605,7 +8677,11 @@ export function makeChrome(
       // A band is pressed by stepping it on, round its end — 0458; a button is clicked, as ever.
       const band = bandAtCursor();
       // 0513: unless the band takes its own option on a press, which is the pilot band's — A flies them.
-      if (band !== undefined && band.press === 'takes') onChoice(band.name, band.index, false);
+      // 0669: and on a shut pilot it is looking at, the press is refused.
+      if (band !== undefined && band.press === 'takes') {
+        if (band.look >= 0) refuse(band);
+        else onChoice(band.name, band.index, false);
+      }
       /*
         0561: a band that tries fits the one tried on, or refuses a shut one; with nothing tried on, the
         fitted one is already fitted and a press has nothing to do.
@@ -8967,12 +9043,13 @@ export function makeChrome(
       }
     },
     setArmed(name: ChoiceName, armed: boolean): void {
+      armedNow = armed;
       for (const screen of Object.keys(panels) as Screen[]) {
         const band = panels[screen]?.bands.find((b) => b.name === name && b.press === 'takes');
         if (band === undefined) continue;
         band.root.classList.toggle(prefixFor(screen) + 'band-armed', armed);
         const line = pilotCards[screen];
-        if (line !== undefined && line.armed !== null) line.armed.hidden = !armed;
+        if (line !== undefined && line.armed !== null) line.armed.hidden = !armed || band.look >= 0;
       }
     },
     dismiss,

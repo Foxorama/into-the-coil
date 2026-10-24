@@ -1193,7 +1193,9 @@ owes; the menus' item 8 waits for the port's first three.
 
 **Being built in the plans' order, one PR at a time — owed a play.** Landed: the menus' item 1,
 [0668](decisions/0668-the-band-arms.md) (A on the pilot band arms, the hover lifts, the hint breaks, the
-Settings strip stays). **Next is the menus' item 2**, one cursor; the rest follow the order the player gave —
+Settings strip stays), and item 2, [0669](decisions/0669-one-cursor.md) (the brackets are the one cursor, and the
+title says why a pilot is locked). **Next is the menus' item 3**, the plate from the short side; the rest follow
+the order the player gave —
 the menus' 1–7, the port's 1–3, the menus' 8, the port's 4–6, the menus' 9.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
