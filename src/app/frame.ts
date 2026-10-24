@@ -2932,7 +2932,8 @@ export class GameFrame implements Frame {
         leaving the shell below in `stepShields` is this cue's twin. A ship on its last life takes the
         other branch, and the two cues are deliberately opposite sweeps.
       */
-      if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield', w.ship.across);
+      // 0658: in the voice of the shell that took it.
+      if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue(w.shipRow.shield.pop, w.ship.across);
       /*
         A hit taken is counted for the rank, a shield's as much as the hull's — 0428 — here, after the
         one-hit cap, so a step that met three bullets is one hit as it is one mark off the shell.
@@ -3850,7 +3851,8 @@ function pinBeams(w: World): void {
     }
   }
   // 0625: *"then a lazer zap + hiss for the hit"* — on the step the line becomes the beam.
-  if (!Number.isNaN(ignited)) w.onCue('laserZap', ignited);
+  // 0660: in its row's own voice where it names one — the pterodactyl's scream.
+  if (!Number.isNaN(ignited)) w.onCue(w.bossRow.zap ?? 'laserZap', ignited);
 }
 
 /** The level-local distance at which the current fight's boss arrives — 0247. */
@@ -5958,7 +5960,8 @@ function openRift(w: World, along: number, across: number, rift: Rift, sound: Cu
   body.lifeFor = rift.steps;
   /*
     ⚠️ **IT ROLLS — 0656.** *"Roll forward off screen then disappear."* Up the lane at its row's `roll` in the
-    camera's frame (0034), so the leading cull takes it once it is past the top of any screen; `steps` is the cap
+    camera's frame (0034), so the leading cull takes it once it is past the leading edge of any screen — the right edge on a landscape
+    one, the top on a portrait one; `steps` is the cap
     behind that.
   */
   body.velAlong = w.scrollPerStep + rift.roll;
@@ -6007,7 +6010,7 @@ function stepRift(w: World): void {
     const rift = w.blasts.at(k);
     if (rift.kind !== RIFT_KIND) continue;
     /*
-      ⚠️ **GONE ONCE IT IS WHOLLY PAST THE TOP OF THE SCREEN — 0656**, on the player's shot cull: *"you can shoot what
+      ⚠️ **GONE ONCE IT IS WHOLLY PAST THE LEADING EDGE OF THE SCREEN — 0656** (the right edge on a landscape screen), on the player's shot cull: *"you can shoot what
       you can see"* (0048). The content's leading cull is placed for the widest view any device has, and a rift left
       to it would negate the next wave before the player had seen it.
     */

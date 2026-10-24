@@ -2708,6 +2708,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     table at the top of `src/app/lifecycle.ts` is the one description of it.
   */
   const chrome = makeChrome(colours, (screen: Screen, index: number): void => {
+    /*
+      0659: a press on a menu's button is heard — *"confirm noise on menus"* — on a sound left on and an unlocked
+      context, as the stand's fitting is. Never on the splash, whose press is the gesture that unlocks it.
+    */
+    if (screen !== 'splash' && audioOut.ready()) speaker.play('confirm');
     if (screen === 'cleared') lifecycle.onward();
     // ⚠️ No arm for `travel`, because it has no control to press — 0340, and its row says why.
     else if (screen === 'gameOver') lifecycle.resume();
@@ -2843,6 +2848,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       */
       const takes = SCREENS[state.screen.current].choices.some((c) => c.name === 'pilot' && c.press === 'takes');
       if (takes && kind === state.settings.pilot && (!pointer || pilotArmed)) {
+        // 0659: the press that flies is a confirm, as *Fly* is.
+        if (audioOut.ready()) speaker.play('confirm');
         fly();
         return;
       }
