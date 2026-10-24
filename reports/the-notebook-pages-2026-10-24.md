@@ -69,3 +69,8 @@ work (8, 9, 12).
   once it is wholly past that edge (`cullPlayerShotAlong`, `src/app/frame.ts`). 0656 and the code's notes said *the
   top of the screen*, which is the leading edge only on a portrait one; `docs/game.md` and the notes now say the
   leading edge. 0656 is not edited ([written once](../docs/decisions/README.md)).
+- **1, after 0666**: *"Make the flame the intro colour flame, there's no way a player will get confused with her flame
+  and the serpents colouring. Distance of her shots needs to be 75% of the screen and the acid should splat like the
+  paintball, but have a hiss noise like it's sizzling and burning through. Sounds for her attack also need to sound
+  different and better and need to be listenable better with the constant autofire. And fix the show owned so it's just
+  Owned or something."* Built — [0667](../docs/decisions/0667-play-asks-of-venoma.md).

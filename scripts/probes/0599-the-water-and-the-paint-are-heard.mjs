@@ -43,7 +43,8 @@ export const PROBES = [
     guard: 'a paintball that lands is heard splatting, where it lands',
     edit: {
       path: 'src/app/frame.ts',
-      find: "  if (landed.count > 0) w.onCue('splat', landed.across[0]!);\n",
+      // Re-anchored by 0667: the splat's sound is the gun's own, the paint row's `lands`.
+      find: "  if (landed.count > 0) w.onCue(paint.lands, landed.across[0]!);\n",
       replace: '',
     },
   },

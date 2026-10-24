@@ -977,6 +977,9 @@ export const SPRITE_KINDS = [
   'venomSpit',
   // 0666: the Viper's tubes' void blast — the serpent's ring, in the player's lavender.
   'venomVoid',
+  // 0667: a spit's burn where it lands, wet and hissing and then spent.
+  'acidSplat',
+  'acidSplatDry',
   /*
     The serpent's last mouthful — 0311: acid and void as one ball, and the drops it bursts into.
 
@@ -2727,6 +2730,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   venomSpit: 2.6,
   // 0666: a ring the size of the seeker it stands in for, and well under the serpent's.
   venomVoid: 3.6,
+  // 0667: at exactly the burn's reach, as the marker's splat is drawn at its blast's.
+  acidSplat: 6,
+  acidSplatDry: 6,
   /*
     ⚠️ **THE BIGGEST THING THAT IS NOT A HULL — 0311, AND IT IS ALLOWED TO BE.** `CLAUDE.md`'s *consider
     the screen* is the rule and 0295 deleted the ranking guards that used to answer it in advance: this

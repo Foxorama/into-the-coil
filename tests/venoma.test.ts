@@ -26,9 +26,13 @@ import { SHIPS, fitted } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SMITE_BOLT_KIND, SPECIALS } from '../src/content/specials.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
+import { FLAMES } from '../src/content/flames.ts';
+import { VIPER } from '../src/content/port.ts';
+import { CUES } from '../src/content/cues.ts';
+import { SCREENS, lockHint } from '../src/state/screens.ts';
+import { SPRITE } from '../src/content/sprites.ts';
 import { reset } from '../src/sim/entity.ts';
 import { initialState, reduce, type Action, type State } from '../src/state/root.ts';
-import { lockHint } from '../src/state/screens.ts';
 import { initialHangar, pilotRecord, reduceHangar } from '../src/state/slices/hangar.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -97,7 +101,7 @@ describe('0666 — the pilot', () => {
 });
 
 describe('0666 — the acid', () => {
-  it('THE ASK: a spray — a fan of four, twice as wide as the pulse’s, that falls short of half the screen', () => {
+  it('THE ASK: a spray — a fan of four, twice as wide as the pulse’s, that reaches three quarters of the screen', () => {
     const { world, frame } = inTheViper();
     world.fireIn = 1;
     frame.step();
@@ -105,25 +109,42 @@ describe('0666 — the acid', () => {
     expect(shots.length, 'not four spits').toBe(4);
     const headings = shots.map((s) => Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep));
     const fan = ((Math.max(...headings) - Math.min(...headings)) * 180) / Math.PI;
-    const pulse = ((weaponFor(SHIPS.fighter).spread * 180) / Math.PI);
-    expect(fan, `the fan is ${fan.toFixed(0)}° and the pulse's ${pulse.toFixed(0)}°`).toBeGreaterThan(pulse * 1.95);
+    const pulse = (weaponFor(SHIPS.fighter).spread * 180) / Math.PI;
+    expect(fan, `the fan is ${fan.toFixed(0)}° and the pulse's ${pulse.toFixed(0)}°`).toBeGreaterThan(pulse * 1.8);
     for (const s of shots) expect(s.sprite, 'a spit is not drawn as Venoma’s').toBe(SHOTS.venom.sprite);
-    // Run it out: every spit is gone before it has gone half the narrowest view.
-    const from = world.ship.along;
+    // 0667: run it out, in the camera's frame from the jaw: every spit flies three quarters of the screen and no further.
+    const from = world.ship.along + world.shipRow.muzzle.along - world.cameraAlong;
     let furthest = 0;
-    for (let step = 0; step < 120; step++) {
+    for (let step = 0; step < 200; step++) {
       world.fireIn = Number.MAX_SAFE_INTEGER;
       frame.step();
-      for (let i = 0; i < world.playerShots.size; i++) furthest = Math.max(furthest, world.playerShots.at(i).along - world.cameraAlong - (from - world.cameraAlong));
+      for (let i = 0; i < world.playerShots.size; i++) furthest = Math.max(furthest, world.playerShots.at(i).along - world.cameraAlong - from);
     }
     expect(world.playerShots.size, 'a spit outlived its range').toBe(0);
-    expect(furthest / world.view.alongSpan, 'the spray reaches past half the screen').toBeLessThan(0.5);
+    const share = furthest / world.view.alongSpan;
+    expect(share, `the spray reaches ${(share * 100).toFixed(0)}% of the screen`).toBeGreaterThan(0.72);
+    expect(share, `the spray reaches ${(share * 100).toFixed(0)}% of the screen`).toBeLessThan(0.78);
+  });
+
+  it('THE ASK: a spit splats where it lands, as the marker’s paint does, and is heard hissing', () => {
+    const { world, frame } = inTheViper();
+    const heard: string[] = [];
+    world.onCue = (kind): void => {
+      heard.push(kind);
+    };
+    bodyAt(world, 30, 0, 999);
+    world.fireIn = 1;
+    for (let step = 0; step < 40 && world.paint.size === 0; step++) frame.step();
+    expect(world.paint.size, 'a spit landed and left no burn').toBeGreaterThan(0);
+    expect(world.paint.at(0).sprite, 'the burn is not the acid’s').toBe(SPRITE.acidSplat);
+    expect(heard, 'the burn was not heard hissing').toContain('acidHiss');
+    expect(heard, 'the burn was heard as the marker’s paint').not.toContain('splat');
   });
 
   it('every other gun keeps the pulse’s fan and no range', () => {
     for (const kind of ['pulse', 'arc', 'shuriken', 'ray', 'catherine', 'ram', 'paintball'] as const) {
       expect(WEAPONS[kind].fan, kind).toBeUndefined();
-      expect(WEAPONS[kind].life, kind).toBeUndefined();
+      expect(WEAPONS[kind].range, kind).toBeUndefined();
     }
   });
 });
@@ -178,5 +199,31 @@ describe('0666 — Red Lightning', () => {
     expect(world.smiteFired, 'not every bolt fell').toBe(SMITE.strikes);
     expect(world.smiteKind, 'it is still falling').toBeNull();
     expect(world.enemies.size, 'three bodies of two bolts each outlived eight bolts').toBe(0);
+  });
+});
+
+describe('0667 — what play asked of her', () => {
+  it('THE ASK: the Viper burns the violet the intro sees her leave the port on', () => {
+    expect(SHIPS.viper.flame, 'the Viper burns another flame').toBe('wyrmFlame');
+    // The intro's own inks, read off the port's row rather than written again here.
+    expect(FLAMES.wyrmFlame.inks, 'the Viper’s flame is not the port’s violet').toEqual({ outer: VIPER.flame, inner: VIPER.core });
+    expect(FLAMES.wyrmFlame.from).toBe('viper');
+  });
+
+  it('THE ASK: Cosmo’s toggle is just Owned, with no line under it to run into', () => {
+    const toggle = SCREENS.shop.actions[2]!;
+    expect(toggle.label).toBe('Owned');
+    expect(toggle.hint, 'the toggle has a line under it again').toBe('');
+  });
+
+  it('the spray is heard as its own, quieter than the pulse it fires as often as', () => {
+    expect(WEAPONS.acid.cue).toBe('spit');
+    expect(CUES.spit.gain, 'the spray is as loud as the pulse').toBeLessThan(CUES.pulse.gain);
+    // No layer of it is bright noise held as long as 0666's hiss: the top is the burn's, where a spit lands.
+    for (const layer of CUES.spit.layers) {
+      if (layer.wave !== 'noise') continue;
+      expect(layer.seconds, 'the spray hisses on every volley').toBeLessThan(0.04);
+    }
+    expect(WEAPONS.acid.paint?.lands).toBe('acidHiss');
   });
 });

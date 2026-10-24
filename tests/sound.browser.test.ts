@@ -552,7 +552,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
 
   it('0659 — THE ASK: a press on a menu’s button is heard, one cue, and a step along a band is not', async () => {
     /*
-      *"Confirm noise on menus."* Cosmo's *Show owned* is the press here because it does nothing else that sounds: it
+      *"Confirm noise on menus."* Cosmo's *Owned* is the press here because it does nothing else that sounds: it
       puts wares on the shelves and takes them off. A tab step, which is looking and not taking, is heard as nothing.
     */
     const page = await open();
@@ -561,7 +561,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.locator(`.${prefixFor('hangar')}tab`, { hasText: 'Cosmo' }).filter({ visible: true }).first().click();
     await page.waitForTimeout(400);
     const before = cueVoices(await tally(page));
-    await page.locator(`.${prefixFor('shop')}action`, { hasText: 'Show owned' }).filter({ visible: true }).first().click();
+    await page.locator(`.${prefixFor('shop')}action`, { hasText: 'Owned' }).filter({ visible: true }).first().click();
     let after = cueVoices(await tally(page));
     for (let i = 0; i < 20 && after === before; i++) {
       await page.waitForTimeout(100);

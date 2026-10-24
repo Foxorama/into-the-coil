@@ -151,7 +151,7 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
 });
 
 describe.runIf(chromePath)('0657 — Cosmo’s shelves show what is for sale, and A on one asks to buy', () => {
-  it('THE ASK: what is owned is off the shelves until Show owned is ticked, and a press on a shelf opens Buy’s sheet', async () => {
+  it('THE ASK: what is owned is off the shelves until Owned is ticked, and a press on a shelf opens Buy’s sheet', async () => {
     /*
       *"Locked items … should be visible in cosmos and in cosmos owned items should be hidden unless you tick to show
       them"*, and *"A button on game console goes to next item in stores, it should confirm just like it does on main
@@ -169,7 +169,7 @@ describe.runIf(chromePath)('0657 — Cosmo’s shelves show what is for sale, an
 
     const golfball = page.locator(`${shown('shop')} [${SETTING_ATTR}="hanging"] .${SHOP}option >> nth=${SHELVES.hanging.wares.indexOf('golfball')}`);
     const family = page.locator(`${shown('shop')} [${SETTING_ATTR}="hanging"] .${SHOP}option >> nth=${SHELVES.hanging.wares.indexOf('family')}`);
-    const tick = page.locator(`${shown('shop')} .${SHOP}action`, { hasText: 'Show owned' });
+    const tick = page.locator(`${shown('shop')} .${SHOP}action`, { hasText: 'Owned' });
     await page.locator(`${shown('shop')} [${SETTING_ATTR}="aisle"] .${SHOP}option >> nth=${SHELF_KINDS.indexOf('hanging')}`).click();
     expect(await golfball.isHidden(), 'the golf ball, owned, is on the shelf with the box unticked').toBe(true);
     expect(await family.isHidden(), 'the family dice, for sale, are off the shelf').toBe(false);

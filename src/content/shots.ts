@@ -47,6 +47,8 @@ export type ShotKind =
   // Venoma's spit, and the void blast her tubes fire in place of a missile — 0666.
   | 'venom'
   | 'venomVoid'
+  // And where a spit lands — 0667.
+  | 'acidSplat'
   | 'spit'
   | 'lance'
   | 'flak'
@@ -402,6 +404,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'splat',
   'venom',
   'venomVoid',
+  'acidSplat',
   'spit',
   'lance',
   'flak',
@@ -604,7 +607,17 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * the acid's lime: 0081 keeps the ship's fire out of the ink of what is trying to kill it, and the serpent
    * throws acid at her. A pulse and a half a spit, since a fan lands fewer of its four on one body.
    */
-  venom: { sprite: SPRITE.venomSpit, spriteHit: SPRITE.venomSpit, radius: 1, health: 1, damage: 1.5, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  /*
+    ⚠️ **0.9 AND IT WAS 1.5 — 0667, BECAUSE EVERY SPIT NOW BURNS WHERE IT LANDS.** A spit and its burn are 1.5 together,
+    what a spit was alone, so a fan that lands all four on one body takes off what it did; the burn's reach is what is
+    new, on whatever is beside it.
+  */
+  venom: { sprite: SPRITE.venomSpit, spriteHit: SPRITE.venomSpit, radius: 1, health: 1, damage: 0.9, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  /**
+   * Where a spit lands — 0667: a burn of acid, on the marker's splat's terms — a blast that lands on everything inside
+   * it once, unseen, the picture the mark it leaves — smaller than the splat, since four land a volley where one ball does.
+   */
+  acidSplat: { sprite: SPRITE.acidSplat, spriteHit: SPRITE.acidSplat, radius: 3, health: 1, damage: 0.6, speed: 0, fission: SPENT_BY_ARRIVING },
   /**
    * The void blast the Viper's tubes fire — 0666, the page's *"missile turrets are the void blasts from serpent
    * boss"*: the serpent's ring, in the player's seeker's lavender where the serpent's is the void's violet (the

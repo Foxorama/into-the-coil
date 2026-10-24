@@ -149,8 +149,9 @@ export const PROBES = [
     guard: '0104 — and the gun never ducks, whatever it is doing',
     edit: {
       path: 'src/content/cues.ts',
-      find: '    figure: [1, 0.62, 0.82, 0.62],',
-      replace: '    figure: [1, 0.62, 0.82, 0.62],\n    duck: 0.2,',
+      // Re-anchored by 0667, whose spit shuffles on the same figure: the pulse's, after its own comment.
+      find: '    */\n    figure: [1, 0.62, 0.82, 0.62],\n    layers: [\n      // The click.',
+      replace: '    */\n    figure: [1, 0.62, 0.82, 0.62],\n    duck: 0.2,\n    layers: [\n      // The click.',
     },
   },
   /*

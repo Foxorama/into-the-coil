@@ -670,6 +670,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   */
   venomSpit: 'player',
   venomVoid: 'ally',
+  // 0667: and a spit's burn where it lands, in the spit's own ink.
+  acidSplat: 'player',
+  acidSplatDry: 'player',
   /*
     ⚠️ **THE BALL IS IN THE VOID'S INK AND ITS DROPS IN THE ACID'S — 0311.** It carries both, and the two
     have to be tellable apart the instant it bursts: one object becomes sixteen, half of them the ink it
@@ -5070,6 +5073,49 @@ function drawSplat(ctx: Pen, f: Frame, palette: Palette, ink: string, dry: boole
   if (!dry) {
     disc(ctx, f, shade(ink, 0.45), -reach * 0.12, -reach * 0.14, reach * 0.26, 0.6);
     disc(ctx, f, palette.impact, -reach * 0.2, -reach * 0.22, reach * 0.09, 0.85);
+  }
+}
+
+/**
+ * A spit's burn where it lands — 0667, the acid's splat: a puddle of venom eating in, uneven at its edge with a few
+ * drops thrown clear, and — while it is wet — bubbles rising in it with a glint, so it reads as fizzing and not as
+ * paint. Spent, it is the same puddle dark and flat, a scorch. In the spit's own ink, the palette's player cyan.
+ */
+function drawAcidSplat(ctx: Pen, f: Frame, palette: Palette, dry: boolean): void {
+  const ink = palette.player;
+  const reach = 0.5 / 0.42;
+  const blob: Pt[] = [];
+  for (let i = 0; i <= 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    // Uneven rather than lobed — a puddle running, where the marker's splat is thrown paint.
+    const r = 0.62 + 0.1 * Math.cos(a * 3 + 0.6) + 0.07 * Math.cos(a * 5 + 1.9);
+    blob.push([Math.cos(a) * reach * r, Math.sin(a) * reach * r]);
+  }
+  // Spent, a faint scorch that sinks into the place rather than a blot over it: photographed at 0.55 of a dark cyan,
+  // the spent burns read as murky stones in the lane and stacked into a mess where a spray had raked.
+  ctx.globalAlpha = dry ? 0.28 : 0.92;
+  ctx.fillStyle = dry ? shade(ink, -0.35) : ink;
+  trace(ctx, f, blob);
+  // Three drops thrown clear of it, each its own sub-path of the one burn.
+  for (const [a, d, r] of [
+    [0.7, 0.9, 0.1],
+    [2.6, 0.92, 0.08],
+    [4.4, 0.88, 0.09],
+  ] as const) {
+    ring(ctx, f, Math.cos(a) * reach * d, Math.sin(a) * reach * d, reach * r);
+  }
+  seal(ctx);
+  ctx.globalAlpha = 1;
+  if (dry) return;
+  // The bubbles rising in it, lit at their tops, and the glint on the wet.
+  for (const [x, y, r] of [
+    [-0.22, 0.12, 0.16],
+    [0.2, -0.08, 0.13],
+    [0.06, 0.3, 0.1],
+    [-0.05, -0.28, 0.09],
+  ] as const) {
+    disc(ctx, f, shade(ink, 0.5), x * reach, y * reach, r * reach, 0.75);
+    disc(ctx, f, palette.impact, (x - r * 0.35) * reach, (y - r * 0.35) * reach, r * 0.35 * reach, 0.85);
   }
 }
 
@@ -17808,6 +17854,11 @@ export function drawKind(
     case 'splatBlueDry':
     case 'splatGrapeDry':
       drawSplat(ctx, f, palette, paintColour(kind).ink, kind.endsWith('Dry'));
+      return;
+    // A spit's burn — 0667, wet and fizzing and then spent.
+    case 'acidSplat':
+    case 'acidSplatDry':
+      drawAcidSplat(ctx, f, palette, kind === 'acidSplatDry');
       return;
     /*
       0610: the Water Cannon's spray, what is flung off it and the mist at its tip — water and not light, so a

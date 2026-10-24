@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'the paint gun’s string goes where the stick points',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const angle = w.weapon.aim * w.intent.aim + w.paintRng.range(-paint.scatter, paint.scatter);',
-      replace: '  const angle = 0 * w.intent.aim + w.paintRng.range(-paint.scatter, paint.scatter);',
+      // Re-anchored by 0667, which fans a volley of several balls about the same aim.
+      find: '    const angle = w.weapon.aim * w.intent.aim + first + step * b + w.paintRng.range(-paint.scatter, paint.scatter);',
+      replace: '    const angle = 0 * w.intent.aim + first + step * b + w.paintRng.range(-paint.scatter, paint.scatter);',
     },
   },
   {
