@@ -2325,6 +2325,9 @@ describe('every cue is played by something, and every cue the frame plays exists
 
       ⚠️ **AND `src/content/shells.ts` SINCE 0658, ON THE SAME TERMS.** A shell names the sound of it taking a hit
       on its row, and the frame plays the worn shell's `pop`.
+
+      ⚠️ **AND `src/content/weapons.ts` SINCE 0667, ON THE SAME TERMS.** A gun names its volley's sound (`cue`, 0666)
+      and its paint's landing (`paint.lands`) on its row, and the frame plays them.
     */
     const sources =
       read('src/app/frame.ts') +
@@ -2332,7 +2335,8 @@ describe('every cue is played by something, and every cue the frame plays exists
       read('src/app/mount.ts') +
       read('src/content/bosses.ts') +
       read('src/content/specials.ts') +
-      read('src/content/shells.ts');
+      read('src/content/shells.ts') +
+      read('src/content/weapons.ts');
     /*
       ⚠️ **AND THE ROWS OF `INTRO_CUES` SINCE 0412 — READ AS ROWS, NOT AS A FILE.** The intro's beats
       name their cues there and the shell plays `row.cue` as the intro passes each one. Reading the
@@ -3164,8 +3168,9 @@ describe('0173 — a cue happens somewhere', () => {
     // And the ram's thump, since 0593: on contact it lands at `landGap`'s rate, ten a second.
     // And the marker's pop, since 0595: a ball every quarter of a beat, the second-fastest gun there is.
     // And, since 0599, its splat, which lands at the marker's rate, and the jet's douse, at the tether's.
-    // And the acid's spit, since 0666: four a volley every quarter of a beat, the marker's cadence.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle', 'ram', 'paintball', 'splat', 'douse', 'spit'];
+    // And the acid's spit, since 0666: four a volley every quarter of a beat, the marker's cadence; and since 0667 its
+    // burn, which lands at that rate as the marker's splat does.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle', 'ram', 'paintball', 'splat', 'douse', 'spit', 'acidHiss'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }

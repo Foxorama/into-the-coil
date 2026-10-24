@@ -20,7 +20,7 @@ import { priced } from './prices.ts';
 import type { ShipKind } from './ships.ts';
 
 /** Every flame. Closed — a new one is a row here. */
-export const FLAME_KINDS = ['standard', 'ion', 'nebula', 'plasma', 'afterburner', 'bubbleJets'] as const;
+export const FLAME_KINDS = ['standard', 'ion', 'nebula', 'plasma', 'afterburner', 'bubbleJets', 'wyrmFlame'] as const;
 export type FlameKind = (typeof FLAME_KINDS)[number];
 
 /**
@@ -73,4 +73,12 @@ export const FLAMES: Record<FlameKind, FlameRow> = {
     hollow ring.
   */
   bubbleJets: { name: 'Bubble Jets', hint: 'A stream of bubbles, as the Aqua Duck blows', price: null, inks: { outer: '#a0bfff', inner: '#e8f0ff' }, look: 'bubbles', from: 'duck' },
+  /*
+    0667: the Viper's own — the violet the intro has always seen her leave the port on (`VIPER.flame` and `VIPER.core`
+    in `src/content/port.ts`). 0666 left her on the standard flame because this violet is three degrees of hue off
+    the serpent's void; played, the call was the other way: *"there's no way a player will get confused with her
+    flame and the serpent's colouring."* A flame trails the ship it burns from and is a tongue, never a ring, and no
+    hostile shot rides behind the player's own hull.
+  */
+  wyrmFlame: { name: 'Wyrm Flame', hint: 'The violet she left the port on', price: null, inks: { outer: '#b060c0', inner: '#f3d2ff' }, look: 'jet', from: 'viper' },
 };

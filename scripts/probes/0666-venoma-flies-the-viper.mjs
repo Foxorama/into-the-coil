@@ -35,15 +35,16 @@ export const PROBES = [
   {
     decision: '0666',
     suite: 'tests/venoma.test.ts',
-    broke: 'the spray runs to the edge of the screen, as the pulse does',
-    guard: 'a spray — a fan of four, twice as wide as the pulse’s, that falls short of half the screen',
-    edit: { path: 'src/app/frame.ts', find: '    if (w.weapon.life > 0) shot.lifeFor = w.weapon.life;\n', replace: '' },
+    broke: 'the spray runs to the edge of the screen, as the marker’s paint does',
+    guard: 'a spray — a fan of four, twice as wide as the pulse’s, that reaches three quarters of the screen',
+    // Re-anchored by 0667: the acid is a paint gun, and its range a share of the screen.
+    edit: { path: 'src/app/frame.ts', find: '    if (life > 0) shot.lifeFor = life;\n', replace: '' },
   },
   {
     decision: '0666',
     suite: 'tests/venoma.test.ts',
     broke: 'the spray fanned at the pulse’s width',
-    guard: 'a spray — a fan of four, twice as wide as the pulse’s, that falls short of half the screen',
+    guard: 'a spray — a fan of four, twice as wide as the pulse’s, that reaches three quarters of the screen',
     edit: { path: 'src/content/pickups.ts', find: '    spread: (gunRow.fan ?? SPREAD_STEP) * (shots - 1),', replace: '    spread: SPREAD_STEP * (shots - 1),' },
   },
   {

@@ -17,16 +17,17 @@ export const PROBES = [
     suite: 'tests/duck.test.ts',
     broke: 'every ball straight ahead, a string that never scatters',
     guard: 'one ball a volley, a little off straight ahead and never all the same way, in every colour in the hopper',
-    // 0623: re-anchored; the scatter is about where the right stick points.
-    edit: { path: 'src/app/frame.ts', find: '  const angle = w.weapon.aim * w.intent.aim + w.paintRng.range(-paint.scatter, paint.scatter);', replace: '  const angle = w.weapon.aim * w.intent.aim;' },
+    // 0623: re-anchored; the scatter is about where the right stick points. And by 0667, which fans a volley.
+    edit: { path: 'src/app/frame.ts', find: '    const angle = w.weapon.aim * w.intent.aim + first + step * b + w.paintRng.range(-paint.scatter, paint.scatter);', replace: '    const angle = w.weapon.aim * w.intent.aim + first + step * b;' },
   },
   {
     decision: '0595',
     suite: 'tests/duck.test.ts',
     broke: 'every ball the first colour in the hopper',
     guard: 'one ball a volley, a little off straight ahead and never all the same way, in every colour in the hopper',
-    // Re-anchored by 0598, which draws out of what the place's hopper holds: the draw is never taken.
-    edit: { path: 'src/app/frame.ts', find: '    if (nth-- === 0) {\n      colour = i;\n      break;\n    }\n', replace: '' },
+    // Re-anchored by 0598, which draws out of what the place's hopper holds: the draw is never taken. And by 0667,
+    // whose volley loop moved it in a step.
+    edit: { path: 'src/app/frame.ts', find: '      if (nth-- === 0) {\n        colour = i;\n        break;\n      }\n', replace: '' },
   },
   {
     decision: '0595',

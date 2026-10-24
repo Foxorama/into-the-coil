@@ -1439,8 +1439,12 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     actions: [
       { label: 'Buy', hint: '' },
       { label: 'Back', hint: '' },
-      // 0657: what the player owns is off the shelves until this is ticked — its box written by the shell.
-      { label: 'Show owned', hint: 'Put what you own back on the shelves' },
+      /*
+        0657: what the player owns is off the shelves until this is ticked — its box written by the shell. 0667: *Owned*,
+        and no hint, as Buy and Back have none: *"fix the show owned so it's just Owned or something."* On a phone its
+        label and the hint under it ran together into one line, *Show ownedPut what you own…*; the box says the rest.
+      */
+      { label: 'Owned', hint: '' },
     ],
     /*
       0542: the aisle, which steps the shelf in view, and a shelf per table — each its own wares, named with

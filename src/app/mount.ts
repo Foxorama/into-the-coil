@@ -3256,13 +3256,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         kind === aisle && ware !== undefined
           ? wareWhy(ware, state.hangar.owned[ware], state.hangar.shards, needsFirst(state.hangar, ware))
           : emptied
-            ? 'Everything here is yours — tick Show owned to see it'
+            ? 'Everything here is yours — tick Owned to see it'
             : null,
       );
       chrome.setHidden(kind, off);
       chrome.setChoice(kind, kind === aisle ? picked[kind] : -1);
     }
-    chrome.setActionLabel('shop', 2, (showOwned ? '☑' : '☐') + ' Show owned');
+    // 0667: the box and the word held together — a plain space let the box wrap onto a line of its own on a phone.
+    chrome.setActionLabel('shop', 2, (showOwned ? '☑' : '☐') + '\u00a0Owned');
     chrome.setChoice('aisle', SHELF_KINDS.indexOf(aisle));
     chrome.setInView('shop', aisle);
     // 0579: and every tabbed stand's group in view, on its own screen.

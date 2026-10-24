@@ -120,8 +120,9 @@ export const CUE_KINDS = [
   'shieldBack',
   // The paintball marker's — 0595: each ball leaving with a pneumatic pop.
   'paintball',
-  // Venoma's acid spray — 0666.
+  // Venoma's acid spray — 0666 — and its burn where it lands, 0667.
   'spit',
+  'acidHiss',
   'threat',
   'hit',
   'kill',
@@ -1131,22 +1132,55 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.05, gain: 0.36, attack: 0.002, curve: 4, drive: 0.2 },
     ],
   },
-  /** Venoma's acid — 0666: a wet hiss through the teeth, and the guns' shared bottom under it. */
+  /**
+   * Venoma's acid — 0667, which replaced 0666's. Played: *"sounds for her attack also need to sound different and better
+   * and need to be listenable better with the constant autofire."* 0666's was bright noise through a narrow band for
+   * seventy milliseconds, ten times a second: a hiss laid over a hiss, the one sound in the game that never stops made
+   * of the frequencies the ear tires of first. This is a wet drop instead — a breath of soft noise, a sine flicked down
+   * from the fifth onto the root an octave up, and the guns' shared bottom under it — short enough that each volley is
+   * its own event, shuffled on the pulse's figure so ten a second read as a groove, and quieter than the pulse. The
+   * hiss is where it belongs now: on the burn where a spit lands (`acidHiss`).
+   */
   spit: {
     twin: 'shot-appears',
     hold: 2,
-    gain: 0.2,
-    glue: 0.12,
-    figure: [1, 0.72, 0.86, 0.72],
+    gain: 0.17,
+    glue: 0.22,
+    figure: [1, 0.62, 0.82, 0.62],
     layers: [
-      // The hiss: bright noise through a narrow band, longer than the marker's breath and falling.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.46, attack: 0.002, curve: 3.6, lowFrom: 9000, lowTo: 4200, highFrom: 2600, q: 1.8 },
-      // The spit: a quick sine flicking down a fourth.
-      { wave: 'sine', from: inKey(24), to: inKey(19), seconds: 0.035, gain: 0.32, attack: 0.001, curve: 5 },
-      // The guns' shared bottom — 0102.
-      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.05, gain: 0.34, attack: 0.002, curve: 4, drive: 0.2 },
+      // The breath: soft noise, its top taken off, over almost at once.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.16, attack: 0.001, curve: 6, lowFrom: 5200, lowTo: 2400, highFrom: 700, q: 0.8 },
+      // The drop: the fifth falling onto the root an octave up, round and quick.
+      { wave: 'sine', from: inKey(19), to: inKey(12), seconds: 0.045, gain: 0.46, attack: 0.002, curve: 5.5 },
+      // The guns' shared bottom — 0102 — softer than the pulse's, so the spray sits under it.
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.05, gain: 0.26, attack: 0.002, curve: 4, drive: 0.15 },
     ],
   },
+  /**
+   * Where a spit lands and burns — 0667: *"a hiss noise like it's sizzling and burning through."* A bed of high noise
+   * sizzling down, four crackles of fat spitting off it from one side to the other, and a low burn under them. Dry and
+   * on the gun's cadence, as the marker's splat is; held, so four landings in a volley are one burn heard.
+   */
+  acidHiss: {
+    twin: 'splat-lands',
+    hold: 4,
+    // Over the guns' (0145) and under the `hit` (0.283) it lands beside, as the splat is — a step under the splat.
+    gain: 0.25,
+    glue: 0.12,
+    figure: [1, 0.8, 0.9, 0.75],
+    layers: [
+      // The sizzle: high noise, its top coming down as it cools.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.34, attack: 0.004, curve: 2.6, lowFrom: 11000, lowTo: 6000, highFrom: 3600, q: 0.7 },
+      // The crackle: fat spitting, four grains, each later, quieter and across.
+      { wave: 'noise', from: 0, to: 0, at: 0.015, seconds: 0.008, gain: 0.32, attack: 0.0004, curve: 8, lowFrom: 9000, highFrom: 2400, q: 1.6, pan: -0.35 },
+      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.008, gain: 0.28, attack: 0.0004, curve: 8, lowFrom: 9000, highFrom: 2600, q: 1.6, pan: 0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.09, seconds: 0.007, gain: 0.22, attack: 0.0004, curve: 8, lowFrom: 9000, highFrom: 2800, q: 1.6, pan: -0.15 },
+      { wave: 'noise', from: 0, to: 0, at: 0.135, seconds: 0.007, gain: 0.16, attack: 0.0004, curve: 8, lowFrom: 9000, highFrom: 3000, q: 1.6, pan: 0.4 },
+      // The burn: low, short, onto the root.
+      { wave: 'sine', from: inKey(5), to: inKey(0), seconds: 0.06, gain: 0.24, attack: 0.002, curve: 4 },
+    ],
+  },
+
   /**
    * The ball's heat burns a shield off it — 0609, where 0593's was the ball cracking apart: a bright plastic
    * snap, a scatter of hot pieces left and right, and a low thud under them. Loud, because it is the one thing

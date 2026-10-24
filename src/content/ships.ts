@@ -1174,13 +1174,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // Scales shed off a snake's back, laid round it — 0666.
     shield: SHELLS.scales.shell,
     lamps: [],
-    /*
-      ⚠️ **THE STANDARD FLAME, AND THE INTRO'S VIOLET WAS WEIGHED — 0666.** The port's Viper burns `#b060c0`, three
-      degrees of hue off the serpent's void (`#e86bff`), and a trail behind the player's own ship in the colour of
-      a void blast is 0295's case exactly — `tests/flames.test.ts` refuses a flame that near a hostile shot. The
-      Nebula Burn is the violet that clears it, and Cosmo's sells it.
-    */
-    flame: 'standard',
+    // The violet she left the port on — 0667, which overturned 0666's standard flame on play.
+    flame: 'wyrmFlame',
     // Her tubes throw the serpent's void, in the player's lavender — 0666.
     tubeFire: 'venomVoid',
   },
