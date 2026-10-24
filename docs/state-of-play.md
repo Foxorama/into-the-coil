@@ -1175,7 +1175,8 @@ three sounds: [0658](decisions/0658-every-shell-pops-its-own.md), [0659](decisio
 [0660](decisions/0660-the-pterodactyl-screams.md), the places described, [0661](decisions/0661-the-places-are-described.md), the fighter's arms hung under it,
 [0662](decisions/0662-the-fighter-hangs-its-arms.md), the tubes' sides, [0663](decisions/0663-the-tubes-have-sides.md),
 the tubes' look, [0665](decisions/0665-the-tubes-are-missiles.md), the controls,
-[0664](decisions/0664-the-controls-are-bound.md), and Venoma, [0666](decisions/0666-venoma-flies-the-viper.md).
+[0664](decisions/0664-the-controls-are-bound.md), and Venoma, [0666](decisions/0666-venoma-flies-the-viper.md), with what play
+asked of her after, [0667](decisions/0667-play-asks-of-venoma.md).
 **Next is the play** of all of it, which also names what else on the menus is wrong (17).
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24

@@ -652,8 +652,8 @@ export interface Weapon {
   turn: number;
   /** How far the right stick may turn a volley either side of straight ahead — 0588. Zero for a gun not steered. */
   aim: number;
-  /** Steps a straight shot lives, or 0 for one the view's cull retires — 0666, the gun's `life`. */
-  life: number;
+  /** How far a shot flies as a share of the screen's long side, or 0 for one the view's cull retires — 0667, the gun's `range`. */
+  range: number;
 }
 
 /*
@@ -863,6 +863,6 @@ export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = []): We
     coil: gunRow.coil,
     turn: gunRow.turn,
     aim: gunRow.aim,
-    life: gunRow.life ?? 0,
+    range: gunRow.range ?? 0,
   };
 }

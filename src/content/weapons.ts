@@ -167,6 +167,13 @@ export interface Paint {
   readonly scatter: number;
   /** Its colours — each ball takes one, from the same stream, and its splat is that colour too. */
   readonly colours: readonly PaintColour[];
+  /** What a ball that lands sounds like — 0667: the marker's splat, the acid's hiss. Every row says its own. */
+  readonly lands: CueKind;
+  /**
+   * Steps its splat is wet before it dries — 0667. The marker's paint is wet for a sixth of a second, as 0610 had every
+   * splat; the acid's burn fizzes for two thirds of one, since the fizz is what says it is burning.
+   */
+  readonly wet: number;
 }
 
 /** One colour in the hopper — 0595: its ink for the bake, and the three pictures it is drawn in. */
@@ -320,11 +327,12 @@ export interface WeaponRow {
    */
   fan?: number;
   /**
-   * Steps a `straight` shot lives before it is spent on nothing — 0666, the acid's range: a spray that falls short
-   * where the pulse runs to the edge of the screen. Absent is no lifetime, which every other gun's shot has, the
-   * view's cull retiring it (`PLAYER_SHOT_LIFE`).
+   * How far a shot flies before it is spent on nothing, as a share of the screen's long side — 0667, the acid's:
+   * *"distance of her shots needs to be 75% of the screen."* A share of the view the player has, because the ask
+   * is a share of the screen they see, as the Catherine wheel's `reach` is (0549). Absent is no range, which every
+   * other gun has, the view's cull retiring its shot (`PLAYER_SHOT_LIFE`).
    */
-  life?: number;
+  range?: number;
   /**
    * What a volley sounds like — 0666. Absent is its flight's (`cueOfFlight` in `src/app/frame.ts`), which every gun
    * but the acid is heard by: the acid flies straight as the pulse does, and a spray is not a pulse.
@@ -804,6 +812,9 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     ram: null,
     paint: {
       scatter: 0.09,
+      // 0667: its splat, which is what the sound was called before a second gun splatted.
+      lands: 'splat',
+      wet: 10,
       // The paint shop's own: a bubblegum pink, a sunshine yellow, a sky blue and a grape — none the enemy's red.
       /*
         ⚠️ **AND NONE A PLACE'S OWN BULLET, WHICH 0595 DID NOT ASK** — the review of 0595. A hostile shot is the
@@ -838,10 +849,15 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    */
   acid: {
     label: 'Acid',
-    hint: 'A short, wide spray of venom',
+    hint: 'A wide spray of venom that burns where it lands',
     shot: 'venom',
     glyph: SPRITE.venomSpit,
-    flight: 'straight',
+    /*
+      0667: it splats where it lands, as the marker's paint does — played: *"the acid should splat like the paintball,
+      but have a hiss noise like it's sizzling and burning through."* So it is the marker's flight, `splat`, with four
+      balls a volley in the fan it already had, one colour in its hopper, and its own splat and sound.
+    */
+    flight: 'splat',
     fireEvery: 6,
     barrels: 4,
     links: 1,
@@ -851,21 +867,32 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     special: 'redLightning',
     // 0666: the fangs' mouth — lying along a nose from above, standing on a hood from the side.
     mount: { top: { along: 1.3, across: 0 }, side: { along: 1.1, across: -0.6 } },
-    bursts: null,
+    // 0667: a burn where each spit lands — a puddle of acid, on the marker's splat's terms.
+    bursts: 'acidSplat',
     reach: 0,
     falloff: 0,
     coil: 0,
     turn: 0,
     wheel: null,
     ram: null,
-    paint: null,
+    paint: {
+      // A little off the fan's own line, so a spray is not four rails.
+      scatter: 0.04,
+      lands: 'acidHiss',
+      wet: 40,
+      /*
+        One colour, the player's own cyan (the vivid palette's, for the hopper's record; the bake draws the spit and the
+        burn in the palette's role, so the high-contrast palette answers them). No place's bullet is the player's ink,
+        on 0081's rule, so it is left out of no place.
+      */
+      colours: [{ ink: '#7ae7ff', ball: SPRITE.venomSpit, splat: SPRITE.acidSplat, dry: SPRITE.acidSplatDry, not: [] }],
+    },
     lends: true,
     aim: 0,
     // Twice the pulse's `SPREAD_STEP` between barrels: 0.78 radians across its four, forty-five degrees.
     fan: 0.26,
-    // Thirty-six steps at 2.2: seventy-nine units in the camera's frame from a jaw six ahead of the ship's middle, so
-    // a spit is gone before half the narrowest view. Forty was measured at 53% of it, the jaw not counted.
-    life: 36,
+    // 0667: three quarters of the screen — *"distance of her shots needs to be 75% of the screen"*. It was 0666's half.
+    range: 0.75,
     cue: 'spit',
   },
 };

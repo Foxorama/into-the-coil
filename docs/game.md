@@ -257,7 +257,7 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | **catherine** | the Firebird | a burning wheel that flies out ahead, slows and hangs spinning on a leash; moving the ship sweeps the tether across whatever is between them, and past the leash's length the wheel is towed — [0545](decisions/0545-the-catherine-wheel.md), [0551](decisions/0551-the-wheel-is-held-closer.md) |
 | **ram** | the Hamster Ball | nothing leaves the ship: the ball lands on what it is flown into, and every landing heats it until a full gauge burns a shield off — [0593](decisions/0593-the-hamster-ball-rolls.md) |
 | **paintball** | the Aqua Duck | one barrel, a ball every quarter beat, a little off straight and each its own colour, bursting into a splat on what it hits — [0595](decisions/0595-the-aqua-duck-paints.md) |
-| **acid** | the Viper | the serpent's spray, the player's: four spits a quarter beat in a fan twice the pulse's width, gone before half the screen. The Viper's tubes throw the serpent's void ring in place of a missile, flying as the fitted kind does — [0666](decisions/0666-venoma-flies-the-viper.md) |
+| **acid** | the Viper | the serpent's spray, the player's: four spits a quarter beat in a fan twice the pulse's width, reaching three quarters of the screen, each burning where it lands as a paintball splats, with a hiss. The Viper's tubes throw the serpent's void ring in place of a missile, flying as the fitted kind does; she burns the violet the intro sees her leave on — [0666](decisions/0666-venoma-flies-the-viper.md), [0667](decisions/0667-play-asks-of-venoma.md) |
 
 | tube | what it does | its surge |
 |---|---|---|

@@ -731,7 +731,7 @@ function burstRays(w: World, landed: Deaths): void {
  * damage lands on the step it lands, as every blast's does, and the blast that carries it lasts that step.
  */
 export const SPLAT_STEPS = 150;
-const SPLAT_WET = 10;
+// How long it is wet, `wet` on its gun's paint row since 0667 — the marker's paint a sixth of a second, the acid's burn longer.
 /**
  * How far in from a boss's rim a splat that landed on it is put, as a share of the body's radius — 0610.
  * A ball lands at its own centre, a ball's radius outside the hurtbox; a splat there is half off the
@@ -762,7 +762,8 @@ function splatPaint(w: World, landed: Deaths): void {
   const paint = gun.paint;
   if (paint === null || gun.bursts === null) return;
   // 0599: and heard where the first of them bursts — the splat's own, beside the `hit` the arrival already sounds.
-  if (landed.count > 0) w.onCue('splat', landed.across[0]!);
+  // 0667: in the gun's own voice — the marker's splat, the acid's hiss.
+  if (landed.count > 0) w.onCue(paint.lands, landed.across[0]!);
   for (let i = 0; i < landed.count; i++) {
     const colour = landed.kind[i]! - PAINT_KIND;
     const face = colour >= 0 && colour < paint.colours.length ? colour : 0;
@@ -885,10 +886,10 @@ function stepPaint(w: World): void {
       w.paint.releaseAt(i);
       continue;
     }
-    if (mark.lifeFor === SPLAT_STEPS - SPLAT_WET) {
-      // Dried, in the colours of the gun that threw it.
-      const paint = WEAPONS[WEAPON_KINDS[mark.kind] ?? w.weapon.kind].paint;
-      const dry = paint === null ? mark.spriteBase : paint.colours[mark.face % paint.colours.length]!.dry;
+    // Dried, in the colours of the gun that threw it, when that gun's paint says it dries — 0667.
+    const paint = WEAPONS[WEAPON_KINDS[mark.kind] ?? w.weapon.kind].paint;
+    if (paint !== null && mark.lifeFor === SPLAT_STEPS - paint.wet) {
+      const dry = paint.colours[mark.face % paint.colours.length]!.dry;
       mark.sprite = dry;
       mark.spriteBase = dry;
       mark.spriteHit = dry;
@@ -933,7 +934,7 @@ function paintStone(w: World, corridor: Corridor): void {
     const colour = ball.kind - PAINT_KIND;
     splatAt(w, ball.along, face - into * 0.5, colour);
     leavePaint(w, ball.along, face + into * SPLAT_INTO_STONE, colour, false);
-    if (!heard) w.onCue('splat', face);
+    if (!heard) w.onCue(WEAPONS[w.weapon.kind].paint!.lands, face);
     heard = true;
     w.playerShots.releaseAt(i);
   }
@@ -5688,8 +5689,8 @@ function firePulse(w: World): void {
     }
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
     shot.damage = w.weapon.damage;
-    // 0666: and a gun with a range spends its shot on nothing at the end of it — the acid's spray falls short.
-    if (w.weapon.life > 0) shot.lifeFor = w.weapon.life;
+    // 0667: and a gun with a range spends its shot on nothing at the end of it, a share of the screen the player has.
+    if (w.weapon.range > 0) shot.lifeFor = Math.ceil((w.weapon.range * w.view.alongSpan) / row.speed);
     /*
       ⚠️ **No lifetime, and there used to be one.** A volley that outlives the screen starves the
       next one — *"two streams continuous and the others stutter"* is how play reported it — and the
@@ -5713,38 +5714,51 @@ function firePaint(w: World): void {
   const paint = gun.paint;
   if (paint === null) return;
   const row = SHOTS[gun.shot];
-  const shot = w.playerShots.spawn();
-  // A ball the pool has no room for is dropped rather than grown — `src/sim/pool.ts` has the argument.
-  if (shot === null) return;
-  w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);
   /*
-    ⚠️ **OUT OF WHAT THIS PLACE'S HOPPER HOLDS** — the review of 0595: a colour whose row names this place is the
-    hue of its bullets, and is left out (`not`). One draw either way, so the stream moves as it always has.
+    0667: a volley of `shots` balls, fanned about the nose as a straight gun's barrels are (`firePulse`), each still
+    scattered and coloured on the gun's own stream — the acid's four. The marker fires one, so its draws are the
+    ones they always were, in the order they always were.
   */
-  const theme = w.level.theme;
-  let held = 0;
-  for (let i = 0; i < paint.colours.length; i++) if (!paint.colours[i]!.not.includes(theme)) held++;
-  let nth = w.paintRng.int(0, Math.max(1, held) - 1);
-  let colour = 0;
-  for (let i = 0; i < paint.colours.length; i++) {
-    if (held > 0 && paint.colours[i]!.not.includes(theme)) continue;
-    if (nth-- === 0) {
-      colour = i;
-      break;
+  const step = w.weapon.shots > 1 ? w.weapon.spread / (w.weapon.shots - 1) : 0;
+  const first = -(step * (w.weapon.shots - 1)) / 2;
+  // 0667: a gun with a range spends its ball on nothing at the end of it, a share of the screen the player has.
+  const life = w.weapon.range > 0 ? Math.ceil((w.weapon.range * w.view.alongSpan) / row.speed) : 0;
+  for (let b = 0; b < w.weapon.shots; b++) {
+    const shot = w.playerShots.spawn();
+    // A ball the pool has no room for is dropped rather than grown — `src/sim/pool.ts` has the argument.
+    if (shot === null) return;
+    // 0667: in the gun's own voice where it has one, once a volley.
+    if (b === 0) w.onCue(gun.cue ?? cueOfFlight(w.weapon.flight), w.ship.across);
+    /*
+      ⚠️ **OUT OF WHAT THIS PLACE'S HOPPER HOLDS** — the review of 0595: a colour whose row names this place is the
+      hue of its bullets, and is left out (`not`). One draw either way, so the stream moves as it always has.
+    */
+    const theme = w.level.theme;
+    let held = 0;
+    for (let i = 0; i < paint.colours.length; i++) if (!paint.colours[i]!.not.includes(theme)) held++;
+    let nth = w.paintRng.int(0, Math.max(1, held) - 1);
+    let colour = 0;
+    for (let i = 0; i < paint.colours.length; i++) {
+      if (held > 0 && paint.colours[i]!.not.includes(theme)) continue;
+      if (nth-- === 0) {
+        colour = i;
+        break;
+      }
     }
+    // 0623: scattered about where the right stick points it, as the ray's rings are thrown (0588).
+    const angle = w.weapon.aim * w.intent.aim + first + step * b + w.paintRng.range(-paint.scatter, paint.scatter);
+    const muzzle = w.shipRow.muzzle;
+    reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, PAINT_KIND + colour);
+    const ball = paint.colours[colour]!.ball;
+    shot.sprite = ball;
+    shot.spriteBase = ball;
+    shot.spriteHit = ball;
+    // In the camera's frame, like every speed (0023).
+    shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
+    shot.velAcross = Math.sin(angle) * row.speed;
+    shot.damage = w.weapon.damage;
+    if (life > 0) shot.lifeFor = life;
   }
-  // 0623: scattered about where the right stick points it, as the ray's rings are thrown (0588).
-  const angle = w.weapon.aim * w.intent.aim + w.paintRng.range(-paint.scatter, paint.scatter);
-  const muzzle = w.shipRow.muzzle;
-  reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, PAINT_KIND + colour);
-  const ball = paint.colours[colour]!.ball;
-  shot.sprite = ball;
-  shot.spriteBase = ball;
-  shot.spriteHit = ball;
-  // In the camera's frame, like every speed (0023).
-  shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
-  shot.velAcross = Math.sin(angle) * row.speed;
-  shot.damage = w.weapon.damage;
 }
 
 /*
