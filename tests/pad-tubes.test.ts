@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { paintLoadedTubes } from '../src/render/bake.ts';
+import { drawKind, paintLoadedTubes } from '../src/render/bake.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { SHIPS, SHIP_KINDS, ownFit, sameFit } from '../src/content/ships.ts';
 import { MISSILE_KINDS } from '../src/content/missiles.ts';
-import { tracingPen } from './paths.ts';
+import { edgeIndex, tracingPen, type Point } from './paths.ts';
 
 /**
  * THE PAD WEARS ITS TUBES — `docs/decisions/0582-the-pad-wears-its-tubes.md`.
@@ -63,5 +63,38 @@ describe('the pad’s tubes', () => {
     const { pen, trace } = tracingPen();
     paintLoadedTubes(pen, F, palette, 'estate', []);
     expect(trace.passes).toHaveLength(0);
+  });
+});
+
+/*
+  0665: *"Missile tubes need to look way cooler."* A loaded tube is nine pixels long at the fight's camera, so what it
+  can say there is its silhouette and a light; held on the drawn tube at the size it is baked, in its own radius.
+*/
+describe('0665 — a loaded tube is shaped like a missile', () => {
+  const SIZE = 200;
+  const R = SIZE * 0.42;
+  const at = (x: number, y: number): Point => [SIZE / 2 + x * R, SIZE / 2 + y * R];
+
+  it('THE ASK, IN ITS SHAPE: canards behind the warhead and swept fins at the tail, wider than the body between', () => {
+    for (const kind of ['tubeMissile', 'tubeSeeker'] as const) {
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], SIZE, 'approach');
+      const hull = edgeIndex(trace.passes[0]!);
+      expect(hull.inside(at(0.27, -0.36)), `${kind} has no canard behind its warhead`).toBe(true);
+      expect(hull.inside(at(0, -0.36)), `${kind}'s body is as wide as its canards — a lozenge`).toBe(false);
+      expect(hull.inside(at(-0.9, -0.5)), `${kind} has no swept fin at its tail`).toBe(true);
+      expect(hull.inside(at(-0.6, -0.5)), `${kind}'s fins are not swept: they stand straight out from the body`).toBe(false);
+    }
+  });
+
+  it('and its motor lit at the tail, translucent, where the nozzle is', () => {
+    const { pen, trace } = tracingPen();
+    drawKind(pen, 'tubeMissile', PALETTES[DEFAULT_PALETTE], SIZE, 'approach');
+    const [tx, ty] = at(-0.88, 0);
+    // A light AT the tail — every point of it there. The body's own shading is a gradient over the whole hull.
+    const lit = trace.passes.some(
+      (pass) => pass.colour === 'gradient' && pass.subpaths.length > 0 && pass.subpaths.every((sub) => sub.every(([x, y]) => Math.hypot(x - tx, y - ty) < 0.3 * R)),
+    );
+    expect(lit, 'the tube has no light at its tail').toBe(true);
   });
 });

@@ -236,7 +236,8 @@ death and a continue keep them. **Tubes bought at Cosmo's are fitted in the hang
 the start** — [0578](decisions/0578-the-tubes-are-sold.md); the pickups fill only what the rack leaves
 empty. Up to two of each kind are sold, and a ship has a left slot and a right slot, each fitted on its own;
 a lone tube flies from the ship's one-tube place, whichever slot holds it —
-[0663](decisions/0663-the-tubes-have-sides.md). **Every face of a pickup is its own glyph in its own ink**, inside the one
+[0663](decisions/0663-the-tubes-have-sides.md). A loaded tube is drawn as a missile, nose, canards and swept fins, its motor lit —
+[0665](decisions/0665-the-tubes-are-missiles.md). **Every face of a pickup is its own glyph in its own ink**, inside the one
 bubble that says *pickup*:
 [0239](decisions/0239-the-guns-answer-the-third-play-test.md) and
 [0240](decisions/0240-the-blades-reach-the-boss.md).
