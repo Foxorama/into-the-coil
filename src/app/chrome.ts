@@ -2832,8 +2832,15 @@ ${each('-band[hidden]')} { display: none; }
     an em of padding either side of it: a share of 4.2 down to the title's floor of 1.7rem, the cards closer
     round their faces — the names under them are not drawn on a plate, so the padding only spaced a ring from
     the next card, which the gap does — and that gap a step less. From 812 wide up the height still decides.
+
+    0666: and on Hangin' Out and Paint & Parts narrower again for the eighth, Venoma, which put the loadout's
+    Right tube band and the Shield band 14 px past the plate on a 667x375 — the faces' row sets the plate's
+    column. A share of 3.8 down to a floor of 1.55rem, about three pixels a face. On Cosmo's its shelf tabs took
+    that room and their arrow ran 7 px past the plate still, so its faces are a share of 3.4 down to 1.4rem. The
+    seventh's rule, which these two override on every plate it styled, is gone rather than left styling nothing.
   */
-  .itc-hangar-option-face > canvas, .itc-parts-option-face > canvas, .itc-shop-option-face > canvas { width: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); height: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); }
+  .itc-hangar-option-face > canvas, .itc-parts-option-face > canvas { width: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); height: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); }
+  .itc-shop-option-face > canvas { width: clamp(1.4rem, min(9cqh, 3.4cqw), 2.6rem); height: clamp(1.4rem, min(9cqh, 3.4cqw), 2.6rem); }
   .itc-hangar-plate .itc-hangar-options-faces, .itc-parts-plate .itc-parts-options-faces, .itc-shop-plate .itc-shop-options-faces { gap: 0.2em; }
   .itc-hangar-plate .itc-hangar-option.itc-hangar-option-face, .itc-parts-plate .itc-parts-option.itc-parts-option-face, .itc-shop-plate .itc-shop-option.itc-shop-option-face { padding-left: 0.1em; padding-right: 0.1em; }
   /*

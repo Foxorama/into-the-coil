@@ -144,8 +144,9 @@ export const PROBES = [
     guard: 'draws every control and word on each tab’s plate whole and inside it',
     edit: {
       path: 'src/app/chrome.ts',
-      find: 'width: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); height: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); }',
-      replace: 'width: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); height: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); }',
+      // Re-anchored by 0666, whose eighth face narrowed Hangin' Out's and Paint & Parts' faces again.
+      find: '.itc-hangar-option-face > canvas, .itc-parts-option-face > canvas { width: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); height: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); }',
+      replace: '.itc-hangar-option-face > canvas, .itc-parts-option-face > canvas { width: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); height: clamp(1.9rem, min(9cqh, 4.5cqw), 2.6rem); }',
     },
   },
   {

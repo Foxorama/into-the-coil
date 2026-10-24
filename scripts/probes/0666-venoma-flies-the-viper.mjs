@@ -74,4 +74,28 @@ export const PROBES = [
     guard: 'called down from the top of the lane onto the body nearest the ship, a bolt at a time',
     edit: { path: 'src/app/frame.ts', find: '    w.throwIn = (row.smite.strikes - 1) * row.smite.every + THROW_GAP_STEPS;\n', replace: '' },
   },
+  {
+    decision: '0666',
+    suite: 'tests/layout.browser.test.ts',
+    // Seven pilots' width: the eighth pushes the loadout's Right tube band off a 667x375.
+    broke: 'eight pilots’ faces on Hangin’ Out at seven pilots’ width on a phone',
+    guard: 'draws every control and word on each tab’s plate whole and inside it',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '.itc-hangar-option-face > canvas, .itc-parts-option-face > canvas { width: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); height: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); }',
+      replace: '.itc-hangar-option-face > canvas, .itc-parts-option-face > canvas { width: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); height: clamp(1.7rem, min(9cqh, 4.2cqw), 2.6rem); }',
+    },
+  },
+  {
+    decision: '0666',
+    suite: 'tests/layout.browser.test.ts',
+    // Cosmo's at the other plates' width: its shelf tabs take the room and push their arrow off a 667x375.
+    broke: 'Cosmo’s faces as wide as Hangin’ Out’s on a phone',
+    guard: 'draws every control and word on each tab’s plate whole and inside it',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '.itc-shop-option-face > canvas { width: clamp(1.4rem, min(9cqh, 3.4cqw), 2.6rem); height: clamp(1.4rem, min(9cqh, 3.4cqw), 2.6rem); }',
+      replace: '.itc-shop-option-face > canvas { width: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); height: clamp(1.55rem, min(9cqh, 3.8cqw), 2.6rem); }',
+    },
+  },
 ];
