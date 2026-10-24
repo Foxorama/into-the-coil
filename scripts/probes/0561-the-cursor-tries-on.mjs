@@ -1,7 +1,7 @@
 // The breaks behind docs/decisions/0561-the-cursor-tries-on.md.
 //
-// ⚠️ The two ways the ask comes undone: a step that fits again, which is the bug the player reported,
-// and a shut option skipped over again, which hides what opens it.
+// ⚠️ The way the ask comes undone: a step that fits again, which is the bug the player reported. Its second probe —
+// a shut option skipped over, which hid what opens it — went with 0657, which hides a shut option on the player's word.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -12,20 +12,9 @@ export const PROBES = [
     guard: 'steps the gun band without fitting',
     edit: {
       path: 'src/app/chrome.ts',
-      // Re-anchored by 0607, whose step comes round and so never stands on the option it left.
-      find: '      if (next >= 0 && next < count && next !== from) tryOn(band, next, true);',
-      replace: '      if (next >= 0 && next < count && next !== from) onChoice(band.name, next, false);',
-    },
-  },
-  {
-    decision: '0561',
-    suite: 'tests/tries.browser.test.ts',
-    broke: 'a shut option disabled again, so a step cannot stand on it',
-    guard: 'stands on a shut gun',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: "            buttons[i]!.setAttribute('aria-disabled', closed ? 'true' : 'false');",
-      replace: "            buttons[i]!.setAttribute('aria-disabled', 'false');",
+      // Re-anchored by 0607, whose step comes round and so never stands on the option it left; and by 0657's skip.
+      find: '      if (next !== from && band.hidden[next] !== true) tryOn(band, next, true);',
+      replace: '      if (next !== from && band.hidden[next] !== true) onChoice(band.name, next, false);',
     },
   },
 ];

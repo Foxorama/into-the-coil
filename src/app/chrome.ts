@@ -35,7 +35,7 @@ import { PICKUPS, PICKUP_KINDS, faceOf, type PickupKind } from '../content/picku
 import { SIDES, SIDE_LABELS, SPECIALS } from '../content/specials.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
-import { FLAME_KINDS } from '../content/flames.ts';
+import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
 import { SHELL_KINDS } from '../content/shells.ts';
 import { RACKS, RACK_KINDS, TUBE_WARES, TUBE_WARE_KINDS } from '../content/racks.ts';
 import { MISSILES, type MissileKind } from '../content/missiles.ts';
@@ -1696,7 +1696,11 @@ ${each('-band-key')} {
 ${each('-band-key[hidden]')} { display: none; }
 ${each('-band-less')} { grid-area: less; }
 ${each('-band-more')} { grid-area: more; }
-${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
+/*
+  0657: an arrow that goes nowhere is not drawn — *"side arrows show on menus even when nothing to nav to"* — and
+  keeps its room, so the options beside it do not move when it comes and goes. 0458 drew it dim.
+*/
+${each('-band-step:disabled')} { visibility: hidden; cursor: default; }
 /*
   0566: on a touch screen the hangar's tabs and its arrows are pressed by a thumb, and they were 31 px and
   less at 844x390 against a floor of 44. Their hit is grown past what is drawn, by a box laid round each
@@ -1727,6 +1731,8 @@ ${banded((p) => `.${p}option:disabled`)} { opacity: 0.38; border-style: dashed; 
   A shut option was told by its dash alone, which read as an empty slot.
 */
 ${banded((p) => `.${p}option.${p}option-shut`)} { opacity: 0.45; border-style: dashed; cursor: not-allowed; position: relative; padding-right: 1.5em; }
+/* 0657: an option off its band is off it on every device, over any rule that shows an option — a phone's first chip included. */
+${banded((p) => `.${p}option[hidden]`)} { display: none !important; }
 ${banded((p) => `.${p}option-shut::before`)} {
   content: '';
   position: absolute;
@@ -2345,6 +2351,14 @@ ${each('-tab-key[hidden]')} { display: none; }
   border-radius: 60% 8% 8% 60% / 50%;
   background: radial-gradient(ellipse at 88% 50%, var(--itc-flame-wisp) 0 14%, var(--itc-flame-inner) 34%, var(--itc-flame-outer) 62%, transparent 74%);
   filter: drop-shadow(0 0 0.3em var(--itc-flame-outer));
+}
+/* 0657: a flame of bubbles — three hollow rings blown out behind, the nearest the largest, as the bake draws them (0595). */
+.itc-shop-art-flame.itc-shop-art-bubbles {
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 80% 50%, transparent 0 0.26em, var(--itc-flame-inner) 0.28em 0.36em, var(--itc-flame-outer) 0.38em 0.42em, transparent 0.44em),
+    radial-gradient(circle at 48% 32%, transparent 0 0.16em, var(--itc-flame-inner) 0.18em 0.23em, var(--itc-flame-outer) 0.25em 0.28em, transparent 0.3em),
+    radial-gradient(circle at 20% 64%, transparent 0 0.1em, var(--itc-flame-outer) 0.12em 0.18em, transparent 0.2em);
 }
 /* The ware in the window, large on the card beside its name. */
 /*
@@ -4492,6 +4506,11 @@ interface Band {
    * ship has not been won in for.
    */
   open: readonly boolean[];
+  /**
+   * Which options are off the band altogether — 0657: not drawn, not stepped onto, and not counted for an arrow.
+   * None, until `setHidden` hides some: a locked option on a band that fits, an owned ware off Cosmo's shelves.
+   */
+  hidden: readonly boolean[];
   /** Why the shut ones are shut, said on the hint line in place of the option's hint, or `null`. */
   why: string | null;
   /** 0561: why each shut one is shut, by position, said when it is tried on; `null` defers to `why`. */
@@ -4514,7 +4533,7 @@ interface Band {
   /** Which devices it is offered on — 0512, the row's `on`. */
   on: 'all' | 'touch';
   /** What a press on it does — 0513, the row's `press`. */
-  press: 'steps' | 'takes' | 'tries';
+  press: 'steps' | 'takes' | 'tries' | 'acts';
   /** What a step past its last option does — 0607, the row's `ends`. */
   ends: 'round' | 'stop';
   /**
@@ -4974,6 +4993,12 @@ export interface Chrome {
    */
   /** 0561: `whys` says why each shut option is shut, for a band that tries; the band's `why` stands in where it says nothing. */
   setOpen(name: ChoiceName, open: readonly boolean[], why: string | null, whys?: readonly (string | null)[]): void;
+  /**
+   * Which of a band's options are off it altogether — 0657, by position: not drawn, not stepped onto by a key,
+   * a pad or an arrow, and not counted for an arrow. The shell says which: on every band that fits, the locked
+   * ones; on Cosmo's shelves, what the player owns until they tick to see it.
+   */
+  setHidden(name: ChoiceName, hidden: readonly boolean[]): void;
   /**
    * Which of each pickup's faces this player may not be offered yet, in `PICKUP_KINDS` order — 0594. How to
    * play's key hides them, so the War Dance is not given away before Unity is open.
@@ -6594,6 +6619,7 @@ export function makeChrome(
         // The pilot's line is the name as well as what they fly: the face alone does not say who it is.
         hints: choice.options.map((option) => (choice.faces === 'portraits' ? option.label + ' — ' + option.hint : option.hint)),
         open: choice.options.map(() => true),
+        hidden: choice.options.map(() => false),
         why: null,
         whys: [],
         index: 0,
@@ -7123,7 +7149,11 @@ export function makeChrome(
       return holder;
     }
     const flame = FLAME_KINDS.find((kind) => kind === ware);
-    holder.className = 'itc-shop-art-flame';
+    /*
+      0657: drawn the way its row says it is drawn (0595) — a flame of bubbles as a string of hollow rings, where every
+      flame was a tongue of fire: *"bubble jets has wrong icon."*
+    */
+    holder.className = flame !== undefined && FLAMES[flame].look === 'bubbles' ? 'itc-shop-art-flame itc-shop-art-bubbles' : 'itc-shop-art-flame';
     if (flame !== undefined) {
       const inks = flameInks(colours, flame);
       holder.style.setProperty('--itc-flame-outer', inks.outer);
@@ -7607,26 +7637,28 @@ export function makeChrome(
     /*
       ⚠️ **A BAND THAT TRIES SAYS WHAT IS UNDER THE CURSOR — 0561**: the option tried on, or the one
       fitted. A shut one says what opens it, and one that can be fitted says how, in the hand's words.
-      Its steps go to its ends, shut options and all, because a shut one is somewhere to look.
+      Since 0657 its steps go only to what is on it: a shut option is hidden (`setHidden`), not somewhere to look.
     */
+    /*
+      ⚠️ **AN ARROW IS THERE ONLY WHEN IT GOES SOMEWHERE — 0657.** *"Side arrows show on menus even when nothing to
+      nav to."* One that cannot step is `disabled`, and the stylesheet takes a disabled arrow off the screen and
+      keeps its room. Somewhere is an option on the band that a step may land on: shown, and on a band that does
+      not try, open.
+    */
+    const shown = band.press === 'tries' && band.look >= 0 ? band.look : band.index;
+    const lands = (i: number): boolean => band.hidden[i] !== true && (band.press === 'tries' || band.open[i] !== false);
+    const elsewhere = band.ends === 'round' && band.hints.some((_, i) => i !== shown && lands(i));
+    band.less.disabled = !elsewhere && !band.hints.some((_, i) => i < shown && lands(i));
+    band.more.disabled = !elsewhere && !band.hints.some((_, i) => i > shown && lands(i));
     if (band.press === 'tries') {
-      const shown = band.look >= 0 ? band.look : band.index;
       const fits = band.look >= 0 && band.open[band.look] !== false;
       // With nothing tried on the band says 0521's sentence, why some are shut, which is what tells the player there is more.
       const said = band.look < 0 ? (band.why ?? band.hints[shown] ?? '') : band.open[shown] === false ? (band.whys[shown] ?? band.why ?? '') : (band.hints[shown] ?? '');
       band.hint.textContent = fits ? said + ' · ' + FITS[device] : said;
-      // 0607: a band that comes round always has somewhere to go, unless it has one option.
-      const round = band.ends === 'round' && band.hints.length > 1;
-      band.less.disabled = !round && shown <= 0;
-      band.more.disabled = !round && shown >= band.hints.length - 1;
       paintCardOf(band);
       return;
     }
     band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
-    // 0607: and one that comes round can go either way while any other option is open.
-    const elsewhere = band.ends === 'round' && band.open.some((open, i) => open !== false && i !== band.index);
-    band.less.disabled = !elsewhere && !band.open.some((open, i) => open && i < band.index);
-    band.more.disabled = !elsewhere && !band.open.some((open, i) => open && i > band.index);
     paintCardOf(band);
   };
   /** Which of Cosmo's shelves is in view, by screen — 0542's `setInView`, kept since 0562 for the card. */
@@ -7790,22 +7822,31 @@ export function makeChrome(
     if (count === 0) return;
     // 0607: the row's ends decide for a direction; a press, which has none, comes round anyway.
     const rounds = round || band.ends === 'round';
-    // 0561: a band that tries moves its look to the next option that way, shut or not, and fits nothing.
+    // 0561: a band that tries moves its look to the next option that way and fits nothing. 0657: the next shown one.
     if (band.press === 'tries') {
       const from = band.look >= 0 ? band.look : band.index >= 0 ? band.index : delta > 0 ? -1 : count;
-      const next = rounds ? (from + delta + count) % count : from + delta;
-      if (next >= 0 && next < count && next !== from) tryOn(band, next, true);
+      let next = from;
+      for (let tried = 0; tried < count; tried++) {
+        let at = next + delta;
+        if (rounds) at = (at + count) % count;
+        else if (at < 0 || at >= count) return;
+        next = at;
+        if (band.hidden[next] !== true) break;
+      }
+      if (next !== from && band.hidden[next] !== true) tryOn(band, next, true);
       return;
     }
+    // 0657: and every other band to the next option that is open and shown.
+    const lands = (i: number): boolean => band.open[i] !== false && band.hidden[i] !== true;
     let next = band.index;
     for (let tried = 0; tried < count; tried++) {
       let at = next + delta;
       if (rounds) at = (at + count) % count;
       else if (at < 0 || at >= count) return;
       next = at;
-      if (band.open[next] !== false) break;
+      if (lands(next)) break;
     }
-    if (next !== band.index && band.open[next] !== false) onChoice(band.name, next, false);
+    if (next !== band.index && lands(next)) onChoice(band.name, next, false);
   };
   /** The band whose row the cursor is on, or `undefined` on a row of buttons. */
   const bandAtCursor = (): Band | undefined => {
@@ -8392,6 +8433,14 @@ export function makeChrome(
         band.look = -1;
         paintLook(band);
         onChoice(band.name, look, false);
+      } else if (band !== undefined && band.press === 'acts') {
+        /*
+          0657: a band that acts presses the screen's first action, as a click would — Cosmo's *Buy*, whose sheet
+          then asks — and nothing while that action is off the screen (`setActionShown`).
+        */
+        const panel = shownScreen === null ? undefined : panels[shownScreen];
+        const first = panel?.controls[0];
+        if (first !== undefined && !first.hidden) first.click();
       } else if (band !== undefined) stepBand(band, 1, true);
       else atCursor()?.click();
     },
@@ -8501,6 +8550,19 @@ export function makeChrome(
             buttons[i]!.setAttribute('aria-disabled', closed ? 'true' : 'false');
           } else buttons[i]!.disabled = closed;
         }
+        sayBand(band);
+      }
+    },
+    setHidden(name: ChoiceName, hidden: readonly boolean[]): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const panel = panels[screen];
+        const buttons = panel?.options[name];
+        const band = panel?.bands.find((b) => b.name === name);
+        if (buttons === undefined || band === undefined) continue;
+        band.hidden = hidden;
+        for (let i = 0; i < buttons.length; i++) buttons[i]!.hidden = hidden[i] === true;
+        // A try on what has just gone is put back, so the stand never wears what the band does not show.
+        if (band.look >= 0 && hidden[band.look] === true) putBack(band);
         sayBand(band);
       }
     },

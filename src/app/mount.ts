@@ -2493,6 +2493,25 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let shopVisits = 0;
   const windowWare = (): OwnableKind | undefined => SHELVES[aisle].wares[picked[aisle]];
   /**
+   * Whether Cosmo's shelves show what the player owns — 0657: *"in cosmos owned items should be hidden unless you
+   * tick to show them."* The shell's, for the session, on the aisle's terms; nothing is stored.
+   */
+  let showOwned = false;
+  /**
+   * Whether `ware` is off its shelf — 0657: owned, the box not ticked, and not the one just bought or fitted, which
+   * stays in the window while Cosmo says so.
+   */
+  const offShelf = (ware: OwnableKind): boolean => state.hangar.owned[ware] && !showOwned && ware !== justSold && ware !== justFitted;
+  /** Each shelf's pick moved off a ware that is off the shelf, to the first one on it, or to none — 0657. */
+  const shelveOwned = (): void => {
+    for (const kind of SHELF_KINDS) {
+      const wares = SHELVES[kind].wares;
+      const at = wares[picked[kind]];
+      if (at !== undefined && !offShelf(at)) continue;
+      picked[kind] = wares.findIndex((w) => !offShelf(w));
+    }
+  };
+  /**
    * Which group each tabbed stand has in view — 0579, by its position in the stand's groups. The shell's,
    * on the aisle's terms: kept for nothing past the visit, and the first group until a tab is stepped.
    */
@@ -2738,7 +2757,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
             },
           );
         }
-      } else if (index !== 0) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+      } else if (index === 1) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+      // 0657: the box that puts what the player owns back on the shelves, and takes it off again.
+      else if (index === 2) {
+        showOwned = !showOwned;
+        fitHangar();
+      }
     }
     /*
       ⚠️ **THE SPLASH'S PROMPT — 0513, ONLY AFTER A GESTURE.** The capture-phase `unlock` hears the click
@@ -2961,21 +2985,31 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);
     // 0561: and why each shut option is, for the one the cursor tries on.
     const whysOf = (name: SlotName, opens: readonly boolean[]): (string | null)[] => opens.map((o, i) => (o ? null : optionWhy(name, ship, i, state.hangar.won)));
-    chrome.setOpen('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable), whysOf('plate', open));
+    /*
+      ⚠️ **0657: A SLOT SHOWS ONLY WHAT THIS SHIP MAY WEAR.** *"Locked items should be hidden on every equippable
+      screen."* What is shut is hidden as well as shut, so the band is what the player has; its `why` still says
+      there is more and where it is. A band with nothing on it at all — the wheels of a ship that has none — goes.
+    */
+    const fitSlot = (name: SlotName, opens: readonly boolean[], why: string | null, whys?: readonly (string | null)[]): void => {
+      chrome.setOpen(name, opens, why, whys);
+      chrome.setHidden(name, opens.map((o) => !o));
+      chrome.setBandShown(name, opens.some((o) => o));
+    };
+    fitSlot('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable), whysOf('plate', open));
     chrome.setChoice('plate', SHIP_KINDS.indexOf(state.hangar.plate[ship]));
     // 0524: the special, on the dash's rule and in its words.
     const specials = SHIP_KINDS.map((from) => specialOpen(state.hangar, ship, from));
     const lendable = SHIP_KINDS.some((from, i) => from !== ship && specials[i] === true);
-    chrome.setOpen('special', specials, specialWhy(ship, state.hangar.won[ship], lendable), whysOf('special', specials));
+    fitSlot('special', specials, specialWhy(ship, state.hangar.won[ship], lendable), whysOf('special', specials));
     chrome.setChoice('special', SHIP_KINDS.indexOf(state.hangar.special[ship]));
     // 0526: the gun, on the same rule and in the same words.
     const guns = SHIP_KINDS.map((from) => gunOpen(state.hangar, ship, from));
     const lent = SHIP_KINDS.some((from, i) => from !== ship && guns[i] === true);
-    chrome.setOpen('gun', guns, gunWhy(ship, state.hangar.won[ship], lent), whysOf('gun', guns));
+    fitSlot('gun', guns, gunWhy(ship, state.hangar.won[ship], lent), whysOf('gun', guns));
     chrome.setChoice('gun', SHIP_KINDS.indexOf(state.hangar.gun[ship]));
     // 0578: the tubes — none always, and every rack the tubes owned are enough for, on any ship.
     const racks = RACK_KINDS.map((rack) => rackOpen(state.hangar, rack));
-    chrome.setOpen('rack', racks, rackWhy(TUBE_WARE_KINDS.some((kind) => state.hangar.owned[kind])), whysOf('rack', racks));
+    fitSlot('rack', racks, rackWhy(TUBE_WARE_KINDS.some((kind) => state.hangar.owned[kind])), whysOf('rack', racks));
     chrome.setChoice('rack', RACK_KINDS.indexOf(state.hangar.rack[ship]));
     /*
       0527: the wheels, on Paint & Parts — every rim open to this car, why the rest are shut, and the one
@@ -2984,12 +3018,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const rims = RIM_KINDS.map((rim) => rimOpen(state.hangar, ship, rim));
     const swapped = RIM_KINDS.some((rim, i) => RIMS[rim].from !== null && RIMS[rim].from !== ship && rims[i] === true);
     const bought = RIM_KINDS.some((rim, i) => RIMS[rim].from === null && rims[i] === true);
-    chrome.setOpen('rim', rims, rimWhy(ship, SHIPS[ship].wheels !== null, state.hangar.won[ship], swapped, bought), whysOf('rim', rims));
+    fitSlot('rim', rims, rimWhy(ship, SHIPS[ship].wheels !== null, state.hangar.won[ship], swapped, bought), whysOf('rim', rims));
     const rim = state.hangar.rim[ship];
     chrome.setChoice('rim', rim === null ? -1 : RIM_KINDS.indexOf(rim));
     // 0528: the look — the band named for this ship's three, the first open always and the rest with its win.
     chrome.setLabels('art', artOptions(ship));
-    chrome.setOpen('art', SHIPS[ship].arts.map((art) => artOpen(state.hangar, ship, art)), artWhy(ship, state.hangar.won[ship]));
+    fitSlot('art', SHIPS[ship].arts.map((art) => artOpen(state.hangar, ship, art)), artWhy(ship, state.hangar.won[ship]));
     chrome.setChoice('art', SHIPS[ship].arts.indexOf(state.hangar.art[ship]));
     /*
       0529: the paint — the factory's always, every hue with the ship's win; and the tone, open only on a
@@ -2997,9 +3031,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     const won = state.hangar.won[ship];
     const paint = state.hangar.livery[ship];
-    chrome.setOpen('livery', [true, ...HUES.map(() => won)], liveryWhy(ship, won));
+    fitSlot('livery', [true, ...HUES.map(() => won)], liveryWhy(ship, won));
     chrome.setChoice('livery', paint === null ? 0 : 1 + paint.hue);
-    chrome.setOpen('tone', TONES.map(() => won && paint !== null), toneWhy(won, paint !== null));
+    fitSlot('tone', TONES.map(() => won && paint !== null), toneWhy(won, paint !== null));
     chrome.setChoice('tone', paint === null ? -1 : paint.tone);
     /*
       0565: the paints as swatches — each hue in the tone the ship's paint has, or Bright off the factory's —
@@ -3015,18 +3049,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setThumbs('art', SHIPS[ship].arts.map((art) => thumbOf(ship, { ...base, art })));
     // 0530: the flame — the standard always, a bought one on any ship; 0595: a ship's own on the shells' rule.
     const flames = FLAME_KINDS.map((kind) => flameOpen(state.hangar, ship, kind));
-    chrome.setOpen('flame', flames, flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])), whysOf('flame', flames));
+    fitSlot('flame', flames, flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])), whysOf('flame', flames));
     chrome.setChoice('flame', FLAME_KINDS.indexOf(state.hangar.flame[ship]));
     // 0584: the shell — its own always, another ship's on the dash's rule, a bought one on any ship.
     const shells = SHELL_KINDS.map((kind) => shellOpen(state.hangar, ship, kind));
     const lendsShell = SHELL_KINDS.some((kind, i) => SHELLS[kind].from !== null && SHELLS[kind].from !== ship && shells[i] === true);
     const boughtShell = SHELL_KINDS.some((kind, i) => SHELLS[kind].from === null && shells[i] === true);
-    chrome.setOpen('shell', shells, shellWhy(ship, state.hangar.won[ship], lendsShell, boughtShell), whysOf('shell', shells));
+    fitSlot('shell', shells, shellWhy(ship, state.hangar.won[ship], lendsShell, boughtShell), whysOf('shell', shells));
     chrome.setChoice('shell', SHELL_KINDS.indexOf(state.hangar.shell[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
     chrome.setSheet('hangar', balance);
     chrome.setSheet('parts', balance);
+    // 0657: the window off any ware that is off its shelf, before anything reads it.
+    shelveOwned();
     // 0562: and on Cosmo's, what is left after the ware in the window, while it is one the balance covers.
     const forSale = windowWare();
     const price = forSale === undefined ? null : OWNABLES[forSale].price;
@@ -3038,7 +3074,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     const hung = state.hangar.hung[ship];
     const hooks = [true, ...DANGLE_KINDS.map((kind) => state.hangar.owned[kind])];
-    chrome.setOpen('dangle', hooks, dangleWhy(DANGLE_KINDS.some((kind) => DANGLES[kind].price !== null && state.hangar.owned[kind])), whysOf('dangle', hooks));
+    fitSlot('dangle', hooks, dangleWhy(DANGLE_KINDS.some((kind) => DANGLES[kind].price !== null && state.hangar.owned[kind])), whysOf('dangle', hooks));
     chrome.setChoice('dangle', hung === null ? 0 : 1 + DANGLE_KINDS.indexOf(hung));
     /*
       0542: every shelf, each ware named with its price on its face — or as the player's, which is the shut
@@ -3058,13 +3094,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
           return { text: String(price) + ' ✦', tone: state.hangar.shards < price ? ('short' as const) : ('price' as const) };
         }),
       );
+      // 0657: what is owned is off the shelf until the box is ticked, and a shelf of nothing but that says so.
+      const off = wares.map((w) => offShelf(w));
+      const emptied = off.every((o) => o);
       chrome.setOpen(
         kind,
         wares.map(() => true),
-        kind === aisle && ware !== undefined ? wareWhy(ware, state.hangar.owned[ware], state.hangar.shards, needsFirst(state.hangar, ware)) : null,
+        kind === aisle && ware !== undefined
+          ? wareWhy(ware, state.hangar.owned[ware], state.hangar.shards, needsFirst(state.hangar, ware))
+          : emptied
+            ? 'Everything here is yours — tick Show owned to see it'
+            : null,
       );
+      chrome.setHidden(kind, off);
       chrome.setChoice(kind, kind === aisle ? picked[kind] : -1);
     }
+    chrome.setActionLabel('shop', 2, (showOwned ? '☑' : '☐') + ' Show owned');
     chrome.setChoice('aisle', SHELF_KINDS.indexOf(aisle));
     chrome.setInView('shop', aisle);
     // 0579: and every tabbed stand's group in view, on its own screen.
@@ -3083,7 +3128,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       chrome.setActionShown('shop', 0, owned ? fit !== null && !wears(ware, ship) : waiting === null);
       chrome.setActionLabel('shop', 0, owned ? 'Fit it now' : state.hangar.shards < price ? 'Need ' + String(price - state.hangar.shards) + ' more ✦' : 'Buy · ' + String(price) + ' ✦');
       chrome.setKeeperLine('shop', keeperLine(ware, owned, ship));
-    }
+    } else chrome.setActionShown('shop', 0, false); // 0657: nothing in the window, so nothing for Buy to take.
     // The readout wears the ware in the window over the shop, so it is seen hung before it is bought.
     const shown = DANGLE_KINDS.find((kind) => kind === ware);
     // 0561: and what hangs tried on, over the hangar.

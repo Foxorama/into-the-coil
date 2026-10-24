@@ -80,8 +80,10 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     // A shut dash cannot be pressed; the estate's is fitted, and the readout wears it at once.
     // 0579: on the *Cockpit* sub-tab.
     await inView(page, 'hangar', 'plate');
-    await page.locator(`${dashes} >> nth=${SHIP_KINDS.indexOf('caddie')}`).click({ force: true });
-    // 0561: a press on a shut dash tries it on — the readout wears it, to be seen — and fits nothing.
+    // 0657: a shut dash is not on the band at all — *"locked items should be hidden on every equippable screen"* —
+    // so there is nothing there to press; every open one is drawn.
+    const drawnDashes = await page.evaluate((sel) => [...document.querySelectorAll<HTMLButtonElement>(sel)].map((b) => !b.hidden), dashes);
+    expect(drawnDashes, 'the dashes drawn are not the open ones').toEqual(await openDashes(page));
     const refused = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(refused.plate.fighter, 'a shut dash was fitted').toBe('fighter');
     await page.locator(`${dashes} >> nth=${SHIP_KINDS.indexOf('estate')}`).click();

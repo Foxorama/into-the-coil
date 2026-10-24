@@ -149,3 +149,51 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
     await context.close();
   });
 });
+
+describe.runIf(chromePath)('0657 — Cosmo’s shelves show what is for sale, and A on one asks to buy', () => {
+  it('THE ASK: what is owned is off the shelves until Show owned is ticked, and a press on a shelf opens Buy’s sheet', async () => {
+    /*
+      *"Locked items … should be visible in cosmos and in cosmos owned items should be hidden unless you tick to show
+      them"*, and *"A button on game console goes to next item in stores, it should confirm just like it does on main
+      menu."* The golf ball is owned; the family dice are not, and the balance covers them.
+    */
+    browser ??= await launchChromium({ headless: true });
+    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const owned = { ...initialHangar.owned, golfball: true };
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 5000, owned }));
+    await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+    await pastIntro(page);
+    await openHangar(page);
+    await page.locator(`${shown('hangar')} .${prefixFor('hangar')}tab`, { hasText: SCREENS.shop.heading }).click();
+    await page.waitForSelector(shown('shop'), { state: 'attached' });
+
+    const golfball = page.locator(`${shown('shop')} [${SETTING_ATTR}="hanging"] .${SHOP}option >> nth=${SHELVES.hanging.wares.indexOf('golfball')}`);
+    const family = page.locator(`${shown('shop')} [${SETTING_ATTR}="hanging"] .${SHOP}option >> nth=${SHELVES.hanging.wares.indexOf('family')}`);
+    const tick = page.locator(`${shown('shop')} .${SHOP}action`, { hasText: 'Show owned' });
+    await page.locator(`${shown('shop')} [${SETTING_ATTR}="aisle"] .${SHOP}option >> nth=${SHELF_KINDS.indexOf('hanging')}`).click();
+    expect(await golfball.isHidden(), 'the golf ball, owned, is on the shelf with the box unticked').toBe(true);
+    expect(await family.isHidden(), 'the family dice, for sale, are off the shelf').toBe(false);
+    expect(await tick.innerText(), 'the box does not say it is unticked').toContain('☐');
+    await tick.click();
+    expect(await golfball.isHidden(), 'ticked, the golf ball is still off the shelf').toBe(false);
+    expect(await tick.innerText(), 'the box does not say it is ticked').toContain('☑');
+    await tick.click();
+    expect(await golfball.isHidden(), 'unticked again, the golf ball is still on the shelf').toBe(true);
+
+    // A press on the shelf, as a pad's A or Enter is: Buy's own sheet asks, and nothing is spent until it is answered.
+    await pickWare(page, 'family');
+    // Down the screen's rows with the keys a player has, to the shelf.
+    for (let i = 0; i < 8; i++) {
+      if ((await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) === SHELVES.hanging.label) break;
+      await page.keyboard.press('ArrowDown');
+      await page.waitForTimeout(80);
+    }
+    expect(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'the keys never reached the shelf').toBe(SHELVES.hanging.label);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(150);
+    expect(await page.locator(`.${SHOP}ask`).count(), 'a press on the shelf did not ask to buy the ware in the window').toBe(1);
+    const kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
+    expect(kept.owned.family, 'a press on the shelf bought without asking').toBe(false);
+    await context.close();
+  });
+});

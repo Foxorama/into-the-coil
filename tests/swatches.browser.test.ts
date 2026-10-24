@@ -70,9 +70,13 @@ describe.runIf(chromePath)('0565 — Paint & Parts is drawn in pictures', () => 
     // A hue fitted, and the tone is there to choose.
     await page.locator(`${band('livery')} .${PARTS}option >> nth=3`).click();
     expect(await page.locator(band('tone')).evaluate((el) => el.closest('[role="group"]')!.getBoundingClientRect().height), 'a painted ship’s tone is not drawn').toBeGreaterThan(0);
-    // The Firebird's wheels each with a picture beside the name.
+    // The Firebird's wheels each with a picture beside the name — every one the band draws, which since 0657 is the
+    // ones this ship may wear.
     await section(page, 'Parts');
-    const pictured = await page.locator(`${band('rim')} .${PARTS}option`).evaluateAll((els) => els.map((el) => el.querySelector('canvas')?.getBoundingClientRect().width ?? 0));
+    const pictured = await page
+      .locator(`${band('rim')} .${PARTS}option`)
+      .evaluateAll((els) => els.filter((el) => !(el as HTMLElement).hidden).map((el) => el.querySelector('canvas')?.getBoundingClientRect().width ?? 0));
+    expect(pictured.length, 'the band draws no wheel, so this asks nothing').toBeGreaterThan(0);
     expect(pictured.every((w) => w > 0), 'a wheel has no picture of the ship wearing it').toBe(true);
     await page.context().close();
   });
