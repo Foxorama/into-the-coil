@@ -16,6 +16,11 @@ import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { OPENING_CHARGES } from '../src/content/specials.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+// 0669: what the title's line says on a locked pilot.
+import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
+import { lockHint } from '../src/state/screens.ts';
+import { initialHangar, pilotRecord } from '../src/state/slices/hangar.ts';
+import { hangarFrom } from '../src/save/hangar.ts';
 
 /**
  * A PAD DRIVING THE REAL PAGE, AND A SCREEN THAT EXPIRES BY ITSELF.
@@ -172,11 +177,14 @@ describe.runIf(chromePath)('a gamepad can press a button on a screen', () => {
     const page = await open();
     const cursor = '.' + prefixFor('title') + 'action-cursor';
     expect(await page.locator(cursor).count(), 'no control is marked as focused').toBe(1);
-    const outline = await page.evaluate((s: string) => {
+    // 0669: the brackets, laid over the control on its before-box — four corners, each two strokes.
+    const drawn = await page.evaluate((s: string) => {
       const el = document.querySelector(s);
-      return el === null ? '' : getComputedStyle(el).outlineStyle;
+      if (el === null) return 0;
+      const before = getComputedStyle(el, '::before');
+      return before.content === 'none' ? 0 : (before.backgroundImage.match(/linear-gradient/g) ?? []).length;
     }, cursor);
-    expect(outline, 'the cursor class draws nothing').not.toBe('none');
+    expect(drawn, 'the cursor class draws nothing').toBe(8);
     await page.context().close();
   });
 
@@ -710,6 +718,52 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await page.context().close();
   });
 
+  it('0669 — the cursor stands on a locked pilot on the title, and the line says what opens them', async () => {
+    /*
+      The lock's line was the hangar's focus card's, and a step on the title skipped every shut face, so nothing on
+      the title ever said why a silhouette was one. In what the player sees: the brackets on a shut face, the line
+      under the faces saying what opens that pilot, the chosen pilot unchanged, and A there refused.
+    */
+    const page = await open();
+    await afterFrames(page, 8);
+    const p = prefixFor('title');
+    const record = pilotRecord(hangarFrom(EVERY_TIER_FINISHED, initialHangar));
+    const shut = GOLFER_KINDS.filter((kind) => lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name) !== null);
+    expect(shut.length, 'this store opens every pilot, so there is no lock to look at').toBeGreaterThan(0);
+    const looked = (): Promise<{ look: number; line: string; chosen: string }> =>
+      page.evaluate(
+        ({ panel, p, attr }: { panel: string; p: string; attr: string }) => {
+          const root = document.querySelector(`.${panel}`)!;
+          const options = [...root.querySelectorAll(`[${attr}="pilot"] .${p}option`)];
+          const on = root.querySelector(`[${attr}="pilot"] [aria-pressed="true"]`);
+          return {
+            look: options.findIndex((o) => o.classList.contains(p + 'option-look')),
+            line: (root.querySelector<HTMLElement>(`.${p}pilot-line`)?.innerText ?? '').trim(),
+            chosen: (on?.getAttribute('aria-label') ?? on?.textContent ?? '').trim(),
+          };
+        },
+        { panel: p + 'shown', p, attr: SETTING_ATTR },
+      );
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    const chosen = (await looked()).chosen;
+    let seen: { look: number; line: string; chosen: string } | null = null;
+    for (let step = 0; step < GOLFER_KINDS.length && seen === null; step++) {
+      await nudge(page, MENU_DPAD_BUTTONS.right);
+      const now = await looked();
+      if (now.look >= 0) seen = now;
+    }
+    expect(seen, 'right along the pilot band never stood on a locked pilot').not.toBeNull();
+    const kind = GOLFER_KINDS[seen!.look]!;
+    expect(shut, `the cursor looked at ${kind}, who is not locked`).toContain(kind);
+    expect(seen!.line, `on ${kind} the line says ${seen!.line}`).toContain(lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name)!);
+    expect(seen!.chosen, 'looking at a locked pilot chose them').toBe(chosen);
+    await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
+    expect(await shown(page, shownScreen('title')), 'A on a locked pilot flew').toBe(true);
+    expect((await looked()).chosen, 'A on a locked pilot chose them').toBe(chosen);
+    await page.context().close();
+  });
+
   it('0668 — THE WALK: A on the pilot band arms the pilot it is on, and a second A flies them', async () => {
     /*
       The review's walk (`reports/the-menus-reviewed-again-2026-10-24.md`, 1.1): into the hangar, B back to the
@@ -737,9 +791,10 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await page.waitForSelector(shownScreen('title'), { timeout: 15_000 });
     const was = await filled();
     await nudge(page, MENU_DPAD_BUTTONS.down);
-    await nudge(page, MENU_DPAD_BUTTONS.right);
+    // Left, onto a pilot this store has open: right of the default stands on a locked one, which 0669 looks at.
+    await nudge(page, MENU_DPAD_BUTTONS.left);
     const second = await filled();
-    expect(second, 'down from the quiet row and right did not step the pilot band').not.toBe(was);
+    expect(second, 'down from the quiet row and left did not step the pilot band').not.toBe(was);
     expect(await armed(), 'a step along the pilot band armed the pilot it landed on').toBe(false);
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
     expect(await shown(page, shownScreen('title')), 'the first A on the pilot band flew').toBe(true);

@@ -86,8 +86,11 @@ export const PROBES = [
       // is supposed to. The repair is in the stylesheet rather than here: one ring, one declaration,
       // both selectors on it. A probe anchored on a declaration is a probe that notices the day
       // something else starts declaring it, which is worth more than an anchor that never complains.
-      find: '  outline: 3px solid currentColor;',
-      replace: '  outline: 3px solid currentColor;\n}\n.hud {\n  opacity: 1;',
+      //
+      // ⚠️ And re-anchored by 0669, which took the ring away for the brackets: on the brackets' own keyframes,
+      // which every control's cursor shares and no screen joins.
+      find: '@keyframes itc-bracket-wide { to { inset: 0.2em; } }',
+      replace: '@keyframes itc-bracket-wide { to { inset: 0.2em; } }\n.hud { opacity: 1; }',
     },
   },
 ];

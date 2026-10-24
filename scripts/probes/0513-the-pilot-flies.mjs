@@ -69,8 +69,9 @@ export const PROBES = [
     guard: 'THE WALK: A on the pilot band arms the pilot it is on',
     edit: {
       path: 'src/app/chrome.ts',
-      find: "      if (band !== undefined && band.press === 'takes') onChoice(band.name, band.index, false);",
-      replace: "      if (band !== undefined && band.press === 'never') onChoice(band.name, band.index, false);",
+      // ⚠️ And re-anchored by 0669, whose press on a shut pilot looked at is refused.
+      find: "      if (band !== undefined && band.press === 'takes') {",
+      replace: "      if (band !== undefined && band.press === 'never') {",
     },
   },
   {
