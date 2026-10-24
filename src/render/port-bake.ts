@@ -1961,6 +1961,8 @@ const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
   ball: null,
   // Side-on in the fight already, as the cars are — 0595.
   duck: null,
+  // And the Viper, side-on as the port's own drawing of her is — 0666.
+  viper: null,
 };
 
 /** How far over each frame of the tilt leans — side-on, then a fifth of the way at a time; `blue` is all of it. */

@@ -139,7 +139,8 @@ describe('0595 — the ask: MMXXVI in the Aqua Duck, with a paintball gun', () =
   });
 
   it('opens after five things bought at Cosmo’s, and the band counts them down', () => {
-    expect(GOLFERS.mmxxvi.opens).toEqual({ after: [], crashes: 0, bought: 5 });
+    // 0666: and no tier to finish.
+    expect(GOLFERS.mmxxvi.opens).toEqual({ after: [], crashes: 0, bought: 5, tiers: [] });
     expect(lockHint(GOLFERS.mmxxvi.opens, pilotRecord(initialHangar), 'MMXXVI')).toBe('Buy 5 more things at Cosmo’s to fly MMXXVI');
     expect(lockHint(GOLFERS.mmxxvi.opens, pilotRecord(bought(4)), 'MMXXVI')).toBe('Buy 1 more thing at Cosmo’s to fly MMXXVI');
     expect(waresBought(bought(5))).toBe(5);
@@ -521,7 +522,8 @@ describe('0595 — the Water Cannon sweeps a jet of water across the lane', () =
     const mount = readFileSync(resolve(fileURLToPath(new URL('..', import.meta.url)), 'src/app/mount.ts'), 'utf8');
     const calls = mount.match(/boltInks\([^;]*\);/g) ?? [];
     expect(calls.length, 'no call that hands the bolts their inks was found').toBeGreaterThan(0);
-    for (const call of calls) expect(call, 'the jet is handed an ink other than the player’s water').toContain('colours.water, colours.impact));');
+    // 0666: Red Lightning's two follow the water's, so the water's pair is no longer the last.
+    for (const call of calls) expect(call, 'the jet is handed an ink other than the player’s water').toContain('colours.water, colours.impact, ');
   });
 
   /*

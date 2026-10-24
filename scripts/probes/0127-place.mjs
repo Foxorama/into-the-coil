@@ -113,8 +113,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0233: the cue is the flight's, asked of `cueOfFlight`.
-      find: "    if (i === 0) w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);",
-      replace: "    if (i === 0) w.onCue(cueOfFlight(w.weapon.flight));",
+      // And by 0666: the gun's own cue where its row has one.
+      find: "    if (i === 0) w.onCue(WEAPONS[w.weapon.kind].cue ?? cueOfFlight(w.weapon.flight), w.ship.across);",
+      replace: "    if (i === 0) w.onCue(WEAPONS[w.weapon.kind].cue ?? cueOfFlight(w.weapon.flight));",
     },
   },
 ];

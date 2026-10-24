@@ -48,6 +48,11 @@ export const ART_KINDS = [
   'paintSplats',
   'polkaDots',
   'gildedDuck',
+  // 0666: the Viper's four.
+  'wyrmGreen',
+  'kraitBands',
+  'diamondback',
+  'venomLine',
 ] as const;
 export type ArtKind = (typeof ART_KINDS)[number];
 
@@ -97,4 +102,9 @@ export const ART: Record<ArtKind, ArtRow> = {
   paintSplats: { name: 'Paint splats', hint: 'Splashed in the shop’s inks, as MMXXVI’s apron is', ship: 'duck' },
   polkaDots: { name: 'Polka dots', hint: 'Big white spots down the flank', ship: 'duck' },
   gildedDuck: { name: 'Gilded duck', hint: 'Gold leaf from bill to tail', ship: 'duck' },
+  // The Viper's flank — 0666: the Wyrm-Ship's green as the intro flies it, and three snakes' markings.
+  wyrmGreen: { name: 'Wyrm green', hint: 'The Coil’s green, as she flew it out of the port', ship: 'viper' },
+  kraitBands: { name: 'Krait bands', hint: 'Dark bands round the hull, as a krait wears them', ship: 'viper' },
+  diamondback: { name: 'Diamondback', hint: 'A rattler’s diamonds down the back', ship: 'viper' },
+  venomLine: { name: 'Venom line', hint: 'A lit line of venom from fang to tail', ship: 'viper' },
 };

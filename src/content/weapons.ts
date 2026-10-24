@@ -22,6 +22,7 @@
 
 import type { ShotKind } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
+import type { CueKind } from './cues.ts';
 import type { GunView, Mount } from './ships.ts';
 import { SPRITE } from './sprites.ts';
 import type { ThemeKind } from './themes.ts';
@@ -29,7 +30,7 @@ import type { ThemeKind } from './themes.ts';
 /**
  * Every gun. Closed — and since 0441 the order means nothing: no pickup cycles over it.
  */
-export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray', 'catherine', 'ram', 'paintball'] as const;
+export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray', 'catherine', 'ram', 'paintball', 'acid'] as const;
 
 /** Derived from the list, so a kind cannot exist in the union and be missing from the table. */
 export type WeaponKind = (typeof WEAPON_KINDS)[number];
@@ -312,6 +313,23 @@ export interface WeaponRow {
    * straight ahead"*. On the row, so a gun that is steered is a number here and nothing in the frame.
    */
   aim: number;
+  /**
+   * Radians between neighbouring barrels of a `straight` volley — 0666. Absent is `SPREAD_STEP` in
+   * `src/content/pickups.ts`, the fan every straight gun fired; the acid spray says its own, wider (0282: a
+   * default in shared code, the row's own where it has one).
+   */
+  fan?: number;
+  /**
+   * Steps a `straight` shot lives before it is spent on nothing — 0666, the acid's range: a spray that falls short
+   * where the pulse runs to the edge of the screen. Absent is no lifetime, which every other gun's shot has, the
+   * view's cull retiring it (`PLAYER_SHOT_LIFE`).
+   */
+  life?: number;
+  /**
+   * What a volley sounds like — 0666. Absent is its flight's (`cueOfFlight` in `src/app/frame.ts`), which every gun
+   * but the acid is heard by: the acid flies straight as the pulse does, and a spray is not a pulse.
+   */
+  cue?: CueKind;
 }
 
 export const WEAPONS: Record<WeaponKind, WeaponRow> = {
@@ -808,5 +826,46 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     lends: true,
     // 0623: the ray's arc, as the wheel's — the string scattered about where the right stick points it.
     aim: Math.PI / 8,
+  },
+  /**
+   * Venoma Krait's gun on the Viper — 0666, the page's *"has the serpent boss attacks → acid spray"*. The serpent
+   * opens on a fan of acid that rakes across the lane (0261); this is that spray, the player's: four spits in a
+   * fan twice the pulse's width, every quarter beat, that fall short before half the screen.
+   *
+   * ⚠️ **WIDE AND SHORT, AND THAT IS WHAT MAKES IT A DIFFERENT GUN.** The pulse reaches the edge and must be aimed;
+   * the spray covers a third of the lane in front of the nose and reaches nothing past it, so the Viper flies close.
+   * At the same damage a step as the pulse's when all four land — four of one and a half every six steps.
+   */
+  acid: {
+    label: 'Acid',
+    hint: 'A short, wide spray of venom',
+    shot: 'venom',
+    glyph: SPRITE.venomSpit,
+    flight: 'straight',
+    fireEvery: 6,
+    barrels: 4,
+    links: 1,
+    weight: 1,
+    bossWeight: 1,
+    // Red lightning called down from the sky — 0666.
+    special: 'redLightning',
+    // 0666: the fangs' mouth — lying along a nose from above, standing on a hood from the side.
+    mount: { top: { along: 1.3, across: 0 }, side: { along: 1.1, across: -0.6 } },
+    bursts: null,
+    reach: 0,
+    falloff: 0,
+    coil: 0,
+    turn: 0,
+    wheel: null,
+    ram: null,
+    paint: null,
+    lends: true,
+    aim: 0,
+    // Twice the pulse's `SPREAD_STEP` between barrels: 0.78 radians across its four, forty-five degrees.
+    fan: 0.26,
+    // Thirty-six steps at 2.2: seventy-nine units in the camera's frame from a jaw six ahead of the ship's middle, so
+    // a spit is gone before half the narrowest view. Forty was measured at 53% of it, the jaw not counted.
+    life: 36,
+    cue: 'spit',
   },
 };

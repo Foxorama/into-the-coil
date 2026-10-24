@@ -17,7 +17,8 @@ export const PROBES = [
     broke: 'the Marmot open from the first run',
     guard: 'every one of the four flies from the first run, and he does not',
     // Re-anchored by 0592, which made the lock a row of three parts.
-    edit: { path: 'src/content/golfers.ts', find: "    opens: { after: ['feather', 'woo', 'larry', 'bo'], crashes: 0, bought: 0 },", replace: '    opens: { after: [], crashes: 0, bought: 0 },' },
+    // And by 0666, which added the tiers.
+    edit: { path: 'src/content/golfers.ts', find: "    opens: { after: ['feather', 'woo', 'larry', 'bo'], crashes: 0, bought: 0, tiers: [] },", replace: '    opens: { after: [], crashes: 0, bought: 0, tiers: [] },' },
   },
   {
     decision: '0546',
@@ -55,7 +56,8 @@ export const PROBES = [
     suite: 'tests/marmot.test.ts',
     broke: 'the Marmot kept out of the Viper until he flies',
     guard: 'he is in every other pilot’s rescue pool',
-    edit: { path: 'src/content/golfers.ts', find: '  return GOLFER_KINDS.filter((kind) => kind !== chosen);', replace: "  return GOLFER_KINDS.filter((kind) => kind !== chosen && kind !== 'marmot');" },
+    // Re-anchored by 0666, which leaves out a pilot the story is not told round.
+    edit: { path: 'src/content/golfers.ts', find: '  return GOLFER_KINDS.filter((kind) => kind !== chosen && GOLFERS[kind].story);', replace: "  return GOLFER_KINDS.filter((kind) => kind !== chosen && GOLFERS[kind].story && kind !== 'marmot');" },
   },
   {
     decision: '0546',

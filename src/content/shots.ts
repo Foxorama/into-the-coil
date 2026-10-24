@@ -44,6 +44,9 @@ export type ShotKind =
   // The paintball marker's ball and the splat it lands as — 0595.
   | 'paintball'
   | 'splat'
+  // Venoma's spit, and the void blast her tubes fire in place of a missile — 0666.
+  | 'venom'
+  | 'venomVoid'
   | 'spit'
   | 'lance'
   | 'flak'
@@ -397,6 +400,8 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'rayBurst',
   'paintball',
   'splat',
+  'venom',
+  'venomVoid',
   'spit',
   'lance',
   'flak',
@@ -593,6 +598,20 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * own glyph (`WEAPONS.paintball.glyph`), the marker.
    */
   paintball: { sprite: SPRITE.paintballPink, spriteHit: SPRITE.paintballPink, radius: 1.1, health: 1, damage: 3, speed: 2.4, fission: SPENT_BY_ARRIVING },
+  /**
+   * Venoma's spit — 0666: the acid spray, four in a wide fan, spent by arriving and gone before half the screen
+   * (`life` on the gun's row). A dash where the serpent's acid is a gobbet, and the player's own cyan where it is
+   * the acid's lime: 0081 keeps the ship's fire out of the ink of what is trying to kill it, and the serpent
+   * throws acid at her. A pulse and a half a spit, since a fan lands fewer of its four on one body.
+   */
+  venom: { sprite: SPRITE.venomSpit, spriteHit: SPRITE.venomSpit, radius: 1, health: 1, damage: 1.5, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  /**
+   * The void blast the Viper's tubes fire — 0666, the page's *"missile turrets are the void blasts from serpent
+   * boss"*: the serpent's ring, in the player's seeker's lavender where the serpent's is the void's violet (the
+   * two are told apart by 0248's own pair). What the tube is fitted with still says how it flies, how hard it
+   * lands and whether it hunts (`tubeFire` on the ship's row); this is how it looks and how big it lands.
+   */
+  venomVoid: { sprite: SPRITE.venomVoid, spriteHit: SPRITE.venomVoid, radius: 1.6, health: 1, damage: 3, speed: 1.5, fission: SPENT_BY_ARRIVING },
   /**
    * Where a paintball lands — 0595: a splat, on the ring's burst's terms — a blast that lands on everything
    * inside it once, drawn at its reach — and smaller than it, so it reaches a body pressed against the one

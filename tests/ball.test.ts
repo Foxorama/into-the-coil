@@ -111,7 +111,7 @@ describe('0593 — the ask: Unity in a hamster ball, flying into things', () => 
   });
 
   it('opens after ten lives lost to something flown into, and the band counts them down', () => {
-    expect(GOLFERS.unity.opens).toEqual({ after: [], crashes: 10, bought: 0 });
+    expect(GOLFERS.unity.opens).toEqual({ after: [], crashes: 10, bought: 0, tiers: [] });
     expect(lockHint(GOLFERS.unity.opens, pilotRecord(initialHangar), 'Unity')).toBe('Lose 10 more lives to a crash to fly Unity');
     expect(lockHint(GOLFERS.unity.opens, pilotRecord({ ...initialHangar, crashes: 9 }), 'Unity')).toBe('Lose 1 more life to a crash to fly Unity');
     expect(lockHint(GOLFERS.unity.opens, pilotRecord({ ...initialHangar, crashes: 10 }), 'Unity')).toBe(null);

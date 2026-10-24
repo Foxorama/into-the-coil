@@ -383,11 +383,12 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     // opened rather than thrown: four shapes, and a row is exactly one of them. 0377 adds the rift,
     // which is thrown and opens where it lands: five. 0447 adds the nova, burst from the ship: six.
     // 0537 adds the candle, whose stars are thrown and go off as fireworks: seven. 0593 adds the dance,
-    // which flies the ship itself: eight. 0595 adds the jet, played from the gun: nine.
+    // which flies the ship itself: eight. 0595 adds the jet, played from the gun: nine. 0666 adds the smite,
+    // lightning called down from the sky: ten.
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
-      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova, row.candle, row.dance, row.jet].filter((shape) => shape !== null).length;
-      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift, a nova, a candle, a dance and a jet`).toBe(1);
+      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova, row.candle, row.dance, row.jet, row.smite].filter((shape) => shape !== null).length;
+      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift, a nova, a candle, a dance, a jet and a smite`).toBe(1);
       expect(
         row.shot !== null,
         `${kind} throws something it does not go off as, or goes off as something it never throws`,
@@ -489,8 +490,8 @@ describe('0378 — every special is heard as itself', () => {
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
       // A candle throws its stars from its own clock rather than a `shot` on the press — 0537 — and
-      // each goes off, so it is a thrown special here.
-      expect(row.lands !== null, `${kind} goes off without a sound, or has one it never goes off with`).toBe(row.shot !== null || row.candle !== null);
+      // each goes off, so it is a thrown special here. 0666: and Red Lightning's bolts each land, on their own clock.
+      expect(row.lands !== null, `${kind} goes off without a sound, or has one it never goes off with`).toBe(row.shot !== null || row.candle !== null || row.smite !== null);
     }
   });
 

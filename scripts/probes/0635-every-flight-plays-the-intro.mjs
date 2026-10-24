@@ -9,17 +9,18 @@ export const PROBES = [
     guard: '0635 — and the next flight plays the intro',
     edit: {
       path: 'src/app/mount.ts',
-      find: "  function fly(): void {\n    dispatch({ slice: 'screen', type: 'show', screen: 'intro' });\n  }",
+      // Re-anchored by 0666, whose pilot with no story flies straight in above this.
+      find: "    dispatch({ slice: 'screen', type: 'show', screen: 'intro' });\n  }\n  /** Where a screen goes",
       replace:
-        '  let flownThisVisit = false;\n' +
-        '  function fly(): void {\n' +
         '    if (flownThisVisit) {\n' +
         '      startRun();\n' +
         '      return;\n' +
         '    }\n' +
         '    flownThisVisit = true;\n' +
         "    dispatch({ slice: 'screen', type: 'show', screen: 'intro' });\n" +
-        '  }',
+        '  }\n' +
+        '  let flownThisVisit = false;\n' +
+        '  /** Where a screen goes',
     },
   },
 ];

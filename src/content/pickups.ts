@@ -652,6 +652,8 @@ export interface Weapon {
   turn: number;
   /** How far the right stick may turn a volley either side of straight ahead — 0588. Zero for a gun not steered. */
   aim: number;
+  /** Steps a straight shot lives, or 0 for one the view's cull retires — 0666, the gun's `life`. */
+  life: number;
 }
 
 /*
@@ -847,7 +849,8 @@ export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = []): We
   return {
     fireEvery,
     shots,
-    spread: SPREAD_STEP * (shots - 1),
+    // 0666: the gun's own fan where it says one.
+    spread: (gunRow.fan ?? SPREAD_STEP) * (shots - 1),
     damage,
     missileEvery,
     launchers,
@@ -860,5 +863,6 @@ export function weaponFor(ship: ShipRow, tubes: readonly MissileKind[] = []): We
     coil: gunRow.coil,
     turn: gunRow.turn,
     aim: gunRow.aim,
+    life: gunRow.life ?? 0,
   };
 }

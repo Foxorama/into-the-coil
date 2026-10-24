@@ -1105,7 +1105,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // Solved once per palette by `boltInks`, which gives each a hot heart — 0520.
   // 0595: and the Water Cannon's jet in the player's water round the same white — `water`, and never `frost`, the
   // other side's ink (the review of 0595).
-  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.water, colours.impact));
+  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.water, colours.impact, colours.enemy, colours.fire));
 
   /*
     Whether the canvas is shown mirrored, left for right — 0590, played left-handed. Held so `applyMirror`
@@ -1237,6 +1237,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     candleKind: null,
     candleFired: 0,
     candleIn: 0,
+    smiteKind: null,
+    smiteFired: 0,
+    smiteIn: 0,
     fireworks: 0,
     throwIn: 0,
     stormFor: 0,
@@ -1268,6 +1271,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Where a paintball scatters and what colour it is — 0595, its own stream per 0021.
     paintRng: makeRng('proof-scene').stream('paint'),
     stormRng: makeRng('proof-scene').stream('storm'),
+    smiteRng: makeRng('proof-scene').stream('smite'),
     bodyBoltRng: makeRng('proof-scene').stream('body-bolt'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
     rainRng: makeRng('proof-scene').stream('rain'),
@@ -2797,6 +2801,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setArrival({ place: THEMES[opening].title, voyage: THEMES[opening].voyage, accent: THEMES[opening].glow[palette] });
   };
   function fly(): void {
+    /*
+      0666: straight into the run for a pilot the story is not told round — Venoma Krait, who is the Viper's pilot
+      and so cannot chase the Viper out of the port.
+    */
+    if (!GOLFERS[state.settings.pilot].story) {
+      startRun();
+      return;
+    }
     dispatch({ slice: 'screen', type: 'show', screen: 'intro' });
   }
   /** Where a screen goes when it runs out or is skipped — a run begun, or a screen shown (`beginsRun`, 0513). */
@@ -3635,7 +3647,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surface.setSpace(want);
     // A hostile bolt in the place's own glow where it authors one, the enemy's ink elsewhere — 0459.
     const hostile = place === null ? null : THEMES[place].bolt;
-    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.water, colours.impact));
+    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard, colours.water, colours.impact, colours.enemy, colours.fire));
     /*
       ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
 

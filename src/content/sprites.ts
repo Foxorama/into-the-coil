@@ -109,6 +109,13 @@ export const SPRITE_KINDS = [
   'duckTubeHit',
   'duckTubes',
   'duckTubesHit',
+  // Venoma Krait's Viper — 0666: the secret ship, flown once every tier is finished.
+  'viper',
+  'viperHit',
+  'viperTube',
+  'viperTubeHit',
+  'viperTubes',
+  'viperTubesHit',
   /*
     0594: every ship's War Dance — two poses either side of its still one, at no tubes, one and two, its
     own parts moving in its own drawing (`dance` on its row). No hurt twin: nothing lands on a dancing ship.
@@ -155,6 +162,13 @@ export const SPRITE_KINDS = [
   'duckTubeDance2',
   'duckTubesDance1',
   'duckTubesDance2',
+  // 0666: the Viper's: its hood flared wide and then drawn in.
+  'viperDance1',
+  'viperDance2',
+  'viperTubeDance1',
+  'viperTubeDance2',
+  'viperTubesDance1',
+  'viperTubesDance2',
   // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
   'spinnerWheel',
   'spinnerWheelHit',
@@ -959,6 +973,10 @@ export const SPRITE_KINDS = [
   // shot has (`tests/legibility.test.ts`), and their own inks.
   'acid',
   'void',
+  // 0666: Venoma's spit — her gun's, a dash where the serpent's acid is a bead, so the two are told apart.
+  'venomSpit',
+  // 0666: the Viper's tubes' void blast — the serpent's ring, in the player's lavender.
+  'venomVoid',
   /*
     The serpent's last mouthful — 0311: acid and void as one ball, and the drops it bursts into.
 
@@ -1138,6 +1156,8 @@ export const SPRITE_KINDS = [
   'pickupDance',
   // The Water Cannon — 0595, redrawn by 0606: one drop of water, point up. The paintball's special's face.
   'pickupWater',
+  // Red Lightning — 0666: a bolt forked down out of a cloud. The Viper's special's face.
+  'pickupSmite',
   /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
@@ -1301,6 +1321,19 @@ export const SPRITE_KINDS = [
   'shieldDrip240a',
   'shieldDrip240b',
   'shieldDrip240c',
+  // 0666: the Viper's own — scales shed off a snake's back, laid round it.
+  'shieldScale0a',
+  'shieldScale0b',
+  'shieldScale0c',
+  'shieldScale120a',
+  'shieldScale120b',
+  'shieldScale120c',
+  'shieldScale180a',
+  'shieldScale180b',
+  'shieldScale180c',
+  'shieldScale240a',
+  'shieldScale240b',
+  'shieldScale240c',
   /*
     ── A SURGE IS WORN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────────────────
 
@@ -1924,6 +1957,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   duckTubeHit: SHIP_BOX,
   duckTubes: SHIP_BOX,
   duckTubesHit: SHIP_BOX,
+  viper: SHIP_BOX,
+  viperHit: SHIP_BOX,
+  viperTube: SHIP_BOX,
+  viperTubeHit: SHIP_BOX,
+  viperTubes: SHIP_BOX,
+  viperTubesHit: SHIP_BOX,
   fighterDance1: SHIP_BOX,
   fighterDance2: SHIP_BOX,
   fighterTubeDance1: SHIP_BOX,
@@ -1966,6 +2005,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   duckTubeDance2: SHIP_BOX,
   duckTubesDance1: SHIP_BOX,
   duckTubesDance2: SHIP_BOX,
+  viperDance1: SHIP_BOX,
+  viperDance2: SHIP_BOX,
+  viperTubeDance1: SHIP_BOX,
+  viperTubeDance2: SHIP_BOX,
+  viperTubesDance1: SHIP_BOX,
+  viperTubesDance2: SHIP_BOX,
   /*
     0527: a box whose frame's radius is the Firebird's tyre — 3.6 of the predecessor's units, each 0.062
     of a ship's box radius — so the spinner is painted to a radius of one and stands over that tyre at
@@ -2678,6 +2723,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A drop bigger than any enemy bullet and a ring between it and the spine — 0248.
   acid: 5.8,
   void: 5,
+  // 0666: a dash a little longer than the pulse's bullet, which is the shot it stands in for.
+  venomSpit: 2.6,
+  // 0666: a ring the size of the seeker it stands in for, and well under the serpent's.
+  venomVoid: 3.6,
   /*
     ⚠️ **THE BIGGEST THING THAT IS NOT A HULL — 0311, AND IT IS ALLOWED TO BE.** `CLAUDE.md`'s *consider
     the screen* is the rule and 0295 deleted the ranking guards that used to answer it in advance: this
@@ -2825,6 +2874,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupCandle: 8,
   pickupDance: 8,
   pickupWater: 8,
+  pickupSmite: 8,
   pickupMissile: 7.33,
   pickupSeeker: 7.33,
   pickupShield: 6.67,
@@ -2961,6 +3011,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shieldDrip240a: 12,
   shieldDrip240b: 12,
   shieldDrip240c: 12,
+  shieldScale0a: 12,
+  shieldScale0b: 12,
+  shieldScale0c: 12,
+  shieldScale120a: 12,
+  shieldScale120b: 12,
+  shieldScale120c: 12,
+  shieldScale180a: 12,
+  shieldScale180b: 12,
+  shieldScale180c: 12,
+  shieldScale240a: 12,
+  shieldScale240b: 12,
+  shieldScale240c: 12,
   // Round the whole hull with a margin — the ship is 7, so its wingtips sit inside the rim. 0373.
   auraHunt: 12,
   auraOverdrive: 12,

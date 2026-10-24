@@ -9,6 +9,7 @@ import { openSettings, shown } from './title.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { SIDES, SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
+import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { GOLFERS } from '../src/content/golfers.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
@@ -39,13 +40,14 @@ afterAll(async () => {
 /**
  * A player who has opened Unity — 0594: ten crashes kept, so the War Dance's face is in the key with the
  * rest. A first-time player's key hides it (the last test below). And MMXXVI since 0595: five things bought,
- * so the Water Cannon's face is in it too.
+ * so the Water Cannon's face is in it too. And Venoma since 0666: every tier finished, so Red Lightning's is.
  */
 const BOUGHT = OWNABLE_KINDS.filter((kind) => OWNABLES[kind].price !== null).slice(0, GOLFERS.mmxxvi.opens.bought);
 const UNITY_OPEN = serialiseHangar({
   ...initialHangar,
   crashes: GOLFERS.unity.opens.crashes,
   owned: { ...initialHangar.owned, ...Object.fromEntries(BOUGHT.map((kind) => [kind, true])) },
+  finished: Object.fromEntries(DIFFICULTY_KINDS.map((tier) => [tier, true])) as typeof initialHangar.finished,
 });
 
 async function opened(width: number, height: number, hangar: string | null = UNITY_OPEN): Promise<Page> {
@@ -135,7 +137,9 @@ describe.runIf(chromePath)('0580 — every face on How to play opens what it is'
     expect(seen, 'a first-time player is shown the War Dance before Unity is open').not.toContain(dance);
     // 0595: and the Water Cannon before MMXXVI is, on the same terms — the two faces that wait on a pilot.
     expect(seen, 'a first-time player is shown the Water Cannon before MMXXVI is open').not.toContain(SPECIALS.waterCannon.label);
-    expect(seen.length, 'more than the two secret pilots’ specials went missing from the key').toBe(FACES.length - 2);
+    // 0666: and Red Lightning before Venoma is — three faces that wait on a pilot.
+    expect(seen, 'a first-time player is shown Red Lightning before Venoma is open').not.toContain(SPECIALS.redLightning.label);
+    expect(seen.length, 'more than the three secret pilots’ specials went missing from the key').toBe(FACES.length - 3);
     // Every face the cursor walks onto, along each pickup's row: never the hidden one.
     for (let row = 0; row < PICKUP_KINDS.length; row++) {
       await fresh.keyboard.press('ArrowDown');

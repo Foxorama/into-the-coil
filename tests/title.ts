@@ -57,6 +57,14 @@ export async function choose(page: Page, setting: ChoiceName, index: number): Pr
  * Escape on the run that follows is a pause (0511). A later flight goes straight into the run.
  */
 export async function fly(page: Page): Promise<void> {
+  if ((await flownTo(page)) === 'intro') {
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(HUD_SHOWN, { timeout: 30_000 });
+  }
+}
+
+/** On the title: press *Fly*, and say what comes up first — the run, or the intro (0666: a pilot with no story has none). */
+export async function flownTo(page: Page): Promise<'run' | 'intro'> {
   await page.waitForSelector(shown('title'), { state: 'attached' });
   await pressOn(page, 'title', SCREENS.title.actions[0]!.label);
   const where = await page.waitForFunction(
@@ -65,10 +73,7 @@ export async function fly(page: Page): Promise<void> {
     [HUD_SHOWN, SKIP_SHOWN] as [string, string],
     { timeout: 30_000 },
   );
-  if ((await where.jsonValue()) === 'intro') {
-    await page.keyboard.press('Escape');
-    await page.waitForSelector(HUD_SHOWN, { timeout: 30_000 });
-  }
+  return (await where.jsonValue()) as 'run' | 'intro';
 }
 
 /** On the title: choose `tier` on the band and fly. */

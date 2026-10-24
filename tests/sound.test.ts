@@ -2664,7 +2664,8 @@ describe('0109 — a death punctuates the music rather than getting it out of th
       burns for nine of them, crackling on each: the crackle is the wheel's own stream, the sound that
       never stops in that pilot's run, and is held under the outcomes as the throw is.
     */
-    const guns: readonly CueKind[] = [...new Set(WEAPON_KINDS.map((k) => cueOfFlight(WEAPONS[k].flight))), 'missile', 'crackle'];
+    // 0666: a gun's own cue where its row names one — the acid's spit — and its flight's where it does not.
+    const guns: readonly CueKind[] = [...new Set(WEAPON_KINDS.map((k) => WEAPONS[k].cue ?? cueOfFlight(WEAPONS[k].flight))), 'missile', 'crackle'];
     const outcomes = CUE_KINDS.filter((k) => !guns.includes(k) && k !== 'threat');
     expect(outcomes.length, 'the table has no outcome cues, so this measured nothing').toBeGreaterThan(6);
     for (const weapon of guns) {
@@ -3163,7 +3164,8 @@ describe('0173 — a cue happens somewhere', () => {
     // And the ram's thump, since 0593: on contact it lands at `landGap`'s rate, ten a second.
     // And the marker's pop, since 0595: a ball every quarter of a beat, the second-fastest gun there is.
     // And, since 0599, its splat, which lands at the marker's rate, and the jet's douse, at the tether's.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle', 'ram', 'paintball', 'splat', 'douse'];
+    // And the acid's spit, since 0666: four a volley every quarter of a beat, the marker's cadence.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle', 'ram', 'paintball', 'splat', 'douse', 'spit'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }

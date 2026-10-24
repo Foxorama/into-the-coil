@@ -32,7 +32,7 @@ import { SPRITE } from './sprites.ts';
  * The ray's nova came after them (0447), and the roman candle after that (0537) — the special of a gun
  * that has not landed yet, so it is thrown from every bomb pickup before any ship opens on it.
  */
-export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova', 'candle', 'warDance', 'waterCannon'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova', 'candle', 'warDance', 'waterCannon', 'redLightning'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -139,6 +139,23 @@ export interface Storm {
   flicker: number;
   /** How long the flicker goes on renewing, in fixed steps. The picture of *"all across the screen."* */
   flickerSteps: number;
+}
+
+/**
+ * Lightning called down from the sky — 0666, the page's *"special is red lightning called down from the sky"*.
+ * `strikes` bolts, one every `every` steps, each from the top of the screen straight down onto the body nearest
+ * the ship that it has not just struck, anywhere on the screen; one with nothing to strike falls on the lane at
+ * random and lands on nothing. Every number in steps, on the sim's clock.
+ */
+export interface Smite {
+  /** How many bolts it calls down. */
+  strikes: number;
+  /** Steps between one bolt and the next. */
+  every: number;
+  /** What a bolt takes off a body. */
+  damage: number;
+  /** What a bolt takes off a boss, as a share of its full health, when that is more — 0372's shape. */
+  bossShare: number;
 }
 
 /**
@@ -316,6 +333,8 @@ export interface SpecialRow {
   dance: Dance | null;
   /** The jet it plays from the ship's gun, or `null` — 0595. */
   jet: Jet | null;
+  /** The lightning it calls down from the sky, or `null` — 0666. */
+  smite: Smite | null;
   /**
    * The pilot who must be open before the bomb pickup offers it in a run, or `null` for every run — 0594.
    * The War Dance's is Unity's: *"other ships can pick up the special once the hamster ball is unlocked"*.
@@ -396,6 +415,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: null,
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     // The bomb pickup's face — the H-bomb in its bubble, since 0441; it was the bare `bomb` before.
     face: SPRITE.pickupBomb,
@@ -426,6 +446,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: null,
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     face: SPRITE.pickupSeeker,
     cue: 'hunt',
@@ -454,6 +475,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: null,
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
@@ -488,6 +510,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: null,
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     face: SPRITE.pickupArc,
     cue: 'stormThrow',
@@ -528,6 +551,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: null,
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',
@@ -562,6 +586,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: null,
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     // Its own face since 0447 — the swirl in its bubble. It wore the shield's while a shield was the
     // only way to earn one.
@@ -618,6 +643,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: null,
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     face: SPRITE.pickupNova,
     cue: 'nova',
@@ -664,6 +690,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     candle: { stars: 8, every: 12, fan: 0.55, reaches: [72, 112, 92, 128], star: 'candleStar', burst: 'firework', bossShare: 0.01 },
     dance: null,
     jet: null,
+    smite: null,
     opensWith: null,
     face: SPRITE.pickupCandle,
     cue: 'candle',
@@ -740,6 +767,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       wave: { shot: 'danceWave', gap: 12, grow: 9, fade: 6 },
     },
     jet: null,
+    smite: null,
     opensWith: 'unity',
     face: SPRITE.pickupDance,
     cue: 'warDance',
@@ -788,10 +816,48 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       it is drawn, so the end lands a third wider too.
     */
     jet: { steps: 120, sweep: 0.55, period: 60, length: 90, flight: 10, width: 1.4, tipWidth: 5.5, flare: 1.7, damage: 2, landGap: 4 },
+    smite: null,
     opensWith: 'mmxxvi',
     face: SPRITE.pickupWater,
     cue: 'waterCannon',
     lands: null,
+    hushes: false,
+  },
+  /**
+   * The Viper's — 0666, the page's *"special is red lightning called down from the sky"*: the serpent's own strike
+   * (0248, *"a space lightning bolt attack that rains down from the top of the screen"*), turned on whatever is in
+   * front of her. Eight bolts over most of a second, each straight down from the top of the screen onto the body
+   * nearest the ship, in red.
+   *
+   * ⚠️ **NO WARNING LINE, AND THAT IS WHAT TELLS IT FROM THE SERPENT'S.** Hers warns for three quarters of a second
+   * before it lands, because it can kill; this one is the player's, falls on what they pressed it at, and lands on
+   * the step it is drawn. The red is the page's; 0081 keeps the ship's fire out of the hostile inks, so it is a
+   * scarlet with a white heart of its own (`smite` in `src/render/bolt-inks.ts`), and the decision weighs it.
+   *
+   * ⚠️ **THE STORM'S STRIKE, ON A CLOCK.** Twelve a bolt, the storm's; a boss takes an eightieth of its health a
+   * bolt where that is more, so all eight on one boss are a tenth — the void's share (0377).
+   */
+  redLightning: {
+    label: 'Red Lightning',
+    hint: 'Red lightning called down from the sky',
+    side: 'gun',
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: null,
+    storm: null,
+    whirl: null,
+    rift: null,
+    nova: null,
+    candle: null,
+    dance: null,
+    jet: null,
+    smite: { strikes: 8, every: 6, damage: 12, bossShare: 0.0125 },
+    opensWith: 'venoma',
+    face: SPRITE.pickupSmite,
+    cue: 'smite',
+    lands: 'smiteStrike',
     hushes: false,
   },
 };
@@ -802,6 +868,12 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
  * and this layer is below both.
  */
 export const JET_BOLT_KIND = 4;
+
+/**
+ * The `kind` Red Lightning's bolts carry in the bolt pool — 0666, beside the jet (4): the painter strokes it in
+ * its own red (`smite` in `src/render/bolt-inks.ts`) and never as a warning line, which is the serpent's rain's.
+ */
+export const SMITE_BOLT_KIND = 5;
 
 /**
  * The Water Cannon's jet — `docs/decisions/0595-the-aqua-duck-paints.md`. For `steps` water leaves the gun's

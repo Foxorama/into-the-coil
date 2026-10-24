@@ -113,12 +113,14 @@ The axes, in the order they are cheapest to make felt:
 Two or three differences authored first, then played, then extended — not a full roster designed up
 front. The constraint is that adding one stays a table edit.
 
-**Seven pilots: the four *Far Carry* golfers from the first run** — Feather Fade, Huang-Woo Hook,
-Longshot Larry, Backspin Bo — **and three secret pilots, each behind a lock**
+**Eight pilots: the four *Far Carry* golfers from the first run** — Feather Fade, Huang-Woo Hook,
+Longshot Larry, Backspin Bo — **and four secret pilots, each behind a lock**
 ([0546](decisions/0546-the-marmot-rides.md), [0592](decisions/0592-the-crashes-are-counted.md)): the
 Marmot once all four golfers have cleared the game, Unity after ten lives lost to something the ship
-flew into, and MMXXVI after five things bought. All three can be met as the rescued pilot before they
-are unlocked. The locks are rows in `src/content/golfers.ts`.
+flew into, MMXXVI after five things bought, and Venoma Krait once every tier has been finished in any ship
+([0666](decisions/0666-venoma-flies-the-viper.md)). The first three can be met as the rescued pilot before they
+are unlocked. Venoma is the Viper's pilot, so the story is not told round her: she has no intro and no finale,
+and is never the one found. The locks are rows in `src/content/golfers.ts`.
 
 **Each flies their own ship, and the ship owns the gun** —
 [0441](decisions/0441-a-pilot-flies-their-own-ship.md). All are drawn from above in one square box,
@@ -133,6 +135,7 @@ with one hurtbox, so what tells them apart is the gun:
 | The Marmot | the Thunderbolt | **arc** — [0546](decisions/0546-the-marmot-rides.md) |
 | Unity | the Hamster Ball | **ram**: the ball flown into things — [0593](decisions/0593-the-hamster-ball-rolls.md) |
 | MMXXVI | the Aqua Duck | **paintball** — [0595](decisions/0595-the-aqua-duck-paints.md) |
+| Venoma Krait | the Viper, the intro's own ship | **acid** — [0666](decisions/0666-venoma-flies-the-viper.md) |
 
 A ship opens a run on its whole gun and two charges of the special fitted to it in the hangar — its own
 gun's, until the ship and another have both been won in and it borrows theirs
@@ -254,6 +257,7 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | **catherine** | the Firebird | a burning wheel that flies out ahead, slows and hangs spinning on a leash; moving the ship sweeps the tether across whatever is between them, and past the leash's length the wheel is towed — [0545](decisions/0545-the-catherine-wheel.md), [0551](decisions/0551-the-wheel-is-held-closer.md) |
 | **ram** | the Hamster Ball | nothing leaves the ship: the ball lands on what it is flown into, and every landing heats it until a full gauge burns a shield off — [0593](decisions/0593-the-hamster-ball-rolls.md) |
 | **paintball** | the Aqua Duck | one barrel, a ball every quarter beat, a little off straight and each its own colour, bursting into a splat on what it hits — [0595](decisions/0595-the-aqua-duck-paints.md) |
+| **acid** | the Viper | the serpent's spray, the player's: four spits a quarter beat in a fan twice the pulse's width, gone before half the screen. The Viper's tubes throw the serpent's void ring in place of a missile, flying as the fitted kind does — [0666](decisions/0666-venoma-flies-the-viper.md) |
 
 | tube | what it does | its surge |
 |---|---|---|
@@ -270,6 +274,7 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | **candle** | catherine | eight firework stars, one every half beat, fanned and sweeping from the nose, alternating near and far — [0537](decisions/0537-the-candle-is-lit.md) |
 | **War Dance** | ram | the ship itself is thrown; what lands is the ball, and it is earned by landing — a full bar banks one on the stack and fills again — [0593](decisions/0593-the-hamster-ball-rolls.md), [0594](decisions/0594-every-ship-dances.md), [0613](decisions/0613-the-dance-is-earned.md), [0648](decisions/0648-the-ball-runs-hot.md) |
 | **Water Cannon** | paintball | a jet of water swept across the lane for two seconds from the ship's own gun — [0595](decisions/0595-the-aqua-duck-paints.md) |
+| **Red Lightning** | acid | eight red bolts called down from the top of the screen, one every sixth of a second, each onto the body nearest the ship; an eightieth of a boss a bolt — [0666](decisions/0666-venoma-flies-the-viper.md) |
 | **nova** | ray, and the shield pickup's third face | on the ward's trigger: a lavender ring bursting from the ship to past every edge of the screen, popping every shot it touches, striking every body it crosses once and a boss once for a twentieth — [0447](decisions/0447-the-ward-is-a-third-trigger.md) |
 | **void** | the shield pickup's second face, and a shield at a full shell; one to open a Burn run unless the ship opens on novas | thrown up the lane on the ward's trigger as a turning swirl ([0447](decisions/0447-the-ward-is-a-third-trigger.md)); opens a rift 72 units across that rolls on along the lane, the way the ship flies — to the right edge on a landscape screen, the top on a portrait one — and is gone once it is wholly past that edge ([0656](decisions/0656-the-void-rolls.md)), removing every hostile shot, body and boss lightning inside it on the way; it carves the Labyrinth stone it opens on for the rest of the level, and lands a tenth of a boss once, the first time it reaches one. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
 

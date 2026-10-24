@@ -115,7 +115,7 @@ import {
 } from '../content/pickups.ts';
 import { TETHER_BOLT_KIND, WEAPONS, WEAPON_KINDS, type CatherineWheel, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { JET_BOLT_KIND, POD_ACROSS, POD_NOSE, SMITE_BOLT_KIND, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Dance, type Jet, type Nova, type Rift, type Smite, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import type { FeelKind } from '../content/feels.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, landsOn, muzzleAcrossOf, muzzleAlongOf, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
@@ -1425,6 +1425,15 @@ export interface World {
   candleKind: SpecialKind | null;
   candleFired: number;
   candleIn: number;
+  /**
+   * Red Lightning calling its bolts down — 0666: which special it is, how many bolts have fallen, and steps until
+   * the next does; `null` when none is falling. Its bolts are links in `bolts`, so a lost life clears them.
+   */
+  smiteKind: SpecialKind | null;
+  smiteFired: number;
+  smiteIn: number;
+  /** Where a bolt with nothing to strike falls — 0666, its own stream on 0021's terms: a picture, and nothing else. */
+  smiteRng: Rng;
   /** Fireworks set off this run, so each burst takes the next of the three colours in turn — 0537. */
   fireworks: number;
   /** Steps until a thrown special may leave the ship again — 0375's `THROW_GAP_STEPS`. */
@@ -2550,6 +2559,8 @@ export class GameFrame implements Frame {
     // rather than one step further on.
     // A firing candle's next star first, so it leaves on the step its clock says — 0537.
     stepCandle(w);
+    // And Red Lightning's next bolt, on its clock — 0666.
+    stepSmite(w);
     stepBombs(w);
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
@@ -5591,10 +5602,11 @@ function nearer(a: Entity, b: Entity, along: number, across: number): boolean {
 */
 
 /** One link's picture: an entity at the landing point, carrying its start, riding the camera. */
-function spawnLink(w: World, row: Body, fromAlong: number, fromAcross: number, toAlong: number, toAcross: number): void {
+function spawnLink(w: World, row: Body, fromAlong: number, fromAcross: number, toAlong: number, toAcross: number, kind = 0): void {
   const link = w.bolts.spawn();
   if (link === null) return;
-  reset(link, toAlong, toAcross, row);
+  // 0666: a kind the painter strokes in its own ink — Red Lightning's; every other link is the player's (0).
+  reset(link, toAlong, toAcross, row, kind);
   link.velAlong = w.scrollPerStep;
   link.fromAlong = fromAlong - toAlong;
   link.fromAcross = fromAcross - toAcross;
@@ -5660,7 +5672,8 @@ function firePulse(w: World): void {
       loop but gated on the first barrel, so a volley the pool refused entirely is silent, which is
       the same rule every other cue in this file follows.
     */
-    if (i === 0) w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);
+    // 0666: in the gun's own voice where it has one.
+    if (i === 0) w.onCue(WEAPONS[w.weapon.kind].cue ?? cueOfFlight(w.weapon.flight), w.ship.across);
     const angle = first + step * i;
     // A ring is marked so `stepRays` can turn its pages — 0442; every other straight shot carries zero.
     // From the ship's own gun — 0448: its `muzzle`, which on the fighter and the saucer is the nose.
@@ -5675,6 +5688,8 @@ function firePulse(w: World): void {
     }
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
     shot.damage = w.weapon.damage;
+    // 0666: and a gun with a range spends its shot on nothing at the end of it — the acid's spray falls short.
+    if (w.weapon.life > 0) shot.lifeFor = w.weapon.life;
     /*
       ⚠️ **No lifetime, and there used to be one.** A volley that outlives the screen starves the
       next one — *"two streams continuous and the others stutter"* is how play reported it — and the
@@ -6480,6 +6495,16 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
     w.onCue(row.cue, w.ship.across);
     return;
   }
+  // Lightning falls now, and the rest of it on its own clock — 0666.
+  if (row.smite !== null) {
+    w.onCue(row.cue, w.ship.across);
+    w.smiteKind = kind;
+    w.smiteFired = 0;
+    callSmite(w, row.smite, null);
+    // It holds the throw gap for as long as it falls, and the gap after its last bolt, as the candle does.
+    w.throwIn = (row.smite.strikes - 1) * row.smite.every + THROW_GAP_STEPS;
+    return;
+  }
   // A candle lights and fires its first star now, and the rest on its own clock — 0537.
   if (row.candle !== null) {
     w.onCue(row.cue, w.ship.across);
@@ -6552,6 +6577,72 @@ function fireStar(w: World, kind: SpecialKind, candle: Candle): void {
   if (index > 0) w.onCue('candleStar', w.ship.across);
 }
 
+/*
+  ── RED LIGHTNING — 0666 ─────────────────────────────────────────────────────────────────────────────
+
+  *"Special is red lightning called down from the sky."* A bolt falls every `every` steps until `strikes` have,
+  each from the top of the lane straight down onto the body nearest the ship that it has not just struck — the
+  storm's strike (0374), from the sky and on a clock. One with nothing to strike falls somewhere ahead of the ship
+  and lands on nothing, so a press is never silent and never invisible.
+
+  ⚠️ **THE STORM'S TARGETING, ALL OF IT** — `nearestFrom`: a body whole on the screen, nothing through stone
+  (0349), and one struck this volley is skipped while its flash lasts. A boss takes `bossShare` of its full
+  health a bolt where that is more than the strike, through `landsOn` as every hit on it is.
+*/
+
+/** Call the next bolt down, and count it; `sound` is the bolt's landing, or `null` for the first, which the press carries. */
+function callSmite(w: World, smite: Smite, sound: CueKind | null): void {
+  w.smiteFired++;
+  // The first bolt answers the press; the rest are on the grid, as the candle's stars are — 0104, 0094.
+  w.smiteIn = stepsToGrid(w.steps, smite.every);
+  if (w.smiteFired >= smite.strikes) w.smiteKind = null;
+  const leading = w.cameraAlong + w.view.alongSpan;
+  const anywhere = w.view.alongSpan + ACROSS_SPAN;
+  const enemy = nearestFrom(w.enemies, w.ship.along, w.ship.across, anywhere, true, leading, w.corridor);
+  const boss = bossTargetable(w) ? nearestFrom(w.bossPool, w.ship.along, w.ship.across, anywhere, false, leading, w.corridor) : -1;
+  const onEnemy = enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(boss), w.ship.along, w.ship.across));
+  let toAlong: number;
+  let toAcross: number;
+  if (onEnemy) {
+    const target = w.enemies.at(enemy);
+    toAlong = target.along;
+    toAcross = target.across;
+    strike(w.enemies, enemy, smite.damage, IMPACT_FLASH_STEPS, w.deaths);
+  } else if (boss >= 0) {
+    const target = w.bossPool.at(boss);
+    toAlong = target.along;
+    toAcross = target.across;
+    const open = landsOn(w.bossRow, target.health, w.bossFullHealth, w.difficulty, fightOf(w));
+    const share = smite.bossShare * w.bossFullHealth;
+    strike(w.bossPool, boss, (share > smite.damage ? share : smite.damage) * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+  } else {
+    // Nothing to strike: it falls ahead of the ship, somewhere on the lane, and lands on nothing.
+    toAlong = w.ship.along + w.smiteRng.range(SMITE_WILD_NEAR, SMITE_WILD_FAR);
+    toAcross = w.smiteRng.range(0, ACROSS_SPAN);
+  }
+  if (sound !== null) w.onCue(sound, toAcross);
+  burst(w, toAlong, toAcross, BURST.ship);
+  // From the top of the lane straight down — the sky the serpent's own strike falls from (0248).
+  spawnLink(w, SHOTS.arc, toAlong, 0, toAlong, toAcross, SMITE_BOLT_KIND);
+}
+
+/** How far ahead of the ship a bolt with nothing to strike falls, in world units — on the screen on every device. */
+const SMITE_WILD_NEAR = 30;
+const SMITE_WILD_FAR = 120;
+
+/** Call the next bolt down when its clock comes round. */
+function stepSmite(w: World): void {
+  if (w.smiteKind === null) return;
+  const row = SPECIALS[w.smiteKind];
+  if (row.smite === null) {
+    w.smiteKind = null;
+    return;
+  }
+  w.smiteIn--;
+  if (w.smiteIn > 0) return;
+  callSmite(w, row.smite, row.lands);
+}
+
 /** Fire the candle's next star when its clock comes round. */
 function stepCandle(w: World): void {
   if (w.candleKind === null) return;
@@ -6611,6 +6702,11 @@ function fireMissiles(w: World): void {
     // Each tube its own kind — 0577: *"1 homing, 1 regular"* is two missiles of two rows in one volley.
     const kind = MISSILES[w.weapon.tubes[i]!];
     const row = SHOTS[kind.shot];
+    /*
+      0666: what leaves the tube, where the ship's row says its own — the Viper's void blasts. The fitted kind still
+      says how it flies, how hard it lands and whether it hunts; the row's shot is how it looks and how big it lands.
+    */
+    const look = w.shipRow.tubeFire === undefined ? row : SHOTS[w.shipRow.tubeFire];
     const missile = w.missiles.spawn();
     // A volley one tube short is dropped rather than grown — `src/sim/pool.ts` has the argument.
     if (missile === null) return;
@@ -6645,7 +6741,7 @@ function fireMissiles(w: World): void {
       hull to the bottom path; the fighter's and the saucer's are where 0097 put them.
     */
     const tube = tubeOf(w.shipRow, w.weapon.launchers, i);
-    reset(missile, w.ship.along + tube.along, w.ship.across + tube.across, row);
+    reset(missile, w.ship.along + tube.along, w.ship.across + tube.across, look);
     missile.velAlong = row.speed + w.scrollPerStep;
     missile.damage = row.damage;
     /*
@@ -13105,6 +13201,8 @@ export function respawn(w: World): void {
   w.novaKind = null;
   // And a candle still firing: its stars and fireworks went with the pools above — 0537.
   w.candleKind = null;
+  // And lightning still falling: its bolts went with the bolt pool — 0666.
+  w.smiteKind = null;
   // A surge went with the ship that wore it — 0373. `stepAuras` ends it at the wreck; this is sure.
   w.surgeFor = 0;
   w.aura.clear();
