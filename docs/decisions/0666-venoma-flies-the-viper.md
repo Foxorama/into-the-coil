@@ -65,6 +65,18 @@ The first photograph had the palette's inks alone and a white core, and read as 
 bolt is mixed half way to a pure red, and its heart is its own glow lifted toward white
 (`src/render/bolt-inks.ts`). No palette role is a saturated red; this is the one bolt ink that is not a role.
 
+## Rollback
+
+**`itc_hangar` and `itc_scores` may now hold a ship and a pilot no earlier build knows** — `viper` and `venoma`
+([0001](0001-revertability-not-risk-rating.md)). No version moves; both are read per field.
+
+- An earlier build reads the hangar's per-ship maps by its own `SHIP_KINDS` and ignores the Viper's entries. When
+  it next writes the hangar, the Viper's are gone: won, plate, fit and rack. Venoma's lock is read from tiers
+  finished, which every build keeps, so she opens again the moment a build that knows her is back.
+- It reads a score row by its own `GOLFER_KINDS` and drops one flown by Venoma (`parseScores`). When it next
+  writes the table, those rows are lost.
+- The pilot is not kept (`KeptSettings`), so nothing else holds her name.
+
 ## Not done
 
 - **The Viper burns the standard flame, not the port's violet.** The port's `#b060c0` is three degrees of hue
