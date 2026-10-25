@@ -2836,15 +2836,23 @@ ${each('-band[hidden]')} { display: none; }
   Two words, On and Off, need neither a column nor a band's height, so on a phone it is one line: its name
   beside its segments, under both columns.
 */
-.itc-settings-touch .itc-settings-settings-box {
+/*
+  ⚠️ **AND THREE TO A COLUMN, ON EVERY DEVICE — 0674.** The intro's band, under the crossing, made six: two to a
+  column was a third column, and one column of five ran Music room and Back off a 1280x720. So three rows filled
+  down two columns everywhere — the sound, the crossing and the intro; then the hand, the steering and the rumble
+  — and the walk still goes down one and on to the next. The rumble stands at the second column's foot, where
+  0613's strip spanned both.
+*/
+.itc-settings-settings-box {
   display: grid;
-  grid-template-rows: repeat(2, auto);
+  grid-template-rows: repeat(3, auto);
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   column-gap: min(1rem, 2cqw);
   width: min(100%, 64em);
 }
-.itc-settings-touch .itc-settings-band:has([${SETTING_ATTR}='rumble']) { grid-row: 3; grid-column: 1 / -1; }
+/* 0674: *Every flight* on one line — at half the plate it broke over two and stood a line taller than its neighbour. */
+.itc-settings-band:has([${SETTING_ATTR}='intro']) .itc-settings-option { white-space: nowrap; padding-inline: 0.45em; }
 /* 0566: and a phone held upright, which only the hangar's tabs are drawn on (the gate has the rest). */
 @container (max-height: 460px) or ((orientation: portrait) and (max-width: 700px)) {
   /*
@@ -2859,16 +2867,8 @@ ${each('-band[hidden]')} { display: none; }
   .itc-title-main, .itc-settings-settings-box { gap: min(0.45rem, 1.6cqh); }
   /*
     And without touch, two columns on a phone too — 0613: the rumble made four bands, and four in a column
-    were eighteen pixels past the smallest landscape phone. Two by two, filled down the columns.
+    were eighteen pixels past the smallest landscape phone. Three to a column since 0674, on every device (above).
   */
-  .itc-settings-settings-box:not(.itc-settings-touch *) {
-    display: grid;
-    grid-template-rows: repeat(2, auto);
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    column-gap: min(1rem, 2cqw);
-    width: min(100%, 64em);
-  }
   /*
     Half a phone's width each, so the band's furniture gives back what the words need, on 0460's terms:
     a segment's floor is its longest word, and *Gentle · Standard · Quick* beside a label is the widest.
@@ -2896,6 +2896,13 @@ ${each('-band[hidden]')} { display: none; }
   /* 0613: the rumble's strip, one line — its name beside On and Off, and no hint, which the two words say. */
   .itc-settings-touch .itc-settings-band:has([${SETTING_ATTR}='rumble']) { grid-template-columns: max-content minmax(0, 1fr); grid-template-areas: 'label track'; align-items: center; column-gap: 0.6em; }
   .itc-settings-touch .itc-settings-band:has([${SETTING_ATTR}='rumble']) .itc-settings-band-hint { display: none; }
+  /*
+    0674: and the intro's, on a phone with or without touch — the third row of each column is a line, not a band,
+    which is the height 0613's spanning strip took. Its two answers say what they are; the hint is the desktop's.
+  */
+  .itc-settings-band:has([${SETTING_ATTR}='intro']) { grid-template-columns: max-content minmax(0, 1fr); grid-template-areas: 'label track'; align-items: center; column-gap: 0.6em; }
+  .itc-settings-band:has([${SETTING_ATTR}='intro']) .itc-settings-band-step,
+  .itc-settings-band:has([${SETTING_ATTR}='intro']) .itc-settings-band-hint { display: none; }
   .itc-settings-touch .itc-settings-option { font-size: 0.8em; padding: 0.3em 0.25em; }
   ${each('-band')} {
     grid-template-columns: max-content auto minmax(0, 1fr) auto;

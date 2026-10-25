@@ -36,16 +36,23 @@ bindings (0664). `SETTINGS_VERSION` stays 1.
   flight*, and the version unmoved.
 - **`tests/settings.test.ts`**: Settings' bands are six and the intro is one of them, walked off its table, on
   exactly one screen; and the frame cannot import the table (0024).
+- **Settings is three rows down two columns on every device.** A sixth band, laid out as before, made a third
+  column on touch, so 667×375 scrolled by 34 px. On a desktop without touch the single column ran *Music room*
+  and *Back* past 720 rows. `tests/layout.browser.test.ts` caught both. Now column one is the sound, the crossing
+  and the intro, and column two is the hand, the steering and the rumble. The walk still goes down one column and
+  on to the next. On a phone the intro is a one-line strip, as the rumble's was, so the third row costs what 0613's
+  spanning strip did. *Every flight* is kept on one line.
 - **`PRIVACY.md`** names the field.
 - **The plan named `tests/intro.browser.test.ts` for 0635's case.** It is in `tests/run-ends.browser.test.ts`, so
   this one is beside it.
 
 Probed in `scripts/probes/0674-the-intro-is-a-setting.mjs`: the flight that ignores the band, the save that
-forgets it, and *Fly* that does not say which.
+forgets it, Settings two to a column, and *Fly* that does not say which.
 
 **Not held by any guard:** the band's words and the line under *Fly*, which are the voice rule's.
 
-**Photographed** at 1280×720 and 844×390 and the layout guard's six: Settings, and the title.
+**Photographed** at 1280×720 and 844×390, the layout guard's six, and 1920×1080 and 2560×1080: Settings. The
+title's *Straight in* is seen only after a flight, which the photographs do not fly; the browser test reads it.
 
 ## What is owed
 

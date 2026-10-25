@@ -33,7 +33,8 @@ describe('the settings screen is its tables', () => {
     asked about answered there — on a touch screen the four in two columns of two and the rumble a strip under
     both (`src/app/chrome.ts`), held whole by `tests/layout.browser.test.ts`.
   */
-  it('offers the sound, the crossing and the intro under it, the hand, the steering and the rumble, and the look no longer', () => {
+  // 0674: and the intro, under the crossing — named in the list, not the title, which 0590's probe names.
+  it('offers the sound, the crossing, the hand, the steering and the rumble, and the look no longer', () => {
     const offered = SCREENS.settings.choices.map((c) => [c.name, c.on]);
     expect(offered).toEqual([
       ['sound', 'all'],

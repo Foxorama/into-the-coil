@@ -29,6 +29,17 @@ export const PROBES = [
   },
   {
     decision: '0674',
+    suite: 'tests/layout.browser.test.ts',
+    broke: 'Settings two to a column, so the sixth band is a third column and a touch phone scrolls',
+    guard: 'needs no scrolling and draws every segment whole with the touch section up',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '  grid-template-rows: repeat(3, auto);\n',
+      replace: '  grid-template-rows: repeat(2, auto);\n',
+    },
+  },
+  {
+    decision: '0674',
     suite: 'tests/run-ends.browser.test.ts',
     broke: 'Fly saying nothing when the next flight goes straight in',
     guard: 'as Fly says',
