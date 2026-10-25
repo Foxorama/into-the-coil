@@ -29,10 +29,10 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { SCREENS, faceCard, type ChoiceName, type Screen } from '../state/screens.ts';
+import { CONTROL_ROWS, CONTROL_TABLE, SCREENS, faceCard, type ChoiceName, type Screen } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf, type PickupKind } from '../content/pickups.ts';
-import { SIDES, SIDE_LABELS, SPECIALS } from '../content/specials.ts';
+import { SIDES, SPECIALS } from '../content/specials.ts';
 import { SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
@@ -519,17 +519,27 @@ ${each('-choices')} {
 }
 .itc-music-action { width: min(100%, 18ch); }
 /*
-  0664: the Controls tab — twelve buttons, which a column cannot hold on a phone. Wrapped as the music room's
-  are, three or four to a row, each its name over what it is bound to.
+  ── THE CONTROLS ARE A TABLE — 0672 ───────────────────────────────────────────────────────────────
+
+  A row per thing a hand does, a column per device, the cell the button that binds it: up and down between
+  rows, left and right between the two cells. The button keeps its name for a reader, and the row's name says
+  it to the eye, so the cell shows only what it is bound to — the name is set at no size and the binding at
+  the panel's. A pad's movement is the stick and binds nothing; it says so. Reset and Back stand in a foot.
 */
-.itc-controls-choices {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: min(0.5rem, 1.6cqh) min(0.6rem, 1.5cqw);
-  max-width: min(100%, 76ch);
+.itc-controls-choices { flex-direction: column; align-items: stretch; gap: min(0.7rem, 2cqh); width: min(100%, 30em); }
+.itc-controls-table {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: min(0.35rem, 1.1cqh) min(0.6rem, 1.5cqw);
 }
-.itc-controls-action { width: min(100%, 22ch); padding: 0.4em 0.7em; }
+.itc-controls-table-head { font-size: 0.72em; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; text-align: center; }
+.itc-controls-table-what { font-weight: 700; text-align: left; white-space: nowrap; }
+.itc-controls-table-how { text-align: center; opacity: 0.75; }
+.itc-controls-table > .itc-controls-action { font-size: 0; padding: 0.35rem 0.5rem; min-width: 0; }
+.itc-controls-table > .itc-controls-action > .itc-controls-action-hint { font-size: clamp(0.85rem, 4.6cqh, 1.15rem); margin: 0; opacity: 1; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.itc-controls-table-foot { display: flex; justify-content: center; gap: min(0.6rem, 1.5cqw); }
+.itc-controls-table-foot > .itc-controls-action { padding: 0.4em 0.9em; }
 /*
   ── THE SPLASH — decision 0415, and a press since 0513 ───────────────────────────────────────────
 
@@ -2550,6 +2560,11 @@ ${each('-tab-key[hidden]')} { display: none; }
 .itc-save-ask-code { display: block; width: min(62cqh, 80cqw); height: min(62cqh, 80cqw); image-rendering: pixelated; border-radius: 0.3em; }
 .itc-save-note { width: min(100%, 34em); text-align: center; }
 .itc-save-note-line { margin: 0 0 0.35em; font-size: 0.85em; opacity: 0.9; }
+/*
+  0672: the line that says a save can be lost is the most important on the screen, and was set in the hint's
+  weight. It takes the sheet's: the full ink at the panel's size, heavy, in the warning's gilt, once.
+*/
+.itc-save-note-line.itc-save-note-warn { font-size: 1em; font-weight: 800; opacity: 1; color: var(--itc-warn, var(--itc-ink)); }
 .itc-save-choices { width: min(100%, 24em); flex-direction: column; align-items: stretch; gap: min(0.5rem, 1.4cqh); }
 /*
   0641, on a phone: the four in two columns over Back, each its label alone, and the code a size the card
@@ -2558,8 +2573,15 @@ ${each('-tab-key[hidden]')} { display: none; }
 */
 @container (max-height: 460px) {
   /* 0664: and the Controls tab four to a row, smaller, so its twelve stand in a phone's height. */
-  .itc-controls-choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(100%, 60em); max-width: 100%; }
-  .itc-controls-action { width: auto; font-size: 0.78em; padding: 0.3em 0.4em; }
+  /* 0672: the table a step tighter, so its seven rows and the foot stand in a phone's height. */
+  .itc-controls-choices { gap: 0.3rem; width: min(100%, 34em); }
+  .itc-controls-table { gap: 0.15rem 0.5rem; }
+  .itc-controls-table > .itc-controls-action { padding: 0.15rem 0.4rem; }
+  .itc-controls-table > .itc-controls-action > .itc-controls-action-hint { font-size: 0.8rem; }
+  .itc-controls-table-foot > .itc-controls-action { font-size: 0.78em; padding: 0.3em 0.6em; }
+  .itc-controls-table-what, .itc-controls-table-how { font-size: 0.82em; }
+  /* At 480x320 the reset's line was the 10 px that scrolled the tab; the button says what it does. */
+  .itc-controls-table-foot .itc-controls-action-hint { display: none; }
   .itc-save-choices { display: grid; grid-template-columns: 1fr 1fr; width: min(100%, 34em); }
   /* 0642: Back beside Undo when it is up, and across both columns alone when it is not. */
   .itc-save-choices > [hidden] + :last-child { grid-column: 1 / -1; }
@@ -5221,7 +5243,8 @@ export interface Chrome {
    */
   setArrival(arrival: Arrival | null): void;
   /** Say on the Save tab where the save is kept and how safe it is there — 0641. One line a paragraph. */
-  setNote(lines: readonly string[]): void;
+  /** The Save tab's lines — 0641; since 0672 the one at `warn`, a save that may be lost, at the sheet's weight. */
+  setNote(lines: readonly string[], warn?: number): void;
   /**
    * Say whether the screen up now may be skipped yet — 0412 for the intro, whose game behind it has to
    * finish loading first; the finale always may (0418). Shown on a row that `skips`, while this is true.
@@ -5642,32 +5665,82 @@ function buildGuide(
     discs by where they stand — they stack up the leading edge from the low corner in trigger order
     (0060), so the first trigger is the lowest.
   */
-  const table = document.createElement('div');
-  table.className = prefix + 'controls';
   const cell = (text: string, part: string, device: GuideDevice | null): HTMLElement => {
     const span = document.createElement('span');
     span.className = prefix + part;
     span.textContent = text;
     if (device !== null) devices[device].push(span);
-    table.appendChild(span);
     return span;
   };
   /** A cell that says a binding — 0664, written now on the defaults and again by `setBindings`. */
-  const boundCell = (say: (bound: Bound) => string, device: GuideDevice): void => {
-    boundCells.push({ span: cell(say(DEFAULT_BOUND), 'controls-how', device), say });
+  const boundCell = (say: (bound: Bound) => string, device: GuideDevice): HTMLElement => {
+    const span = cell(say(DEFAULT_BOUND), 'controls-how', device);
+    boundCells.push({ span, say });
+    return span;
   };
-  cell('', 'controls-head', null);
-  for (const device of GUIDE_DEVICES) cell(GUIDE_DEVICE_LABELS[device], 'controls-head', device);
-  cell('Fly', 'controls-what', null);
-  boundCell((bound) => flyKeys(bound.keys), 'keyboard');
-  cell('Left stick', 'controls-how', 'pad');
-  cell('Drag anywhere', 'controls-how', 'touch');
-  SIDES.forEach((side, slot) => {
-    cell(SIDE_LABELS[side], 'controls-what', null);
-    for (const device of GUIDE_DEVICES) boundCell((bound) => triggerIn(device, slot, bound), device);
-  });
+  /*
+    0672: the Controls tab's rows, by the one function both are laid out by. The movement is one row here, *Fly*,
+    since a reader wants the shape and the tab wants a cell to press for each way; the triggers are the tab's rows.
+  */
+  const triggers = CONTROL_TABLE.filter((row) => !row.moves).map((row, slot) => ({
+    label: row.label,
+    cells: GUIDE_DEVICES.map((device) => boundCell((bound) => triggerIn(device, slot, bound), device)),
+  }));
+  const table = controlGrid(prefix, 'controls', GUIDE_DEVICES.map((device) => cell(GUIDE_DEVICE_LABELS[device], 'controls-head', device)), [
+    { label: 'Fly', cells: [boundCell((bound) => flyKeys(bound.keys), 'keyboard'), cell('Left stick', 'controls-how', 'pad'), cell('Drag anywhere', 'controls-how', 'touch')] },
+    ...triggers,
+  ]);
   section('CONTROLS').appendChild(table);
   return body;
+}
+
+/**
+ * A table of what a hand does by device — 0672, the one function the Controls tab and How to play's CONTROLS
+ * are both laid out by, so the two cannot disagree. A corner, the column heads, then each row's name and its
+ * cells: `part` names the grid, and `-head`, `-what` its heads and names.
+ */
+function controlGrid(prefix: string, part: string, heads: readonly HTMLElement[], rows: readonly { label: string; cells: readonly HTMLElement[] }[]): HTMLElement {
+  const grid = document.createElement('div');
+  grid.className = prefix + part;
+  const span = (text: string, kind: string): HTMLElement => {
+    const el = document.createElement('span');
+    el.className = prefix + part + '-' + kind;
+    el.textContent = text;
+    return el;
+  };
+  grid.append(span('', 'head'), ...heads);
+  for (const row of rows) grid.append(span(row.label, 'what'), ...row.cells);
+  return grid;
+}
+
+/**
+ * Lay the Controls tab's buttons out as its table — 0672. They were a grid of twelve, *Reset to defaults* and
+ * *Back* among the bindings and the keys' and the pad's interleaved: *"a table of action × device, with the two
+ * reset-and-back actions in a foot, is what the genre does and what How to play already draws beside it."* The
+ * buttons are the same buttons, rebinding as 0664 has them; only where they stand moves.
+ */
+function layControls(prefix: string, choices: HTMLElement, controls: readonly HTMLButtonElement[]): void {
+  const head = (text: string): HTMLElement => {
+    const el = document.createElement('span');
+    el.className = prefix + 'table-head';
+    el.textContent = text;
+    return el;
+  };
+  const stick = (): HTMLElement => {
+    const el = document.createElement('span');
+    el.className = prefix + 'table-how';
+    el.textContent = 'Left stick';
+    return el;
+  };
+  const rows = CONTROL_TABLE.map((row) => ({
+    label: row.label,
+    cells: [controls[row.keys]!, row.pad === null ? stick() : controls[row.pad]!],
+  }));
+  const grid = controlGrid(prefix, 'table', [head('Keys'), head('Pad')], rows);
+  const foot = document.createElement('div');
+  foot.className = prefix + 'table-foot';
+  foot.append(...controls.slice(CONTROL_ROWS.length));
+  choices.replaceChildren(grid, foot);
 }
 
 /** `m:ss`. A walk is minutes long, and 170.6 is not a thing anybody reads off a bar. */
@@ -6629,6 +6702,8 @@ export function makeChrome(
       const control = document.createElement('button');
       control.type = 'button';
       control.className = prefix + 'action';
+      // 0672: its place in the row's actions, which a table that lays them out of that order (Controls) keeps.
+      control.dataset['itcAction'] = String(index);
       // 0538: the action that leads, which the stylesheet stands alone over the quiet row.
       if (row.leads && index === 0) control.classList.add(prefix + 'action-lead');
       control.textContent = action.label;
@@ -6651,6 +6726,8 @@ export function makeChrome(
       choices.appendChild(control);
       controls.push(control);
     });
+    // 0672: the Controls tab's buttons are cells of a table of action by device, with its reset and Back in a foot.
+    if (screen === 'controls') layControls(prefix, choices, controls);
 
     /*
       THE SETTINGS THIS SCREEN OFFERS — decision 0070, and each one a BAND since 0458.
@@ -6822,7 +6899,12 @@ export function makeChrome(
             band.look = -1;
             paintLook(band);
           }
-          onChoice(choice.name, target, true);
+          /*
+            0672: a band of two is a switch — a press on the one that is on flips it, as A, Enter and either arrow do,
+            so Sound, Travel, Hand and Rumble are one press from either side on every device.
+          */
+          const flips = band !== undefined && band.press === 'steps' && band.hints.length === 2 && index === band.index;
+          onChoice(choice.name, flips ? 1 - index : target, true);
         };
         button.addEventListener('click', press);
         listeners.push(() => button.removeEventListener('click', press));
@@ -9175,13 +9257,14 @@ export function makeChrome(
       }
       line.textContent = hint;
     },
-    setNote(lines: readonly string[]): void {
+    setNote(lines: readonly string[], warn = -1): void {
       const note = panels.save?.note;
       if (note === undefined || note === null) return;
       note.replaceChildren(
-        ...lines.map((text) => {
+        ...lines.map((text, i) => {
           const line = document.createElement('p');
           line.className = prefixFor('save') + 'note-line';
+          if (i === warn) line.classList.add(prefixFor('save') + 'note-warn');
           line.textContent = text;
           return line;
         }),

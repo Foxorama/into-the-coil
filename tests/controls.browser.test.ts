@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { back, fly, openSettings, shown } from './title.ts';
-import { CONTROL_ROWS } from '../src/state/screens.ts';
+import { CONTROL_ROWS, CONTROL_TABLE } from '../src/state/screens.ts';
 
 /**
  * THE CONTROLS, IN THE PAGE — 0664.
@@ -47,7 +47,9 @@ async function openControls(page: Page): Promise<void> {
   await page.waitForSelector(shown('controls'), { state: 'attached', timeout: 5_000 });
 }
 
-const hintOf = (page: Page, index: number): Promise<string> => page.locator(`${shown('controls')} ${CONTROL} >> nth=${index}`).locator(HINT).innerText();
+/** The tab's button at `index` of its row's actions — 0672: by its place there, since the table lays them out of it. */
+const cellAt = (index: number): string => `${shown('controls')} ${CONTROL}[data-itc-action="${index}"]`;
+const hintOf = (page: Page, index: number): Promise<string> => page.locator(cellAt(index)).locator(HINT).innerText();
 
 const press = (page: Page, buttons: number[]): Promise<void> =>
   page.evaluate((b: number[]) => {
@@ -84,7 +86,7 @@ describe.runIf(chromePath)('0664 — the controls are bound, kept and flown', ()
     // The gun's trigger on K: a press listens, P is refused as the menu's, and K is taken.
     const keys = row('keys', 0);
     expect(await hintOf(page, keys), 'the gun’s key is not Space by default, so this proves nothing').toBe('Space');
-    await page.locator(`${shown('controls')} ${CONTROL} >> nth=${keys}`).click();
+    await page.locator(cellAt(keys)).click();
     expect(await hintOf(page, keys), 'the row is not listening').toContain('Press a key');
     await page.keyboard.press('KeyP');
     expect(await hintOf(page, keys), 'P was taken, which pauses').toContain('menu');
@@ -94,7 +96,7 @@ describe.runIf(chromePath)('0664 — the controls are bound, kept and flown', ()
 
     // The gun's pad button on RB: a press listens, and the pad's next button is taken.
     const pad = row('pad', 0);
-    await page.locator(`${shown('controls')} ${CONTROL} >> nth=${pad}`).click();
+    await page.locator(cellAt(pad)).click();
     expect(await hintOf(page, pad), 'the pad row is not listening').toContain('Press a pad button');
     await press(page, [5]);
     await expect.poll(() => hintOf(page, pad), { timeout: 5_000 }).toBe('RB');
@@ -138,5 +140,61 @@ describe.runIf(chromePath)('0664 — the controls are bound, kept and flown', ()
     }
     expect(afterPad, 'RB did not throw the gun’s charge').not.toBe(afterKey);
     await context.close();
+  });
+});
+
+describe.runIf(chromePath)('0672 — the Controls tab is a table of action by device', () => {
+  it('stands each row’s name and its two cells on one line, the columns aligned, and Reset and Back under them', async () => {
+    /*
+      *"A table of action × device, with the two reset-and-back actions in a foot."* In CSS px on the built page: each
+      row of `CONTROL_TABLE` has its name, its keys button and its pad cell at one height; every keys button stands
+      in one column and every pad cell in another, right of it; and the last two actions stand below the last row.
+    */
+    for (const viewport of [
+      { width: 1280, height: 720 },
+      { width: 844, height: 390 },
+    ]) {
+      browser ??= await launchChromium({ headless: true });
+      const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+      const page = await context.newPage();
+      await open(page);
+      await openControls(page);
+      const at = `${viewport.width}x${viewport.height}`;
+      const p = prefixFor('controls');
+      const m = await page.evaluate(
+        ({ p, rows }: { p: string; rows: { label: string; keys: number; pad: number | null }[] }) => {
+          const root = document.querySelector('.' + p + 'shown')!;
+          const box = (el: Element | null): DOMRect | null => (el === null ? null : el.getBoundingClientRect());
+          const names = [...root.querySelectorAll('.' + p + 'table-what')];
+          const sticks = [...root.querySelectorAll('.' + p + 'table-how')];
+          let stick = 0;
+          const cell = (i: number): DOMRect | null => box(root.querySelector(`.${p}action[data-itc-action="${i}"]`));
+          return {
+            rows: rows.map((row, r) => {
+              const name = box(names[r] ?? null);
+              const keys = cell(row.keys);
+              const pad = row.pad === null ? box(sticks[stick++] ?? null) : cell(row.pad);
+              return { label: row.label, said: names[r]?.textContent ?? '', name, keys, pad };
+            }),
+            foot: [...root.querySelectorAll('.' + p + 'table-foot > .' + p + 'action')].map(box),
+          };
+        },
+        { p, rows: CONTROL_TABLE.map((row) => ({ label: row.label, keys: row.keys, pad: row.pad })) },
+      );
+      const mid = (b: DOMRect | null): number => (b === null ? Number.NaN : (b.top + b.bottom) / 2);
+      for (const row of m.rows) {
+        expect(row.said, `${at}: the table's rows are not CONTROL_TABLE's`).toBe(row.label);
+        expect(Math.abs(mid(row.keys) - mid(row.name)), `${at}: ${row.label}'s keys cell is off its row`).toBeLessThan(4);
+        expect(Math.abs(mid(row.pad) - mid(row.name)), `${at}: ${row.label}'s pad cell is off its row`).toBeLessThan(4);
+        expect(row.pad!.left, `${at}: ${row.label}'s pad cell is not right of its keys cell`).toBeGreaterThanOrEqual(row.keys!.right - 1);
+      }
+      const lefts = new Set(m.rows.map((row) => Math.round(row.keys!.left)));
+      expect(lefts.size, `${at}: the keys cells stand at ${[...lefts].join(', ')} px`).toBe(1);
+      const last = Math.max(...m.rows.map((row) => row.name!.bottom));
+      const foot = m.foot;
+      expect(foot.length, `${at}: the foot holds ${foot.length} actions`).toBe(2);
+      for (const b of foot) expect(b!.top, `${at}: Reset or Back is not under the table`).toBeGreaterThanOrEqual(last - 1);
+      await context.close();
+    }
   });
 });

@@ -525,6 +525,13 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     */
     const page = await open();
     await openSettings(page);
+    /*
+      ⚠️ **OFF AND ON AGAIN FIRST, SINCE 0672.** A click on the chip that is on flips a band of two, so the press that
+      unlocks the page here is on *Off* and the next back on *On*; each lands on the chip that is not on, and the
+      pair the guard reads — Off, then On — is the one it always read.
+    */
+    await page.click(soundOption('off'));
+    await settled(page);
     await page.click(soundOption('on'));
     await settled(page);
     await page.click(soundOption('off'));

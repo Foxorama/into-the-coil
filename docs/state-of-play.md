@@ -1197,8 +1197,9 @@ Settings strip stays), and item 2, [0669](decisions/0669-one-cursor.md) (the bra
 title says why a pilot is locked), and item 3, [0670](decisions/0670-the-plate-from-the-short-side.md) (the hangar
 family's type and width from the short side, the phone's targets at 44 px, whole faces), and item 4,
 [0671](decisions/0671-the-settings-stand-on-the-sky.md) (Settings' tabs on the title's sky in its plate, the pause
-over the dimmed field). **Next is the menus' item 5**, Controls as a table and two-option bands as toggles; the rest
-follow the order the player gave —
+over the dimmed field), and item 5, [0672](decisions/0672-the-controls-are-a-table.md) (Controls a table of action by
+device, a band of two a switch, Rumble's and Save's lines). **Next is the menus' item 6**, Cosmo's foot and sub-tabs
+and Paint & Parts' thumbnails; the rest follow the order the player gave —
 the menus' 1–7, the port's 1–3, the menus' 8, the port's 4–6, the menus' 9.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24

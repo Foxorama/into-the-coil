@@ -718,6 +718,43 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await page.context().close();
   });
 
+  it('0672 — a band of two is a switch: A, either arrow and a click on the one that is on all flip it', async () => {
+    /*
+      *"Sound On/Off, Travel Scene/Brief, Hand Right/Left, Rumble On/Off are each two chips with arrows either side, so
+      a band is three stops wide on a keyboard for one bit."* In what the player sees: Sound's filled chip, flipped by
+      a pad's A, by right on the last option and left on the first, and by a click on the chip that is on.
+    */
+    const page = await open();
+    await afterFrames(page, 8);
+    await page.locator(`${shownScreen('title')} .${prefixFor('title')}action`, { hasText: SCREENS.title.actions[2]!.label }).first().click();
+    await page.waitForSelector(shownScreen('settings'));
+    await afterFrames(page, 8);
+    const p = prefixFor('settings');
+    const on = (): Promise<string> =>
+      page.evaluate(
+        ({ attr, panel }: { attr: string; panel: string }) => (document.querySelector(`.${panel} [${attr}="sound"] [aria-pressed="true"]`)?.textContent ?? '').trim(),
+        { attr: SETTING_ATTR, panel: p + 'shown' },
+      );
+    const sound = SCREENS.settings.choices.find((c) => c.name === 'sound')!.options.map((o) => o.label);
+    expect(sound, 'Sound is not a band of two, so this proves nothing').toHaveLength(2);
+    // The cursor onto Sound, which is the tab's first band.
+    for (let i = 0; i < 8; i++) {
+      const at = await page.evaluate((s: string) => document.querySelector(s)?.getAttribute('aria-label') ?? '', `.${p}action-cursor`);
+      if (at === 'Sound') break;
+      await nudge(page, MENU_DPAD_BUTTONS.down);
+    }
+    const was = await on();
+    await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
+    expect(await on(), 'A on Sound did not flip it').not.toBe(was);
+    // Right on the last, left on the first: either arrow flips, round its end.
+    const last = sound.indexOf(await on()) === 1;
+    await nudge(page, last ? MENU_DPAD_BUTTONS.right : MENU_DPAD_BUTTONS.left);
+    expect(await on(), `${last ? 'right on the last' : 'left on the first'} did not flip Sound`).toBe(was);
+    await page.locator(`${shownScreen('settings')} [${SETTING_ATTR}="sound"] [aria-pressed="true"]`).click();
+    expect(await on(), 'a click on the chip that is on did not flip Sound').not.toBe(was);
+    await page.context().close();
+  });
+
   it('0669 — the cursor stands on a locked pilot on the title, and the line says what opens them', async () => {
     /*
       The lock's line was the hangar's focus card's, and a step on the title skipped every shut face, so nothing on
