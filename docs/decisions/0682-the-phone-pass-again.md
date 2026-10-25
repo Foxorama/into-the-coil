@@ -33,11 +33,13 @@ The player's answer, given before the build: the phone's cockpit strip is not dr
   0511, because the trigger discs stack up the right edge. What it lacked was the gap.
 - **The gap is a margin as well as a gap.** The strip's width alone was not enough. The digits pop from their right
   edge, so their left edge reaches back by a fifth of their own width, about 21 px at 844×390. With only the gap, the
-  popped digits were 19 px from the plate.
+  popped digits were 20.5 px from a plate 31.2 px wide; with only the margin, 19.2 px.
 - **A keeper's bubble moved, which the plan did not ask.** Photographed for this item, Cosmo's bubble stood over the
-  balance's second line at 844×390, and over all of it held upright at 412×915. [0681](0681-the-dock-dressed.md) did
-  that: it stood Cosmo's shop forward and taller, and his head higher. In 0681's own photographs it can be seen, and
-  was not looked for. The player's answer was that the sheet stays, so it is fixed here, with its own guard.
+  balance's second line at 844×390, and over all of it held upright at 412×915. Held upright at 390×844, Unity's stood
+  over the sheet's words on Hangin' Out. [0681](0681-the-dock-dressed.md) made Cosmo's worse: it stood his shop
+  forward and taller, and his head higher. It can be seen in 0681's own photographs, and was not looked for there;
+  0678's show the bubble already touching the sheet's rim. The player's answer was that the sheet stays, so it is
+  fixed here, with its own guard.
 - **The balance at 480×320 is still not seen.** The plan said to confirm it. Confirmed: on the narrowest phone the
   plate takes the width and the stand lies behind it at a third of its strength, and the balance is in the stand
   (0572). 0566's comment says it moves into the plate's foot beside Back. It does not. It is placed once, in the
