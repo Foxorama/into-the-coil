@@ -34,7 +34,8 @@ export const PROBES = [
     guard: 'holds the plate to one width',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '    grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);',
+      // ⚠️ Re-anchored by 0670, whose plate is its type's width with a cap.
+      find: '    grid-template-columns: minmax(0, min(25.4em, max(24rem, 33.3%))) minmax(0, 1fr);',
       replace: '    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);',
     },
   },

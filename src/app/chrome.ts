@@ -2260,7 +2260,8 @@ ${faced((p) => `.${p}band-armed .${p}option-face.${p}option-on > canvas`)} {
 @container (max-height: 360px) {
   .itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { display: none; }
 }
-.itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { grid-area: glyphs; justify-self: end; text-align: right; font-size: 0.62em; font-weight: 700; letter-spacing: 0.04em; opacity: 0.6; min-width: 0; }
+/* 0670: never under 12 px — it was 9.4 px at 1280x720, the line that says what every key does. */
+.itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { grid-area: glyphs; justify-self: end; text-align: right; font-size: max(0.62em, 12px); font-weight: 700; letter-spacing: 0.04em; opacity: 0.6; min-width: 0; }
 .itc-hangar-foot > .itc-hangar-sheet, .itc-parts-foot > .itc-parts-sheet, .itc-shop-foot > .itc-shop-sheet { grid-area: sheet; }
 .itc-hangar-foot > .itc-hangar-choices, .itc-parts-foot > .itc-parts-choices, .itc-shop-foot > .itc-shop-choices { grid-area: choices; }
 .itc-hangar-band-hint, .itc-parts-band-hint, .itc-shop-band-hint { display: none; }
@@ -3398,6 +3399,15 @@ ${each('-band[hidden]')} { display: none; }
     .itc-hangar-plate .itc-hangar-band-step, .itc-parts-plate .itc-parts-band-step, .itc-shop-plate .itc-shop-band-step { min-width: 1.25rem; text-align: center; }
     .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band, .itc-shop-plate .itc-shop-band { column-gap: 0.2rem; }
     .itc-hangar-group, .itc-parts-group { column-gap: 0.75rem; }
+    /*
+      0670: and drawn at a thumb's floor, not only pressed there. Measured at 844x390 the tabs were 29 px tall, the
+      chips 30, the arrows 26, *Fly* 39 and the tier's chips 44 — under the 44 pt and 48 dp the platforms ask. Each
+      is now at least 44 px on its short side, the arrow its height: its width is 0607's, which a thumb's edge finds.
+    */
+    .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .itc-hangar-plate .itc-hangar-option:not(.itc-hangar-option-face), .itc-parts-plate .itc-parts-option:not(.itc-parts-option-face), .itc-shop-plate .itc-shop-option:not(.itc-shop-option-face) { min-height: 44px; }
+    .itc-hangar-plate .itc-hangar-band-step, .itc-parts-plate .itc-parts-band-step, .itc-shop-plate .itc-shop-band-step { min-height: 44px; }
+    .itc-title-choices > .itc-title-action-lead, .itc-title-band:not(.itc-title-band-faces) .itc-title-option { min-height: 44px; }
   }
 }
 /*
@@ -3417,10 +3427,19 @@ ${each('-band[hidden]')} { display: none; }
   After the phone's and the upright layouts in the sheet, so where this one applies it is the last word.
 */
 @container (min-height: 461px) and (orientation: landscape) {
+  /*
+    ⚠️ **0670: THE PLATE'S TYPE FROM THE SHORT SIDE, AND ITS WIDTH IN THAT TYPE.** It was 24 rem wide and its em
+    capped at 1 rem, so a 2560x1080 showed the 1280x720's form at 15 % of the screen with its bottom third empty.
+    The em now grows with the height past 720: 15 px there, as before, and 18.5 px at 1080 — a straight line
+    through the two, capped at 1.4 rem. 19 px at 1080 ran Hangin' Out's four bands 13 px past its plate. The width
+    is 25.4 of those em, which is the 384 px it was at 720, and never more than a third of the screen, so the stand
+    keeps the rest (0571's column at a size of its own) — nor less than the 24 rem it was, which a 1024x768's third
+    would have cut it under.
+  */
   .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel {
-    grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+    grid-template-columns: minmax(0, min(25.4em, max(24rem, 33.3%))) minmax(0, 1fr);
     grid-template-areas: 'plate stand';
-    font-size: clamp(0.78rem, 2.1cqh, 1rem);
+    font-size: clamp(0.78rem, calc(0.5rem + 0.97cqh), 1.4rem);
     padding: 0.8rem;
     gap: 0;
   }
@@ -3434,6 +3453,14 @@ ${each('-band[hidden]')} { display: none; }
     line too tall put Buy under the clip, where a click could not settle on it.
   */
   .itc-hangar-settings-box, .itc-parts-settings-box, .itc-shop-settings-box { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; align-content: start; }
+  /*
+    0670: and a tab with fewer bands spreads them down the plate rather than leaving its foot empty: at 1920x1080
+    Paint & Parts stood its three bands at the top and 230 px of plate under them, a band and a half of nothing.
+    The head — the faces, whose they are, the sub-tabs — stays together; the groups' row under it takes what is
+    left, and the group in view stretches its bands down it. What is spread is only what is left over, so a tab
+    that fills its plate is laid out as before, and the row is never shorter than its bands.
+  */
+  .itc-hangar-settings-box, .itc-parts-settings-box { grid-template-rows: auto auto auto 1fr; }
   .itc-hangar-plate > .itc-hangar-foot, .itc-parts-plate > .itc-parts-foot, .itc-shop-plate > .itc-shop-foot { flex: none; }
   .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { grid-area: stand; position: relative; }
   /* The balance is in the plate's foot; the dash on the deck under the ship, which stands in the stand's middle. */
@@ -3468,7 +3495,8 @@ ${each('-band[hidden]')} { display: none; }
     text-transform: uppercase;
     color: var(--itc-ally, var(--itc-ink));
   }
-  .itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs { font-size: 0.78rem; gap: 0.2em; }
+  /* 0670: in the plate's em, which grows with the height — 12.4 px at 720 as the 0.78 rem was, about 15.6 at 1080. */
+  .itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs { font-size: 0.82em; gap: 0.2em; }
   .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { flex: 1 1 auto; min-width: 0; padding: 0.35em 0.35em 0.3em; overflow: hidden; text-overflow: ellipsis; }
   /* The faces a size that fits the column, all five in view. */
   .itc-hangar-band-faces .itc-hangar-face, .itc-parts-band-faces .itc-parts-face, .itc-shop-band-faces .itc-shop-face { width: 2.3em; height: 2.3em; }
@@ -6825,6 +6853,12 @@ export function makeChrome(
         faces: choice.faces,
         caption: null,
       };
+      // 0670: a scrolled row of faces shows whole faces only — `wholeFaces`.
+      if (choice.faces === 'portraits') {
+        const scrolled = (): void => wholeFaces(band);
+        box.addEventListener('scroll', scrolled, { passive: true });
+        listeners.push(() => box.removeEventListener('scroll', scrolled));
+      }
       /*
         0572: on a screen that stands, a caption under the band — the option under the cursor or fitted, what
         it is, and what it is to the player. Played: *"the detail for the equipped gun on the bottom left of
@@ -8014,6 +8048,24 @@ export function makeChrome(
       if (left < track.scrollLeft) track.scrollLeft = left;
       else if (left + chosen.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + chosen.offsetWidth - track.clientWidth;
     }
+    if (band.faces === 'portraits') wholeFaces(band);
+  };
+  /**
+   * 0670: a band of faces shows whole faces only. The hangar's column at 384 px drew six and the seventh cut in half
+   * behind the arrow; a face the track only partly shows is put away until a scroll brings all of it in. A read of
+   * layout, made on a choice, a scroll of the track and a framing of the stand — never on a frame (0022).
+   */
+  const wholeFaces = (band: Band): void => {
+    const track = band.buttons[0]?.parentElement;
+    if (!(track instanceof HTMLElement)) return;
+    const edge = track.getBoundingClientRect();
+    if (edge.width === 0) return;
+    for (const face of band.buttons) {
+      face.style.visibility = '';
+      const box = face.getBoundingClientRect();
+      const cut = box.width > 0 && (box.left < edge.left - 0.5 || box.right > edge.right + 0.5) && box.right > edge.left && box.left < edge.right;
+      if (cut) face.style.visibility = 'hidden';
+    }
   };
   /** Try an option on — 0561. Trying on the fitted one is putting back. */
   const tryOn = (band: Band, index: number, scroll = false): void => {
@@ -8896,6 +8948,8 @@ export function makeChrome(
       for (const kind of KEEPER_KINDS) Object.assign(said.shops[kind], marks.shops[kind]);
       Object.assign(said.hang, marks.hang);
       placeStand(screen);
+      // 0670: a framing is a layout, so the faces the track cuts are worked out again.
+      for (const band of panels[screen]?.bands ?? []) if (band.faces === 'portraits') wholeFaces(band);
     },
     setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void {
       for (const screen of Object.keys(panels) as Screen[]) {

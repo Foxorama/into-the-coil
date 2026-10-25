@@ -72,7 +72,12 @@ describe.runIf(chromePath)('0562 and 0568 — the plate is one size, and its foo
     const large = await opened(1920, 1080);
     const big = await plateOf(large);
     await large.context().close();
-    expect(big, `the plate is ${big}px at 1920x1080 against ${small}px at 1280x720`).toBeLessThanOrEqual(small + 1);
+    /*
+      ⚠️ **AMENDED BY 0670**: the plate is its type's width, and the type grows from the short side, so it is wider at
+      1080 rows than at 720 — by the type's own ratio and no more, 18.5 against 15 px. It was one width at every size,
+      and at 2560x1080 that was a 1280x720's form at 15 % of the screen. The quarter still holds the share.
+    */
+    expect(big, `the plate is ${big}px at 1920x1080 against ${small}px at 1280x720`).toBeLessThanOrEqual(small * (18.5 / 15) + 2);
     expect(big / 1920, 'the plate takes a quarter of a 1920 screen or more').toBeLessThan(0.25);
   });
 
