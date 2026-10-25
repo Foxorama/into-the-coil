@@ -122,8 +122,11 @@ const GAME_BASE = PORT_KINDS.length;
  * pilot's: its `wingtip` is where its contrails trail from (0441), and its `cockpit` where the pilot
  * drops in (0444), both in the fight's units.
  */
-export function paintPort(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow): void {
+export function paintPort(surface: Surface, base: View, t: number, sky: Sky, ship: ShipRow): void {
   surface.clear();
+  // 0679: the whole screen, the strip's band too, and the room pushed in on as it empties.
+  introViewInto(base, t, INTRO_VIEW);
+  const view = INTRO_VIEW;
   // Each ship at its own size in the shot, against the shared scale — 0450; its cockpit and its wingtips with it.
   const inside = ship.intro.hangar;
   const outside = ship.intro.outside;
@@ -471,6 +474,56 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
 }
 
 /**
+ * 0679: how much closer the intro's camera is on the room by the cut than at the fade-in — *"the intro camera
+ * pushes in slowly"*, the player's answer. About the room's middle, so the bay and the bar stay in.
+ */
+export const INTRO_PUSH = 1.08;
+
+// @setup: 0679's view the intro is drawn through, written in place every frame by `introViewInto`.
+const INTRO_VIEW: View = { alongSpan: 0, acrossSpan: 0, alongAxis: 'x', scale: 0, gutterAlong: 0, gutterAcross: 0, barAcross: 0 };
+
+/**
+ * The view the intro is seen through at `t` — 0679, written into `out`. The screen's own `base` with no bar: the
+ * strip at the top of a desktop is the play readout's (0500), and while the intro is up it was an empty black band
+ * over the room. So the lane is grown to fill the whole height, and from the fade-in to the cut it is pushed in on by
+ * `INTRO_PUSH` about the room's middle; the dark outside is the filled view, held. Held inside the lane either way,
+ * so no edge shows past what is painted. A portrait view, which is never played, is the base.
+ */
+export function introViewInto(base: View, t: number, out: View): void {
+  out.alongSpan = base.alongSpan;
+  out.acrossSpan = base.acrossSpan;
+  out.alongAxis = base.alongAxis;
+  out.barAcross = 0;
+  if (base.alongAxis !== 'x' || base.scale <= 0) {
+    out.scale = base.scale;
+    out.gutterAlong = base.gutterAlong;
+    out.gutterAcross = base.gutterAcross;
+    out.barAcross = base.barAcross;
+    return;
+  }
+  const width = 2 * base.gutterAlong + base.alongSpan * base.scale;
+  const height = base.barAcross + 2 * base.gutterAcross + ACROSS_SPAN * base.scale;
+  const inside = t < BEATS.cut;
+  const push = inside ? 1 + (INTRO_PUSH - 1) * ease(t, BEATS.fadeIn, BEATS.cut) : 1;
+  const scale = Math.max(base.scale, height / ACROSS_SPAN) * push;
+  out.scale = scale;
+  // The point pushed in on: the room's middle inside, the screen's outside — where it stood in the base.
+  const along = inside ? STAGE.bay / 2 : base.alongSpan / 2;
+  const across = inside ? (STAGE.ceiling + STAGE.deck) / 2 : ACROSS_SPAN / 2;
+  const x = base.gutterAlong + along * base.scale;
+  const y = height / 2;
+  out.gutterAlong = Math.min(0, Math.max(width - base.alongSpan * scale, x - along * scale));
+  out.gutterAcross = Math.min(0, Math.max(height - ACROSS_SPAN * scale, y - across * scale));
+}
+
+/** 0679: the pixels per world unit the intro is drawn at when pushed in furthest, which its atlas is baked for. */
+export function introSharpness(base: View): number {
+  if (base.alongAxis !== 'x' || base.scale <= 0) return base.scale;
+  const height = base.barAcross + 2 * base.gutterAcross + ACROSS_SPAN * base.scale;
+  return Math.max(base.scale, height / ACROSS_SPAN) * INTRO_PUSH;
+}
+
+/**
  * The stand's camera fitted to the column the plate leaves it — 0563, written into `out`.
  *
  * The row's camera says where it stands and how close it would like to be. Fitted, the pad stands at
@@ -719,6 +772,22 @@ const SCORCH_FROM = 30;
 const SCORCH_IN = 60;
 /** How bright a beam's reflection in the deck is, against the beam. */
 const REFLECTION = 0.22;
+/**
+ * 0679: the alarm's wash — how far either side of its beacon a turn throws it along the room, and where on the wall
+ * it falls, across. The Coil's crest on the wall over her pad, across; and how far her clamps sink as she lights.
+ */
+const ALARM_SWEEP = 44;
+const ALARM_WALL = 56;
+const CREST_ACROSS = 54;
+const CLAMPS_SINK = 8;
+/**
+ * 0679: the field across the bay ripples as each ship goes through it — drawn a second time a unit off, for
+ * `RIPPLE_STEPS` from the step its centre crosses the bay. The steps are solved from each launch's own curve
+ * (`launched`), so they are constants and the ripple is a function of the clock.
+ */
+const RIPPLE_STEPS = 12;
+const VIPER_THROUGH = BEATS.viperGo + Math.sqrt((2 * (STAGE.bay - STAGE.viperPad)) / LAUNCH_ACCEL);
+const BLUE_THROUGH = BEATS.blueGo + Math.sqrt((2 * (STAGE.bay - STAGE.bluePad)) / BLUE_LAUNCH_ACCEL);
 /** The crane over the pilot's pad: how far under the truss its rail is, and how far its hook swings, in radians. */
 const CRANE_UNDER = 1;
 const HOOK_SWING = 0.05;
@@ -837,6 +906,12 @@ function paintDeck(surface: Surface, view: View): void {
 /** The edge of the room, over everything that flies out through it. */
 function paintEdge(surface: Surface, view: View, t: number): void {
   put(surface, view, PORT_SPRITE.field, STAGE.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
+  // 0679: and rippling as each ship goes through it — a second sheet a unit off, flicking side to side and fading.
+  const through = t >= BLUE_THROUGH ? t - BLUE_THROUGH : t - VIPER_THROUGH;
+  if (through >= 0 && through < RIPPLE_STEPS) {
+    const side = Math.floor(through / 3) % 2 === 0 ? 1 : -1;
+    put(surface, view, PORT_SPRITE.field, STAGE.bay + 1 + side, (STAGE.ceiling + STAGE.deck) / 2, 0.8 * (1 - through / RIPPLE_STEPS));
+  }
   put(surface, view, PORT_SPRITE.bayTop, STAGE.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
   put(surface, view, PORT_SPRITE.bayBottom, STAGE.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
   // 0677: and the bay door's warning lamp, turning.
@@ -918,14 +993,24 @@ const LANDS = 0.6;
 
 function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number, size: number, seated: boolean): void {
   paintRoom(surface, view, t, sky);
-  // The alarm, turning once she has gone: a beacon sweeps past the viewer once a turn.
+  /*
+    The alarm, turning once she has gone. 0679: the beacons are its source, lit and steady, and what turns is their
+    light — a red wash thrown along the wall and the deck, swept across the room once a turn while it faces it. It
+    was the two dots brightening and growing, which read as two lamps blinking and not as a light going round.
+  */
   if (t >= BEATS.alarm) {
-    const turn = ((t - BEATS.alarm) / ALARM_PERIOD) * Math.PI * 2;
-    const sweep = Math.max(0, Math.cos(turn));
-    const lit = Math.min(1, (t - BEATS.alarm) / 12) * (0.25 + 0.75 * sweep * sweep);
+    const up = Math.min(1, (t - BEATS.alarm) / 12);
     for (let i = 0; i < STAGE.beacons.length; i++) {
       const at = STAGE.beacons[i]!;
-      put(surface, view, PORT_SPRITE.beacon, at[0], at[1], lit, 0, 1 + 0.6 * sweep);
+      // Each beacon half a turn from the other, so one is always throwing its light somewhere.
+      const turn = ((t - BEATS.alarm) / ALARM_PERIOD) * Math.PI * 2 + i * Math.PI;
+      const facing = Math.cos(turn);
+      if (facing > 0) {
+        const along = at[0] + Math.sin(turn) * ALARM_SWEEP;
+        put(surface, view, PORT_SPRITE.alarmWash, along, ALARM_WALL, up * facing);
+        put(surface, view, PORT_SPRITE.alarmWash, along, STAGE.deck + POOL_DOWN, up * facing * 0.7);
+      }
+      put(surface, view, PORT_SPRITE.beacon, at[0], at[1], up * (0.6 + 0.4 * Math.max(0, facing)));
     }
   }
   paintLamps(surface, view);
@@ -958,16 +1043,21 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   const viperField = 1 - ease(t, BEATS.viperGo, BEATS.viperGo + 30);
   const blueField = 1 - ease(t, BEATS.blueGo, BEATS.blueGo + 30);
   // 0677: each beam's rings in the polished deck under its pad — the beam turned over and faint.
-  put(surface, view, PORT_SPRITE.beam, STAGE.viperPad, STAGE.deck + beam / 2 - 2, viperField * REFLECTION, Math.PI);
+  // 0679: hers in her violet, beam and pool and pad.
+  put(surface, view, PORT_SPRITE.beamViper, STAGE.viperPad, STAGE.deck + beam / 2 - 2, viperField * REFLECTION, Math.PI);
   put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck + beam / 2 - 2, blueField * REFLECTION, Math.PI);
   // 0677: and the crates and the hose standing on the deck past the Viper's pad.
   put(surface, view, PORT_SPRITE.hose, STAGE.hose.along, STAGE.hose.across);
   put(surface, view, PORT_SPRITE.crates, STAGE.crates.along, STAGE.crates.across);
-  put(surface, view, PORT_SPRITE.padPool, STAGE.viperPad, STAGE.deck + POOL_DOWN, viperField);
+  put(surface, view, PORT_SPRITE.padPoolViper, STAGE.viperPad, STAGE.deck + POOL_DOWN, viperField);
   put(surface, view, PORT_SPRITE.padPool, STAGE.bluePad, STAGE.deck + POOL_DOWN, blueField);
-  put(surface, view, PORT_SPRITE.beam, STAGE.viperPad, STAGE.deck - beam / 2 + 2, viperField);
+  put(surface, view, PORT_SPRITE.beamViper, STAGE.viperPad, STAGE.deck - beam / 2 + 2, viperField);
   put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck - beam / 2 + 2, blueField);
-  put(surface, view, PORT_SPRITE.pad, STAGE.viperPad, STAGE.deck);
+  // 0679: the Coil's crest on the wall over her pad, and the clamps holding her to it, dropping into it as she lights.
+  put(surface, view, PORT_SPRITE.crest, STAGE.viperPad, CREST_ACROSS);
+  const freed = ease(t, BEATS.viperLit, BEATS.viperLift);
+  if (freed < 1) put(surface, view, PORT_SPRITE.clamps, STAGE.viperPad, STAGE.deck - PORT_EXTENT.clamps / 2 + 4 + CLAMPS_SINK * freed, 1 - freed);
+  put(surface, view, PORT_SPRITE.padViper, STAGE.viperPad, STAGE.deck);
   put(surface, view, PORT_SPRITE.pad, STAGE.bluePad, STAGE.deck);
   // The Viper: a bob on the beam, the lift, and the burn out through the bay.
   const viperBob = t < BEATS.viperGo ? Math.sin(t * 0.07) * 0.6 : 0;

@@ -1207,7 +1207,8 @@ Cosmo's, the art's picture at the flank's size), and item 7, [0674](decisions/06
 wall lit by its lamps, pools on the deck, the ship lit from its pad, shade, the bar's warm side), and item 3,
 [0677](decisions/0677-big-forms.md) (the wall's overlays, the truss's braces, a crane, a bulkhead, the deck as a
 floor); and the menus' item 8, [0678](decisions/0678-a-stand-per-tab.md) (a camera a tab, and the dolly between
-them). **Next is the port's item 4**; the rest follow the order the player gave — the menus' 1–7, the port's 1–3,
+them); and the port's item 4, [0679](decisions/0679-the-intros-staging.md) (her pad violet, the alarm's wash, the
+field's ripple, the camera pushing in and no bar over the intro). **Next is the port's item 5**; the rest follow the order the player gave — the menus' 1–7, the port's 1–3,
 the menus' 8, the port's 4–6, the menus' 9.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24

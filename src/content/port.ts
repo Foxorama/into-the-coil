@@ -206,13 +206,24 @@ export const PORT_KINDS = [
   'scorch',
   'tyres',
   'oil',
+  /*
+    0679: the intro's staging — the Viper's own pad, its beam and its pool on the deck in her violet; the Coil's
+    crest on the wall over it; the clamps holding her to it, which drop as she lights; and the alarm's wash, a
+    beacon's turning light thrown along the wall and the deck.
+  */
+  'padViper',
+  'beamViper',
+  'padPoolViper',
+  'crest',
+  'clamps',
+  'alarmWash',
 ] as const;
 
 /**
  * 0676: the port's kinds that are light — added to what is under them rather than laid over it, on 0520's terms
  * for the game's (`Atlas.light`). The pools and the up-light, and 0677's door lamp; everything else in the room is body.
  */
-export const PORT_LIGHT_KINDS: readonly PortKind[] = ['lampPool', 'padPool', 'padLight', 'spillWall', 'doorLamp'];
+export const PORT_LIGHT_KINDS: readonly PortKind[] = ['lampPool', 'padPool', 'padLight', 'spillWall', 'doorLamp', 'padPoolViper', 'alarmWash'];
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
   looks super basic compared to the level 1 starfield and it should kinda lead straight into level 1."*
@@ -348,6 +359,13 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   scorch: 34,
   tyres: 30,
   oil: 14,
+  // 0679: her pad, beam and pool at the pilot's; the crest a mark over the pad; the clamps across her keel; the wash wide and soft.
+  padViper: 36,
+  beamViper: 36,
+  padPoolViper: 30,
+  crest: 14,
+  clamps: 30,
+  alarmWash: 60,
 };
 
 /**
@@ -468,6 +486,8 @@ export const VIPER = {
   flame: '#b060c0',
   core: '#f3d2ff',
   eye: '#d8ff5a',
+  // 0679: her pad's edge lights and her beam — the violet of her flame, lifted.
+  pad: '#d08cff',
 } as const;
 
 /** The warm inks of the room itself — the predecessor's clubhouse, which is not a palette role either. */
