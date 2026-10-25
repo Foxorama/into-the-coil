@@ -92,6 +92,58 @@ describe.runIf(chromePath)('0511 — the run can be paused', () => {
     await page.context().close();
   });
 
+  it('0671 — the pause and Quit stand over the frozen field, dimmed, and not over the void', async () => {
+    /*
+      *"The pause is a black screen."* A player who pauses to look at the field could not. In pixels: the screen
+      beside the pause's panel, read off a screenshot, is the field under a dim — many pixels that are not the
+      void's colour — and not a flat sheet of the void.
+    */
+    const page = await open();
+    await launch(page, 'savior');
+    await page.waitForSelector('.itc-playing-pause-shown');
+    await page.waitForTimeout(1500);
+    const field = async (screen: 'paused' | 'quit'): Promise<number> => {
+      const panel = (await page.locator(`${shown(screen)} .${prefixFor(screen)}panel`).boundingBox())!;
+      // The strip of screen left of the panel, the whole height.
+      const clip = { x: 0, y: 0, width: Math.max(40, Math.floor(panel.x) - 4), height: 720 };
+      const png = await page.screenshot({ clip });
+      return page.evaluate(
+        async ({ b64, root }: { b64: string; root: string }) => {
+          const img = new Image();
+          img.src = 'data:image/png;base64,' + b64;
+          await img.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const pen = canvas.getContext('2d')!;
+          pen.drawImage(img, 0, 0);
+          const d = pen.getImageData(0, 0, canvas.width, canvas.height).data;
+          // The void, as the overlay is painted: one pixel of a box filled with it.
+          const probe = document.createElement('div');
+          probe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;background:var(--itc-void)';
+          document.querySelector('.' + root)!.appendChild(probe);
+          const [r, g, b] = getComputedStyle(probe).backgroundColor.match(/\d+/g)!.map(Number);
+          probe.remove();
+          let off = 0;
+          for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i]! - r!) + Math.abs(d[i + 1]! - g!) + Math.abs(d[i + 2]! - b!) > 12) off++;
+          return off / (d.length / 4);
+        },
+        { b64: png.toString('base64'), root: prefixFor(screen).slice(0, -1) },
+      );
+    };
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(shown('paused'));
+    await page.waitForTimeout(300);
+    const paused = await field('paused');
+    expect(paused, `beside the pause, ${(paused * 100).toFixed(1)} % of the screen is anything but the void`).toBeGreaterThan(0.2);
+    await press(page, 'paused', 'Quit');
+    await page.waitForSelector(shown('quit'));
+    await page.waitForTimeout(300);
+    const quit = await field('quit');
+    expect(quit, `beside Quit, ${(quit * 100).toFixed(1)} % of the screen is anything but the void`).toBeGreaterThan(0.2);
+    await page.context().close();
+  });
+
   it('the button pauses; Settings from a pause has no music room and comes back to it; P resumes', async () => {
     const page = await open();
     await launch(page, 'savior');
