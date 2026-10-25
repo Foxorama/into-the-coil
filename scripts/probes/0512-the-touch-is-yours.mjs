@@ -56,8 +56,9 @@ export const PROBES = [
     guard: 'with the touch section up',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-settings-touch .itc-settings-settings-box {\n  display: grid;',
-      replace: '.itc-settings-touch .itc-settings-settings-box {\n  display: flex;',
+      // 0674: the grid is every device's now, so the column is put back for every device.
+      find: '\n.itc-settings-settings-box {\n  display: grid;',
+      replace: '\n.itc-settings-settings-box {\n  display: flex;',
     },
   },
   {
