@@ -329,6 +329,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'padPool':
     case 'padLight':
     case 'shade':
+    case 'shadeFoot':
     case 'spillWall':
       break;
     default: {
@@ -398,13 +399,20 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       // 0676: the pad's light up the ship's underside, in the ship's own box — strongest at its keel.
       radialEllipse(ctx, 0, h * 0.42, h * 0.62, h * 0.3, palette.player, 0.45);
       return;
-    case 'shade': {
-      // 0676: a band of the void across the box's top eighth, at half and to nothing — laid stretched, and turned to lie the other way.
-      const fall = ctx.createLinearGradient(0, -h, 0, -h + extent * 0.125);
+    case 'shade':
+    case 'shadeFoot': {
+      /*
+        0676: a band of the void across the box's top eighth, at half and to nothing, laid stretched — and for a
+        wall's foot across its bottom eighth, rising, so it is never laid turned (a turn rotates the canvas).
+      */
+      const foot = kind === 'shadeFoot';
+      const edge = foot ? h : -h;
+      const inner = foot ? h - extent * 0.125 : -h + extent * 0.125;
+      const fall = ctx.createLinearGradient(0, edge, 0, inner);
       fall.addColorStop(0, rgba(palette.space, 0.5));
       fall.addColorStop(1, rgba(palette.space, 0));
       ctx.fillStyle = fall;
-      ctx.fillRect(-h, -h, extent, extent * 0.125);
+      ctx.fillRect(-h, Math.min(edge, inner), extent, extent * 0.125);
       return;
     }
     case 'spillWall':

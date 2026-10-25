@@ -181,6 +181,8 @@ export const PORT_KINDS = [
   'padPool',
   'padLight',
   'shade',
+  // The same band lying the other way, rising from a wall's foot: baked so, because a turned blit rotates the canvas.
+  'shadeFoot',
   'spillWall',
 ] as const;
 
@@ -305,6 +307,7 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   padLight: HANGAR_SHIP,
   // A band across the top of its box, laid stretched (`SHADE_GROW`): soft by nature, so baked small.
   shade: 20,
+  shadeFoot: 20,
   spillWall: 40,
 };
 

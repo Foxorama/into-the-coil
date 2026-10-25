@@ -590,13 +590,14 @@ export function tileLit(along: number, across: number, lamps: readonly number[])
 
 /**
  * A band of shade `width` world units wide whose dark edge lies along `edge`, across — under a thing (`below`,
- * the band falling away down the wall) or at a wall's foot (the band rising from it). The sprite is a band across
- * the top of its box, so it is laid at the box's centre, stretched to the width and turned to lie the other way.
+ * the band falling away down the wall) or at a wall's foot (the band rising from it). Each sprite is a band across
+ * one edge of its box, so it is laid at the box's centre stretched to the width — and never turned, because a
+ * turned blit rotates the canvas every frame, which `tests/run-ends.browser.test.ts` counts on the stand.
  */
 function shadeAt(surface: Surface, view: View, along: number, edge: number, width: number, below: boolean): void {
   const grow = width / PORT_EXTENT.shade;
   const half = width / 2;
-  put(surface, view, PORT_SPRITE.shade, along, below ? edge + half : edge - half, 1, below ? 0 : Math.PI, grow);
+  put(surface, view, below ? PORT_SPRITE.shade : PORT_SPRITE.shadeFoot, along, below ? edge + half : edge - half, 1, 0, grow);
 }
 
 /** Smooth from 0 at `from` to 1 at `to`, and flat either side. */
