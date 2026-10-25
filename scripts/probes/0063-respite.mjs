@@ -130,8 +130,9 @@ export const PROBES = [
     guard: 'paints nothing over the scene and takes no pointer',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '    if (row.dims) root.style.background = colours.space;',
-      replace: '    root.style.background = colours.space;',
+      // ⚠️ Re-anchored by 0671, whose screens that dim inside a run lay the void over the field at 70 %.
+      find: '    if (row.dims) root.style.background = row.inRun ?',
+      replace: '    if (true) root.style.background = row.inRun ?',
     },
   },
   {

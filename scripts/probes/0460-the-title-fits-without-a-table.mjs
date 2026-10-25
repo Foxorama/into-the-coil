@@ -38,8 +38,9 @@ export const PROBES = [
     guard: 'sizes every layer of the drifting background as a tile',
     edit: {
       path: 'src/app/chrome.ts',
-      find: ".itc-title-sky::before {\n  content: '';\n  position: absolute;\n  inset: 0;\n  background:",
-      replace: '.itc-title-sky {\n  background:',
+      // ⚠️ Re-anchored by 0671, whose sky stands behind Settings' tabs too.
+      find: "${SKIED.map((s) => `.${prefixFor(s)}sky::before`).join(', ')} {\n  content: '';\n  position: absolute;\n  inset: 0;\n  background:",
+      replace: "${SKIED.map((s) => `.${prefixFor(s)}sky`).join(', ')} {\n  background:",
     },
   },
 ];

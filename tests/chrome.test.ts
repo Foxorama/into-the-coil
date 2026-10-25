@@ -296,6 +296,22 @@ describe('every screen owns its class prefix', () => {
     expect(rings.map((r) => r.selectors.join(', ').slice(0, 120)), 'a cursor drawn as a ring').toEqual([]);
   });
 
+  it('0671 — Settings and its tabs stand on the title’s sky, in the title’s plate', () => {
+    /*
+      The review: *"Settings, Controls, How to play, Save, Paused and Quit are type on a black void, while the title
+      has its sky."* Held on the stylesheet: each of Settings' tabs has the sky's stars and the cut-corner frame.
+    */
+    const rules = [...STYLE.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+      selectors: m[1]!.split(',').map((s) => s.trim()),
+      body: m[2]!,
+    }));
+    for (const tab of SCREENS.settings.tabs) {
+      const p = prefixFor(tab);
+      expect(rules.some((r) => r.selectors.includes(`.${p}sky`) && r.body.includes('radial-gradient')), `${tab} has no sky of stars`).toBe(true);
+      expect(rules.some((r) => r.selectors.includes(`.${p}panel`) && r.body.includes('clip-path')), `${tab} stands in no plate`).toBe(true);
+    }
+  });
+
   it('0668 — every screen with a hinted action sets the hint on its own line', () => {
     /*
       Cosmo's *Show owned* read *"Show ownedPut what you own back on the shelves"* at every size: the rule that

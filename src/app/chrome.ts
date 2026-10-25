@@ -168,6 +168,12 @@ const BRACKETS = `--itc-bracket: #ffffff;
 const TABBED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].tabs.length > 0 && SCREENS[screen].stand === null);
 
 /**
+ * The screens that stand on the title's sky — 0437's title, and since 0671 the place its Settings button opens,
+ * whose four tabs were type on the void while the title had its sky and the hangar its dock.
+ */
+const SKIED: readonly Screen[] = PANELLED.filter((screen) => screen === 'title' || TABBED.includes(screen));
+
+/**
  * The title's star sky — 0437: three layers, far to near, each a handful of soft dots on a tile of
  * its own size, drifting a whole number of tiles per loop at its own speed. Placed by a fixed hash
  * rather than a stream: it is the stylesheet's, written once at load, and the same sky every time.
@@ -197,8 +203,10 @@ function starSky(): string {
       to.push(`${-layer.tile * layer.tiles}px 0`);
     }
   }
+  // 0671: every screen that stands on it, one drift.
+  const skies = SKIED.map((s) => `.${prefixFor(s)}sky`).join(', ');
   return (
-    `.${prefixFor('title')}sky { background-image: ${images.join(', ')}; background-size: ${sizes.join(', ')}; ` +
+    `${skies} { background-image: ${images.join(', ')}; background-size: ${sizes.join(', ')}; ` +
     `animation: ${prefixFor('title')}drift 60s linear infinite; }\n` +
     `@keyframes ${prefixFor('title')}drift { from { background-position: ${from.join(', ')}; } to { background-position: ${to.join(', ')}; } }`
   );
@@ -353,14 +361,14 @@ ${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { margin-top:
   Each layer moves a whole number of its own tiles per loop, so the loop has no seam. The buttons get a
   backing of the void, because a ship passing behind a label is a label nobody can read.
 */
-.itc-title-sky {
+${SKIED.map((s) => `.${prefixFor(s)}sky`).join(', ')} {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
 }
 ${starSky()}
-.itc-title-panel { position: relative; z-index: 1; }
+${SKIED.map((s) => `.${prefixFor(s)}panel`).join(', ')} { position: relative; z-index: 1; }
 .itc-title-flyer {
   position: absolute;
   left: 0;
@@ -394,7 +402,7 @@ ${starSky()}
 */
 .itc-title-panel .itc-title-action { background-color: color-mix(in srgb, var(--itc-void) 82%, transparent); }
 @media (prefers-reduced-motion: reduce) {
-  .itc-title-sky { animation: none; }
+  ${SKIED.map((s) => `.${prefixFor(s)}sky`).join(', ')} { animation: none; }
   .itc-title-flyer { display: none; }
 }
 /*
@@ -2115,9 +2123,10 @@ ${faced((p) => `.${p}band-armed .${p}option-face.${p}option-on > canvas`)} {
   ⚠️ **AN EMPTY TABLE DRAWS NO PLATE**: the board is not displayed while the body is bare, and its
   frame is the board's own.
 
-  0539: and the hangar family's plate, on the same terms — one frame for every plate a menu stands in.
+  0539: and the hangar family's plate, on the same terms — one frame for every plate a menu stands in. 0671: and
+  Settings' four tabs, whose panel is the plate, the tab strip its head.
 */
-.itc-title-board, .itc-title-main, .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate {
+.itc-title-board, .itc-title-main, .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate, ${TABBED.map((s) => `.${prefixFor(s)}panel`).join(', ')} {
   --itc-cut: 0.9em;
   --itc-plate-glass: color-mix(in srgb, var(--itc-void) 84%, transparent);
   border: 1px solid transparent;
@@ -3713,7 +3722,7 @@ ${faced((p) => `.${p}option-face:hover > canvas`)} { box-shadow: 0 0 0 2px color
   seconds of background-position — slid these two washes left instead, at the size of the screen,
   repeating: their seam was an edge creeping in from the right that jumped back every minute.
 */
-.itc-title-sky::before {
+${SKIED.map((s) => `.${prefixFor(s)}sky::before`).join(', ')} {
   content: '';
   position: absolute;
   inset: 0;
@@ -6292,7 +6301,12 @@ export function makeChrome(
       the thing it is a banner over. The stylesheet cannot say this, because it is a fact about the
       screen rather than about the class.
     */
-    if (row.dims) root.style.background = colours.space;
+    /*
+      ⚠️ **AND INSIDE A RUN IT DIMS RATHER THAN BLACKS OUT — 0671.** *Paused* and *Quit this run?* stop the world
+      (0511), and the player who pauses to look at the field could not: the run went to the void and came back
+      only on the count-in. The field is frozen and still drawn under them, so they lay the void over it at 70 %.
+    */
+    if (row.dims) root.style.background = row.inRun ? `color-mix(in srgb, ${colours.space} 70%, transparent)` : colours.space;
     root.style.color = colours.player;
     // The two inks a filled control needs, where the palette is. Custom properties rather than a
     // second stylesheet: the palette is chosen at runtime and a static rule cannot know it.
@@ -6359,18 +6373,21 @@ export function makeChrome(
       pilot's ship crossing low under the buttons. All of it is the stylesheet's and none of it the
       game's — see 0437 for why the music room's flythrough is not what draws it.
     */
-    if (screen === 'title') {
+    // 0671: and behind Settings and its tabs, the same sky without the ship crossing it.
+    if (SKIED.includes(screen)) {
       const sky = document.createElement('div');
       sky.className = prefix + 'sky';
       sky.setAttribute('aria-hidden', 'true');
-      const flyer = document.createElement('span');
-      flyer.className = prefix + 'flyer';
-      // The default pilot's fighter until the shell says whose ship it is (`setShip`) — 0441.
-      const hull = iconOf(SPRITE.fighter);
-      flyer.appendChild(hull);
-      sky.appendChild(flyer);
+      if (screen === 'title') {
+        const flyer = document.createElement('span');
+        flyer.className = prefix + 'flyer';
+        // The default pilot's fighter until the shell says whose ship it is (`setShip`) — 0441.
+        const hull = iconOf(SPRITE.fighter);
+        flyer.appendChild(hull);
+        sky.appendChild(flyer);
+        titleFlyer = flyer;
+      }
       root.insertBefore(sky, panel);
-      titleFlyer = flyer;
     }
     // The inks the score's gold is made of, on every overlay, where the palette is — 0428.
     paintScoreInks(root, colours);
