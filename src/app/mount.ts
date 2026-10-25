@@ -21,7 +21,7 @@ import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeAtlasStepwise, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
-import { fitStand, introSharpness, standMarksInto, standViewInto } from '../render/port.ts';
+import { fitStand, introSharpness, railTop, standMarksInto, standViewInto } from '../render/port.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
 import { screenX, screenY } from '../render/surface.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
@@ -1830,6 +1830,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0572: and where the ship's foot and the keeper's head are on it, for the monitor and the bubble.
     standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks);
     chrome.setStandMarks(current, marks);
+    // 0680: and the rail along the dock's foot only where it clears the cockpit readout, which a phone stands there.
+    const dash = chrome.dashBox(current);
+    world.standRail = dash === null || railTop(world.standView) >= dash.bottom;
   }
 
   /**

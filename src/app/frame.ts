@@ -2154,6 +2154,11 @@ export interface World {
   standSpots?: Readonly<Record<KeeperKind, number>>;
   /** 0584: whether the pad shows the ship's shell round it — while a shell is being chosen. Written by the shell. */
   standShell?: boolean;
+  /**
+   * 0680: whether the rail along the dock's foot is drawn — where it clears the cockpit readout, which a phone's
+   * layout stands at the stand's foot. Written by the shell on every framing; absent is drawn.
+   */
+  standRail?: boolean;
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
@@ -3309,7 +3314,7 @@ export class GameFrame implements Frame {
     }
     // And the hangar's tabs, standing in the same room — 0540.
     if (w.stand !== null) {
-      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP, w.standSpots ?? null, w.standShell ?? false);
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP, w.standSpots ?? null, w.standShell ?? false, w.standRail ?? true);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.

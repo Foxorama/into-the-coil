@@ -217,13 +217,31 @@ export const PORT_KINDS = [
   'crest',
   'clamps',
   'alarmWash',
+  /*
+    0680: depth and life — the station's own structure past the bay and a far shuttle crossing it; the rail across
+    the dock's foot nearer the player than anything; steam off a vent, sparks at Unity's bench, the bar's neon dark
+    for a frame and its string of lights twinkling, a fan's three frames (baked turned, so the stand never turns
+    the canvas), the alarm's turning cone, and a drone working along the truss.
+  */
+  'spar',
+  'shuttle',
+  'rail',
+  'steam',
+  'sparks',
+  'neonDark',
+  'twinkle',
+  'fan0',
+  'fan1',
+  'fan2',
+  'beaconCone',
+  'drone',
 ] as const;
 
 /**
  * 0676: the port's kinds that are light — added to what is under them rather than laid over it, on 0520's terms
  * for the game's (`Atlas.light`). The pools and the up-light, and 0677's door lamp; everything else in the room is body.
  */
-export const PORT_LIGHT_KINDS: readonly PortKind[] = ['lampPool', 'padPool', 'padLight', 'spillWall', 'doorLamp', 'padPoolViper', 'alarmWash'];
+export const PORT_LIGHT_KINDS: readonly PortKind[] = ['lampPool', 'padPool', 'padLight', 'spillWall', 'doorLamp', 'padPoolViper', 'alarmWash', 'sparks', 'twinkle', 'beaconCone'];
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
   looks super basic compared to the level 1 starfield and it should kinda lead straight into level 1."*
@@ -366,6 +384,19 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   crest: 14,
   clamps: 30,
   alarmWash: 60,
+  // 0680: the spar a module and its arm; the shuttle far and small; the rail a span of it; the rest each its own.
+  spar: 70,
+  shuttle: 10,
+  rail: 20,
+  steam: 12,
+  sparks: 8,
+  neonDark: 22,
+  twinkle: 4,
+  fan0: 10,
+  fan1: 10,
+  fan2: 10,
+  beaconCone: 40,
+  drone: 8,
 };
 
 /**

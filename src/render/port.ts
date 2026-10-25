@@ -154,7 +154,18 @@ export function paintPort(surface: Surface, base: View, t: number, sky: Sky, shi
  *
  * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
  */
-export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP, spots: Readonly<Record<KeeperKind, number>> | null = null, shell = false): void {
+export function paintStand(
+  surface: Surface,
+  view: View,
+  t: number,
+  sky: Sky,
+  ship: ShipRow,
+  keeper: KeeperKind | null,
+  hop = NO_HOP,
+  spots: Readonly<Record<KeeperKind, number>> | null = null,
+  shell = false,
+  rail = true,
+): void {
   surface.clear();
   /*
     ── THE DOCK — 0571 ─────────────────────────────────────────────────────────────────────────────
@@ -182,11 +193,17 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   if (behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit * 0.8, 0, DOCK.moon.grow);
   put(surface, view, PORT_SPRITE.planet, planetAlong, DOCK.planet.across, planetLit, 0, DOCK.planetGrow);
   if (!behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit, 0, DOCK.moon.grow);
+  // 0680: a far shuttle crossing the bay once a minute, and the station's own structure past it, nearer than the sky.
+  paintShuttle(surface, view, DOCK.bay, (t + SHUTTLE.every - SHUTTLE.at) % SHUTTLE.every);
+  put(surface, view, PORT_SPRITE.spar, planeAlong(view, DOCK.bay + SPAR.past, SPAR.depth), SPAR.across);
   const wall = PORT_EXTENT.wall;
   for (let along = wall / 2; along < DOCK.bay; along += wall) {
     // 0676: lit by the lamp over it, half lit beside one, dark between. 0677: and its vent, patch or conduit.
     for (let across = wall / 2; across < STAGE.deck + wall; across += wall) wallTile(surface, view, along, across, DOCK.lamps);
   }
+  // 0680: the steam off a vent, and a fan turning in the wall.
+  if (DOCK_VENT.along > 0) paintSteam(surface, view, t, DOCK_VENT.along, DOCK_VENT.across);
+  paintFan(surface, view, t, FAN.dock.along, FAN.dock.across);
   // 0676: the shade under the truss, under the catwalk, and along the wall's foot.
   shadeAt(surface, view, DOCK.bay / 2, STAGE.ceiling, DOCK.bay, true);
   shadeAt(surface, view, (DOCK.catwalkFrom + DOCK.catwalkTo) / 2, DOCK.catwalk + CATWALK_UNDER, DOCK.catwalkTo - DOCK.catwalkFrom, true);
@@ -195,8 +212,12 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   for (let along = ceiling / 2; along < DOCK.bay + ceiling; along += ceiling) put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
   // 0677: the truss's braces between its spans.
   paintBraces(surface, view, DOCK.bay);
+  // 0680: and a drone working along it once a minute.
+  paintDrone(surface, view, DOCK.bay, (t + DRONE.every - DRONE.at) % DRONE.every);
   const lamp = PORT_EXTENT.lamp;
-  for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lamp, DOCK.lamps[i]!, STAGE.ceiling - 2 + lamp / 2);
+  // 0680: the first lamp with a fault in it, flickering.
+  const flicker = flickerAt(t);
+  for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lamp, DOCK.lamps[i]!, STAGE.ceiling - 2 + lamp / 2, i === 0 ? flicker : 1);
   const deck = PORT_EXTENT.deck;
   for (let along = deck / 2; along < DOCK.bay + deck; along += deck) {
     for (let across = STAGE.deck + deck / 2; across < ACROSS_SPAN + deck / 2; across += deck) put(surface, view, PORT_SPRITE.deck, along, across, 1, 0, TILE_OVERLAP);
@@ -205,7 +226,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   paintLip(surface, view, DOCK.bay);
   put(surface, view, PORT_SPRITE.grating, DOCK.ship, STAGE.deck + GRATING_DOWN);
   // 0676: each lamp's light on the deck under it, and the cradle's field round its foot.
-  for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, DOCK.lamps[i]!, STAGE.deck + POOL_DOWN);
+  for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, DOCK.lamps[i]!, STAGE.deck + POOL_DOWN, i === 0 ? flicker : 1);
   put(surface, view, PORT_SPRITE.padPool, DOCK.ship, STAGE.deck + POOL_DOWN);
   // The mezzanine's catwalk along the back wall, and each keeper's shopfront standing on it.
   const walk = PORT_EXTENT.catwalk;
@@ -233,6 +254,11 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     if (place.at === 'counter' && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
     put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);
     if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
+    // 0680: and Unity at their bench, grinding — sparks off it, flaring on the bob's clock while they are at it.
+    if (kind === 'unity' && place.at === 'counter') {
+      const n = Math.floor(t) % Math.round(BOB_STEPS);
+      if (n < SPARKS_FOR && hash(n + 77) > 0.3) put(surface, view, PORT_SPRITE.sparks, shop + SPARKS_AT.along * s, DOCK.shopAcross + SPARKS_AT.across * s, 0.55 + 0.45 * hash(n + 31), 0, s);
+    }
     // The shops of the other tabs are there, in the dim: a shutter of the night over them, not a fade to the wall.
     if (keeper !== null && kind !== keeper) put(surface, view, PORT_SPRITE.veil, shop, DOCK.shopAcross - 0.5, SHOP_DIM, 0, PORT_EXTENT.alcove * s);
   }
@@ -334,6 +360,15 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   put(surface, view, PORT_SPRITE.bayBottom, DOCK.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
   // 0677: and the bay door's warning lamp, turning.
   paintDoorLamp(surface, view, t, DOCK.bay);
+  // 0680: and nearest of all, the rail along the dock's foot, at its own depth — where it clears the cockpit readout.
+  if (!rail) return;
+  const span = PORT_EXTENT.rail * RAIL.depth;
+  for (let along = span / 2; along < DOCK.bay; along += span) put(surface, view, PORT_SPRITE.rail, planeAlong(view, along, RAIL.depth), RAIL.across, 1, 0, RAIL.depth);
+}
+
+/** 0680: the top of the rail along the dock's foot on the screen through `view`, in CSS pixels — what the readout must clear. */
+export function railTop(view: View): number {
+  return screenY(view, 0, RAIL.across - RAIL_RISE * RAIL.depth);
 }
 
 /**
@@ -471,6 +506,96 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
   const across = camera.y * height - camera.across * scale;
   // 0566: `below` is how much of the screen's foot is under the plate, where the deck may end short of the edge.
   out.gutterAcross = Math.min(0, Math.max(height - below - ACROSS_SPAN * scale, across));
+}
+
+/**
+ * ── DEPTH AND LIFE — 0680 ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Each a function of the clock, and on the stand each either a whole number of its own cycles a bob
+ * (`BOB_STEPS`), or drawn where the stand's guards never read (`tests/stand.ts`: from behind the ship to short of
+ * the bay, from a third of the way down the stand): what the guards read a bob apart is then the same picture.
+ *
+ * - The spar past the bay and the rail across the dock's foot are planes at their own depth: `depth` of the
+ *   camera's travel, so the dolly (0678) slides the far one less than the room and the near one more. Nought
+ *   travel is the camera's left edge at `PLANE_REST`.
+ * - The shuttle crosses the bay once a minute, past the bay; the drone works along the truss once a minute,
+ *   over the guards' band.
+ * - The flicker is the room's first lamp, left of the band; its pattern repeats every bob.
+ * - The steam is a vent's on the wall, puffing once in three bobs; the sparks are at Unity's bench, left of the
+ *   band, flaring on the bob's clock; the fan turns three frames in fifteen steps, seven times a bob.
+ */
+const SPAR = { past: 50, across: 62, depth: 0.5 } as const;
+const RAIL = { across: ACROSS_SPAN - 4, depth: 1.1 } as const;
+// How far above its box's middle the rail's top stands, in its own units (`rail` in port-bake.ts: its posts from -2.6).
+const RAIL_RISE = 2.6;
+const PLANE_REST = 60;
+const SHUTTLE = { every: 60 * 60, takes: 60 * 6, from: 4, to: 150, across: 40, at: 60 * 10 } as const;
+const DRONE = { every: 60 * 60, takes: 60 * 6, across: STAGE.ceiling + 7, at: 60 * 25 } as const;
+// The intro's shuttle and drone, once each in the held shot — from 4.5 s and from 5 s.
+const INTRO_SHUTTLE_AT = 270;
+const INTRO_DRONE_AT = 300;
+const FAN_STEP = 5;
+// A puff once in three bobs, rising for most of one.
+const STEAM_BOBS = 3;
+const STEAM_RISE = 90;
+// Up on the wall, over the stand's guarded band, right of the plate and clear of the steaming vent: in the dock between the lamps, in the intro over her pad's left.
+const FAN = { dock: { along: 108, across: 30 }, intro: { along: 150, across: 30 } } as const;
+// The wall's two upper rows, where a vent may steam.
+const VENT_ABOVE = 40;
+/** Where the neon sign's plate stands, from the bar's centre — `paintBar`'s units, and `neonDark`'s box. */
+const NEON_AT = { along: 1.5, across: -5.5 } as const;
+/** The step of every sixty the neon buzzes dark on. */
+const NEON_BUZZ = 37;
+/** The bar's string of lights — `paintBar`'s fifteen bulbs, four units apart from 28 left of its centre — and how long a bulb's flare lasts. */
+const BAR_BULBS = 15;
+const TWINKLE_STEPS = 8;
+/** Where the sparks fly from on Unity's bench, in the shop's units from its centre, and for how many steps of a bob. */
+const SPARKS_AT = { along: 4, across: 1.5 } as const;
+const SPARKS_FOR = 45;
+
+/** A number from nought to under one for the integer `n`, the same every time — a frame's flicker, with no allocation. */
+function hash(n: number): number {
+  return (Math.imul(n ^ 0x5bd1e995, 0x27d4eb2d) >>> 0) / 4294967296;
+}
+
+/** How lit the room's first lamp is at step `t` — a fault in it, on a pattern that repeats every bob. */
+function flickerAt(t: number): number {
+  const n = Math.floor(t) % Math.round(BOB_STEPS);
+  return hash(n) < 0.08 ? 0.45 + 0.3 * hash(n + 999) : 1;
+}
+
+/** The plane at `depth` slid by the camera's travel: its along at `along` when the camera's left edge is at `PLANE_REST`. */
+function planeAlong(view: View, along: number, depth: number): number {
+  const left = view.scale > 0 ? -view.gutterAlong / view.scale : 0;
+  return along + (left - PLANE_REST) * (1 - depth);
+}
+
+/** A far shuttle crossing past the bay from `bay`, `since` steps into its crossing, if it is crossing. */
+function paintShuttle(surface: Surface, view: View, bay: number, since: number): void {
+  if (since < 0 || since >= SHUTTLE.takes) return;
+  const u = since / SHUTTLE.takes;
+  const fade = Math.min(1, u * 6, (1 - u) * 6);
+  put(surface, view, PORT_SPRITE.shuttle, bay + SHUTTLE.from + (SHUTTLE.to - SHUTTLE.from) * u, SHUTTLE.across, 0.75 * fade);
+}
+
+/** A drone working along the truss from the room's left to `end`, `since` steps into its pass, if it is passing. */
+function paintDrone(surface: Surface, view: View, end: number, since: number): void {
+  if (since < 0 || since >= DRONE.takes) return;
+  const u = since / DRONE.takes;
+  put(surface, view, PORT_SPRITE.drone, -6 + (end + 12) * u, DRONE.across + Math.sin(since * 0.21) * 0.6);
+}
+
+/** A wall fan at `along`, `across`, three frames in `FAN_STEP`s each. */
+function paintFan(surface: Surface, view: View, t: number, along: number, across: number): void {
+  put(surface, view, PORT_SPRITE.fan0 + (Math.floor(t / FAN_STEP) % 3), along, across);
+}
+
+/** Steam off the vent at `along`, `across`: a puff rising and thinning, once in `STEAM_BOBS` bobs. */
+function paintSteam(surface: Surface, view: View, t: number, along: number, across: number): void {
+  const since = Math.floor(t) % (Math.round(BOB_STEPS) * STEAM_BOBS);
+  if (since >= STEAM_RISE) return;
+  const u = since / STEAM_RISE;
+  put(surface, view, PORT_SPRITE.steam, along + u * 2, across - 2 - u * 9, 0.85 * Math.sin(u * Math.PI), 0, 0.6 + u * 0.9);
 }
 
 /**
@@ -734,6 +859,31 @@ export function overlayAt(along: number, across: number): number {
   return WALL_OVERLAY[column * OVERLAY_ROWS + row] ?? -1;
 }
 
+/**
+ * 0680: the first vent on a wall from `after` to `before` and over `above`, in its tile's middle — the one the steam
+ * comes off. Read off the wall's overlays (`overlayAt`), so the steam is always at a vent; an along of nought is none.
+ */
+function ventOn(after: number, before: number, above: number): { along: number; across: number } {
+  const wall = PORT_EXTENT.wall;
+  for (let along = wall / 2; along < before; along += wall) {
+    for (let across = wall / 2; across < above; across += wall) {
+      // @setup: run twice at module load, for the dock and the intro's room.
+      // Below the truss: a vent behind it is not seen.
+      if (along > after && across > STAGE.ceiling && overlayAt(along, across) === PORT_SPRITE.wallVent) return { along, across };
+    }
+  }
+  // @setup: as above.
+  return { along: 0, across: 0 };
+}
+/*
+  The vents the steam comes off: in the wall's upper two rows, over the stand's guarded band (`tests/stand.ts`) and
+  clear of the plate on a desktop — past the lift in the dock, past the bar in the intro's room.
+*/
+// @setup: the dock's vent, and the intro's.
+const DOCK_VENT = ventOn(DOCK.lift, DOCK.bay, VENT_ABOVE);
+// @setup: as above.
+const INTRO_VENT = ventOn(STAGE.bar.along + 30, STAGE.bay, VENT_ABOVE);
+
 /** A wall tile and its overlay, if it has one. */
 function wallTile(surface: Surface, view: View, along: number, across: number, lamps: readonly number[]): void {
   put(surface, view, WALL_TILE[tileLit(along, across, lamps)], along, across, 1, 0, TILE_OVERLAP);
@@ -854,6 +1004,9 @@ function surgeAt(t: number, go: number): number {
 function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
   // The first level's sky past the bay, drifting — the room covers the rest of it (0416).
   paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
+  // 0680: a far shuttle crossing the bay once in the held shot, and the station's own structure past the bay.
+  paintShuttle(surface, view, STAGE.bay, t - INTRO_SHUTTLE_AT);
+  put(surface, view, PORT_SPRITE.spar, planeAlong(view, STAGE.bay + SPAR.past, SPAR.depth), SPAR.across);
   // The back wall, the truss and the lamps.
   const wall = PORT_EXTENT.wall;
   const hole = STAGE.viewport;
@@ -866,6 +1019,9 @@ function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
     }
   }
   put(surface, view, PORT_SPRITE.viewport, hole.along + wall, hole.across + wall / 2);
+  // 0680: the steam off a vent, and a fan turning in the wall.
+  if (INTRO_VENT.along > 0) paintSteam(surface, view, t, INTRO_VENT.along, INTRO_VENT.across);
+  paintFan(surface, view, t, FAN.intro.along, FAN.intro.across);
   // 0676: and the shade under the truss and along the wall's foot, where the lamps do not reach.
   shadeAt(surface, view, STAGE.bay / 2, STAGE.ceiling, STAGE.bay, true);
   shadeAt(surface, view, STAGE.bay / 2, STAGE.deck, STAGE.bay, false);
@@ -878,6 +1034,8 @@ function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
   }
   // 0677: the truss's braces, and the crane's rail under it over the pilot's pad with its hook swinging on the clock.
   paintBraces(surface, view, STAGE.bay);
+  // 0680: a drone working along the truss, once in the held shot.
+  paintDrone(surface, view, STAGE.bay, t - INTRO_DRONE_AT);
   const rail = PORT_EXTENT.craneRail;
   put(surface, view, PORT_SPRITE.craneRail, STAGE.bluePad, STAGE.ceiling + CRANE_UNDER + rail / 2 - 1);
   const hook = PORT_EXTENT.craneHook;
@@ -885,11 +1043,11 @@ function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
   put(surface, view, PORT_SPRITE.craneHook, STAGE.bluePad, STAGE.ceiling + CRANE_UNDER + 5.8 + hook / 2, 1, swing);
 }
 
-/** The lamps hung from the truss. */
-function paintLamps(surface: Surface, view: View): void {
+/** The lamps hung from the truss — 0680: the first with a fault in it, flickering. */
+function paintLamps(surface: Surface, view: View, t: number): void {
   const lamp = PORT_EXTENT.lamp;
   for (let i = 0; i < STAGE.lamps.length; i++) {
-    put(surface, view, PORT_SPRITE.lamp, STAGE.lamps[i]!, STAGE.ceiling - 2 + lamp / 2);
+    put(surface, view, PORT_SPRITE.lamp, STAGE.lamps[i]!, STAGE.ceiling - 2 + lamp / 2, i === 0 ? flickerAt(t) : 1);
   }
 }
 
@@ -1009,11 +1167,13 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
         const along = at[0] + Math.sin(turn) * ALARM_SWEEP;
         put(surface, view, PORT_SPRITE.alarmWash, along, ALARM_WALL, up * facing);
         put(surface, view, PORT_SPRITE.alarmWash, along, STAGE.deck + POOL_DOWN, up * facing * 0.7);
+        // 0680: and its beam, a cone off the lamp turned to where the wash falls.
+        put(surface, view, PORT_SPRITE.beaconCone, at[0], at[1], up * facing * 0.8, Math.atan2(ALARM_WALL - at[1], along - at[0]));
       }
       put(surface, view, PORT_SPRITE.beacon, at[0], at[1], up * (0.6 + 0.4 * Math.max(0, facing)));
     }
   }
-  paintLamps(surface, view);
+  paintLamps(surface, view, t);
   /*
     The bar: the light inside it and the door that slides back across it, then the front of it. It
     opens once, for the pilot, and stays open — it opened for Venoma too from 0416 until 0444.
@@ -1024,6 +1184,12 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   if (open > 0) put(surface, view, PORT_SPRITE.spill, STAGE.doorway.along, STAGE.doorway.across, open);
   put(surface, view, PORT_SPRITE.door, STAGE.doorway.along - 13 * open, STAGE.doorway.across);
   put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
+  // 0680: its neon buzzing dark for a step in sixty, and a bulb of its string flaring, a different one each eighth of a step-block.
+  if (Math.floor(t) % 60 === NEON_BUZZ) put(surface, view, PORT_SPRITE.neonDark, STAGE.bar.along + NEON_AT.along, STAGE.bar.across + NEON_AT.across, 0.5);
+  const block = Math.floor(t / TWINKLE_STEPS);
+  const bulb = Math.floor(hash(block) * BAR_BULBS);
+  const flare = Math.sin(((t % TWINKLE_STEPS) / TWINKLE_STEPS) * Math.PI);
+  put(surface, view, PORT_SPRITE.twinkle, STAGE.bar.along - 28 + bulb * 4, STAGE.bar.across - 19.2 + Math.sin(bulb * 1.3) * 0.4, 0.8 * flare);
   // The deck.
   paintDeck(surface, view);
   if (open > 0) put(surface, view, PORT_SPRITE.pool, STAGE.doorway.along + 6, STAGE.deck + 1, open * 0.7);
@@ -1037,7 +1203,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   if (scorch > 0) put(surface, view, PORT_SPRITE.scorch, STAGE.viperPad, STAGE.deck + TYRES_DOWN, scorch);
   put(surface, view, PORT_SPRITE.oil, STAGE.crates.along - OIL_BACK, STAGE.deck + TYRES_DOWN);
   // 0676: each lamp's light on the deck under it.
-  for (let i = 0; i < STAGE.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, STAGE.lamps[i]!, STAGE.deck + POOL_DOWN);
+  for (let i = 0; i < STAGE.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, STAGE.lamps[i]!, STAGE.deck + POOL_DOWN, i === 0 ? flickerAt(t) : 1);
   // The pads, and the beams each ship rides until it goes — 0676: each pad's field lit on the deck as long as its beam.
   const beam = PORT_EXTENT.beam;
   const viperField = 1 - ease(t, BEATS.viperGo, BEATS.viperGo + 30);
