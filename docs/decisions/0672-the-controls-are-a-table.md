@@ -46,9 +46,19 @@ in the game reaches the hands. So the line says whose ball.
 - **A first draft also made every band of two come round its ends.** The proof found its break green: Settings'
   bands already come round (0607), so it changed nothing, and it is gone. The test still steps off Sound's end and
   reads the flip, which is 0607's rule seen from the switch.
+- **A stand's tabs are not a switch.** Hangin' Out's section band (*Loadout* / *Cockpit*) is a band of two that
+  steps, and CI found the first build flipping it to *Cockpit* on a click on the open *Loadout* tab: 0579's
+  `tests/loadout-tabs.browser.test.ts` went red. A press on the open tab keeps it open, as a press on a screen's own
+  tab does; the section and aisle bands are left out of the switch by name, as the chrome already reads them for
+  their tab look.
+- **`tests/key-opens.browser.test.ts`'s budget**, 0580's, ran out in CI on the same push. Nothing in this change
+  made How to play heavier: a frame on it costs 259 ms in a software-drawn container against 253 ms on 0671's tree,
+  1,880 nodes against 1,864. The budget was 120 s against 96 s measured in CI's suite on #660, a headroom of 1.25,
+  where [0245](0245-a-budget-is-sized-under-load.md) asks for three. It is 375 s now, three times the worst
+  measured (125 s), with the figures beside it.
 
-Probed in `scripts/probes/0672-the-controls-are-a-table.mjs`: the buttons left in their row's order, and a click on
-the chip that is on choosing it again.
+Probed in `scripts/probes/0672-the-controls-are-a-table.mjs`: the buttons left in their row's order, a click on
+the chip that is on choosing it again, and a stand's tabs taken for a switch.
 
 **Not held by any guard:** Rumble's words, and the warning's weight — a style, and the voice rule's.
 

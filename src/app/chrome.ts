@@ -6901,9 +6901,11 @@ export function makeChrome(
           }
           /*
             0672: a band of two is a switch — a press on the one that is on flips it, as A, Enter and either arrow do,
-            so Sound, Travel, Hand and Rumble are one press from either side on every device.
+            so Sound, Travel, Hand and Rumble are one press from either side on every device. A stand's tabs are not a
+            switch: a press on the open tab keeps it open, as a press on a screen's own tab does.
           */
-          const flips = band !== undefined && band.press === 'steps' && band.hints.length === 2 && index === band.index;
+          const tab = choice.name === 'section' || choice.name === 'aisle';
+          const flips = band !== undefined && !tab && band.press === 'steps' && band.hints.length === 2 && index === band.index;
           onChoice(choice.name, flips ? 1 - index : target, true);
         };
         button.addEventListener('click', press);

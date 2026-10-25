@@ -27,4 +27,15 @@ export const PROBES = [
       replace: '          onChoice(choice.name, target, true);',
     },
   },
+  {
+    decision: '0672',
+    suite: 'tests/loadout-tabs.browser.test.ts',
+    broke: 'a stand’s tabs taken for a switch, so a click on the open Loadout tab flips to Cockpit',
+    guard: 'only the group whose tab is lit',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: "          const tab = choice.name === 'section' || choice.name === 'aisle';",
+      replace: '          const tab = false;',
+    },
+  },
 ];
