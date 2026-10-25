@@ -42,6 +42,9 @@ bindings (0664). `SETTINGS_VERSION` stays 1.
   and the intro, and column two is the hand, the steering and the rumble. The walk still goes down one column and
   on to the next. On a phone the intro is a one-line strip, as the rumble's was, so the third row costs what 0613's
   spanning strip did. *Every flight* is kept on one line.
+- **0635's probe put the visit's flag back as a second declaration** of the one this decision adds, so its tree
+  did not build and CI's proof found no test to watch. It is re-anchored on the line that now decides it: every
+  flight treated as the first, whatever the setting.
 - **`PRIVACY.md`** names the field.
 - **The plan named `tests/intro.browser.test.ts` for 0635's case.** It is in `tests/run-ends.browser.test.ts`, so
   this one is beside it.

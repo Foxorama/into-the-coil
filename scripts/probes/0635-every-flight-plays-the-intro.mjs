@@ -9,18 +9,12 @@ export const PROBES = [
     guard: '0635 — and the next flight plays the intro',
     edit: {
       path: 'src/app/mount.ts',
-      // Re-anchored by 0666, whose pilot with no story flies straight in above this.
-      find: "    dispatch({ slice: 'screen', type: 'show', screen: 'intro' });\n  }\n  /** Where a screen goes",
-      replace:
-        '    if (flownThisVisit) {\n' +
-        '      startRun();\n' +
-        '      return;\n' +
-        '    }\n' +
-        '    flownThisVisit = true;\n' +
-        "    dispatch({ slice: 'screen', type: 'show', screen: 'intro' });\n" +
-        '  }\n' +
-        '  let flownThisVisit = false;\n' +
-        '  /** Where a screen goes',
+      /*
+        Re-anchored by 0666, whose pilot with no story flies straight in above this; and by 0674, which put the
+        visit's flag back behind a setting — so the break is every flight treated as the first, setting or none.
+      */
+      find: '    if (flownThisVisit && !INTROS[state.settings.intro].everyFlight) {',
+      replace: '    if (flownThisVisit) {',
     },
   },
 ];
