@@ -32,9 +32,9 @@ afterAll(async () => {
 });
 
 /** A page on the title, with the audio context's suspends and resumes logged into `window.__clock`. */
-async function open(): Promise<Page> {
+async function open(viewport = { width: 1280, height: 720 }, touch = false): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: touch });
   await context.addInitScript(() => {
     const log: string[] = [];
     (window as unknown as { __clock: string[] }).__clock = log;
@@ -192,6 +192,36 @@ describe.runIf(chromePath)('0511 — the run can be paused', () => {
     const kept = parseScores(await page.evaluate((key) => localStorage.getItem(key), SCORES_KEY));
     expect(kept.length, 'a quit was not kept on the table').toBe(1);
     expect((await clock(page)).at(-1), 'the title was left with the audio clock held').toBe('resume');
+    await page.context().close();
+  });
+
+  it('0682 — on a touch phone the pause plate stands its own width clear of the score, popped', async () => {
+    /*
+      Reviewed on a phone: the plate stood 0.6 em from the score, and the score grows toward it on every gain, so a
+      thumb going for the pause landed in the pop's reach. In CSS pixels on a 844x390 touch screen: from the plate's
+      right edge to the left edge the score's pop reaches at the top of its animation, at least the plate's width.
+      The pop is held at its first frame to be measured, which is where it is biggest.
+    */
+    const page = await open({ width: 844, height: 390 }, true);
+    await launch(page, 'savior');
+    await page.waitForSelector('.itc-playing-pause-shown');
+    const seen = await page.evaluate(() => {
+      const pause = document.querySelector('.itc-playing-pause-shown')!.getBoundingClientRect();
+      const pop = document.querySelector<HTMLElement>('.itc-playing-score-pop')!;
+      pop.classList.remove('itc-playing-score-gain-a', 'itc-playing-score-gain-b');
+      void pop.offsetWidth;
+      pop.classList.add('itc-playing-score-gain-a');
+      for (const a of pop.getAnimations()) {
+        a.pause();
+        a.currentTime = 0;
+      }
+      const popped = pop.getBoundingClientRect();
+      return { plate: pause.width, gap: popped.left - pause.right };
+    });
+    expect(
+      seen.gap,
+      `the score's pop reaches ${seen.gap.toFixed(1)} px from the pause plate, which is ${seen.plate.toFixed(1)} px wide`,
+    ).toBeGreaterThanOrEqual(seen.plate - 0.5);
     await page.context().close();
   });
 });

@@ -13,6 +13,7 @@
 //   node scripts/shot-menus.mjs --out=menus     elsewhere under the repo
 //   node scripts/shot-menus.mjs --sizes=guard   at the layout guard's six sizes instead
 //   node scripts/shot-menus.mjs --sizes=wide    at 1920x1080 and 2560x1080, for the hangar family
+//   node scripts/shot-menus.mjs --sizes=portrait  at 390x844 and 412x915, touch, held upright
 //   node scripts/shot-menus.mjs --only=title    the title alone
 //
 // The seeds are the documents the page reads: `itc_scores` (every field `entryFrom` in
@@ -95,9 +96,18 @@ const WIDE = [
   [1920, 1080],
   [2560, 1080],
 ].map(([width, height]) => ({ tag: `${width}x${height}`, width, height, phone: false }));
-const SIZES = { pair: PAIR, guard: GUARD, wide: WIDE }[arg('sizes', 'pair')];
+/**
+ * `--sizes=portrait`: two phones held upright, touch, since 0682 — so the upright layout 0566 built is in every
+ * handover. ⚠️ Walked in landscape and turned upright for each picture: the title gates a phone held upright
+ * (0031), so its buttons cannot be pressed there, which is how `tests/upright.browser.test.ts` reaches the hangar.
+ */
+const PORTRAIT = [
+  [390, 844],
+  [412, 915],
+].map(([width, height]) => ({ tag: `${width}x${height}`, width, height, phone: true, upright: true }));
+const SIZES = { pair: PAIR, guard: GUARD, wide: WIDE, portrait: PORTRAIT }[arg('sizes', 'pair')];
 if (SIZES === undefined) {
-  console.error('--sizes is pair, guard or wide.');
+  console.error('--sizes is pair, guard, wide or portrait.');
   process.exit(2);
 }
 
@@ -109,8 +119,10 @@ const written = [];
 let failure = null;
 try {
   for (const size of SIZES) {
+    // An upright size is walked on its side, and turned upright for each picture.
+    const walk = size.upright ? { width: size.height, height: size.width } : { width: size.width, height: size.height };
     const context = await browser.newContext({
-      viewport: { width: size.width, height: size.height },
+      viewport: walk,
       deviceScaleFactor: size.phone ? 2 : 1,
       hasTouch: size.phone,
     });
@@ -131,7 +143,17 @@ try {
     await page.waitForTimeout(800);
     const shoot = async (name) => {
       const path = resolve(outDir, `${size.tag}-${name}.png`);
+      if (size.upright) {
+        await page.setViewportSize({ width: size.width, height: size.height });
+        // Waited for, as tests/upright.browser.test.ts waits: the room turned upright and baked again.
+        await page.waitForFunction((h) => (document.querySelector('#app > canvas')?.getBoundingClientRect().height ?? 0) > h * 0.6, size.height, { timeout: 15_000 }).catch(() => undefined);
+        await page.waitForTimeout(600);
+      }
       await page.screenshot({ path });
+      if (size.upright) {
+        await page.setViewportSize(walk);
+        await page.waitForTimeout(600);
+      }
       written.push(path);
     };
     await shoot('title');

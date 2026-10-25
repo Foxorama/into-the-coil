@@ -3462,6 +3462,18 @@ ${each('-band[hidden]')} { display: none; }
     .itc-hangar-plate .itc-hangar-option:not(.itc-hangar-option-face), .itc-parts-plate .itc-parts-option:not(.itc-parts-option-face), .itc-shop-plate .itc-shop-option:not(.itc-shop-option-face) { min-height: 44px; }
     .itc-hangar-plate .itc-hangar-band-step, .itc-parts-plate .itc-parts-band-step, .itc-shop-plate .itc-shop-band-step { min-height: 44px; }
     .itc-title-choices > .itc-title-action-lead, .itc-title-band:not(.itc-title-band-faces) .itc-title-option { min-height: 44px; }
+    /*
+      0682: the cockpit strip is not drawn on a touch phone — the player's answer. It was a strip of counts on the deck
+      under the ship, over the picture a phone has least room for, saying what the plate's bands already say. The
+      readout is still re-parented into the dash's cell (0539), so what reads it by its class still finds it; the
+      balance's sheet is not the dash and stays.
+    */
+    .itc-hangar-dash, .itc-parts-dash, .itc-shop-dash { display: none; }
+    /*
+      0682: and the chosen pilot's name under their face on the title's band. A desktop shows every name; the phone
+      showed none (0521 took them for CI's wider fonts), so the face picked said nothing. The one on is named.
+    */
+    .itc-title-band-faces .itc-title-option-face.itc-title-option-on .itc-title-option-name { display: block; }
   }
 }
 /*
@@ -4392,6 +4404,17 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
   inset: min(0px, calc((var(--itc-strip) - 44px) / 2));
 }
 .itc-playing-pause-shown { display: flex; }
+/*
+  0682: on a touch screen the plate stands its own width clear of the score. The digits pop toward it on every gain,
+  from their right edge to 1.22 times their size, and the plate was 0.6 em from the score's box: measured at 844x390,
+  the popped digits stood 3.5 px over the plate's right edge, and a thumb going for the pause landed in them. So the
+  digits keep their reach beside them as a margin, a fifth and a little of eight digits at the strip's 1.45 em tracked
+  0.05 em, and past that the plate stands the strip's width off. After the corner's rule above, so it is the last word.
+*/
+@media (pointer: coarse) {
+  .itc-playing-corner { gap: var(--itc-strip); }
+  .itc-playing-score-pop { margin-left: calc(0.22 * 8 * 1.45 * (1ch + 0.05em)); }
+}
 .itc-playing-pause:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 .itc-playing-pause-bars {
   width: 0.8em;
@@ -6428,8 +6451,22 @@ export function makeChrome(
     const width = say.offsetWidth;
     const left = Math.min(Math.max(x - width / 2, BUBBLE_EDGE), Math.max(BUBBLE_EDGE, box.width - width - BUBBLE_EDGE));
     const tail = Math.min(Math.max(x - left, BUBBLE_TAIL), Math.max(BUBBLE_TAIL, width - BUBBLE_TAIL));
+    const tall = say.offsetHeight;
+    let foot = Math.max(tall + BUBBLE_EDGE, at.keeperY - box.top - BUBBLE_GAP);
+    /*
+      0682: and never over the balance. The player's answer was that the shards sheet stays; 0681 stood Cosmo's shop
+      forward and taller, and on a phone his bubble rose over the balance's second line, and held upright over all of
+      it. Where the two share columns, the bubble hangs from under the sheet: it may cover the top of the keeper's
+      awning, which says nothing the bubble's tail does not.
+    */
+    const sheet = panel.sheet;
+    if (sheet !== null && sheet.parentElement === stand) {
+      const held = sheet.getBoundingClientRect();
+      const under = held.bottom - box.top + BUBBLE_EDGE;
+      if (held.height > 0 && left < held.right - box.left && left + width > held.left - box.left && foot - tall < under) foot = under + tall;
+    }
     say.style.setProperty('--itc-say-x', String(Math.round(left)) + 'px');
-    say.style.setProperty('--itc-say-y', String(Math.round(Math.max(say.offsetHeight + BUBBLE_EDGE, at.keeperY - box.top - BUBBLE_GAP))) + 'px');
+    say.style.setProperty('--itc-say-y', String(Math.round(foot)) + 'px');
     say.style.setProperty('--itc-say-tail', String(Math.round(tail)) + 'px');
     say.classList.add(placed);
   };
@@ -8736,6 +8773,8 @@ export function makeChrome(
         }
         sheet.append(label, value);
       });
+      // 0682: a sheet of another height moves the bubble that hangs clear of it.
+      if (SCREENS[screen].stand !== null) placeStand(screen);
     },
     setBoard(lines: readonly BoardLine[], fresh: number): void {
       const board = panels.title?.board;
