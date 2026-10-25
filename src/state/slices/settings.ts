@@ -22,6 +22,7 @@
 import { DEFAULT_SOUND, type SoundKind } from '../../content/sound.ts';
 import { DEFAULT_RUMBLE, type RumbleKind } from '../../content/rumble.ts';
 import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
+import { DEFAULT_INTRO, type IntroKind } from '../../content/intro.ts';
 import { DEFAULT_GOLFER, type GolferKind } from '../../content/golfers.ts';
 import { TUNED, type DifficultyKind } from '../../content/difficulty.ts';
 import { DEFAULT_HAND, DEFAULT_STEER, type HandKind, type SteerKind } from '../../content/touch.ts';
@@ -67,6 +68,13 @@ interface SettingValue {
    * of holding it.
    */
   travel: TravelKind;
+  /**
+   * Which flights play the intro — 0674. `src/content/intro.ts` is the table.
+   *
+   * ⚠️ **It reaches the shell's `fly` and nothing else, on `travel`'s exact terms**: it chooses the screen a
+   * flight opens on, the intro does not step the world, and the frame cannot see this field or its table (0024).
+   */
+  intro: IntroKind;
   /**
    * Which golfer is flying — `docs/decisions/0415-the-golfer-is-chosen.md`. Chosen on the select
    * screen at boot and on the title's pilot band (0458); `src/content/golfers.ts` is the table.
@@ -142,6 +150,7 @@ export type SettingsAction =
   | { slice: 'settings'; type: 'sound'; sound: SoundKind }
   | { slice: 'settings'; type: 'rumble'; rumble: RumbleKind }
   | { slice: 'settings'; type: 'travel'; travel: TravelKind }
+  | { slice: 'settings'; type: 'intro'; intro: IntroKind }
   | { slice: 'settings'; type: 'pilot'; pilot: GolferKind }
   | { slice: 'settings'; type: 'difficulty'; difficulty: DifficultyKind }
   | { slice: 'settings'; type: 'hand'; hand: HandKind }
@@ -160,6 +169,7 @@ export const initialSettings: SettingsState = {
   sound: DEFAULT_SOUND,
   rumble: DEFAULT_RUMBLE,
   travel: DEFAULT_TRAVEL,
+  intro: DEFAULT_INTRO,
   pilot: DEFAULT_GOLFER,
   difficulty: TUNED,
   hand: DEFAULT_HAND,
@@ -181,6 +191,9 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
     // from its neighbours is a slice somebody has to read three times.
     case 'travel':
       return state.travel === action.travel ? state : { ...state, travel: action.travel };
+    // 0674: which flights play the intro, on the same shape.
+    case 'intro':
+      return state.intro === action.intro ? state : { ...state, intro: action.intro };
     // 0613: the hands, on the same shape.
     case 'rumble':
       return state.rumble === action.rumble ? state : { ...state, rumble: action.rumble };

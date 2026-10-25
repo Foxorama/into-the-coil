@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { SCREENS } from '../src/state/screens.ts';
@@ -6,6 +7,7 @@ import { SHELF_KINDS } from '../src/content/wares.ts';
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { RUMBLE_KINDS } from '../src/content/rumble.ts';
 import { TRAVEL_KINDS } from '../src/content/travel.ts';
+import { INTRO_KINDS } from '../src/content/intro.ts';
 import { HAND_KINDS, STEER_KINDS } from '../src/content/touch.ts';
 import { SETTINGS_VERSION, settingsFrom } from '../src/save/settings.ts';
 import { initialSettings } from '../src/state/slices/settings.ts';
@@ -31,11 +33,14 @@ describe('the settings screen is its tables', () => {
     asked about answered there — on a touch screen the four in two columns of two and the rumble a strip under
     both (`src/app/chrome.ts`), held whole by `tests/layout.browser.test.ts`.
   */
+  // 0674: and the intro, under the crossing — named in the list, not the title, which 0590's probe names.
   it('offers the sound, the crossing, the hand, the steering and the rumble, and the look no longer', () => {
     const offered = SCREENS.settings.choices.map((c) => [c.name, c.on]);
     expect(offered).toEqual([
       ['sound', 'all'],
       ['travel', 'all'],
+      // 0674: which flights play the intro, under Travel.
+      ['intro', 'all'],
       ['hand', 'all'],
       ['steer', 'touch'],
       ['rumble', 'all'],
@@ -43,7 +48,7 @@ describe('the settings screen is its tables', () => {
   });
 
   it('and each band is walked off its kind table, so an option added is an option shown', () => {
-    const kinds = { sound: SOUND_KINDS, rumble: RUMBLE_KINDS, travel: TRAVEL_KINDS, hand: HAND_KINDS, steer: STEER_KINDS } as const;
+    const kinds = { sound: SOUND_KINDS, rumble: RUMBLE_KINDS, travel: TRAVEL_KINDS, intro: INTRO_KINDS, hand: HAND_KINDS, steer: STEER_KINDS } as const;
     for (const choice of SCREENS.settings.choices) {
       const table = kinds[choice.name as keyof typeof kinds];
       expect(choice.options, `${choice.name} offers other than its table`).toHaveLength(table.length);
@@ -61,6 +66,12 @@ describe('the settings screen is its tables', () => {
     from the screen to the setting: each is offered on exactly one screen, or a player changing it in one
     place would find it set differently in the other's memory of where to look.
   */
+  it('0674 — the frame cannot see which flights play the intro (0024)', () => {
+    const frame = readFileSync(new URL('../src/app/frame.ts', import.meta.url), 'utf8');
+    const strip = (s: string): string => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    expect(strip(frame).includes('content/intro'), 'the frame imports the intro setting').toBe(false);
+  });
+
   it('every setting is offered on exactly one screen, so there is one place to look for it', () => {
     const where = new Map<string, string[]>();
     for (const [name, row] of Object.entries(SCREENS)) {
@@ -96,8 +107,9 @@ describe('the settings screen is its tables', () => {
     // 0584: and the shell a ship's shields wear.
     // 0590: and no longer the look.
     // 0613: and the rumble, on Settings with the sound.
+    // 0674: and the intro, under Travel.
     expect([...where.keys()].sort()).toEqual(
-      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rim', 'rumble', 'shell', 'sound', 'special', 'steer', 'tone', 'travel', 'tubeLeft', 'tubeRight', 'aisle', 'section', ...SHELF_KINDS].sort(),
+      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'intro', 'livery', 'pilot', 'plate', 'rim', 'rumble', 'shell', 'sound', 'special', 'steer', 'tone', 'travel', 'tubeLeft', 'tubeRight', 'aisle', 'section', ...SHELF_KINDS].sort(),
     );
   });
 });

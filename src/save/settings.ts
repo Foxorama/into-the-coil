@@ -19,6 +19,7 @@ import { DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUND_KINDS } from '../content/sound.ts';
 import { RUMBLE_KINDS } from '../content/rumble.ts';
 import { TRAVEL_KINDS } from '../content/travel.ts';
+import { INTRO_KINDS } from '../content/intro.ts';
 import { HAND_KINDS, STEER_KINDS } from '../content/touch.ts';
 import { CREDIT_KINDS } from '../content/credits.ts';
 import { ACTION_NAMES, BINDABLE_PAD_BUTTONS, KEY_CODE, RESERVED_KEYS, SPECIAL_BINDINGS, type Action, type KeyBindings } from '../content/actions.ts';
@@ -89,6 +90,8 @@ export function keptOf(settings: SettingsState): KeptSettings {
     sound: settings.sound,
     rumble: settings.rumble,
     travel: settings.travel,
+    // 0674: which flights play the intro.
+    intro: settings.intro,
     difficulty: settings.difficulty,
     hand: settings.hand,
     steer: settings.steer,
@@ -125,6 +128,11 @@ export function settingsFrom(text: string | null, base: SettingsState): Settings
     */
     rumble: oneOf(RUMBLE_KINDS, doc.rumble, base.rumble),
     travel: oneOf(TRAVEL_KINDS, doc.travel, base.travel),
+    /*
+      0674: which flights play the intro, on 0512's per-field terms: a document written before it has no field and
+      reads as Every flight, 0635's rule it was flying under; an older build reading one with it ignores the field.
+    */
+    intro: oneOf(INTRO_KINDS, doc.intro, base.intro),
     difficulty: oneOf(DIFFICULTY_KINDS, doc.difficulty, base.difficulty),
     /*
       0512: the touch section's two. A version-1 document written before them has neither field, and

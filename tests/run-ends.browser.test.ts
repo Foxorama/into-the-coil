@@ -5,7 +5,8 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { EVERY_TIER_FINISHED, choose, credit, fly, openHangar, shown } from './title.ts';
+import { EVERY_TIER_FINISHED, choose, credit, fly, flownTo, openHangar, openSettings, shown } from './title.ts';
+import { INTRO_KINDS } from '../src/content/intro.ts';
 import { SCORES_KEY } from '../src/save/scores.ts';
 import { seeded } from './seed.ts';
 import { HANGAR_KEY, serialiseHangar } from '../src/save/hangar.ts';
@@ -119,6 +120,43 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
       { timeout: 30_000 },
     );
     expect(await where.jsonValue(), 'the second flight of the visit went straight into the run, with no intro').toBe('intro');
+    await context.close();
+  });
+
+  it('0674 — on First flight the visit’s first flight plays the intro and the next goes straight in, as Fly says', async () => {
+    /*
+      0635 owed *"whether an intro every run is welcome or wants a setting"*, and the answer was a setting. Set on the
+      band under Travel, kept over a reload, and seen where it acts: the intro's skip, then the run's readout.
+    */
+    browser ??= await launchChromium({ headless: true });
+    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(dist);
+    await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+    await pastIntro(page);
+    await openSettings(page);
+    await choose(page, 'intro', INTRO_KINDS.indexOf('first'));
+    await page.locator(`${shown('settings')} .${prefixFor('settings')}action`, { hasText: 'Back' }).click();
+    await page.waitForSelector(shown('title'), { state: 'attached' });
+    const said = (): Promise<string> =>
+      page.locator(`${shown('title')} .${prefixFor('title')}action`, { hasText: SCREENS.title.actions[0]!.label }).first().locator(`.${prefixFor('title')}action-hint`).innerText().catch(() => '');
+    expect((await said()).trim(), 'Fly says it goes straight in before the visit has flown').toBe('');
+    expect(await flownTo(page), 'the visit’s first flight went straight in on First flight').toBe('intro');
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.itc-playing-hud-shown', { timeout: 30_000 });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(shown('paused'), { state: 'attached' });
+    await page.locator(`${shown('paused')} .${prefixFor('paused')}action`, { hasText: 'Quit' }).click();
+    await page.waitForSelector(shown('quit'), { state: 'attached' });
+    await page.locator(`${shown('quit')} .${prefixFor('quit')}action`, { hasText: 'Quit' }).click();
+    await page.waitForSelector(shown('title'), { state: 'attached' });
+    expect((await said()).trim(), 'Fly does not say the next flight goes straight in').toBe('Straight in');
+    expect(await flownTo(page), 'the second flight of the visit played the intro on First flight').toBe('run');
+    // Kept: a reload is a new visit, and its first flight plays the intro again.
+    await page.reload();
+    await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+    await pastIntro(page);
+    expect(await flownTo(page), 'a new visit’s first flight went straight in').toBe('intro');
     await context.close();
   });
 

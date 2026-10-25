@@ -40,6 +40,8 @@ import {
   travelMayLand,
   warpAt,
 } from '../content/travel.ts';
+// 0674: which flights play the intro.
+import { DEFAULT_INTRO, INTROS, INTRO_KINDS } from '../content/intro.ts';
 // 0517: whether a run that runs out may be continued.
 import { CREDIT_KINDS, DEFAULT_CREDIT } from '../content/credits.ts';
 // 0512: the touch section — which side the discs stand on, and how quick the steering is.
@@ -2367,6 +2369,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
   }
 
+  /**
+   * Whether this visit has played the intro yet — 0674, for *First flight*. The page's, as 0513's flag was; above
+   * `dispatch`, which reads it through `sayFly`.
+   */
+  let flownThisVisit = false;
+  /** What the title's *Fly* says under it — 0674: *Straight in* when the next flight skips the intro, and nothing when it plays it. */
+  let flySaid = '';
+  function sayFly(): void {
+    const straight = !GOLFERS[state.settings.pilot].story || (flownThisVisit && !INTROS[state.settings.intro].everyFlight);
+    const said = straight ? 'Straight in' : '';
+    if (said === flySaid) return;
+    flySaid = said;
+    chrome.setActionHint('title', 0, said);
+  }
+
   const dispatch = (action: Action): void => {
     /*
       A continue that ran out, or was walked away from, onto the title: the run is over and it goes on the
@@ -2412,6 +2429,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0340, on the two lines above's terms: per FIELD, so a travel change re-marks one chooser and
     // does not re-bake an atlas or touch the speaker.
     const travelChanged = next.settings.travel !== state.settings.travel;
+    // 0674: and the intro, which re-marks its chooser and nothing else.
+    const introChanged = next.settings.intro !== state.settings.intro;
+    // 0674: the pilot and the intro each move what *Fly* says, and so does a flight (a screen shown).
+    const flyMoved = next.settings.intro !== state.settings.intro || next.settings.pilot !== state.settings.pilot || action.slice === 'screen';
     // 0613: and the hands, which re-mark their chooser and, turned on, tap once so the player feels what it is.
     const rumbleChanged = next.settings.rumble !== state.settings.rumble;
     /*
@@ -2485,6 +2506,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (state.settings.sound === 'on') speaker.play('chime');
     }
     if (travelChanged) applyTravel();
+    if (introChanged) applyIntro();
+    if (flyMoved) sayFly();
     if (rumbleChanged) {
       applyRumble();
       if (RUMBLES[state.settings.rumble].felt) rumble('smash', performance.now());
@@ -2816,6 +2839,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       startRun();
       return;
     }
+    /*
+      0674: and straight in after the visit's first flight, on *First flight* — 0513's rule, which 0635 made every
+      flight's and owed a setting for. A pilot the story is not told round does not spend the visit's first.
+    */
+    if (flownThisVisit && !INTROS[state.settings.intro].everyFlight) {
+      startRun();
+      return;
+    }
+    flownThisVisit = true;
     dispatch({ slice: 'screen', type: 'show', screen: 'intro' });
   }
   /** Where a screen goes when it runs out or is skipped — a run begun, or a screen shown (`beginsRun`, 0513). */
@@ -2958,6 +2990,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The third, and it is the line 0072 predicted: *"the queue behind the style was already the same
     // shape."* `TRAVEL_KINDS` IS the order `src/state/screens.ts` built the options in — 0340.
     else if (name === 'travel') dispatch({ slice: 'settings', type: 'travel', travel: TRAVEL_KINDS[index] ?? DEFAULT_TRAVEL });
+    // 0674: the band under it, in `INTRO_KINDS`' order.
+    else if (name === 'intro') dispatch({ slice: 'settings', type: 'intro', intro: INTRO_KINDS[index] ?? DEFAULT_INTRO });
     // 0458: the title's two bands. `DIFFICULTY_KINDS` and `GOLFER_KINDS` ARE the orders they were built in.
     else if (name === 'difficulty') {
       dispatch({ slice: 'settings', type: 'difficulty', difficulty: DIFFICULTY_KINDS[index] ?? TUNED });
@@ -3477,6 +3511,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('travel', TRAVEL_KINDS.indexOf(state.settings.travel));
   };
   applyTravel();
+  // 0674: the intro's mark, on the crossing's terms — what it is FOR is read in `fly`, the one place it decides.
+  const applyIntro = (): void => {
+    chrome.setChoice('intro', INTRO_KINDS.indexOf(state.settings.intro));
+  };
+  applyIntro();
+  sayFly();
   /*
     WHAT THE RUMBLE SETTING CHANGES — 0613: the mark on its chooser, and nothing else to apply. What it is FOR is
     read where a feel is played (`world.onFeel`, below), so a step that names a landing is the same step either
