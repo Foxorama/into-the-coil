@@ -3390,6 +3390,12 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-music-now-legend { display: none; }
   .itc-music-now { width: 100%; }
+  /*
+    0673: no way to Cosmo's on a phone. A band here is a cell the width of the one chip it shows, so a lone option
+    fills it and there is no row sized for three to stand empty. At 480x320 the tile ran over the next band and off
+    the glass. The shoulders still reach Cosmo's.
+  */
+  .itc-hangar-cosmos, .itc-parts-cosmos { display: none; }
 }
 /*
   ── THE HANGAR HELD UPRIGHT — 0566 ────────────────────────────────────────────────────────────────

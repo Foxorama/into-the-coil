@@ -24,9 +24,9 @@ export const PROBES = [
     guard: 'the filter at the shelf’s head',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label { display: block;',
+      find: '  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label { display: block; grid-area: label; font-size: 0.6em;',
       replace:
-        '  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label, .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-band-label { display: block;',
+        '  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label, .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-band-label { display: block; grid-area: label; font-size: 0.6em;',
     },
   },
   {
@@ -61,6 +61,17 @@ export const PROBES = [
       path: 'src/app/chrome.ts',
       find: '        if (band.cosmos !== null) band.cosmos.hidden = buttons.filter((b) => !b.hidden).length !== 1;',
       replace: '        if (band.cosmos !== null) band.cosmos.hidden = true;',
+    },
+  },
+  {
+    decision: '0673',
+    suite: 'tests/layout.browser.test.ts',
+    broke: 'the way to Cosmo’s drawn on a phone, where it runs over the next band and off the glass',
+    guard: 'draws all of every screen on the smallest landscape phone',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '  .itc-hangar-cosmos, .itc-parts-cosmos { display: none; }\n',
+      replace: '',
     },
   },
   {
