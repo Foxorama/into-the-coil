@@ -1030,3 +1030,110 @@ describe.runIf(chromePath)('0668 — a button under the pointer lifts and keeps 
     await page.context().close();
   });
 });
+
+/**
+ * 0670 — the hangar family's plate from the short side, the glyph line at 12 px, the phone's targets, whole faces.
+ * In CSS px on the built page, at the sizes the review measured: a desktop's 1080 rows, the phone the chrome is
+ * sized for and the smallest the guard holds, and every one of the guard's six for the faces.
+ */
+const HANGAR_TABS = ['hangar', 'parts', 'shop'] as const;
+async function openTab(page: Page, tab: (typeof HANGAR_TABS)[number]): Promise<void> {
+  if (tab !== 'hangar') {
+    const from = (await page.$(shown('hangar'))) !== null ? 'hangar' : (await page.$(shown('parts'))) !== null ? 'parts' : 'shop';
+    await page.locator(`${shown(from)} .${prefixFor(from)}tab`, { hasText: SCREENS[tab].heading }).first().click();
+  }
+  await page.waitForSelector(shown(tab));
+  await page.waitForTimeout(300);
+}
+describe.runIf(chromePath)('0670 — the hangar family’s plate is sized from the short side', () => {
+  it('grows its type on a 1080-row desktop, inside a third of the width, with no empty foot', async () => {
+    for (const viewport of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1080 },
+    ]) {
+      const page = await open(viewport);
+      await openHangar(page);
+      for (const tab of HANGAR_TABS) {
+        await openTab(page, tab);
+        const m = await page.evaluate((p: string) => {
+          const plate = document.querySelector<HTMLElement>(`.${p}shown .${p}plate`)!;
+          const box = plate.getBoundingClientRect();
+          const bands = [...plate.querySelectorAll<HTMLElement>(`.${p}band`)].filter((b) => b.getClientRects().length > 0 && b.getBoundingClientRect().height > 0);
+          const foot = plate.querySelector<HTMLElement>(`.${p}foot`)!.getBoundingClientRect();
+          const last = Math.max(...bands.map((b) => b.getBoundingClientRect().bottom));
+          const tallest = Math.max(...bands.map((b) => b.getBoundingClientRect().height));
+          const glyphs = plate.querySelector<HTMLElement>(`.${p}glyphs`);
+          return {
+            em: parseFloat(getComputedStyle(plate).fontSize),
+            share: box.width / innerWidth,
+            empty: foot.top - last,
+            band: tallest,
+            glyphs: glyphs === null || glyphs.getClientRects().length === 0 ? null : parseFloat(getComputedStyle(glyphs).fontSize),
+          };
+        }, prefixFor(tab));
+        const at = `${tab} at ${viewport.width}x${viewport.height}`;
+        expect(m.em, `${at}: the plate's type is ${m.em} px`).toBeGreaterThanOrEqual(18);
+        expect(m.share, `${at}: the plate takes ${(m.share * 100).toFixed(0)} % of the width`).toBeLessThanOrEqual(0.34);
+        /*
+          Not Cosmo's, which shows one shelf at a time and stands most of its plate empty at 1080 whatever the type
+          does — what fills it is a layout of the shelf, which 0670 does not invent and the plan's item 6 is about.
+        */
+        if (tab !== 'shop') expect(m.empty, `${at}: ${m.empty.toFixed(0)} px of plate stand empty under the last band, which is ${m.band.toFixed(0)} px tall`).toBeLessThan(m.band);
+        if (m.glyphs !== null) expect(m.glyphs, `${at}: the keys' line is ${m.glyphs} px`).toBeGreaterThanOrEqual(12);
+      }
+      await page.context().close();
+    }
+  });
+
+  it('draws every tab, chip, arrow and Fly at 44 px on a touch phone', async () => {
+    for (const viewport of [
+      { width: 844, height: 390 },
+      { width: 667, height: 375 },
+    ]) {
+      const page = await open(viewport, 'table', true);
+      const small = (sel: string, side: 'short' | 'height'): Promise<string[]> =>
+        page.evaluate(
+          ({ sel, side }: { sel: string; side: string }) =>
+            [...document.querySelectorAll<HTMLElement>(sel)]
+              .filter((e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden')
+              .map((e) => ({ e, b: e.getBoundingClientRect() }))
+              .filter(({ b }) => (side === 'short' ? Math.min(b.width, b.height) : b.height) < 43.5)
+              .map(({ e, b }) => `${(e.getAttribute('aria-label') ?? e.textContent ?? '').trim().slice(0, 24)} ${b.width.toFixed(0)}x${b.height.toFixed(0)}`),
+          { sel, side },
+        );
+      const t = prefixFor('title');
+      const at = `${viewport.width}x${viewport.height}, touch`;
+      expect(await small(`${shown('title')} .${t}action-lead`, 'short'), `${at}: Fly`).toEqual([]);
+      expect(await small(`${shown('title')} [${SETTING_ATTR}="difficulty"] .${t}option`, 'height'), `${at}: the tiers`).toEqual([]);
+      await openHangar(page);
+      for (const tab of HANGAR_TABS) {
+        await openTab(page, tab);
+        const p = prefixFor(tab);
+        expect(await small(`${shown(tab)} .${p}tab`, 'short'), `${at}: ${tab}'s tabs`).toEqual([]);
+        expect(await small(`${shown(tab)} .${p}plate .${p}option:not(.${p}option-face)`, 'short'), `${at}: ${tab}'s chips`).toEqual([]);
+        expect(await small(`${shown(tab)} .${p}plate .${p}band-step:not(:disabled)`, 'height'), `${at}: ${tab}'s arrows`).toEqual([]);
+      }
+      await page.context().close();
+    }
+  });
+
+  it('shows a band of faces whole faces only, on every device', async () => {
+    for (const viewport of [...VIEWPORTS, { width: 1920, height: 1080 }]) {
+      const page = await open(viewport);
+      await openHangar(page);
+      await page.waitForTimeout(300);
+      const cut = await page.evaluate((p: string) => {
+        const track = document.querySelector<HTMLElement>(`.${p}shown .${p}options-faces`);
+        if (track === null) return ['no faces'];
+        const edge = track.getBoundingClientRect();
+        return [...track.children]
+          .filter((f) => getComputedStyle(f).visibility !== 'hidden')
+          .map((f) => ({ f, b: f.getBoundingClientRect() }))
+          .filter(({ b }) => b.width > 0 && b.right > edge.left && b.left < edge.right && (b.left < edge.left - 0.5 || b.right > edge.right + 0.5))
+          .map(({ f, b }) => `${(f.textContent ?? '').trim()} ${b.left.toFixed(0)}-${b.right.toFixed(0)} in ${edge.left.toFixed(0)}-${edge.right.toFixed(0)}`);
+      }, prefixFor('hangar'));
+      expect(cut, `${viewport.width}x${viewport.height}: a face drawn in part`).toEqual([]);
+      await page.context().close();
+    }
+  });
+});
