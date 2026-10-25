@@ -38,15 +38,16 @@ const BOB_MS = ((Math.PI * 2) / BLUE_BOB_RATE / STEPS_PER_SECOND) * 1000;
  */
 async function snap(page: Page, screen: Screen, key: string): Promise<void> {
   await page.evaluate(
-    ({ prefix, key, fronts, alcove, ship, bay, behind, ahead }: { prefix: string; key: string; fronts: Record<string, number>; alcove: number; ship: number; bay: number; behind: number; ahead: number }) => {
+    ({ prefix, key, fronts, ship, bay, behind, ahead }: { prefix: string; key: string; fronts: Record<string, { along: number; wide: number }>; ship: number; bay: number; behind: number; ahead: number }) => {
       const canvas = document.querySelector<HTMLCanvasElement>('#app canvas')!;
       const box = document.querySelector('.' + prefix + 'stand')!.getBoundingClientRect();
       const k = canvas.width / canvas.getBoundingClientRect().width;
       // A world unit in pixels, and where the room's along is nought, off a shopfront door drawn on this tab.
       const door = [...document.querySelectorAll<HTMLElement>('.' + prefix + 'shop-door')].find((d) => !d.hidden && fronts[d.getAttribute('aria-label') ?? ''] !== undefined)!;
       const front = door.getBoundingClientRect();
-      const unit = front.width / alcove;
-      const origin = front.left - (fronts[door.getAttribute('aria-label')!]! - alcove / 2) * unit;
+      const shop = fronts[door.getAttribute('aria-label')!]!;
+      const unit = front.width / shop.wide;
+      const origin = front.left - (shop.along - shop.wide / 2) * unit;
       const left = Math.max(box.left, origin + (ship - behind) * unit);
       const right = Math.min(box.left + box.width, origin + Math.min(bay - 1, ship + ahead) * unit);
       const x = Math.max(0, Math.floor(left * k));
@@ -65,8 +66,13 @@ async function snap(page: Page, screen: Screen, key: string): Promise<void> {
     {
       prefix: prefixFor(screen),
       key,
-      fronts: Object.fromEntries(SCREEN_KINDS.flatMap((s) => (SCREENS[s].stand?.keeper ? [[SCREENS[s].heading, DOCK.shops[SCREENS[s].stand!.keeper!]]] : []))),
-      alcove: PORT_EXTENT.alcove * DOCK.shopScale,
+      // 0681: each door its own shop's width, at that shop's size.
+      fronts: Object.fromEntries(
+        SCREEN_KINDS.flatMap((s) => {
+          const kind = SCREENS[s].stand?.keeper ?? null;
+          return kind === null ? [] : [[SCREENS[s].heading, { along: DOCK.shops[kind], wide: PORT_EXTENT.alcove * DOCK.shopGrow[kind] }]];
+        }),
+      ),
       ship: DOCK.ship,
       bay: DOCK.bay,
       behind: SHIP_BEHIND,

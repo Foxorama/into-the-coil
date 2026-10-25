@@ -54,8 +54,18 @@ export interface KeeperRow {
   /** Their figure in the port's atlas — a bust behind the counter or a whole one on it — and the counter. */
   readonly figure: PortKind;
   readonly counter: PortKind;
+  /**
+   * 0681: the shopfront round their counter, laid over the alcove it stands in — each shop's own shape: Unity's a
+   * workshop's roller door and hoist, MMXXVI's a spray booth's extractor hood, Cosmo's a lit glass display.
+   */
+  readonly front: PortKind;
   /** The two lines on the counter's front: the name, large, and what is done there, under it. */
   readonly sign: readonly [string, string];
+  /**
+   * 0681: what their work throws off while they are at the counter — its picture, and where it flies from in the
+   * shop's units about its centre — or `null`. Unity's grinder's sparks (0680, which named Unity in the frame).
+   */
+  readonly works: { readonly kind: PortKind; readonly along: number; readonly across: number } | null;
   /** What they say of a ware in the window — a shop's, and `null` for a keeper with nothing to sell. */
   readonly shop: ShopLines | null;
   /**
@@ -181,7 +191,9 @@ export const COSMO = {
   greet: 'Try it on, no charge for looking.',
   figure: 'cosmo',
   counter: 'stall',
+  front: 'frontDisplay',
   sign: ['COSMO’S', 'COSMETICS'],
+  works: null,
   shop: {
     owned: 'That one’s yours already — fit it in {where}.',
     short: 'Come back with {short} more Star Shards, friend.',
@@ -236,7 +248,9 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     greet: 'I bring it all together.',
     figure: 'unity',
     counter: 'bench',
+    front: 'frontWorkshop',
     sign: ['UNITY’S', 'TRADE & REPAIR'],
+    works: { kind: 'sparks', along: 4, across: 1.5 },
     shop: null,
     spots: [
       // On the bench, against the wrench, as 0554 stood them.
@@ -270,7 +284,9 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     greet: 'We’ll make it look good.',
     figure: 'mmxxvi',
     counter: 'booth',
+    front: 'frontBooth',
     sign: ['MMXXVI', 'PAINT & PARTS'],
+    works: null,
     shop: null,
     spots: [
       // Behind the booth, as 0556 lowered them.

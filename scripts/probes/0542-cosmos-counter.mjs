@@ -77,8 +77,8 @@ export const PROBES = [
     guard: 'stands the tab’s keeper at their counter beside the pad',
     edit: {
       path: 'src/render/port.ts',
-      // 0571: on the dock's mezzanine.
-      find: '    put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);',
+      // 0571: on the dock's mezzanine. ⚠️ Re-anchored by 0681, whose shops each stand at their own across.
+      find: '    put(surface, view, PORT_SPRITE[row.counter], shop, front, 1, 0, s);',
       replace: '',
     },
   },

@@ -9,7 +9,7 @@ import { openHangar, shown } from './title.ts';
 import { DOCK, DOLLY_STEPS, HANGAR_SCALE, PORT_EXTENT } from '../src/content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
 import { SHIPS } from '../src/content/ships.ts';
-import { SCREENS, type Screen } from '../src/state/screens.ts';
+import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 
 /**
  * A STAND PER TAB, AND THE DOLLY — `docs/decisions/0678-a-stand-per-tab.md`.
@@ -45,13 +45,21 @@ async function open(width: number, height: number): Promise<Page> {
   return page;
 }
 
-/** A world unit in CSS pixels on `screen`'s stand, off the widest shown shopfront door. */
+/** A world unit in CSS pixels on `screen`'s stand, off a shown shopfront door, read at its own shop's size (0681). */
 async function unitOn(page: Page, screen: Screen): Promise<number> {
-  const door = await page.evaluate((prefix: string) => {
-    const doors = [...document.querySelectorAll<HTMLElement>('.' + prefix + 'shop-door')].filter((d) => !d.hidden);
-    return Math.max(0, ...doors.map((d) => d.getBoundingClientRect().width));
-  }, prefixFor(screen));
-  return door / (PORT_EXTENT.alcove * DOCK.shopScale);
+  const wide = Object.fromEntries(
+    SCREEN_KINDS.flatMap((s) => {
+      const kind = SCREENS[s].stand?.keeper ?? null;
+      return kind === null ? [] : [[SCREENS[s].heading, PORT_EXTENT.alcove * DOCK.shopGrow[kind]]];
+    }),
+  );
+  return page.evaluate(
+    ({ prefix, wide }: { prefix: string; wide: Record<string, number> }) => {
+      const door = [...document.querySelectorAll<HTMLElement>('.' + prefix + 'shop-door')].find((d) => !d.hidden && wide[d.getAttribute('aria-label') ?? ''] !== undefined);
+      return door === undefined ? 0 : door.getBoundingClientRect().width / wide[door.getAttribute('aria-label')!]!;
+    },
+    { prefix: prefixFor(screen), wide },
+  );
 }
 
 /**

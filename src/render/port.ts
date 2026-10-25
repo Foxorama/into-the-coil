@@ -196,14 +196,21 @@ export function paintStand(
   // 0680: a far shuttle crossing the bay once a minute, and the station's own structure past it, nearer than the sky.
   paintShuttle(surface, view, DOCK.bay, (t + SHUTTLE.every - SHUTTLE.at) % SHUTTLE.every);
   put(surface, view, PORT_SPRITE.spar, planeAlong(view, DOCK.bay + SPAR.past, SPAR.depth), SPAR.across);
+  // 0681: and on a wide screen's right, the dock's arm reaching out, further off than the spar.
+  put(surface, view, PORT_SPRITE.dockArm, planeAlong(view, DOCK.bay + ARM.past, ARM.depth), ARM.across);
   const wall = PORT_EXTENT.wall;
   for (let along = wall / 2; along < DOCK.bay; along += wall) {
     // 0676: lit by the lamp over it, half lit beside one, dark between. 0677: and its vent, patch or conduit.
     for (let across = wall / 2; across < STAGE.deck + wall; across += wall) wallTile(surface, view, along, across, DOCK.lamps);
   }
+  // 0681: one panel dented, and grime along the wall's foot.
+  put(surface, view, PORT_SPRITE.wallDent, DENT.dock.along, DENT.dock.across);
+  paintGrime(surface, view, DOCK.bay);
   // 0680: the steam off a vent, and a fan turning in the wall.
   if (DOCK_VENT.along > 0) paintSteam(surface, view, t, DOCK_VENT.along, DOCK_VENT.across);
   paintFan(surface, view, t, FAN.dock.along, FAN.dock.across);
+  // 0681: the dock's neon over the mezzanine, a picture and not a word.
+  put(surface, view, PORT_SPRITE.neonMark, NEON_MARK.along, NEON_MARK.across);
   // 0676: the shade under the truss, under the catwalk, and along the wall's foot.
   shadeAt(surface, view, DOCK.bay / 2, STAGE.ceiling, DOCK.bay, true);
   shadeAt(surface, view, (DOCK.catwalkFrom + DOCK.catwalkTo) / 2, DOCK.catwalk + CATWALK_UNDER, DOCK.catwalkTo - DOCK.catwalkFrom, true);
@@ -240,27 +247,32 @@ export function paintStand(
     0569: every keeper wherever they are this visit — at their counter, at the ship, or out — and since 0571
     all three are in the room at once. The open tab's shop is lit; the others stand back in the dim.
   */
-  for (let k = 0; k < KEEPER_KINDS.length; k++) {
-    const kind = KEEPER_KINDS[k]!;
+  // 0681: farthest first, so a nearer shop's frame stands over the one behind it.
+  for (let k = 0; k < SHOP_ORDER.length; k++) {
+    const kind = SHOP_ORDER[k]!;
     const row = KEEPERS[kind];
     const place = row.spots[spots === null ? 0 : spots[kind]] ?? row.spots[0];
     const shop = DOCK.shops[kind];
-    const s = DOCK.shopScale;
-    put(surface, view, PORT_SPRITE.alcove, shop, DOCK.shopAcross, 1, 0, s);
+    // 0681: each shop at its own size and its own foot on the catwalk.
+    const s = DOCK.shopGrow[kind];
+    const front = DOCK.shopAcross[kind];
+    put(surface, view, PORT_SPRITE.alcove, shop, front, 1, 0, s);
+    // 0681: and its own shopfront over the alcove.
+    put(surface, view, PORT_SPRITE[row.front], shop, front, 1, 0, s);
     // 0554: at the counter, where they stand is theirs — behind it, or on it, as Unity stands on their bench.
     const offset = place.at === 'counter' ? place.offset : AWAY_FROM_IT;
     const along = shop + offset.along * s;
-    const across = DOCK.shopAcross + offset.across * s;
+    const across = front + offset.across * s;
     if (place.at === 'counter' && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
-    put(surface, view, PORT_SPRITE[row.counter], shop, DOCK.shopAcross, 1, 0, s);
+    put(surface, view, PORT_SPRITE[row.counter], shop, front, 1, 0, s);
     if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across, 1, 0, s);
-    // 0680: and Unity at their bench, grinding — sparks off it, flaring on the bob's clock while they are at it.
-    if (kind === 'unity' && place.at === 'counter') {
+    // 0680: and what their work throws off while they are at it — Unity's sparks — flaring on the bob's clock. 0681: off the row.
+    if (row.works !== null && place.at === 'counter') {
       const n = Math.floor(t) % Math.round(BOB_STEPS);
-      if (n < SPARKS_FOR && hash(n + 77) > 0.3) put(surface, view, PORT_SPRITE.sparks, shop + SPARKS_AT.along * s, DOCK.shopAcross + SPARKS_AT.across * s, 0.55 + 0.45 * hash(n + 31), 0, s);
+      if (n < SPARKS_FOR && hash(n + 77) > 0.3) put(surface, view, PORT_SPRITE[row.works.kind], shop + row.works.along * s, front + row.works.across * s, 0.55 + 0.45 * hash(n + 31), 0, s);
     }
     // The shops of the other tabs are there, in the dim: a shutter of the night over them, not a fade to the wall.
-    if (keeper !== null && kind !== keeper) put(surface, view, PORT_SPRITE.veil, shop, DOCK.shopAcross - 0.5, SHOP_DIM, 0, PORT_EXTENT.alcove * s);
+    if (keeper !== null && kind !== keeper) put(surface, view, PORT_SPRITE.veil, shop, front - 0.5, SHOP_DIM, 0, PORT_EXTENT.alcove * s);
   }
   /*
     0628: the workshop wall between the lift and the cradle, in front of the catwalk's girder, that the cockpit
@@ -398,15 +410,17 @@ export function standMarksInto(
   out.hang.width = screenX(view, wall.along + wall.half - HANG_INSET, wall.hang) - out.hang.left;
   out.hang.top = screenY(view, wall.along, wall.hang);
   // 0572: and each shopfront's box, its alcove's — what a click or a tap on the shop lands on.
-  const half = (PORT_EXTENT.alcove * DOCK.shopScale) / 2;
+  // 0681: each at its own size and across.
   for (let k = 0; k < KEEPER_KINDS.length; k++) {
     const kind = KEEPER_KINDS[k]!;
     const front = out.shops[kind];
     const shop = DOCK.shops[kind];
-    front.left = screenX(view, shop - half, DOCK.shopAcross);
-    front.right = screenX(view, shop + half, DOCK.shopAcross);
-    front.top = screenY(view, shop, DOCK.shopAcross - half);
-    front.bottom = screenY(view, shop, DOCK.shopAcross + half);
+    const half = (PORT_EXTENT.alcove * DOCK.shopGrow[kind]) / 2;
+    const across = DOCK.shopAcross[kind];
+    front.left = screenX(view, shop - half, across);
+    front.right = screenX(view, shop + half, across);
+    front.top = screenY(view, shop, across - half);
+    front.bottom = screenY(view, shop, across + half);
   }
   if (keeper === null) {
     out.keeperX = Number.NaN;
@@ -416,12 +430,12 @@ export function standMarksInto(
   const row = KEEPERS[keeper];
   const place = row.spots[spots === null ? 0 : spots[keeper]] ?? row.spots[0];
   const shop = DOCK.shops[keeper];
-  const s = DOCK.shopScale;
+  const s = DOCK.shopGrow[keeper];
   let along = shop;
-  let across = DOCK.shopAcross - (PORT_EXTENT.alcove * s) / 2;
+  let across = DOCK.shopAcross[keeper] - (PORT_EXTENT.alcove * s) / 2;
   if (place.at === 'counter') {
     along = shop + place.offset.along * s;
-    across = DOCK.shopAcross + (place.offset.across - KEEPER_HEAD) * s;
+    across = DOCK.shopAcross[keeper] + (place.offset.across - KEEPER_HEAD) * s;
   } else if (place.at !== 'away') {
     // 0611: over their head where they stand — on the lift, half way up its ride, which it is always passing.
     const where = DOCK_PLACES[place.at];
@@ -538,8 +552,19 @@ const FAN_STEP = 5;
 // A puff once in three bobs, rising for most of one.
 const STEAM_BOBS = 3;
 const STEAM_RISE = 90;
-// Up on the wall, over the stand's guarded band, right of the plate and clear of the steaming vent: in the dock between the lamps, in the intro over her pad's left.
-const FAN = { dock: { along: 108, across: 30 }, intro: { along: 150, across: 30 } } as const;
+/*
+  Up on the wall and clear of the steaming vent. In the dock, 0681 moved it from over the mezzanine, where its neon now
+  hangs, to the wall under the catwalk by the bay — in the stand's guarded band, where its frames turn seven times a bob.
+  In the intro, over her pad's left.
+*/
+const FAN = { dock: { along: 155, across: 70 }, intro: { along: 150, across: 30 } } as const;
+/**
+ * 0681: the dock's neon, over the mezzanine between Unity's shop and MMXXVI's; the dented panel in each room; the
+ * arm reaching out past the bay, beyond the spar and further off than it.
+ */
+const NEON_MARK = { along: 100.5, across: 24 } as const;
+const DENT = { dock: { along: 110, across: 70 }, intro: { along: 70, across: 50 } } as const;
+const ARM = { past: 135, across: 80, depth: 0.35 } as const;
 // The wall's two upper rows, where a vent may steam.
 const VENT_ABOVE = 40;
 /** Where the neon sign's plate stands, from the bar's centre — `paintBar`'s units, and `neonDark`'s box. */
@@ -549,9 +574,11 @@ const NEON_BUZZ = 37;
 /** The bar's string of lights — `paintBar`'s fifteen bulbs, four units apart from 28 left of its centre — and how long a bulb's flare lasts. */
 const BAR_BULBS = 15;
 const TWINKLE_STEPS = 8;
-/** Where the sparks fly from on Unity's bench, in the shop's units from its centre, and for how many steps of a bob. */
-const SPARKS_AT = { along: 4, across: 1.5 } as const;
+/** For how many steps of a bob a keeper's work throws off what it throws off (`KeeperRow.works`). */
 const SPARKS_FOR = 45;
+/** 0681: the shops in the order they are drawn — the farthest, the smallest (`DOCK.shopGrow`), first. */
+// @setup: sorted once at module load.
+const SHOP_ORDER: readonly KeeperKind[] = [...KEEPER_KINDS].sort((a, b) => DOCK.shopGrow[a] - DOCK.shopGrow[b]);
 
 /** A number from nought to under one for the integer `n`, the same every time — a frame's flicker, with no allocation. */
 function hash(n: number): number {
@@ -583,6 +610,13 @@ function paintDrone(surface: Surface, view: View, end: number, since: number): v
   if (since < 0 || since >= DRONE.takes) return;
   const u = since / DRONE.takes;
   put(surface, view, PORT_SPRITE.drone, -6 + (end + 12) * u, DRONE.across + Math.sin(since * 0.21) * 0.6);
+}
+
+/** 0681: grime along the wall's foot to `end`, a tile of it at a time, rising off the deck. */
+function paintGrime(surface: Surface, view: View, end: number): void {
+  const tile = PORT_EXTENT.grime;
+  // Edge to edge and not overlapped as the wall's tiles are: a band laid twice over a seam would darken it.
+  for (let along = tile / 2; along < end; along += tile) put(surface, view, PORT_SPRITE.grime, along, STAGE.deck - tile / 2);
 }
 
 /** A wall fan at `along`, `across`, three frames in `FAN_STEP`s each. */
@@ -1019,6 +1053,9 @@ function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
     }
   }
   put(surface, view, PORT_SPRITE.viewport, hole.along + wall, hole.across + wall / 2);
+  // 0681: one panel dented, and grime along the wall's foot.
+  put(surface, view, PORT_SPRITE.wallDent, DENT.intro.along, DENT.intro.across);
+  paintGrime(surface, view, STAGE.bay);
   // 0680: the steam off a vent, and a fan turning in the wall.
   if (INTRO_VENT.along > 0) paintSteam(surface, view, t, INTRO_VENT.along, INTRO_VENT.across);
   paintFan(surface, view, t, FAN.intro.along, FAN.intro.across);
