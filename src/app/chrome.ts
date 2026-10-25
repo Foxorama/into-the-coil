@@ -5363,6 +5363,11 @@ export interface Chrome {
    */
   setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void;
   /**
+   * The same marks moved, and nothing else laid out — 0678: a step of the dolly between two tabs' cameras, where
+   * the column is the one already framed and only the picture under it has moved.
+   */
+  moveStandMarks(screen: Screen, marks: Readonly<StandMarks>): void;
+  /**
    * What each ware's tile says under its name — 0564: its price, *Yours*, or its price short of the balance,
    * which is drawn in a warning ink as well as said. Position for position, as the shelf lists them.
    */
@@ -9171,7 +9176,7 @@ export function makeChrome(
       const box = stand.getBoundingClientRect();
       return box.width > 0 ? { left: box.left, width: box.width, top: box.top, height: box.height } : null;
     },
-    setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void {
+    moveStandMarks(screen: Screen, marks: Readonly<StandMarks>): void {
       const said = standMarks[screen];
       said.shipX = marks.shipX;
       said.shipY = marks.shipY;
@@ -9180,6 +9185,9 @@ export function makeChrome(
       for (const kind of KEEPER_KINDS) Object.assign(said.shops[kind], marks.shops[kind]);
       Object.assign(said.hang, marks.hang);
       placeStand(screen);
+    },
+    setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void {
+      this.moveStandMarks(screen, marks);
       // 0670: a framing is a layout, so the faces the track cuts are worked out again.
       // 0673: and the option on — tried on, or fitted — brought into its track first, so it is never the one put away.
       for (const band of panels[screen]?.bands ?? []) {

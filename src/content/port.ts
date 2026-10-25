@@ -568,6 +568,11 @@ export const STAND_PAD_AT = 0.46;
  * screen's edge ever comes before it, where on a phone the plate stands to the right of the column.
  */
 export const STAND_SKY = 400;
+/**
+ * 0678: how many steps the stand's camera takes to ease from one tab's camera to the next — 0.3 s. 0548 merged
+ * the three tabs' cameras because a change of tab jumped the room; the dolly is what lets each tab stand again.
+ */
+export const DOLLY_STEPS = 18;
 
 /**
  * Where a camera stands in the room when a menu stands in it — 0540: the point of the room it is on, in
@@ -582,9 +587,24 @@ export interface StandCamera {
   along: number;
   across: number;
   zoom: number;
+  /**
+   * 0678: the share of the stand's column, across, the camera's point stands at once fitted (`fitStand`), and of
+   * the screen before it is. It was `STAND_PAD_AT` for every tab, so a tab could not stand its point anywhere else.
+   */
   x: number;
   y: number;
+  /** 0678: what this camera keeps whole on the column's left as it is fitted — `STAND_KEEPS`. */
+  keep: StandKeep;
 }
+
+/**
+ * 0678: what a stand's camera is drawn back to keep whole on its column's left. `room` is 0571's and 0572's rule
+ * for the camera that shows the dock: the lift and every keeper's shopfront. `workshop` keeps the wall the cockpit
+ * monitor hangs from (0628), which every tab shows, for a camera closer in than the whole dock.
+ * Closed — 0016 — and read by `fitStand` with a `never` arm.
+ */
+export const STAND_KEEPS = ['room', 'workshop'] as const;
+export type StandKeep = (typeof STAND_KEEPS)[number];
 
 /**
  * Every moment the intro turns on, in steps from its first frame.

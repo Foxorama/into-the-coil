@@ -128,6 +128,23 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     }
   });
 
+  /*
+    ⚠️ **A CAMERA A TAB — 0678.** 0548 put one camera on all three rows, because a change of tab jumped the room;
+    the field each row has was there so each tab could stand somewhere (0540), and none did — 0282's tell. The
+    dolly answers the jump, so every tab authors its own and no two stand in one place.
+  */
+  it('0678 — stands every tab somewhere of its own', () => {
+    const place = (s: (typeof STANDING)[number]): string => {
+      const c = SCREENS[s].stand!.camera;
+      return [c.along, c.across, c.zoom, c.x, c.y].join(' ');
+    };
+    for (let a = 0; a < STANDING.length; a++) {
+      for (let b = a + 1; b < STANDING.length; b++) {
+        expect(place(STANDING[a]!), `${STANDING[a]} and ${STANDING[b]} stand their cameras in one place`).not.toBe(place(STANDING[b]!));
+      }
+    }
+  });
+
   it('keeps the room over every edge of the screen, so no camera shows the void it is painted on', () => {
     /*
       ⚠️ **AND THE WIDEST SCREEN THE GAME DRAWS ON**, at its aspect clamp: the guard's sizes stop at 2.2 to
@@ -139,7 +156,7 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       0542: and a camera at the bar, which no tab stands at since Cosmo's moved to the stall — the hold is
       `standViewInto`'s for every camera a tab may author, so it is asked of the one at the room's wall.
     */
-    const atTheBar = { along: STAGE.bar.along, across: STAGE.bar.across, zoom: 1.6, x: 0.18, y: 0.5 };
+    const atTheBar = { along: STAGE.bar.along, across: STAGE.bar.across, zoom: 1.6, x: 0.18, y: 0.5, keep: 'room' } as const;
     for (const [screen, camera] of [...STANDING.map((s) => [s, SCREENS[s].stand!.camera] as const), ['hangar', atTheBar] as const]) {
       for (const [width, height] of [...SIZES, widest]) {
         const blits = drawStand(screen, width, height, 0, SHIPS.firebird, camera);
@@ -276,7 +293,12 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       for (const [width, height] of [...SIZES, [1920, 1080] as const]) {
         const at = `${screen} at ${width}x${height}`;
         const blits = drawStand(screen, width, height);
-        if (height > 460) {
+        /*
+          ⚠️ **NOT ON PAINT & PARTS — 0678.** Its camera stands close on the cradle, so a rim reads at the size it is
+          chosen at: the bay's edge is in its picture on a wide screen and past it on a 4:3. The open bay is the
+          hangar's picture and Cosmo's.
+        */
+        if (height > 460 && screen !== 'parts') {
           const box = standColumn(width, height);
           const walls = all(blits, 'wall');
           const unit = walls[0]!.scale;

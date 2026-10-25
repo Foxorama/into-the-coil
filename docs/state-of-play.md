@@ -1206,8 +1206,9 @@ Cosmo's, the art's picture at the flank's size), and item 7, [0674](decisions/06
 `scripts/shot-intro.mjs` to photograph the intro by), and item 2, [0676](decisions/0676-the-light-is-cast.md) (the
 wall lit by its lamps, pools on the deck, the ship lit from its pad, shade, the bar's warm side), and item 3,
 [0677](decisions/0677-big-forms.md) (the wall's overlays, the truss's braces, a crane, a bulkhead, the deck as a
-floor). **Next is the menus' item 8**, a stand per tab and the dolly; the rest follow the order the player gave —
-the menus' 1–7, the port's 1–3, the menus' 8, the port's 4–6, the menus' 9.
+floor); and the menus' item 8, [0678](decisions/0678-a-stand-per-tab.md) (a camera a tab, and the dolly between
+them). **Next is the port's item 4**; the rest follow the order the player gave — the menus' 1–7, the port's 1–3,
+the menus' 8, the port's 4–6, the menus' 9.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
 

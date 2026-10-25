@@ -18,8 +18,8 @@
 import type { Page } from 'playwright-core';
 import { prefixFor } from '../src/app/chrome.ts';
 import { BLUE_BOB_RATE } from '../src/render/port.ts';
-import { STAND_PAD_AT } from '../src/content/port.ts';
-import { STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
+import { DOCK, PORT_EXTENT } from '../src/content/port.ts';
+import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
 
 /** How far a channel must move for a pixel to count as changed — past the edge a sub-pixel bob blurs. */
 const MARGIN = 48;
@@ -33,17 +33,22 @@ const BOB_MS = ((Math.PI * 2) / BLUE_BOB_RATE / STEPS_PER_SECOND) * 1000;
  * ⚠️ **ROUND THE SHIP, AND IT WAS THE WHOLE STAND — 0568.** Since the hangar opened out the stand is most of
  * the screen: a wall, the keeper, and the open bay with its stars drifting past. A look changed on the ship
  * was then two thousandths of the box against a noise of one, the stars' — under CI, every look's guard
- * read *no change*. So what is read is the ship's own part of the stand: a band of its width about the pad
- * (`STAND_PAD_AT`), from above the ship to the deck, where the stars are not.
+ * read *no change*. So what is read is the ship's own part of the stand: a band from its flame to its nose
+ * (`SHIP_BEHIND`, `SHIP_AHEAD`, 0678), from above the ship to the deck, where the stars are not.
  */
 async function snap(page: Page, screen: Screen, key: string): Promise<void> {
   await page.evaluate(
-    ({ prefix, key, pad, half }: { prefix: string; key: string; pad: number; half: number }) => {
+    ({ prefix, key, fronts, alcove, ship, bay, behind, ahead }: { prefix: string; key: string; fronts: Record<string, number>; alcove: number; ship: number; bay: number; behind: number; ahead: number }) => {
       const canvas = document.querySelector<HTMLCanvasElement>('#app canvas')!;
       const box = document.querySelector('.' + prefix + 'stand')!.getBoundingClientRect();
       const k = canvas.width / canvas.getBoundingClientRect().width;
-      const left = box.left + box.width * Math.max(0, pad - half);
-      const right = box.left + box.width * Math.min(1, pad + half);
+      // A world unit in pixels, and where the room's along is nought, off a shopfront door drawn on this tab.
+      const door = [...document.querySelectorAll<HTMLElement>('.' + prefix + 'shop-door')].find((d) => !d.hidden && fronts[d.getAttribute('aria-label') ?? ''] !== undefined)!;
+      const front = door.getBoundingClientRect();
+      const unit = front.width / alcove;
+      const origin = front.left - (fronts[door.getAttribute('aria-label')!]! - alcove / 2) * unit;
+      const left = Math.max(box.left, origin + (ship - behind) * unit);
+      const right = Math.min(box.left + box.width, origin + Math.min(bay - 1, ship + ahead) * unit);
       const x = Math.max(0, Math.floor(left * k));
       const y = Math.max(0, Math.floor((box.top + box.height * 0.3) * k));
       const w = Math.min(canvas.width - x, Math.floor((right - left) * k));
@@ -51,7 +56,22 @@ async function snap(page: Page, screen: Screen, key: string): Promise<void> {
       const kept = ((window as unknown as { itcStand?: Record<string, Uint8ClampedArray> }).itcStand ??= {});
       kept[key] = canvas.getContext('2d')!.getImageData(x, y, w, h).data;
     },
-    { prefix: prefixFor(screen), key, pad: STAND_PAD_AT, half: SHIP_BAND },
+    /*
+      0678: in the room's own units, read off the page, where it was a share of the stand about `STAND_PAD_AT`. Each
+      tab has its camera now: at the one camera's share, Paint & Parts' closer one left its flame outside the band and
+      a flame chosen there read as nothing moving, and widened by its zoom the band reached past the bay into the
+      stars, and the stand never read as still.
+    */
+    {
+      prefix: prefixFor(screen),
+      key,
+      fronts: Object.fromEntries(SCREEN_KINDS.flatMap((s) => (SCREENS[s].stand?.keeper ? [[SCREENS[s].heading, DOCK.shops[SCREENS[s].stand!.keeper!]]] : []))),
+      alcove: PORT_EXTENT.alcove * DOCK.shopScale,
+      ship: DOCK.ship,
+      bay: DOCK.bay,
+      behind: SHIP_BEHIND,
+      ahead: SHIP_AHEAD,
+    },
   );
 }
 
@@ -61,8 +81,13 @@ async function snap(page: Page, screen: Screen, key: string): Promise<void> {
  */
 export const STILL = 0.00008;
 
-/** Half the width of the band read round the ship, as a share of the stand — the ship and a little either side. */
-const SHIP_BAND = 0.2;
+/**
+ * How far the band read round the ship reaches behind its centre and ahead of it, in world units — its flame
+ * behind, its nose ahead, and never past the bay (0678). It was 0.2 of the stand either side of `STAND_PAD_AT`,
+ * about 25 units at the one camera.
+ */
+const SHIP_BEHIND = 30;
+const SHIP_AHEAD = 25;
 
 /** The share of the stand's pixels whose colour moved past `MARGIN` between two snaps. */
 async function changed(page: Page, from: string, to: string): Promise<number> {

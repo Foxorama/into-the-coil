@@ -39,12 +39,12 @@ import {
   RUN_SPEED,
   STAGE,
   DOCK,
-  STAND_PAD_AT,
   STAND_SKY,
   SURGE_CURVE,
   SURGE_STEPS,
   TILT,
   type StandCamera,
+  type StandKeep,
   TRACK_DELAY,
   TRAIL_EVERY,
   TRAIL_SAMPLES,
@@ -474,7 +474,7 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
  * The stand's camera fitted to the column the plate leaves it — 0563, written into `out`.
  *
  * The row's camera says where it stands and how close it would like to be. Fitted, the pad stands at
- * `STAND_PAD_AT` of the column, and the camera is drawn back from the row's zoom wherever it would put the
+ * the row's `x` of the column (0678; it was `STAND_PAD_AT` for every tab), and the camera is drawn back from the row's zoom wherever it would put the
  * ship's box past a share of the column (gone in 0571), or the keeper, their counter or the viewport in the
  * back wall more than a quarter of their width off the screen's left — the keeper and the stars are each
  * the player's own ask (0550), and a camera close enough to lose them is too close.
@@ -492,8 +492,10 @@ export function fitStand(
   out.across = camera.across;
   // 0566: the camera's share down the column, where the column is not the whole height — portrait's.
   out.y = box.top !== undefined && box.height !== undefined && screenHeight > 0 ? (box.top + box.height * camera.y) / screenHeight : camera.y;
-  out.x = (box.left + box.width * STAND_PAD_AT) / width;
+  // 0678: the row's own share of the column, where every tab's was `STAND_PAD_AT`.
+  out.x = (box.left + box.width * camera.x) / width;
   out.zoom = camera.zoom;
+  out.keep = camera.keep;
   if (base.scale <= 0 || box.width <= 0) return;
   // The furthest left the camera must keep on the screen, in the room's units: the viewport's pane, and the keeper's two pieces less a quarter of each.
   /*
@@ -503,11 +505,12 @@ export function fitStand(
   /*
     0571: and the mezzanine's first shopfront, whole — every keeper's shop is in the room on every tab, the
     first of them furthest from the ship. `keeper` is the tab's; the camera keeps them all, so it is unread.
+    0678: the `room` camera does; a closer one keeps the workshop wall.
   */
   void keeper;
   // 0572: and the lift up to them, whole — it is the way to the shops, and a way up cut off goes nowhere.
-  let keep: number = DOCK.lift - LIFT_HALF;
-  for (let k = 0; k < KEEPER_KINDS.length; k++) keep = Math.min(keep, DOCK.shops[KEEPER_KINDS[k]!] - PORT_EXTENT.alcove / 2);
+  // 0678: that is the `room` camera's; a camera closer in keeps what its own tab stands on (`STAND_KEEPS`).
+  const keep = keptFrom(camera);
   // Half a unit to spare, so what is kept is on the screen and not on its edge by a rounding.
   const reach = camera.along - keep + 0.5;
   /*
@@ -526,15 +529,65 @@ export function fitStand(
   // ends only a panel's padding above it: the deck stands on its floor.
   const foot = (box.top ?? 0) + (box.height ?? 0);
   const fills = (screenHeight > 0 && screenHeight - foot < screenHeight * 0.05 ? screenHeight : foot) / (ACROSS_SPAN * base.scale);
-  out.zoom = Math.max(fills, Math.min(camera.zoom, keepsLeft));
+  /*
+    0678: and what is kept and the ship's nose in the column together. The nose is held in below by sliding the room
+    left, which slid what is kept off the column's left wherever the two were wider than it: no camera that kept the
+    whole dock was ever close enough for that, and a camera close on the cradle is.
+  */
+  const spans = box.width / ((DOCK.ship + SHIP_REACH - keep + 0.5) * base.scale);
+  out.zoom = Math.max(fills, Math.min(camera.zoom, keepsLeft, spans));
   /*
     0628: and the ship's hull whole in the column on the right, as the lift is kept on the left. The ship stands in
     the middle of the open deck past the workshop wall, and a phone's column — a third of the screen — is narrower
     than a desktop's: at 480x320 its nose ran past the column's edge. The room is slid left until it is in; on a
     desktop's column it already is, and this asks nothing.
   */
+  /*
+    0678: and slid right to keep the workshop wall, where the room's height held the camera closer than the keep
+    would — a 4:3's. A camera on the cradle or Cosmo's stands its point well right of the wall, and at 1024x768 the
+    wall and the monitor on it went under the plate. The nose's slide below is the later, so the hull wins where
+    both cannot be in. Not the `room` camera's lift: slid for it, the hangar's bay left a 4:3's column (0568).
+  */
+  if (reach > 0 && slidesFor(camera.keep)) out.x = Math.max(out.x, (box.left + reach * base.scale * out.zoom) / width);
   const nose = (DOCK.ship + SHIP_REACH - out.along) * base.scale * out.zoom;
   out.x = Math.min(out.x, (box.left + box.width - nose) / width);
+}
+
+/**
+ * 0678: the furthest left, along, a stand's camera keeps on its column — by what the row says it keeps. `room`
+ * is 0571's and 0572's: the lift and every keeper's shopfront. `workshop` is the wall the cockpit monitor hangs
+ * from, to the outside of its posts (0628), which every tab shows.
+ */
+function keptFrom(camera: StandCamera): number {
+  switch (camera.keep) {
+    case 'room': {
+      let keep: number = DOCK.lift - LIFT_HALF;
+      for (let k = 0; k < KEEPER_KINDS.length; k++) keep = Math.min(keep, DOCK.shops[KEEPER_KINDS[k]!] - PORT_EXTENT.alcove / 2);
+      return keep;
+    }
+    case 'workshop':
+      return DOCK.workshop.along - DOCK.workshop.half;
+    default: {
+      const never: never = camera.keep;
+      return never;
+    }
+  }
+}
+
+/** 0678: whether the room is slid right to keep what a camera keeps, where the room's height holds it too close. */
+function slidesFor(keep: StandKeep): boolean {
+  switch (keep) {
+    // 0568's bay is kept before the lift on a 4:3, as it was before there was a second kind.
+    case 'room':
+      return false;
+    // The cockpit monitor hangs on it, and a monitor under the plate is a readout the player cannot read.
+    case 'workshop':
+      return true;
+    default: {
+      const never: never = keep;
+      return never;
+    }
+  }
 }
 
 /**
