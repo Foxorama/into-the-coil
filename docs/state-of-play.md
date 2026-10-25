@@ -1198,8 +1198,10 @@ title says why a pilot is locked), and item 3, [0670](decisions/0670-the-plate-f
 family's type and width from the short side, the phone's targets at 44 px, whole faces), and item 4,
 [0671](decisions/0671-the-settings-stand-on-the-sky.md) (Settings' tabs on the title's sky in its plate, the pause
 over the dimmed field), and item 5, [0672](decisions/0672-the-controls-are-a-table.md) (Controls a table of action by
-device, a band of two a switch, Rumble's and Save's lines). **Next is the menus' item 6**, Cosmo's foot and sub-tabs
-and Paint & Parts' thumbnails; the rest follow the order the player gave —
+device, a band of two a switch, Rumble's and Save's lines), and item 6,
+[0673](decisions/0673-cosmos-foot-is-one-line.md) (Cosmo's foot one line, its sub-tabs whole, a lone option's way to
+Cosmo's, the art's picture at the flank's size). **Next is the menus' item 7**, Travel's *Intro* band; the rest
+follow the order the player gave —
 the menus' 1–7, the port's 1–3, the menus' 8, the port's 4–6, the menus' 9.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24

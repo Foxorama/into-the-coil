@@ -197,3 +197,115 @@ describe.runIf(chromePath)('0657 — Cosmo’s shelves show what is for sale, an
     await context.close();
   });
 });
+
+describe.runIf(chromePath)('0673 — Cosmo’s foot is one line, its sub-tabs whole, and a lone option shows the way there', () => {
+  /** A page on the title with a store in which every one of the four golfers' ships is won in. */
+  const opened = async (viewport: { width: number; height: number }): Promise<Page> => {
+    browser ??= await launchChromium({ headless: true });
+    const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+    const won = { ...initialHangar.won, fighter: true, caddie: true, firebird: true, estate: true };
+    const page = await seeded(context, dist, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 5000, won }));
+    await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+    await pastIntro(page);
+    await openHangar(page);
+    return page;
+  };
+  const tab = async (page: Page, from: 'hangar' | 'parts' | 'shop', to: 'parts' | 'shop'): Promise<void> => {
+    await page.locator(`${shown(from)} .${prefixFor(from)}tab`, { hasText: SCREENS[to].heading }).click();
+    await page.waitForSelector(shown(to), { state: 'attached' });
+    await page.waitForTimeout(300);
+  };
+
+  it('stands Buy across the foot on one line with Back beside it, and the filter at the shelf’s head', async () => {
+    for (const viewport of [
+      { width: 1280, height: 720 },
+      { width: 1920, height: 1080 },
+      { width: 667, height: 375 },
+    ]) {
+      const page = await opened(viewport);
+      await tab(page, 'hangar', 'shop');
+      const m = await page.evaluate((p: string) => {
+        const root = document.querySelector('.' + p + 'shown')!;
+        const action = (label: string): HTMLElement | undefined =>
+          [...root.querySelectorAll<HTMLElement>('.' + p + 'action')].find((b) => (b.textContent ?? '').includes(label));
+        const box = (el: Element | undefined | null): DOMRect | null => (el ? el.getBoundingClientRect() : null);
+        const buy = action('Buy');
+        const lines = buy === undefined ? 0 : Math.round(buy.getBoundingClientRect().height / parseFloat(getComputedStyle(buy).lineHeight || '20'));
+        const aisle = root.querySelector(`[data-itc-setting="aisle"]`);
+        const shelf = [...root.querySelectorAll('.' + p + 'band')].find((b) => !b.querySelector('[data-itc-setting="aisle"]') && !b.classList.contains(p + 'band-faces') && b.getClientRects().length > 0);
+        // The shelf's own heading, drawn: it said the open sub-tab's name again under it.
+        const headings = [...root.querySelectorAll<HTMLElement>('.' + p + 'band-label')].filter((h) => h.checkVisibility()).map((h) => h.textContent ?? '');
+        return { buy: box(buy), back: box(action('Back')), owned: box(action('Owned')), aisle: box(aisle), shelf: box(shelf), buyLines: lines, buyText: buy === undefined ? -1 : buy.scrollWidth - buy.clientWidth, headings };
+      }, SHOP);
+      const at = `${viewport.width}x${viewport.height}`;
+      expect(m.buy!.width, `${at}: Buy is not the widest of the foot`).toBeGreaterThan(m.back!.width);
+      expect(Math.abs((m.buy!.top + m.buy!.bottom) / 2 - (m.back!.top + m.back!.bottom) / 2), `${at}: Back is not beside Buy`).toBeLessThan(4);
+      expect(m.buyText, `${at}: Buy's words run out of it`).toBeLessThanOrEqual(1);
+      expect(m.buy!.height, `${at}: Buy is ${m.buy!.height.toFixed(0)} px tall, more than a line of it`).toBeLessThan(m.back!.height + 4);
+      expect(m.owned!.top, `${at}: the filter is not under the sub-tabs`).toBeGreaterThanOrEqual(m.aisle!.bottom - 1);
+      expect(m.owned!.bottom, `${at}: the filter is not over the shelf`).toBeLessThanOrEqual(m.shelf!.top + 1);
+      expect(m.headings, `${at}: the shelf's heading says the open sub-tab's name again`).toEqual([]);
+      await page.context().close();
+    }
+  });
+
+  it('draws every sub-tab whole, never cut short, on every device', async () => {
+    for (const viewport of [
+      { width: 480, height: 320 },
+      { width: 667, height: 375 },
+      { width: 1280, height: 720 },
+      { width: 2560, height: 1080 },
+    ]) {
+      const page = await opened(viewport);
+      await tab(page, 'hangar', 'shop');
+      const cut = await page.evaluate((p: string) => {
+        const strip = document.querySelector<HTMLElement>(`.${p}shown [data-itc-setting="aisle"]`)!;
+        const edge = strip.getBoundingClientRect();
+        return [...strip.querySelectorAll<HTMLElement>('.' + p + 'option')]
+          .filter((t) => getComputedStyle(t).visibility !== 'hidden' && t.getClientRects().length > 0)
+          .filter((t) => {
+            const b = t.getBoundingClientRect();
+            return t.scrollWidth > t.clientWidth + 1 || (b.right > edge.left && b.left < edge.right && (b.left < edge.left - 0.5 || b.right > edge.right + 0.5));
+          })
+          .map((t) => t.textContent);
+      }, SHOP);
+      expect(cut, `${viewport.width}x${viewport.height}: a sub-tab cut short`).toEqual([]);
+      await page.context().close();
+    }
+  });
+
+  it('shows whole chips on Paint & Parts, a lone flame the way to Cosmo’s, and the art as the ship’s flank', async () => {
+    const page = await opened({ width: 1280, height: 720 });
+    await tab(page, 'hangar', 'parts');
+    const p = prefixFor('parts');
+    const cut = await page.evaluate((p: string) => {
+      const out: string[] = [];
+      for (const track of document.querySelectorAll<HTMLElement>(`.${p}shown .${p}plate .${p}options`)) {
+        const edge = track.getBoundingClientRect();
+        for (const chip of track.querySelectorAll<HTMLElement>('.' + p + 'option')) {
+          if (getComputedStyle(chip).visibility === 'hidden' || chip.getClientRects().length === 0) continue;
+          const b = chip.getBoundingClientRect();
+          if (b.right > edge.left && b.left < edge.right && (b.left < edge.left - 0.5 || b.right > edge.right + 0.5)) out.push(chip.textContent ?? '');
+        }
+      }
+      return out;
+    }, p);
+    expect(cut, 'a chip drawn in part on Paint & Parts').toEqual([]);
+    // The Firebird's flame: its standard one alone, since this store owns no other.
+    const more = page.locator(`${shown('parts')} [data-itc-setting="flame"] .${p}cosmos`);
+    expect(await more.isVisible(), 'the lone flame shows no way to Cosmo’s').toBe(true);
+    await more.click();
+    await page.waitForSelector(shown('shop'), { state: 'attached' });
+    const open = await page.locator(`${shown('shop')} [data-itc-setting="aisle"] [aria-pressed="true"]`).innerText();
+    expect(open.trim(), 'the way to Cosmo’s opened another shelf than the flames').toBe(SHELVES.flames.label);
+    // The art: the Paint group's thumbnails at the flank's size.
+    await tab(page, 'shop', 'parts');
+    await page.locator(`${shown('parts')} [data-itc-setting="section"] .${p}option`, { hasText: 'Paint' }).click();
+    await page.waitForTimeout(300);
+    const thumb = await page.locator(`${shown('parts')} [data-itc-setting="art"] .${p}option-thumb`).first().boundingBox();
+    expect(thumb, 'the art has no thumbnail').not.toBeNull();
+    expect(thumb!.width, `the art's picture is ${thumb!.width.toFixed(0)} px across`).toBeGreaterThanOrEqual(80);
+    expect(thumb!.height, `the art's picture is ${thumb!.height.toFixed(0)} px tall`).toBeGreaterThanOrEqual(44);
+    await page.context().close();
+  });
+});
