@@ -69,3 +69,11 @@ at 1.2 s and 6 s. The arm shows only on a screen wide enough, as asked.
 
 - A play: whether the three shops read as three trades, whether the stagger reads as depth or as misalignment,
   and whether the neon is the right size against the lamps' cones.
+- **Two browser suites' budgets, sized under the whole suite (0245).** Run here in a batch of seven,
+  `tests/wheels.browser.test.ts` ran out its 120 s and `tests/workshop.browser.test.ts` its 180 s.
+  - Alone they take 92.5 s and 117.7 s on this branch, and 91.6 s and 119.8 s on `main` before it, so this
+    decision did not slow them.
+  - The wheels' suite took 70.7 s alone before [0680](0680-depth-and-life.md), so the twenty seconds are 0680's or
+    later.
+  - CI, which shards the suites, passed both on 0680's merge. What is owed is each one's time under the whole
+    suite, and a budget of three times the worst.
