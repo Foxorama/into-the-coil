@@ -1203,8 +1203,9 @@ device, a band of two a switch, Rumble's and Save's lines), and item 6,
 Cosmo's, the art's picture at the flank's size), and item 7, [0674](decisions/0674-the-intro-is-a-setting.md)
 (an *Intro* band under Travel: every flight, or the first of a visit); and the port's item 1,
 [0675](decisions/0675-the-station-is-a-ship.md) (the station outside is the Mothership, lit from its bay, with
-`scripts/shot-intro.mjs` to photograph the intro by). **Next is the port's item 2**, the light cast; the rest
-follow the order the player gave —
+`scripts/shot-intro.mjs` to photograph the intro by), and item 2, [0676](decisions/0676-the-light-is-cast.md) (the
+wall lit by its lamps, pools on the deck, the ship lit from its pad, shade, the bar's warm side). **Next is the
+port's item 3**, big forms and the deck as a floor; the rest follow the order the player gave —
 the menus' 1–7, the port's 1–3, the menus' 8, the port's 4–6, the menus' 9.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24

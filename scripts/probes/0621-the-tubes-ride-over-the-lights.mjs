@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'lays the saucer’s side-on tubes over its ring of lights on the pad',
     edit: {
       path: 'src/render/port.ts',
-      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false);',
-      replace: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, true);',
+      // Re-anchored by 0676, which lights the ship from its cradle in the same call.
+      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false, 1);',
+      replace: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, true, 1);',
     },
   },
   {

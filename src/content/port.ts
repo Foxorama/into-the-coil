@@ -170,7 +170,25 @@ export const PORT_KINDS = [
   'workBenches',
   // 0675: the Viper's exhaust still glowing on the bay's sill as the chase shot opens.
   'sill',
+  /*
+    0676: the light cast — the wall tile half lit and lit by the lamp over it; the lamps' pools on the deck, the
+    pads' pools in the player's ink, and the pad's light up the ship's underside; the band of shade under the
+    truss, the catwalk and along the wall's foot; and the bar's light climbing the wall beside its door.
+  */
+  'wallHalf',
+  'wallLit',
+  'lampPool',
+  'padPool',
+  'padLight',
+  'shade',
+  'spillWall',
 ] as const;
+
+/**
+ * 0676: the port's kinds that are light — added to what is under them rather than laid over it, on 0520's terms
+ * for the game's (`Atlas.light`). The pools and the up-light; everything else in the room is body.
+ */
+export const PORT_LIGHT_KINDS: readonly PortKind[] = ['lampPool', 'padPool', 'padLight', 'spillWall'];
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
   looks super basic compared to the level 1 starfield and it should kinda lead straight into level 1."*
@@ -197,7 +215,8 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   lamp: 60,
   bar: 64,
   door: 20,
-  spill: 36,
+  // 0676: 36 to 46 — the bar's light reaching further out of its door, so the room has a warm side.
+  spill: 46,
   pad: 36,
   beam: 36,
   bayTop: 30,
@@ -278,6 +297,15 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   workBenches: 34,
   // 0675: a soft glow, baked at the room's scale and laid at the station's bay mouth.
   sill: 24,
+  // 0676: the lit tiles at the wall's own; the pools a lamp's width and a pad's; the up-light in the ship's box.
+  wallHalf: 20,
+  wallLit: 20,
+  lampPool: 44,
+  padPool: 30,
+  padLight: HANGAR_SHIP,
+  // A band across the top of its box, laid stretched (`SHADE_GROW`): soft by nature, so baked small.
+  shade: 20,
+  spillWall: 40,
 };
 
 /**
