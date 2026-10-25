@@ -168,6 +168,8 @@ export const PORT_KINDS = [
   */
   'workWall',
   'workBenches',
+  // 0675: the Viper's exhaust still glowing on the bay's sill as the chase shot opens.
+  'sill',
 ] as const;
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
@@ -231,7 +233,8 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   pilotRun2: 16,
   pilotRun3: 16,
   pilotLeap: 16,
-  station: 110,
+  // 0675: 110 to 130, so the bay's spill, the mast's beacon and the spar's collar are not cut square at the box.
+  station: 130,
   flash: 40,
   pool: 40,
   contrail: 16,
@@ -273,6 +276,8 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   // 0628: the wall from the catwalk's girder to the deck, in a box as tall; the benches as wide as the wall.
   workWall: 44,
   workBenches: 34,
+  // 0675: a soft glow, baked at the room's scale and laid at the station's bay mouth.
+  sill: 24,
 };
 
 /**

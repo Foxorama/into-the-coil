@@ -320,6 +320,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'pool':
     case 'contrail':
     case 'veil':
+    case 'sill':
       break;
     default: {
       const never: never = kind;
@@ -607,6 +608,11 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'pool':
       // The bar's light lying on the deck in front of its door: the same warm light, flattened.
       radialEllipse(ctx, 0, 0, h, h * 0.16, PORT_INK.lamp, 0.8);
+      return;
+    case 'sill':
+      // 0675: the Viper's burn still hanging in the bay's mouth — her flame's colour, tall and thin as the mouth is.
+      radialEllipse(ctx, 0, 0, h * 0.45, h, VIPER.flame, 0.85);
+      radialEllipse(ctx, 0, 0, h * 0.18, h * 0.6, VIPER.core, 0.7);
       return;
     case 'contrail': {
       // A length of vapour, long across the box and a hair high, soft at both ends and both edges —
@@ -1822,78 +1828,245 @@ function paintViewport(ctx: CanvasRenderingContext2D, palette: Palette): void {
 }
 
 /**
- * The outside of the port — the Mothership's flank, lit windows in rows, running lights at its
- * corners, and the bay the chase came out of glowing in its side.
+ * The outside of the port — 0675: the Mothership, which the clubhouse is aboard. A long hull running off
+ * the left of the shot with a tapered prow; a superstructure along its back with the bridge and an antenna
+ * cluster on it; two modules slung under it; a docking spar reaching out at the camera; and a ring round
+ * the hull just aft of the prow, which the bay hangs in. Windows in strips along its decks, the bar's one
+ * wide warm pane among them, and panel lines that follow the hull. The light comes from the bay: the mouth
+ * is the brightest thing on it, with a warm spill and two floodlights over the door; the hull is dark,
+ * picked out by a rim light along its upper edges rather than a wash from above.
  *
  * Its bay mouth is at `+42` along its own centre and `+2` across, which `src/render/port.ts` leaves
- * from.
+ * from — 0411's numbers, kept.
  */
 function paintStation(ctx: CanvasRenderingContext2D, palette: Palette, h: number): void {
-  const hull = ctx.createLinearGradient(0, -h, 0, h);
-  hull.addColorStop(0, '#46526a');
-  hull.addColorStop(0.55, '#2a3346');
-  hull.addColorStop(1, '#151a26');
-  ctx.fillStyle = hull;
+  /** A closed path through `points`, begun fresh — the station's shapes are filled, stroked and clipped by it. */
+  const outline = (pen: CanvasRenderingContext2D, points: readonly Pt[]): void => {
+    pen.beginPath();
+    pen.moveTo(points[0]![0], points[0]![1]);
+    for (const [x, y] of points.slice(1)) pen.lineTo(x, y);
+    pen.closePath();
+  };
+  const hullInk = '#232b3c';
+  const plateInk = shade(hullInk, 0.07);
+  const rimInk = '#9fb2d8';
+  /** The prow's face, which the mouth is cut into, and the hull's edges either side of it. */
+  const prow = 46;
+  // The hull's outline, aft off the shot's left edge to the prow's face — its taper is where the ring sits.
+  const hull: Pt[] = [
+    [-h, -30],
+    [14, -30],
+    [32, -22],
+    [prow, -15],
+    [prow, 19],
+    [34, 28],
+    [14, 35],
+    [-h, 35],
+  ];
+  // The ring the bay hangs in, edge-on, behind the hull first: its far half.
+  ctx.strokeStyle = shade(hullInk, -0.25);
+  ctx.lineWidth = 3.2;
   ctx.beginPath();
-  ctx.moveTo(-h, -44);
-  ctx.lineTo(28, -44);
-  ctx.lineTo(46, -26);
-  ctx.lineTo(46, 30);
-  ctx.lineTo(30, 48);
-  ctx.lineTo(-h, 48);
-  ctx.closePath();
+  ctx.ellipse(24, 2, 5, 43, 0, Math.PI * 0.5, Math.PI * 1.5);
+  ctx.stroke();
+  // The superstructure along the back, and the bridge on it, raked forward.
+  ctx.fillStyle = shade(hullInk, -0.04);
+  outline(ctx, [
+    [-h, -38],
+    [-4, -38],
+    [6, -30],
+    [-h, -30],
+  ]);
+  ctx.fill();
+  ctx.fillStyle = hullInk;
+  outline(ctx, [
+    [-36, -38],
+    [-33, -46],
+    [-17, -46],
+    [-11, -38],
+  ]);
+  ctx.fill();
+  // The two modules slung under the hull, the larger aft.
+  ctx.fillStyle = shade(hullInk, -0.08);
+  outline(ctx, [
+    [-50, 35],
+    [-8, 35],
+    [-13, 44],
+    [-45, 44],
+  ]);
+  ctx.fill();
+  outline(ctx, [
+    [0, 35],
+    [20, 31],
+    [18, 39],
+    [3, 40],
+  ]);
+  ctx.fill();
+  // The docking spar, out from under the hull and toward the camera, with its collar end-on.
+  ctx.strokeStyle = shade(hullInk, -0.02);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-26, 42);
+  ctx.lineTo(-33, 51);
+  ctx.stroke();
+  ctx.lineWidth = 0.5;
+  ctx.strokeStyle = rgba(rimInk, 0.35);
+  ctx.stroke();
+  ctx.fillStyle = shade(hullInk, 0.05);
+  ctx.beginPath();
+  ctx.ellipse(-33.5, 51.5, 5.5, 2.4, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#0d111a';
+  ctx.beginPath();
+  ctx.ellipse(-33.5, 51.5, 3.4, 1.4, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  radial(ctx, -29, 50.5, 1.2, PORT_INK.pad, 0.9);
+  // The hull itself, flat and dark: the light on it is the bay's and the rim's, not a wash from above.
+  ctx.fillStyle = hullInk;
+  outline(ctx, hull);
   ctx.fill();
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = 0.6;
   ctx.stroke();
   ctx.save();
+  outline(ctx, hull);
   ctx.clip();
-  ctx.strokeStyle = rgba(PORT_INK.seam, 0.7);
+  // A few plates a shade lighter, and the panel lines: decks along it, frames across, raked at the taper.
+  const rng = makeRng('port').stream('windows');
+  ctx.fillStyle = plateInk;
+  for (const [x, y, w, t] of [
+    [-48, -29, 14, 6],
+    [-20, -9, 10, 5],
+    [-38, 15, 16, 7],
+    [2, 21, 12, 6],
+    [8, -29, 10, 5],
+  ] as const) ctx.fillRect(x, y, w, t);
+  ctx.strokeStyle = rgba(PORT_INK.seam, 0.75);
   ctx.lineWidth = 0.3;
-  for (let x = -h; x < 46; x += 9) {
-    ctx.beginPath();
-    ctx.moveTo(x, -44);
-    ctx.lineTo(x, 48);
-    ctx.stroke();
-  }
-  for (let y = -40; y < 48; y += 11) {
+  for (let y = -22; y < 35; y += 8.5) {
     ctx.beginPath();
     ctx.moveTo(-h, y);
-    ctx.lineTo(46, y);
+    ctx.lineTo(prow, y);
     ctx.stroke();
   }
-  const rng = makeRng('port').stream('windows');
-  for (let y = -36; y < 44; y += 5.5) {
-    for (let x = -h + 2; x < 36; x += 3.2) {
-      if (rng.float() < 0.45) continue;
-      ctx.fillStyle = rgba(PORT_INK.lamp, rng.range(0.35, 0.9));
-      ctx.fillRect(x, y, 1.6, 0.9);
+  for (let x = -h + 6; x < 22; x += 12) {
+    ctx.beginPath();
+    ctx.moveTo(x, -30);
+    ctx.lineTo(x, 35);
+    ctx.stroke();
+  }
+  for (const x of [30, 38]) {
+    ctx.beginPath();
+    ctx.moveTo(x - 4, -30);
+    ctx.lineTo(x, 2);
+    ctx.lineTo(x - 4, 35);
+    ctx.stroke();
+  }
+  /*
+    Windows in strips along the decks — runs of panes with gaps between, not a scatter: a few dark, a few
+    warmer, and one long warm pane on the deck the bar is on. The seeded stream is 0411's, so the room is
+    the same room every visit (0021).
+  */
+  for (let y = -26; y < 33; y += 8.5) {
+    let x = -h + 1.5;
+    while (x < 20) {
+      const run = 3 + Math.floor(rng.float() * 7);
+      const dark = rng.float() < 0.18;
+      const warm = !dark && rng.float() < 0.22;
+      for (let i = 0; i < run && x < 20; i++, x += 2.6) {
+        const lit = dark ? 0.08 : rng.range(0.45, 0.85);
+        ctx.fillStyle = rgba(warm ? '#ffb86a' : PORT_INK.lamp, lit);
+        ctx.fillRect(x, y, 1.7, 1.3);
+      }
+      x += 2.6 + rng.float() * 6;
     }
   }
+  // The bar's pane: the Parrot's Perch looks out of the ship here, the one wide warm window on it.
+  ctx.fillStyle = rgba('#ffb86a', 0.95);
+  ctx.fillRect(-31, 3.2, 15, 2.6);
+  radialEllipse(ctx, -23.5, 4.5, 11, 4, '#ffb86a', 0.35);
+  // The bay's light on the prow, warm and strongest round the mouth.
+  radial(ctx, prow, 2, 30, PORT_INK.lamp, 0.4);
   ctx.restore();
-  // The mast and dish on the roof.
-  ctx.fillStyle = '#39445c';
-  ctx.fillRect(9.6, -54, 0.8, 10);
+  // The rim light along the upper edges: the back, the bridge, the taper to the prow.
+  ctx.strokeStyle = rgba(rimInk, 0.85);
+  ctx.lineWidth = 0.6;
+  for (const edge of [
+    [
+      [-h, -38],
+      [-36, -38],
+      [-33, -46],
+      [-17, -46],
+      [-11, -38],
+      [-4, -38],
+      [6, -30],
+      [14, -30],
+      [32, -22],
+      [prow, -15],
+    ],
+    [
+      [-50, 35],
+      [-8, 35],
+    ],
+  ] as Pt[][]) {
+    ctx.beginPath();
+    ctx.moveTo(edge[0]![0], edge[0]![1]);
+    for (const [x, y] of edge.slice(1)) ctx.lineTo(x, y);
+    ctx.stroke();
+  }
+  // The ring's near half, over the hull, lit along its top where it rounds toward the light.
+  ctx.strokeStyle = shade(hullInk, 0.1);
+  ctx.lineWidth = 3.2;
   ctx.beginPath();
-  ctx.ellipse(10, -54, 4, 1.4, -0.3, 0, Math.PI);
+  ctx.ellipse(24, 2, 5, 43, 0, -Math.PI * 0.5, Math.PI * 0.5);
+  ctx.stroke();
+  ctx.strokeStyle = rgba(rimInk, 0.7);
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.ellipse(24, 2, 6.4, 44.4, 0, -Math.PI * 0.5, -Math.PI * 0.1);
+  ctx.stroke();
+  // The antenna cluster on the bridge: a mast with the beacon, a shorter one, and a dish.
+  ctx.fillStyle = '#39445c';
+  ctx.fillRect(-28.4, -54, 0.8, 8);
+  ctx.fillRect(-23.4, -51, 0.6, 5);
+  ctx.beginPath();
+  ctx.ellipse(-19, -48.5, 3.6, 1.2, -0.35, 0, Math.PI);
   ctx.fill();
-  radial(ctx, 10, -54.5, 1.5, PORT_INK.alarm, 1);
-  // The bay mouth, cut into the flank, lit from inside and sealed by its field.
+  radial(ctx, -28, -54.5, 1.6, PORT_INK.alarm, 1);
+  // The bay mouth, cut into the prow, lit from inside and sealed by its field.
   ctx.fillStyle = '#10141e';
-  ctx.fillRect(36, -12, 10, 28);
-  const inside = ctx.createLinearGradient(36, 0, 46, 0);
-  inside.addColorStop(0, rgba(PORT_INK.lamp, 0.55));
-  inside.addColorStop(1, rgba(PORT_INK.lamp, 0.95));
+  ctx.fillRect(36, -12, prow - 36, 28);
+  const inside = ctx.createLinearGradient(36, 0, prow, 0);
+  inside.addColorStop(0, rgba(PORT_INK.lamp, 0.7));
+  inside.addColorStop(1, rgba('#fff4dc', 1));
   ctx.fillStyle = inside;
-  ctx.fillRect(37, -10, 9, 24);
-  ctx.fillStyle = rgba(PORT_INK.pad, 0.45);
-  ctx.fillRect(45, -10, 1.2, 24);
+  ctx.fillRect(37, -10, prow - 37, 24);
+  ctx.fillStyle = rgba(PORT_INK.pad, 0.5);
+  ctx.fillRect(prow - 1, -10, 1.2, 24);
   ctx.fillStyle = PORT_INK.hazard;
   for (let y = -12; y < 17; y += 28) ctx.fillRect(35, y, 12, 0.9);
-  radial(ctx, 46, 2, 14, PORT_INK.lamp, 0.35);
+  // The floodlights over the door and under it, each throwing its cone back along the prow.
+  for (const [x, y, dir] of [
+    [prow - 1, -15.5, 1],
+    [prow - 1, 19.5, -1],
+  ] as const) {
+    const cone = ctx.createLinearGradient(x, y, x, y + dir * 10);
+    cone.addColorStop(0, rgba('#fff4dc', 0.55));
+    cone.addColorStop(1, rgba('#fff4dc', 0));
+    ctx.fillStyle = cone;
+    outline(ctx, [
+      [x, y],
+      [x - 9, y + dir * 10],
+      [x + 1, y + dir * 10],
+    ]);
+    ctx.fill();
+    radial(ctx, x, y, 2, '#fff4dc', 1);
+  }
+  // And the spill out of the mouth into the dark in front of it.
+  radial(ctx, prow, 2, 18, PORT_INK.lamp, 0.45);
   // Running lights, red to port and green to starboard, as a ship has them.
-  radial(ctx, 46, -26, 2, PORT_INK.alarm, 1);
-  radial(ctx, 46, 30, 2, PORT_INK.neon, 1);
+  radial(ctx, prow, -24, 2, PORT_INK.alarm, 1);
+  radial(ctx, prow - 2, 26, 2, PORT_INK.neon, 1);
 }
 
 /*

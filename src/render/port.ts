@@ -841,6 +841,13 @@ const BAY_MOUTH_ACROSS = 2;
 const STATION_ACROSS = 58;
 
 /**
+ * 0675: the dock's planet, far behind the station in the chase — where it hangs, how much of the station's
+ * rate it falls behind at, how lit, and how big beside the dock's own (`DOCK.planetGrow`). A tenth of the
+ * rate, so it is the furthest thing in the shot after the stars; small, so it is far.
+ */
+const FAR_PLANET = { along: 180, across: 22, rate: 0.1, lit: 0.75, grow: 0.6 } as const;
+
+/**
  * One blit in the dark outside, framed `OUTSIDE_ZOOM` about the middle of the view — 0414. The shot is
  * authored in the same world units as the hangar; only where they land and how big is scaled.
  */
@@ -923,8 +930,15 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip
     not framed by `OUTSIDE_ZOOM`, because it is the sky the level is drawn in and the level is not zoomed.
   */
   paintSky(surface, view, fallen(s, SKY_SPEED), sky, 0, 0, GAME_BASE);
+  // 0675: the planet Hangin' Out's bay looks out on, far behind, so the chase and the dock are one sky.
+  putOut(surface, view, PORT_SPRITE.planet, FAR_PLANET.along - fallen(s, OUTSIDE.station * FAR_PLANET.rate), FAR_PLANET.across, FAR_PLANET.lit, 0, DOCK.planetGrow * FAR_PLANET.grow);
   const station = stationAlong(s);
-  if (station > -PORT_EXTENT.station) putOut(surface, view, PORT_SPRITE.station, station, STATION_ACROSS);
+  if (station > -PORT_EXTENT.station) {
+    putOut(surface, view, PORT_SPRITE.station, station, STATION_ACROSS);
+    // 0675: and the Viper's burn still hanging in the bay's mouth, gone over the shot's first second.
+    const sill = 1 - s / STEPS_PER_SECOND;
+    if (sill > 0) putOut(surface, view, PORT_SPRITE.sill, station + BAY_MOUTH_ALONG + 2, STATION_ACROSS + BAY_MOUTH_ACROSS, sill);
+  }
   // The Viper, ahead, holding her line and breaking from it — until she opens her throttle and is gone.
   const viperAlong = viperAlongAt(s);
   const viperAcross = viperLine(s);
