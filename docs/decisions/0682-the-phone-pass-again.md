@@ -60,7 +60,19 @@ Stylesheet rules, and one more read of a box when a bubble is placed. No sim, no
 - **`tests/pause.browser.test.ts`**, *0682*, new. At 844×390 touch, from the pause plate's right edge to the left
   edge of the score's digits at the top of their pop, at least the plate's width. In CSS pixels, the pop held at its
   first frame.
-- Probed in `scripts/probes/0682-the-phone-pass.mjs`, PROVE_RESULT
+- Probed in `scripts/probes/0682-the-phone-pass.mjs`, 4/4 red:
+  - The plate 0.6 em from the score again: the popped digits 19.2 px from a plate 31.2 px wide.
+  - No reach kept beside the digits: 20.5 px.
+  - The bubble hung where the keeper is: 819 px² of the balance under Unity's bubble on Hangin' Out.
+  - The desktop type worn upright: on Cosmo's, *Buy* drawn where a press cannot reach it.
+  - A plate held upright that no longer scrolls was tried first and stayed green. At both sizes every tab's plate
+    fits without scrolling, so that break put nothing off the screen. The probe was wrong, not the guard, and it was
+    replaced.
+- **Not this decision's, and recorded:** under `npm run prove`'s baseline, with another suite running beside it,
+  0370's *every tier shows its line* in `tests/layout.browser.test.ts` ran out its 120 s once. Alone it takes 84 s.
+  It is not touched here; every rule in this item is under a touch screen or on the stand, and that test opens
+  neither. Like the two budgets [0681](0681-the-dock-dressed.md) owes, its limit has never been sized under the
+  whole suite (0245).
 
 **Not held by any guard:** that the plate's own reach for a thumb (0511's `::before`) clears the score. It is a hit
 area and not a picture. Also not held: that the bubble covering an awning reads well.
@@ -74,3 +86,4 @@ area and not a picture. Also not held: that the bubble covering an awning reads 
 - **The balance on the narrowest phone.** At 480×320 it is behind the plate. Either it moves into the plate's foot by
   the screen's size, or it stands over the plate. The player chooses.
 - Safe areas, on a device with a notch.
+- 0370's tier test's budget, measured under the whole suite and set at three times the worst (0245).
