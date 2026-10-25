@@ -7,6 +7,7 @@ import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar } from './title.ts';
 import { DOCK, PORT_EXTENT, PORT_INK } from '../src/content/port.ts';
+import { SCREENS } from '../src/state/screens.ts';
 
 /**
  * THE MONITOR HANGS ON A WALL — `docs/decisions/0628-the-monitor-hangs-on-a-wall.md`.
@@ -67,8 +68,9 @@ async function around(page: Page, p: string, above: number): Promise<{ fifths: n
   return page.evaluate(
     ({ prefix, above, alcove, hang, deck, hazard, woods }) => {
       const dash = document.querySelector<HTMLElement>('.' + prefix + 'dash')!.getBoundingClientRect();
-      const door = [...document.querySelectorAll<HTMLElement>('.' + prefix + 'shop-door')].find((d) => !d.hidden)!.getBoundingClientRect();
-      const unit = door.width / alcove;
+      // 0681: Cosmo's door, read at Cosmo's shop's size — each shop has its own.
+      const door = [...document.querySelectorAll<HTMLElement>('.' + prefix + 'shop-door')].find((d) => !d.hidden && d.getAttribute('aria-label') === alcove.label)!.getBoundingClientRect();
+      const unit = door.width / alcove.wide;
       const canvas = document.querySelector<HTMLCanvasElement>('#app canvas')!;
       const k = canvas.width / canvas.getBoundingClientRect().width;
       const ctx = canvas.getContext('2d')!;
@@ -98,7 +100,7 @@ async function around(page: Page, p: string, above: number): Promise<{ fifths: n
     {
       prefix: p,
       above,
-      alcove: PORT_EXTENT.alcove * DOCK.shopScale,
+      alcove: { label: SCREENS.shop.heading, wide: PORT_EXTENT.alcove * DOCK.shopGrow.cosmo },
       hang: DOCK.workshop.hang,
       deck: 100,
       hazard: rgb(PORT_INK.hazard),

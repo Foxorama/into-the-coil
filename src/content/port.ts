@@ -235,6 +235,18 @@ export const PORT_KINDS = [
   'fan2',
   'beaconCone',
   'drone',
+  /*
+    0681: the dock dressed as a place — each keeper's shopfront its own shape over the alcove, a neon picture over
+    the mezzanine, an arm reaching out past the bay on a wide screen, and the polish: grime along the wall's foot
+    and one dented panel.
+  */
+  'frontWorkshop',
+  'frontBooth',
+  'frontDisplay',
+  'neonMark',
+  'dockArm',
+  'grime',
+  'wallDent',
 ] as const;
 
 /**
@@ -397,6 +409,14 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   fan2: 10,
   beaconCone: 40,
   drone: 8,
+  // 0681: the fronts at the alcove's size and a margin for what stands out of it — the hoist's arm, the hood's duct.
+  frontWorkshop: 44,
+  frontBooth: 44,
+  frontDisplay: 36,
+  neonMark: 12,
+  dockArm: 90,
+  grime: 20,
+  wallDent: 20,
 };
 
 /**
@@ -426,9 +446,15 @@ export const DOCK = {
    * 0572: a little closer together and on toward the bay, so the lift stands at the catwalk's end.
    */
   shops: { unity: 86, mmxxvi: 115, cosmo: 144 } as Record<KeeperKind, number>,
-  /** How much the shops and their keepers are drawn down from the size they were baked for the floor. */
-  shopScale: 0.78,
-  shopAcross: 48.3,
+  /**
+   * How much each shop and its keeper are drawn down from the size they were baked for the floor, and each
+   * shopfront's centre across — its counter's foot on the catwalk (`catwalk`, the counter's box 30 tall).
+   * 0681: each shop's own, where all three were 0.78 and 48.3. The nearer a shop stands the larger it is drawn
+   * and the further down its foot, so MMXXVI's stands back and Unity's and Cosmo's stand forward of it, each
+   * overlapping its neighbour's frame; drawn farthest first (`SHOP_ORDER`).
+   */
+  shopGrow: { unity: 0.86, mmxxvi: 0.76, cosmo: 0.9 } as Record<KeeperKind, number>,
+  shopAcross: { unity: 47.1, mmxxvi: 47.8, cosmo: 46.5 } as Record<KeeperKind, number>,
   /**
    * The pilot's ship's centre on its cradle, along, how high it rides, and how much larger than the intro's.
    * 0572: higher off the cradle — *"move the car slightly higher and hover it a bit more"* — and bobbing

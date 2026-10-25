@@ -173,6 +173,29 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     }
   });
 
+  /*
+    ⚠️ **THREE SHOPS OF THREE SHAPES, EACH ON THE CATWALK — 0681.** Each keeper's row names its own shopfront, each shop
+    its own size, and the nearer is drawn over the farther. What would undo it without a sound: one front on two rows,
+    one size for every shop, or a shop moved across so its counter floats over the catwalk or sinks through it.
+  */
+  it('0681 — stands three shops of three shapes, each its own size, on the catwalk, the nearer over the farther', () => {
+    const fronts = KEEPER_KINDS.map((kind) => KEEPERS[kind].front);
+    expect(new Set(fronts).size, `two shops wear one front: ${fronts.join(', ')}`).toBe(KEEPER_KINDS.length);
+    const grows = KEEPER_KINDS.map((kind) => DOCK.shopGrow[kind]);
+    expect(new Set(grows).size, `two shops stand at one size: ${grows.join(', ')}`).toBe(KEEPER_KINDS.length);
+    for (const kind of KEEPER_KINDS) {
+      // The counter's foot: its box's half below the shop's centre, at the shop's size — on the catwalk, or a unit back on it.
+      const foot = DOCK.shopAcross[kind] + (PORT_EXTENT[KEEPERS[kind].counter] / 2) * DOCK.shopGrow[kind];
+      expect(foot, `${kind}'s counter does not stand on the catwalk`).toBeLessThanOrEqual(DOCK.catwalk + 0.05);
+      expect(foot, `${kind}'s counter does not stand on the catwalk`).toBeGreaterThanOrEqual(DOCK.catwalk - 1.5);
+    }
+    const blits = drawStand('hangar', 1280, 720);
+    const alcoves = all(blits, 'alcove');
+    expect(alcoves, 'the shops are not each drawn once').toHaveLength(KEEPER_KINDS.length);
+    // Drawn in order of size: each alcove at least as large as the one before it.
+    for (let i = 1; i < alcoves.length; i++) expect(alcoves[i]!.scale, 'a nearer shop is drawn under a farther one').toBeGreaterThanOrEqual(alcoves[i - 1]!.scale);
+  });
+
   it('keeps the room over every edge of the screen, so no camera shows the void it is painted on', () => {
     /*
       ⚠️ **AND THE WIDEST SCREEN THE GAME DRAWS ON**, at its aspect clamp: the guard's sizes stop at 2.2 to

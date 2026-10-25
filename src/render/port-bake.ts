@@ -326,6 +326,13 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'fan2':
     case 'beaconCone':
     case 'drone':
+    case 'frontWorkshop':
+    case 'frontBooth':
+    case 'frontDisplay':
+    case 'neonMark':
+    case 'dockArm':
+    case 'grime':
+    case 'wallDent':
     case 'bayTop':
     case 'bayBottom':
     case 'field':
@@ -395,16 +402,28 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       ctx.fillStyle = PORT_INK.wallDark;
       ctx.fillRect(-h, -h, extent, 0.5);
       ctx.fillRect(-h, -h, 0.5, extent);
+      // 0681: the seams' shadow, along the panel's inset under its top edge and inside its left one.
+      ctx.fillStyle = rgba(PORT_INK.wallDark, 0.55);
+      ctx.fillRect(-h + 1.2, -h + 1.2, extent - 2.4, 0.35);
+      ctx.fillRect(-h + 1.2, -h + 1.2, 0.35, extent - 2.4);
       for (const [x, y] of [[-h + 2.2, -h + 2.2], [h - 2.2, -h + 2.2], [-h + 2.2, h - 2.2], [h - 2.2, h - 2.2]] as const) {
         ctx.fillStyle = PORT_INK.seam;
         ctx.beginPath();
         ctx.arc(x, y, 0.4, 0, Math.PI * 2);
         ctx.fill();
+        // 0681: lit from above — a light point on its top, a dark one under it.
+        ctx.fillStyle = shade(PORT_INK.seam, 0.5);
+        ctx.fillRect(x - 0.15, y - 0.4, 0.3, 0.2);
+        ctx.fillStyle = PORT_INK.wallDark;
+        ctx.fillRect(x - 0.2, y + 0.35, 0.4, 0.2);
       }
       ctx.fillStyle = PORT_INK.seam;
       ctx.fillRect(-h, 3, extent, 1.3);
       ctx.fillStyle = shade(PORT_INK.seam, 0.25);
       ctx.fillRect(-h, 3, extent, 0.3);
+      // 0681: and the conduit's shadow on the panel under it.
+      ctx.fillStyle = rgba(PORT_INK.wallDark, 0.5);
+      ctx.fillRect(-h, 4.3, extent, 0.45);
       /*
         0676: and the lamp's light on it — the panel warmed and brighter toward the top, where the lamp is, and its
         upper edge catching it. Half for a tile beside a lamp or under one but low on the wall; whole under one.
@@ -722,6 +741,15 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
         ctx.lineTo(x - 2, h);
         ctx.stroke();
       }
+      // 0681: scuffs — a few short strokes where boots and skids have worn it, paler than the plank.
+      ctx.strokeStyle = rgba(PORT_INK.seam, 0.45);
+      ctx.lineWidth = 0.25;
+      for (const [x, y, l] of [[-5, -3, 3], [3.5, 1.5, 2.2], [-1, 5, 2.8]] as const) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + l, y + l * 0.12);
+        ctx.stroke();
+      }
       return;
     }
     case 'lamp': {
@@ -986,6 +1014,42 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       ctx.fill();
       return;
     }
+    case 'frontWorkshop':
+      paintFrontWorkshop(ctx, palette);
+      return;
+    case 'frontBooth':
+      paintFrontBooth(ctx, palette);
+      return;
+    case 'frontDisplay':
+      paintFrontDisplay(ctx, palette);
+      return;
+    case 'neonMark':
+      paintNeonMark(ctx, px);
+      return;
+    case 'dockArm':
+      paintDockArm(ctx, h);
+      return;
+    case 'grime': {
+      // 0681: the wall's foot where the deck meets it, grimed — a brown-dark band rising off the box's bottom, laid stretched.
+      const grime = ctx.createLinearGradient(0, h, 0, h - extent * 0.3);
+      grime.addColorStop(0, 'rgba(40, 30, 22, 0.55)');
+      grime.addColorStop(1, 'rgba(40, 30, 22, 0)');
+      ctx.fillStyle = grime;
+      ctx.fillRect(-h, h - extent * 0.3, extent, extent * 0.3);
+      return;
+    }
+    case 'wallDent': {
+      // 0681: one panel knocked in — a dent's shadow and its lit rim, and paint chipped off round it.
+      radialEllipse(ctx, -1, 1, 4.5, 3, PORT_INK.wallDark, 0.75);
+      ctx.strokeStyle = rgba(shade(PORT_INK.wall, 0.35), 0.8);
+      ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      ctx.ellipse(-1.2, 0.6, 4.4, 2.9, -0.2, Math.PI * 1.05, Math.PI * 1.85);
+      ctx.stroke();
+      ctx.fillStyle = PORT_INK.seam;
+      for (const [x, y] of [[3, -2], [3.8, -1.2], [-5.6, 2.4]] as const) ctx.fillRect(x, y, 0.6, 0.4);
+      return;
+    }
     case 'drone': {
       // 0680: a maintenance drone — a body, two rotor arms, and a working light under it.
       ctx.fillStyle = '#3d4860';
@@ -1221,6 +1285,195 @@ function paintSpar(ctx: CanvasRenderingContext2D, h: number): void {
   ctx.ellipse(-h * 0.3, -12, 5, 2, 0, Math.PI, 0);
   ctx.fill();
   radial(ctx, -h * 0.3, -14.5, 1.2, PORT_INK.alarm, 0.9);
+}
+
+/*
+  ── THE SHOPFRONTS — 0681 ────────────────────────────────────────────────────────────────────────
+
+  Each laid over the alcove (`paintAlcove`, its recess ±15 across and -16 to 15 down, its frame to ±17 and -18) and
+  under the keeper and the counter, so a front frames them and never covers a face. In the alcove's units.
+*/
+
+/** Unity's workshop: a roller door rolled up into its drum under the head, its guides down both sides, and a hoist out to the right. */
+function paintFrontWorkshop(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const steel = shade(palette.blade, -0.45);
+  // The door, rolled up: its drum under the frame's head, and the bottom few slats still hanging below it.
+  ctx.fillStyle = shade(steel, -0.2);
+  ctx.fillRect(-15.5, -17.6, 31, 3.4);
+  ctx.fillStyle = shade(steel, 0.2);
+  ctx.fillRect(-15.5, -17.6, 31, 0.4);
+  for (let y = -14.2; y < -11.4; y += 0.9) {
+    ctx.fillStyle = steel;
+    ctx.fillRect(-14.8, y, 29.6, 0.75);
+    ctx.fillStyle = shade(steel, 0.18);
+    ctx.fillRect(-14.8, y, 29.6, 0.15);
+  }
+  // Its bottom rail and handle, in the hazard's gold.
+  ctx.fillStyle = palette.hazard;
+  ctx.fillRect(-14.8, -11.4, 29.6, 0.5);
+  ctx.fillStyle = shade(steel, -0.4);
+  ctx.fillRect(-2, -10.9, 4, 0.6);
+  // The guides it runs in, down both sides of the frame, striped at their foot.
+  for (const x of [-16.2, 15.2]) {
+    ctx.fillStyle = shade(steel, -0.1);
+    ctx.fillRect(x, -14.2, 1, 29);
+    for (let y = 10; y < 14.6; y += 1.2) {
+      ctx.fillStyle = (y - 10) % 2.4 < 1.2 ? palette.hazard : palette.space;
+      ctx.fillRect(x, y, 1, 0.6);
+    }
+  }
+  // The hoist: a beam out over the right of the shop, its trolley, a chain and a hook.
+  ctx.fillStyle = shade(steel, -0.25);
+  ctx.fillRect(8, -20, 13.5, 1.6);
+  ctx.fillStyle = shade(steel, 0.15);
+  ctx.fillRect(8, -20, 13.5, 0.35);
+  ctx.fillStyle = shade(steel, -0.4);
+  ctx.fillRect(18, -18.6, 2.6, 1.6);
+  ctx.strokeStyle = shade(palette.blade, 0.1);
+  ctx.lineWidth = 0.3;
+  ctx.setLineDash([0.5, 0.35]);
+  ctx.beginPath();
+  ctx.moveTo(19.3, -17);
+  ctx.lineTo(19.3, -7.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = palette.hazard;
+  ctx.lineWidth = 0.55;
+  ctx.beginPath();
+  ctx.arc(19.3, -6.4, 1, -Math.PI / 2, Math.PI * 0.8);
+  ctx.stroke();
+}
+
+/** MMXXVI's spray booth: an extractor hood over the shop with its duct up the wall, a strip light under it, and overspray. */
+function paintFrontBooth(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const metal = shade(palette.blade, -0.5);
+  // The duct up the wall from the hood's crown, banded.
+  ctx.fillStyle = shade(metal, -0.1);
+  ctx.fillRect(-3.5, -22, 7, 7);
+  ctx.fillStyle = shade(metal, 0.2);
+  for (const y of [-21, -18]) ctx.fillRect(-3.8, y, 7.6, 0.6);
+  // The hood: wider at its mouth than its crown, a grille of slots across it.
+  ctx.fillStyle = metal;
+  ctx.beginPath();
+  ctx.moveTo(-10, -15.4);
+  ctx.lineTo(10, -15.4);
+  ctx.lineTo(15.4, -10.6);
+  ctx.lineTo(-15.4, -10.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = shade(metal, 0.3);
+  ctx.fillRect(-15.4, -10.9, 30.8, 0.4);
+  ctx.fillStyle = shade(metal, -0.35);
+  for (let x = -8; x <= 8; x += 2) ctx.fillRect(x - 0.3, -14.6, 0.6, 3);
+  // A strip light under its mouth, the booth's own light on the work.
+  ctx.fillStyle = '#eaf6ff';
+  ctx.fillRect(-13, -10.4, 26, 0.4);
+  const fall = ctx.createLinearGradient(0, -10, 0, 0);
+  fall.addColorStop(0, rgba('#eaf6ff', 0.22));
+  fall.addColorStop(1, rgba('#eaf6ff', 0));
+  ctx.fillStyle = fall;
+  ctx.fillRect(-14.5, -10, 29, 10);
+  // Overspray on the frame's posts and the back wall's corners, in the inks the shop paints with.
+  const paints = [palette.enemy, palette.hazard, palette.acid, palette.player, palette.void];
+  for (let i = 0; i < 26; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const x = side * (13.4 + ((i * 7) % 5) * 0.8);
+    const y = -9 + ((i * 11) % 19);
+    ctx.fillStyle = rgba(paints[i % paints.length]!, 0.75);
+    ctx.beginPath();
+    ctx.arc(x, y, 0.22 + ((i * 3) % 4) * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** Cosmo's glass display: a lit case on the back wall, two glass shelves of wares glowing, gilt-framed, and the glass's sheen. */
+function paintFrontDisplay(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  // The case's light, and the glass over it.
+  const lit = ctx.createLinearGradient(0, -15, 0, -3);
+  lit.addColorStop(0, rgba('#fff2d0', 0.55));
+  lit.addColorStop(1, rgba(palette.ally, 0.25));
+  ctx.fillStyle = lit;
+  ctx.fillRect(-12, -15, 24, 12);
+  // The wares on two glass shelves: small, each a glow of its own ink.
+  const wares = [palette.hazard, palette.player, palette.enemy, palette.acid, palette.impact, palette.ally];
+  for (const [y, from] of [[-10.5, 0], [-5.5, 2]] as const) {
+    ctx.fillStyle = rgba('#dff6ff', 0.55);
+    ctx.fillRect(-11.5, y + 0.6, 23, 0.3);
+    for (let i = 0; i < 6; i++) {
+      const x = -9.5 + i * 3.8;
+      const ink = wares[(i + from) % wares.length]!;
+      radial(ctx, x, y - 0.6, 1.4, ink, 0.45);
+      ctx.fillStyle = ink;
+      ctx.fillRect(x - 0.6, y - 1.4, 1.2, 1.9);
+    }
+  }
+  // The gilt frame, its spotlights on top, and two streaks of sheen across the glass.
+  ctx.strokeStyle = palette.hazard;
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(-12, -15, 24, 12);
+  for (const x of [-8, 0, 8]) radial(ctx, x, -15.4, 1, '#fff2d0', 0.9);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(-9, -3.4);
+  ctx.lineTo(-4, -14.6);
+  ctx.moveTo(-6.6, -3.4);
+  ctx.lineTo(-3.4, -10.6);
+  ctx.stroke();
+}
+
+/** 0681: the dock's neon over the mezzanine — a wrench crossed with a star, the trade and the shine, a picture and not a word. */
+function paintNeonMark(ctx: CanvasRenderingContext2D, px: number): void {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 0.5;
+  ctx.shadowBlur = 1.2 * px;
+  // The wrench, on the diagonal: its handle and its open jaw.
+  ctx.shadowColor = '#7fe8ff';
+  ctx.strokeStyle = '#c8f6ff';
+  ctx.beginPath();
+  ctx.moveTo(-3.6, 3.6);
+  ctx.lineTo(1.6, -1.6);
+  ctx.moveTo(1.6, -1.6);
+  ctx.arc(2.6, -2.6, 1.6, Math.PI * 0.75, Math.PI * 2.25);
+  ctx.stroke();
+  // The star behind it, five points.
+  ctx.shadowColor = '#ffd36b';
+  ctx.strokeStyle = '#ffe9b0';
+  ctx.beginPath();
+  for (let i = 0; i <= 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 === 0 ? 3.6 : 1.5;
+    const x = -1.6 + Math.cos(a) * r;
+    const y = -1.4 + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** 0681: the dock's arm past the bay on a wide screen's right — a long girder reaching in from the right to a lit docking collar. */
+function paintDockArm(ctx: CanvasRenderingContext2D, h: number): void {
+  ctx.fillStyle = '#1a2130';
+  ctx.fillRect(-h * 0.62, -1.6, h * 1.62, 3.2);
+  ctx.strokeStyle = '#283247';
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  for (let x = -h * 0.62; x < h; x += 4) {
+    ctx.moveTo(x, -1.6);
+    ctx.lineTo(x + 2, 1.6);
+    ctx.lineTo(x + 4, -1.6);
+  }
+  ctx.stroke();
+  // The collar at its end, lit round its mouth, and a beacon on it.
+  ctx.fillStyle = '#232c3f';
+  ctx.fillRect(-h * 0.8, -6, h * 0.2, 12);
+  ctx.fillStyle = '#2f3a52';
+  ctx.fillRect(-h * 0.8, -6, h * 0.2, 1);
+  for (const y of [-3.5, 0, 3.5]) radial(ctx, -h * 0.82, y, 0.9, '#7fd8ff', 0.8);
+  radial(ctx, -h * 0.7, -7.2, 1.1, PORT_INK.alarm, 0.9);
 }
 
 /** 0680: a wall fan in its round housing, its four blades turned by `third` thirds of a quarter turn. */
