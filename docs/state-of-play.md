@@ -1200,8 +1200,9 @@ family's type and width from the short side, the phone's targets at 44 px, whole
 over the dimmed field), and item 5, [0672](decisions/0672-the-controls-are-a-table.md) (Controls a table of action by
 device, a band of two a switch, Rumble's and Save's lines), and item 6,
 [0673](decisions/0673-cosmos-foot-is-one-line.md) (Cosmo's foot one line, its sub-tabs whole, a lone option's way to
-Cosmo's, the art's picture at the flank's size). **Next is the menus' item 7**, Travel's *Intro* band; the rest
-follow the order the player gave —
+Cosmo's, the art's picture at the flank's size), and item 7, [0674](decisions/0674-the-intro-is-a-setting.md)
+(an *Intro* band under Travel: every flight, or the first of a visit). **Next is the port's item 1**, the station
+outside; the rest follow the order the player gave —
 the menus' 1–7, the port's 1–3, the menus' 8, the port's 4–6, the menus' 9.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24

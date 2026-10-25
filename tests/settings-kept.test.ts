@@ -12,6 +12,7 @@ import { initialSettings, type SettingsState } from '../src/state/slices/setting
 import { SOUND_KINDS } from '../src/content/sound.ts';
 import { RUMBLE_KINDS } from '../src/content/rumble.ts';
 import { TRAVEL_KINDS } from '../src/content/travel.ts';
+import { INTRO_KINDS } from '../src/content/intro.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { GOLFER_KINDS } from '../src/content/golfers.ts';
 import { HAND_KINDS, STEER_KINDS } from '../src/content/touch.ts';
@@ -45,6 +46,7 @@ const moved = (): SettingsState => ({
   sound: SOUND_KINDS.find((k) => k !== initialSettings.sound)!,
   rumble: RUMBLE_KINDS.find((k) => k !== initialSettings.rumble)!,
   travel: TRAVEL_KINDS.find((k) => k !== initialSettings.travel)!,
+  intro: INTRO_KINDS.find((k) => k !== initialSettings.intro)!,
   difficulty: DIFFICULTY_KINDS.find((k) => k !== initialSettings.difficulty)!,
   pilot: GOLFER_KINDS.find((k) => k !== initialSettings.pilot)!,
   hand: HAND_KINDS.find((k) => k !== initialSettings.hand)!,
@@ -149,6 +151,17 @@ describe('0510 — the settings are kept', () => {
     const before = JSON.stringify({ v: SETTINGS_VERSION, sound: chosen.sound });
     expect(settingsFrom(before, initialSettings).rumble).toBe(initialSettings.rumble);
     expect(initialSettings.rumble, 'the hands are the loud game by default (0024)').toBe('on');
+  });
+
+  it('0674: the intro is kept, a document from before it reads as every flight, and the version did not move', () => {
+    const store = memory();
+    const chosen = moved();
+    writeSettings(store, chosen);
+    expect(readSettings(store, initialSettings).intro, 'the intro was forgotten').toBe('first');
+    const before = JSON.stringify({ v: SETTINGS_VERSION, sound: chosen.sound });
+    expect(settingsFrom(before, initialSettings).intro, 'a save from before the band reads as other than 0635’s rule').toBe('every');
+    // The rollback: a build before the band reads its field as nothing, per field, and the rest as written.
+    expect(SETTINGS_VERSION, 'the intro bumped the version: a build before it reads the whole document as the defaults').toBe(1);
   });
 
   it('the pilot is not kept — written without it, and read as whatever the visit starts with', () => {

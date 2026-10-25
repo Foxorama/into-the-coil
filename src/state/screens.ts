@@ -22,6 +22,7 @@ import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
 import { RUMBLES, RUMBLE_KINDS } from '../content/rumble.ts';
 // 0340: the crossing's knob, on the two lines above's exact terms.
 import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
+import { INTROS, INTRO_KINDS } from '../content/intro.ts';
 // 0512: the touch section's two, on the same terms.
 import { HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
@@ -105,7 +106,8 @@ export interface ScreenAction {
 // 0517: and whether a run that runs out may be continued.
 // 0590: and no longer the look, whose one alternative had stopped being what it was asked for as.
 // 0613: and whether a landing is felt in the hands.
-export type SettingName = 'difficulty' | 'sound' | 'rumble' | 'travel' | 'pilot' | 'hand' | 'steer' | 'credits';
+// 0674: and which flights play the intro.
+export type SettingName = 'difficulty' | 'sound' | 'rumble' | 'travel' | 'intro' | 'pilot' | 'hand' | 'steer' | 'credits';
 
 /**
  * Every slot the hangar fits on a ship — 0521. Closed. The plate is the first; the plan's queue
@@ -1163,6 +1165,16 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         name: 'travel',
         label: 'Travel',
         options: TRAVEL_KINDS.map((kind) => ({ label: TRAVELS[kind].title, hint: TRAVELS[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+        ends: 'round',
+      },
+      // 0674: under Travel, which flights play the intro — 0635's every flight, or 0513's first of a visit.
+      {
+        name: 'intro',
+        label: 'Intro',
+        options: INTRO_KINDS.map((kind) => ({ label: INTROS[kind].title, hint: INTROS[kind].hint })),
         faces: 'words',
         on: 'all',
         press: 'steps',
