@@ -128,6 +128,25 @@ export type SettingName = 'difficulty' | 'sound' | 'rumble' | 'travel' | 'pilot'
 // 0663: the tubes as two slots, the left and the right, where 0578's `rack` was one band of every pair.
 export const SLOT_NAMES = ['plate', 'dangle', 'special', 'gun', 'rim', 'art', 'livery', 'tone', 'flame', 'tubeLeft', 'tubeRight', 'shell'] as const;
 export type SlotName = (typeof SLOT_NAMES)[number];
+
+/**
+ * The shelf at Cosmo's that sells what a slot wears — 0673, or `null` for a slot nothing is sold for (a gun, a
+ * special, the art, the paint: won or free). A band with one option to show beside it the way to the rest.
+ */
+export const SLOT_SHELVES: Record<SlotName, ShelfKind | null> = {
+  plate: null,
+  dangle: 'hanging',
+  special: null,
+  gun: null,
+  rim: 'wheels',
+  art: null,
+  livery: null,
+  tone: null,
+  flame: 'flames',
+  tubeLeft: 'tubes',
+  tubeRight: 'tubes',
+  shell: 'shields',
+};
 /** Whether a band's name is a slot of the ship — 0561, so the shell can fit or try on any slot in one arm. */
 export function isSlot(name: ChoiceName): name is SlotName {
   return SLOT_NAMES.some((slot) => slot === name);

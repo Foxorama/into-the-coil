@@ -29,7 +29,7 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { CONTROL_ROWS, CONTROL_TABLE, SCREENS, faceCard, type ChoiceName, type Screen } from '../state/screens.ts';
+import { CONTROL_ROWS, CONTROL_TABLE, SCREENS, SLOT_SHELVES, faceCard, isSlot, type ChoiceName, type Screen } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf, type PickupKind } from '../content/pickups.ts';
 import { SIDES, SPECIALS } from '../content/specials.ts';
@@ -2634,7 +2634,11 @@ ${each('-tab-key[hidden]')} { display: none; }
 .itc-shop-keeper-name, .itc-hangar-keeper-name, .itc-parts-keeper-name { font-size: 1.15em; font-weight: 800; letter-spacing: 0.02em; }
 .itc-shop-keeper-line, .itc-hangar-keeper-line, .itc-parts-keeper-line { margin: 0; font-size: 0.85em; font-style: italic; opacity: 0.92; }
 .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) { grid-template-columns: max-content auto minmax(0, 1fr) auto; grid-template-areas: 'label less track more' '. . hint .'; padding: 0.1em; }
-.itc-shop-plate .itc-shop-band-label { font-size: 0.66em; text-align: left; }
+/*
+  0673: the shelf in view is the open sub-tab's, so its own heading said the tab's name again under it — *HANGING*
+  under *Hanging*. The sub-tab says it; the heading stays for a reader (the band's label) and is not drawn.
+*/
+.itc-shop-plate .itc-shop-band-label { display: none; }
 /* The aisle says nothing under it: a shelf's line is the shelf's, so the line kept for one is not kept here. */
 .itc-shop-plate [data-itc-setting='aisle'] ~ .itc-shop-band-hint { display: none; }
 /*
@@ -3492,6 +3496,21 @@ ${each('-band[hidden]')} { display: none; }
     that fills its plate is laid out as before, and the row is never shorter than its bands.
   */
   .itc-hangar-settings-box, .itc-parts-settings-box { grid-template-rows: auto auto auto 1fr; }
+  /*
+    0673: and the groups fill that row, their bands spaced down it, first under the head and last over the foot.
+    As 0670 left it the groups stood at the row's foot, so at 1280x720 Paint & Parts opened an 80 px gap between
+    its sub-tabs and its first band, the head and the bands it heads a hand apart.
+  */
+  .itc-hangar-groups, .itc-parts-groups { align-self: stretch; }
+  .itc-hangar-group, .itc-parts-group { align-self: stretch; }
+  /*
+    Spaced only where the plate is tall and the group has three bands or more: at 720 rows spacing opened 70 px gaps
+    between bands a glance should take together, and a group of two — Paint, art over colour — put its second band
+    at the plate's foot, a screen away from the first.
+  */
+  @container (min-height: 900px) {
+    .itc-hangar-group:has(> :nth-child(3)), .itc-parts-group:has(> :nth-child(3)) { justify-content: space-between; }
+  }
   .itc-hangar-plate > .itc-hangar-foot, .itc-parts-plate > .itc-parts-foot, .itc-shop-plate > .itc-shop-foot { flex: none; }
   .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { grid-area: stand; position: relative; }
   /* The balance is in the plate's foot; the dash on the deck under the ship, which stands in the stand's middle. */
@@ -3543,7 +3562,8 @@ ${each('-band[hidden]')} { display: none; }
     grid-template-areas: 'label label label' 'less track more';
     row-gap: 0;
   }
-  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label, .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-band-label { display: block; grid-area: label; font-size: 0.6em; padding-left: 1.6em; }
+  /* 0673: not Cosmo's, whose shelf's name is the open sub-tab's over it. */
+  .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label { display: block; grid-area: label; font-size: 0.6em; padding-left: 1.6em; }
   .itc-hangar-plate .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options,
   .itc-parts-plate .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options,
   .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-options {
@@ -3589,7 +3609,43 @@ ${each('-band[hidden]')} { display: none; }
   /* The foot stacked: the card across the plate, and the balance and the actions under it. */
   .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'focus focus' 'sheet choices' 'glyphs glyphs'; }
   .itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { font-size: 0.74em; }
+  /*
+    0673: Cosmo's foot is one line — *Buy · 575 ✦* the primary across it, *Back* beside — where it was three shapes:
+    Buy wrapped to three lines in a tall narrow button, Back short, the filter wide. The balance is the stand's
+    (0572), so the actions take the foot's whole width.
+  */
+  .itc-shop-foot { grid-template-areas: 'focus focus' 'choices choices' 'glyphs glyphs'; }
+  .itc-shop-foot > .itc-shop-choices { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
 }
+/* 0673: Buy one line wherever it stands, and the primary's rim — the title's Fly's. */
+.itc-shop-choices > .itc-shop-action:first-child { white-space: nowrap; box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-ink) 30%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 14%, transparent); }
+/*
+  0673: the way to Cosmo's beside a lone option — a tile of the chip's size in the shop's own violet, dashed, so it
+  reads as somewhere to go and not as a second thing to fit.
+*/
+.itc-hangar-cosmos, .itc-parts-cosmos {
+  flex: 0 1 auto;
+  align-self: stretch;
+  padding: 0.3em 0.7em;
+  border: 1px dashed var(--itc-ally, var(--itc-ink));
+  border-radius: 0.5em;
+  background: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 10%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8em;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.itc-hangar-cosmos[hidden], .itc-parts-cosmos[hidden] { display: none; }
+/*
+  0673: an art chip's picture is the ship's flank at 96 by 48 — the art is the ship's paint, a glyph-sized face of
+  the whole ship said nothing of it. The same thumb the shell already bakes for the band (96 px across, kept per
+  ship and art), cut to its middle band rather than shrunk to fit, so no canvas is added and no bake is longer.
+*/
+.itc-parts-band:has([${SETTING_ATTR}='art']) .itc-parts-option-thumbed .itc-parts-option-thumb { width: min(96px, 100%); height: 48px; object-fit: cover; }
+/* 0673: the filter at the shelf's head, small and to its right, under the sub-tabs. */
+.itc-shop-owned { justify-self: end; font-size: 0.72em; padding: 0.2em 0.7em; margin: 0; }
 /*
   0589: a landscape phone's shelf one tile, the ware in the window — the hanging shelf has seven since 0589,
   and in rows of three it ran three rows deep, past a 667x375's foot.
@@ -3604,8 +3660,12 @@ ${each('-band[hidden]')} { display: none; }
   .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-options { display: flex; flex-wrap: nowrap; justify-content: center; }
   .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces):not(:has([${SETTING_ATTR}='aisle'])) .itc-shop-option:not(.itc-shop-option-on) { display: none; }
   .itc-shop-option.itc-shop-option-tile { flex: 0 1 60%; }
-  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-options { display: flex; flex-wrap: nowrap; }
-  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-option { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /*
+    0673: and the sub-tabs scroll rather than cut short — *Han… Whe… Flam… Shie…* at 667x375 named no shelf. Each
+    is its name's width; the open one is brought into view, and a tab the strip only partly shows is put away.
+  */
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-options { display: flex; flex-wrap: nowrap; justify-content: safe center; overflow-x: auto; scrollbar-width: none; }
+  .itc-shop-plate .itc-shop-band:has([${SETTING_ATTR}='aisle']) .itc-shop-option { flex: 0 0 auto; white-space: nowrap; }
 }
 /*
   ── ONE VOICE — 0440 ─────────────────────────────────────────────────────────────────────────────
@@ -4748,6 +4808,8 @@ interface Band {
    * a chip is one button among the actions (0517).
    */
   faces: 'words' | 'portraits' | 'chip';
+  /** 0673: *More at Cosmo's →*, on a slot Cosmo's sells for, shown while the band has one option; `null` elsewhere. */
+  cosmos: HTMLButtonElement | null;
 }
 
 /**
@@ -6932,6 +6994,29 @@ export function makeChrome(
         box.addEventListener('pointerleave', away);
         listeners.push(() => box.removeEventListener('pointerleave', away));
       }
+      /*
+        0673: a slot sold at Cosmo's carries a tile beside its options, *More at Cosmo's →*, drawn only while the band
+        shows one option — *Flame: Standard* on most ships, a lone chip in a row sized for three. A press opens Cosmo's
+        on that slot's shelf. The hint line said this in prose; the tile is the way there.
+      */
+      const shelf = row.stand !== null && isSlot(choice.name) ? SLOT_SHELVES[choice.name] : null;
+      let cosmos: HTMLButtonElement | null = null;
+      if (shelf !== null) {
+        const tile = document.createElement('button');
+        tile.type = 'button';
+        tile.className = prefix + 'cosmos';
+        tile.textContent = 'More at Cosmo’s →';
+        tile.hidden = true;
+        tile.tabIndex = -1;
+        const go = (): void => {
+          onChoice('aisle', SHELF_KINDS.indexOf(shelf), true);
+          onTab('shop');
+        };
+        tile.addEventListener('click', go);
+        listeners.push(() => tile.removeEventListener('click', go));
+        box.append(tile);
+        cosmos = tile;
+      }
       const band: Band = {
         name: choice.name,
         label: choice.label,
@@ -6953,10 +7038,11 @@ export function makeChrome(
         buttons,
         faces: choice.faces,
         caption: null,
+        cosmos,
       };
-      // 0670: a scrolled row of faces shows whole faces only — `wholeFaces`.
-      if (choice.faces === 'portraits') {
-        const scrolled = (): void => wholeFaces(band);
+      // 0670: a scrolled row of faces shows whole faces only — `wholeChips`. 0673: and every band on a stand's plate.
+      if (choice.faces === 'portraits' || row.stand !== null) {
+        const scrolled = (): void => wholeChips(band);
         box.addEventListener('scroll', scrolled, { passive: true });
         listeners.push(() => box.removeEventListener('scroll', scrolled));
       }
@@ -7134,6 +7220,19 @@ export function makeChrome(
     panel.addEventListener('focusin', follow);
     listeners.push(() => panel.removeEventListener('focusin', follow));
 
+    /*
+      0673: Cosmo's *Owned* is a filter on the shelf, not an action on the ware in the window, so it stands at the
+      shelf's head under the sub-tabs, a small toggle, and the foot is *Buy* and *Back*. Still the row's action, so a
+      press and the walk reach it as before; only where it stands moves.
+    */
+    if (screen === 'shop') {
+      const owned = controls[row.actions.findIndex((a) => a.label === 'Owned')];
+      const aisle = choiceBands.find((b) => b.name === 'aisle');
+      if (owned !== undefined && aisle !== undefined) {
+        owned.classList.add(prefix + 'owned');
+        aisle.root.after(owned);
+      }
+    }
     // 0562: the card opens speaking for the screen's first band of its own, which is where the cursor opens (0561).
     const spoken = focus === null ? null : (choiceBands.find((b) => b.faces === 'words') ?? null);
     panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, note, sheet, board, dash, keeper, focus, spoken, glyphs, groups: groupBoxes, keys };
@@ -8149,14 +8248,17 @@ export function makeChrome(
       if (left < track.scrollLeft) track.scrollLeft = left;
       else if (left + chosen.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + chosen.offsetWidth - track.clientWidth;
     }
-    if (band.faces === 'portraits') wholeFaces(band);
+    wholeChips(band);
   };
   /**
    * 0670: a band of faces shows whole faces only. The hangar's column at 384 px drew six and the seventh cut in half
    * behind the arrow; a face the track only partly shows is put away until a scroll brings all of it in. A read of
    * layout, made on a choice, a scroll of the track and a framing of the stand — never on a frame (0022).
+   *
+   * 0673: and every band's chips, on every screen: Paint & Parts' shield row cut its third chip at 1280x720
+   * (*Phoenix plu…*) with the cursor's brackets on the second. A track that does not overflow cuts nothing.
    */
-  const wholeFaces = (band: Band): void => {
+  const wholeChips = (band: Band): void => {
     const track = band.buttons[0]?.parentElement;
     if (!(track instanceof HTMLElement)) return;
     const edge = track.getBoundingClientRect();
@@ -8977,6 +9079,8 @@ export function makeChrome(
         if (buttons === undefined || band === undefined) continue;
         band.hidden = hidden;
         for (let i = 0; i < buttons.length; i++) buttons[i]!.hidden = hidden[i] === true;
+        // 0673: the way to Cosmo's beside a band left with one option.
+        if (band.cosmos !== null) band.cosmos.hidden = buttons.filter((b) => !b.hidden).length !== 1;
         // A try on what has just gone is put back, so the stand never wears what the band does not show.
         if (band.look >= 0 && hidden[band.look] === true) putBack(band);
         sayBand(band);
@@ -9050,7 +9154,17 @@ export function makeChrome(
       Object.assign(said.hang, marks.hang);
       placeStand(screen);
       // 0670: a framing is a layout, so the faces the track cuts are worked out again.
-      for (const band of panels[screen]?.bands ?? []) if (band.faces === 'portraits') wholeFaces(band);
+      // 0673: and the option on — tried on, or fitted — brought into its track first, so it is never the one put away.
+      for (const band of panels[screen]?.bands ?? []) {
+        const on = band.buttons[band.look >= 0 ? band.look : band.index];
+        const track = on?.parentElement;
+        if (on !== undefined && track instanceof HTMLElement && track.scrollWidth > track.clientWidth) {
+          const left = on.offsetLeft - track.offsetLeft;
+          if (left < track.scrollLeft) track.scrollLeft = left;
+          else if (left + on.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + on.offsetWidth - track.clientWidth;
+        }
+        wholeChips(band);
+      }
     },
     setTags(name: ChoiceName, tags: readonly { text: string; tone: 'price' | 'owned' | 'short' }[]): void {
       for (const screen of Object.keys(panels) as Screen[]) {
