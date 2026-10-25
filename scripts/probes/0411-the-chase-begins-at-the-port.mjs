@@ -66,7 +66,8 @@ export const PROBES = [
     guard: 'draws every piece of the port it bakes',
     edit: {
       path: 'src/render/port.ts',
-      find: '      put(surface, view, PORT_SPRITE.beacon, at[0], at[1], lit, 0, 1 + 0.6 * sweep);',
+      // ⚠️ Re-anchored by 0679, whose beacons are steady and whose light is the wash they throw.
+      find: '      put(surface, view, PORT_SPRITE.beacon, at[0], at[1], up * (0.6 + 0.4 * Math.max(0, facing)));',
       replace: '      void at;',
     },
   },
@@ -135,9 +136,9 @@ export const PROBES = [
     guard: 'no hot file allocates',
     edit: {
       path: 'src/render/port.ts',
-      // ⚠️ Re-anchored by 0450, which reads each ship's intro size between the two.
-      find: '  surface.clear();\n  // Each ship at its own size',
-      replace: '  surface.clear();\n  void [t].map((n) => n);\n  // Each ship at its own size',
+      // ⚠️ Re-anchored by 0450, which reads each ship's intro size between the two, and by 0679, which pushes the view in first.
+      find: '  const view = INTRO_VIEW;\n  // Each ship at its own size',
+      replace: '  const view = INTRO_VIEW;\n  void [t].map((n) => n);\n  // Each ship at its own size',
     },
   },
   {

@@ -308,6 +308,12 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'spill':
     case 'pad':
     case 'beam':
+    case 'padViper':
+    case 'beamViper':
+    case 'padPoolViper':
+    case 'crest':
+    case 'clamps':
+    case 'alarmWash':
     case 'bayTop':
     case 'bayBottom':
     case 'field':
@@ -797,49 +803,81 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       // The bar's warm light, seen through the doorway and thrown onto the deck in front of it.
       radial(ctx, 0, 0, h, PORT_INK.lamp, 0.95);
       return;
-    case 'pad': {
-      radialEllipse(ctx, 0, -1.2, 16, 2.6, palette.player, 0.28);
-      ctx.fillStyle = '#1d2433';
-      ctx.fillRect(-14, -1.6, 28, 3);
-      for (let x = -12.5; x < 12.5; x += 3) {
-        ctx.fillStyle = PORT_INK.hazard;
+    case 'pad':
+      paintPad(ctx, palette.player, PORT_INK.pad);
+      return;
+    // 0679: hers in her violet — the player's answer, so the room says whose each pad is before either ship lights.
+    case 'padViper':
+      paintPad(ctx, VIPER.flame, VIPER.pad);
+      return;
+    case 'beam':
+      paintBeam(ctx, PORT_INK.pad, h, extent);
+      return;
+    case 'beamViper':
+      paintBeam(ctx, VIPER.pad, h, extent);
+      return;
+    case 'padPoolViper':
+      radialEllipse(ctx, 0, 0, h, h * 0.22, VIPER.flame, 0.55);
+      return;
+    case 'crest': {
+      /*
+        0679: the Coil's mark on the wall over her pad — a serpent coiled three turns round itself, its head at the
+        centre, in her accent on a dark plate. A mark, not a word, on the voice rule.
+      */
+      ctx.fillStyle = PORT_INK.wallDark;
+      ctx.beginPath();
+      ctx.arc(0, 0, h * 0.95, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = VIPER.accent;
+      ctx.lineWidth = 0.9;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= 60; i++) {
+        const turn = (i / 60) * Math.PI * 6;
+        const r = h * 0.8 * (1 - i / 66);
+        if (i === 0) ctx.moveTo(Math.cos(turn) * r, Math.sin(turn) * r);
+        else ctx.lineTo(Math.cos(turn) * r, Math.sin(turn) * r);
+      }
+      ctx.stroke();
+      ctx.fillStyle = VIPER.eye;
+      ctx.beginPath();
+      ctx.arc(h * 0.08, 0, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgba(VIPER.accent, 0.5);
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, h * 0.95, 0, Math.PI * 2);
+      ctx.stroke();
+      return;
+    }
+    case 'clamps': {
+      /*
+        0679: the two clamps that hold her down on her pad — a jaw either side of her keel, risen from the deck on a
+        post, with a hazard band. They drop back into the pad as she lights.
+      */
+      for (const side of [-1, 1]) {
+        const x = side * 9;
+        ctx.fillStyle = '#2b3446';
+        ctx.fillRect(x - 1.2, -2, 2.4, h);
+        ctx.fillStyle = '#3d4860';
         ctx.beginPath();
-        ctx.moveTo(x, -0.9);
-        ctx.lineTo(x + 1.3, -0.9);
-        ctx.lineTo(x + 2.1, 0.9);
-        ctx.lineTo(x + 0.8, 0.9);
+        ctx.moveTo(x - side * 1.2, -4);
+        ctx.lineTo(x - side * 5, -4);
+        ctx.lineTo(x - side * 5, -1.6);
+        ctx.lineTo(x - side * 1.2, -0.4);
         ctx.closePath();
         ctx.fill();
-      }
-      ctx.fillStyle = PORT_INK.pad;
-      ctx.fillRect(-14, -1.8, 28, 0.45);
-      radial(ctx, -13.5, -1.4, 1.4, PORT_INK.pad, 1);
-      radial(ctx, 13.5, -1.4, 1.4, PORT_INK.pad, 1);
-      return;
-    }
-    case 'beam': {
-      // The column a ship rides on above its pad, lit from below and gone by the top.
-      const rise = ctx.createLinearGradient(0, h, 0, -h);
-      rise.addColorStop(0, rgba(PORT_INK.pad, 0.3));
-      rise.addColorStop(1, rgba(PORT_INK.pad, 0));
-      ctx.fillStyle = rise;
-      ctx.beginPath();
-      ctx.moveTo(-12, h - 4);
-      ctx.lineTo(12, h - 4);
-      ctx.lineTo(8, -h);
-      ctx.lineTo(-8, -h);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = rgba(PORT_INK.pad, 0.18);
-      ctx.lineWidth = 0.35;
-      for (let y = h - 8; y > -h + 6; y -= 5) {
-        const w = 8 + (4 * (y + h)) / extent;
-        ctx.beginPath();
-        ctx.ellipse(0, y, w, 1, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.fillStyle = PORT_INK.hazard;
+        ctx.fillRect(x - 1.2, 0.5, 2.4, 1.1);
+        ctx.fillStyle = PORT_INK.wallDark;
+        ctx.fillRect(x - 1.2, 1.2, 2.4, 0.4);
       }
       return;
     }
+    case 'alarmWash':
+      // 0679: a beacon's turning light thrown on a surface — wide, soft, and red, added to what it falls on.
+      radialEllipse(ctx, 0, 0, h, h * 0.42, PORT_INK.alarm, 0.85);
+      return;
     case 'bayTop':
     case 'bayBottom': {
       // The edge of the room: a bulkhead with the bay's door run back into it, and a stripe on its lip.
@@ -996,6 +1034,50 @@ function nobodyAboard(ship: ShipKind, paint: () => void): void {
 }
 
 /** A soft round light: full at the centre, gone at `radius`. */
+/** A ship's pad: its field's glow in `glow`, the plate and its hazard band, and its edge lights in `light` — 0679: hers or the pilot's. */
+function paintPad(ctx: CanvasRenderingContext2D, glow: string, light: string): void {
+  radialEllipse(ctx, 0, -1.2, 16, 2.6, glow, 0.28);
+  ctx.fillStyle = '#1d2433';
+  ctx.fillRect(-14, -1.6, 28, 3);
+  for (let x = -12.5; x < 12.5; x += 3) {
+    ctx.fillStyle = PORT_INK.hazard;
+    ctx.beginPath();
+    ctx.moveTo(x, -0.9);
+    ctx.lineTo(x + 1.3, -0.9);
+    ctx.lineTo(x + 2.1, 0.9);
+    ctx.lineTo(x + 0.8, 0.9);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = light;
+  ctx.fillRect(-14, -1.8, 28, 0.45);
+  radial(ctx, -13.5, -1.4, 1.4, light, 1);
+  radial(ctx, 13.5, -1.4, 1.4, light, 1);
+}
+
+/** The column a ship rides on above its pad, lit from below and gone by the top, in `ink` — 0679: hers or the pilot's. */
+function paintBeam(ctx: CanvasRenderingContext2D, ink: string, h: number, extent: number): void {
+  const rise = ctx.createLinearGradient(0, h, 0, -h);
+  rise.addColorStop(0, rgba(ink, 0.3));
+  rise.addColorStop(1, rgba(ink, 0));
+  ctx.fillStyle = rise;
+  ctx.beginPath();
+  ctx.moveTo(-12, h - 4);
+  ctx.lineTo(12, h - 4);
+  ctx.lineTo(8, -h);
+  ctx.lineTo(-8, -h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(ink, 0.18);
+  ctx.lineWidth = 0.35;
+  for (let y = h - 8; y > -h + 6; y -= 5) {
+    const w = 8 + (4 * (y + h)) / extent;
+    ctx.beginPath();
+    ctx.ellipse(0, y, w, 1, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
 function radial(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, colour: string, alpha: number): void {
   const light = ctx.createRadialGradient(x, y, 0, x, y, radius);
   light.addColorStop(0, rgba(colour, alpha));

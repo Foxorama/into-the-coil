@@ -21,7 +21,7 @@ import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeAtlasStepwise, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
-import { fitStand, standMarksInto, standViewInto } from '../render/port.ts';
+import { fitStand, introSharpness, standMarksInto, standViewInto } from '../render/port.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
 import { screenX, screenY } from '../render/surface.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
@@ -1646,7 +1646,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       the intro is over, because nothing will draw it again this page.
     */
     if (screen === 'intro' && playable) {
-      const resolution = view.scale * dpr;
+      // 0679: at the camera's closest, by the cut — the intro is drawn over the whole screen and pushed in on.
+      const resolution = introSharpness(view) * dpr;
       // With the golfer who was picked — 0415. The port is dropped when the intro ends, so a new pick
       // always meets a fresh bake.
       // 0526: and the pilot's ship with the gun the hangar fitted it, which is the gun the run will fly.
@@ -1656,12 +1657,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         portSharp = 1;
       }
       world.intro = 0;
+      // 0679: and no bar over it — the strip's band is the play readout's, and empty while the intro is up.
+      surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, 0);
       showPort();
       // Its beats from the first — 0412.
       introCueNext = 0;
     } else if (world.intro !== null) {
       world.intro = null;
       port = null;
+      surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, view.barAcross);
       surface.setAtlas(atlas);
     }
     /*
@@ -5555,6 +5559,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       surface.setSize(width, height, colours.space, 0);
       frameStand();
     }
+    // 0679: and the intro's, which is drawn over the whole screen.
+    if (world.intro !== null) surface.setSize(width, height, colours.space, 0);
   };
 
   /*

@@ -73,7 +73,15 @@ as `tests/stand.test.ts` does):
   - Cosmo's door, read relative to the stand a frame at a time with the clock paused, stands between its two
     places on 16 of the frames after a tab change. The bound is half the dolly's steps.
   - Under the probe's one-step dolly it stood between on none.
-- **`tests/stand.ts`** reads the ship's band about the tab's own `x`, where it was `STAND_PAD_AT`.
+- **`tests/stand.ts`** reads the ship's band in the room's own units, off a shopfront door: from 30 units
+  behind the ship to 25 ahead, and never past the bay. It was a fifth of the stand either side of
+  `STAND_PAD_AT`.
+  - First pushed as the tab's own `x`. CI found that Paint & Parts' flame fell outside the band, so a flame
+    chosen there read as nothing moving.
+  - Widened by the zoom, the band reached the stars past the bay. The stand then never read as still, and
+    `tests/wheels.browser.test.ts` ran out its 120 s.
+  - The probes on the five suites that read it are red under the new band: 0527, 0528, 0529, 0540, 0541,
+    0542 and 0582.
 - **Re-anchored:** both of `scripts/probes/0568-the-hangar-opens-out.mjs`'s camera probes, onto `HANGAR_CAMERA`.
   `npm run prove` 0540, 0568 and 0628 are red under every probe after this change.
 
@@ -92,3 +100,8 @@ the wall. They are the picture's.
 
 - A play: whether Paint & Parts' close camera reads, whether the dolly is the right length, and whether Cosmo's at
   1.3 is close enough. The plan's *about 1.3* is kept because the open bay holds it there.
+- **An intermittency, not yet established (0044).** Once, `npm run prove 0542` found one of its five suites red at
+  baseline, before any probe. The run's filtered output did not say which. The same command was green and 7/7
+  red when run again alone. `tests/wheels.browser.test.ts` takes 71 s alone against its 120 s, and is the first
+  suspect. What would settle it: that suite's time under `npm run prove`'s three trees, and a budget of three
+  times the worst, per 0245.

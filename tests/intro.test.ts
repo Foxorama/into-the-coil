@@ -36,7 +36,7 @@ import { CADDIE_DISC, SHIPS, SHIP_KINDS, fitted, type ShipKind } from '../src/co
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
 import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../src/content/keepers.ts';
 import { SKY } from '../src/app/mount.ts';
-import { NO_HOP, paintPort, paintStand } from '../src/render/port.ts';
+import { NO_HOP, introViewInto, paintPort, paintStand } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -71,10 +71,13 @@ const NARROW = { width: 1920, height: 1080 };
  * `src/app/mount.ts` builds it — whose sprites land at `GAME_BASE` on in the intro's atlas (0416).
  */
 function drawAt(t: number, size = WIDE, ship: ShipKind = GOLFERS[DEFAULT_GOLFER].ship): { blits: Blit[]; view: View } {
-  const view = viewOf(size.width, size.height);
+  const base = viewOf(size.width, size.height);
   const surface = new RecordingSurface();
   // The pilot's ship's own row: its wingtips, where its contrails leave from (0441), and its cockpit (0444).
-  paintPort(surface, view, t, SKY, SHIPS[ship]);
+  paintPort(surface, base, t, SKY, SHIPS[ship]);
+  // 0679: the view the picture was drawn through at `t` — the screen's, pushed in on as the room empties.
+  const view = { ...base };
+  introViewInto(base, t, view);
   return { blits: surface.blits, view };
 }
 
@@ -232,7 +235,8 @@ describe('the picture', () => {
       drawAt(t).blits.find((b) => b.sprite >= PORT_SPRITE.pilotRun0 && b.sprite <= PORT_SPRITE.pilotLeap)!;
     const ran = at(BEATS.pilotLeap - 0.001);
     const leapt = at(BEATS.pilotLeap);
-    const { view } = drawAt(0);
+    // 0679: through the camera at the leap, which has pushed in since the first step.
+    const { view } = drawAt(BEATS.pilotLeap);
     expect(Math.abs(leapt.x - ran.x), 'the pilot jumped along the deck between the run and the leap').toBeLessThan(2);
     expect(Math.abs(leapt.y - ran.y), 'the pilot jumped off the deck between the run and the leap').toBeLessThan(view.scale * 1);
     expect(leapt.x).toBeCloseTo(screenX(view, LEAP_FROM, 0), 0);
@@ -360,10 +364,15 @@ describe('the chase is a chase — 0414', () => {
       whole 9.4-unit box at that hull's scale, 40 units, so every ship stood a third bigger. Each box is
       measured as drawn: its baked extent times the scale it was blitted at.
     */
-    const view = viewOf(NARROW.width, NARROW.height);
     const was = (30 / 7) * 9.4;
+    /*
+      0679: against the camera it was drawn through at that step. The intro's camera pushes in on the room as it
+      empties — the player's own ask — so a ship is a few hundredths bigger on the screen by the leap than at the
+      fade-in; what this holds is the ship's size in the room, which the push does not change.
+    */
     const drawn = (t: number, ship: ShipKind, kind: PortKind): number => {
-      const b = drawAt(t, NARROW, ship).blits.find((x) => x.sprite === PORT_SPRITE[kind]);
+      const { blits, view } = drawAt(t, NARROW, ship);
+      const b = blits.find((x) => x.sprite === PORT_SPRITE[kind]);
       expect(b, `${ship}: no ${kind} at step ${t}`).toBeDefined();
       return (PORT_EXTENT[kind] * b!.scale) / view.scale;
     };
