@@ -2903,6 +2903,12 @@ ${each('-band[hidden]')} { display: none; }
   .itc-settings-band:has([${SETTING_ATTR}='intro']) { grid-template-columns: max-content minmax(0, 1fr); grid-template-areas: 'label track'; align-items: center; column-gap: 0.6em; }
   .itc-settings-band:has([${SETTING_ATTR}='intro']) .itc-settings-band-step,
   .itc-settings-band:has([${SETTING_ATTR}='intro']) .itc-settings-band-hint { display: none; }
+  /*
+    And its answers a size down from the touch bands' 0.8em and free to break, on 0512's terms: on one line they
+    fitted this machine's fonts with nothing to spare (103 px of words in a 103 px chip at 667x375) and CI's drew
+    them past it. A wider font costs a line here, never a cut word.
+  */
+  .itc-settings-band:has([${SETTING_ATTR}='intro']) .itc-settings-option { white-space: normal; font-size: 0.72em; }
   .itc-settings-touch .itc-settings-option { font-size: 0.8em; padding: 0.3em 0.25em; }
   ${each('-band')} {
     grid-template-columns: max-content auto minmax(0, 1fr) auto;
