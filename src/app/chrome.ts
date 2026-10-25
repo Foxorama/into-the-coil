@@ -5357,6 +5357,11 @@ export interface Chrome {
    */
   standBox(screen: Screen): { left: number; width: number; top: number; height: number } | null;
   /**
+   * Where the stand's cockpit readout is on the screen, in CSS pixels — 0680, for the rail along the dock's foot to
+   * be drawn only where it clears it. `null` off a stand or before it is laid out. A read of layout.
+   */
+  dashBox(screen: Screen): { top: number; bottom: number } | null;
+  /**
    * Hang the stand's words on its picture — 0572: the cockpit monitor centred under the ship's foot, and
    * the keeper's bubble with its tail on their head, each kept inside the stand. Screen pixels, from the
    * stand's view (`standMarksInto`); a keeper mark that is not a number takes the bubble down.
@@ -9175,6 +9180,12 @@ export function makeChrome(
       if (stand === null || stand === undefined) return null;
       const box = stand.getBoundingClientRect();
       return box.width > 0 ? { left: box.left, width: box.width, top: box.top, height: box.height } : null;
+    },
+    dashBox(screen: Screen): { top: number; bottom: number } | null {
+      const dash = panels[screen]?.dash;
+      if (dash === null || dash === undefined) return null;
+      const box = dash.getBoundingClientRect();
+      return box.height > 0 ? { top: box.top, bottom: box.bottom } : null;
     },
     moveStandMarks(screen: Screen, marks: Readonly<StandMarks>): void {
       const said = standMarks[screen];

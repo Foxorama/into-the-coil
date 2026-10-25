@@ -314,6 +314,18 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'crest':
     case 'clamps':
     case 'alarmWash':
+    case 'spar':
+    case 'shuttle':
+    case 'rail':
+    case 'steam':
+    case 'sparks':
+    case 'neonDark':
+    case 'twinkle':
+    case 'fan0':
+    case 'fan1':
+    case 'fan2':
+    case 'beaconCone':
+    case 'drone':
     case 'bayTop':
     case 'bayBottom':
     case 'field':
@@ -878,6 +890,114 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       // 0679: a beacon's turning light thrown on a surface — wide, soft, and red, added to what it falls on.
       radialEllipse(ctx, 0, 0, h, h * 0.42, PORT_INK.alarm, 0.85);
       return;
+    case 'spar':
+      paintSpar(ctx, h);
+      return;
+    case 'shuttle': {
+      // 0680: a far shuttle side-on, nose to the right — a hull, a cockpit's glow and its engine, small and dim with distance.
+      ctx.fillStyle = '#3a4459';
+      ctx.beginPath();
+      ctx.moveTo(-4.5, 0.8);
+      ctx.lineTo(3.2, 0.8);
+      ctx.lineTo(4.6, -0.2);
+      ctx.lineTo(2.6, -1.4);
+      ctx.lineTo(-3.8, -1.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#2a3242';
+      ctx.fillRect(-3.4, 0.8, 4, 0.6);
+      radial(ctx, 2.8, -0.7, 0.7, '#9fe3ff', 0.9);
+      radial(ctx, -4.8, -0.3, 1.4, '#ffb36b', 0.9);
+      return;
+    }
+    case 'rail': {
+      /*
+        0680: the safety rail along the dock's foot, the nearest thing to the player — a top rail and a mid rail on a
+        post at each end of its span, dark against the room, with a hazard band on each post's foot.
+      */
+      ctx.fillStyle = '#0d1119';
+      ctx.fillRect(-h, -2.4, extent, 1.1);
+      ctx.fillRect(-h, 1.8, extent, 0.7);
+      ctx.fillStyle = '#2a3346';
+      ctx.fillRect(-h, -2.4, extent, 0.3);
+      for (const x of [-h + 0.8, h - 0.8]) {
+        ctx.fillStyle = '#0d1119';
+        ctx.fillRect(x - 0.7, -2.6, 1.4, h + 2.6);
+        ctx.fillStyle = PORT_INK.hazard;
+        ctx.fillRect(x - 0.7, h - 2.2, 1.4, 1);
+      }
+      return;
+    }
+    case 'steam': {
+      // 0680: a puff of steam, soft and pale, thinning at its edge; laid rising and fading off a vent.
+      const puff = ctx.createRadialGradient(0, 0, 0, 0, 0, h);
+      puff.addColorStop(0, 'rgba(214, 226, 240, 0.55)');
+      puff.addColorStop(0.6, 'rgba(190, 204, 222, 0.22)');
+      puff.addColorStop(1, 'rgba(190, 204, 222, 0)');
+      ctx.fillStyle = puff;
+      ctx.beginPath();
+      ctx.arc(0, 0, h, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    case 'sparks': {
+      // 0680: a spray of sparks off a grinder, hot at the root and gold along their streaks — light.
+      radial(ctx, 0, 0, h * 0.35, '#fff2c8', 1);
+      ctx.strokeStyle = '#ffcf5a';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 0.18;
+      for (let i = 0; i < 9; i++) {
+        const a = -Math.PI * 0.95 + (i / 8) * Math.PI * 0.9;
+        const r = h * (0.45 + 0.5 * ((i * 7) % 5) / 4);
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * h * 0.15, Math.sin(a) * h * 0.15);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.stroke();
+      }
+      return;
+    }
+    case 'neonDark':
+      // 0680: the bar's neon sign unlit — its plate and its tubes dark, laid over the lit one for a frame as it buzzes.
+      // Its box centred on the sign's plate, which stands at (1.5, -5.5) in the bar's units: `NEON_AT` lays it there.
+      ctx.translate(-1.5, 5.5);
+      paintNeon(ctx, '#1e3a2a', '#24382c', 0);
+      return;
+    case 'twinkle':
+      // 0680: one bulb of the bar's string flaring — light.
+      radial(ctx, 0, 0, h, '#fff6dc', 1);
+      return;
+    case 'fan0':
+    case 'fan1':
+    case 'fan2':
+      // 0680: a wall fan in its housing, its blades at a third of their turn a frame — baked so, never laid turned.
+      paintFan(ctx, h, kind === 'fan0' ? 0 : kind === 'fan1' ? 1 : 2);
+      return;
+    case 'beaconCone': {
+      // 0680: the beacon's beam, a cone of red off its lamp toward +x, soft at its edges and gone at its end — light.
+      const cone = ctx.createLinearGradient(0, 0, h, 0);
+      cone.addColorStop(0, rgba(PORT_INK.alarm, 0.55));
+      cone.addColorStop(1, rgba(PORT_INK.alarm, 0));
+      ctx.fillStyle = cone;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(h, -h * 0.3);
+      ctx.lineTo(h, h * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      return;
+    }
+    case 'drone': {
+      // 0680: a maintenance drone — a body, two rotor arms, and a working light under it.
+      ctx.fillStyle = '#3d4860';
+      ctx.fillRect(-1.6, -0.8, 3.2, 1.6);
+      ctx.fillStyle = '#2a3346';
+      ctx.fillRect(-3.2, -1.2, 6.4, 0.4);
+      ctx.fillStyle = 'rgba(200, 220, 240, 0.5)';
+      ctx.fillRect(-3.8, -1.5, 1.6, 0.25);
+      ctx.fillRect(2.2, -1.5, 1.6, 0.25);
+      radial(ctx, 0, 1.1, 0.9, '#7fd8ff', 0.9);
+      return;
+    }
     case 'bayTop':
     case 'bayBottom': {
       // The edge of the room: a bulkhead with the bay's door run back into it, and a stripe on its lip.
@@ -1034,6 +1154,110 @@ function nobodyAboard(ship: ShipKind, paint: () => void): void {
 }
 
 /** A soft round light: full at the centre, gone at `radius`. */
+/**
+ * The bar's neon sign in the bar's own units (`paintBar`): its plate, its frame in `frame` and the parrot on its
+ * perch in `tube`, glowing by `blur` pixels. 0680: lit on the bar, and unlit as `neonDark`, laid over it as it buzzes.
+ */
+function paintNeon(ctx: CanvasRenderingContext2D, frame: string, tube: string, blur: number): void {
+  ctx.fillStyle = '#0d1512';
+  ctx.fillRect(-3.5, -16, 10, 21);
+  ctx.save();
+  ctx.shadowColor = frame;
+  ctx.shadowBlur = blur;
+  ctx.strokeStyle = frame;
+  ctx.lineWidth = 0.45;
+  ctx.lineCap = 'round';
+  ctx.strokeRect(-3, -15.5, 9, 20);
+  ctx.strokeStyle = tube;
+  ctx.beginPath();
+  ctx.arc(2.4, -9.5, 1.6, 0, Math.PI * 2);
+  ctx.moveTo(3.9, -10.1);
+  ctx.lineTo(5.2, -9.2);
+  ctx.lineTo(3.8, -8.5);
+  ctx.moveTo(1.2, -8.2);
+  ctx.bezierCurveTo(-0.6, -6.5, -0.4, -2.6, 1.4, -1.8);
+  ctx.bezierCurveTo(3.2, -2.4, 3.8, -5.6, 3.1, -8.1);
+  ctx.moveTo(1, -2);
+  ctx.lineTo(-0.4, 2.8);
+  ctx.moveTo(1.6, -2);
+  ctx.lineTo(1.2, 3.2);
+  ctx.moveTo(-1.8, -1.4);
+  ctx.lineTo(5.2, -1.4);
+  ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = frame;
+  ctx.beginPath();
+  ctx.arc(2.9, -9.9, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/**
+ * 0680: the station's own structure past the bay — a lit module on the end of an arm reaching in from the right,
+ * with rows of windows and a beacon, in the dark and dim with distance.
+ */
+function paintSpar(ctx: CanvasRenderingContext2D, h: number): void {
+  // The arm: a girder from the box's right edge to the module.
+  ctx.fillStyle = '#1b2232';
+  ctx.fillRect(-h * 0.1, -2, h * 1.1, 4);
+  ctx.strokeStyle = '#2a3346';
+  ctx.lineWidth = 0.4;
+  ctx.beginPath();
+  for (let x = -h * 0.1; x < h; x += 5) {
+    ctx.moveTo(x, -2);
+    ctx.lineTo(x + 2.5, 2);
+    ctx.lineTo(x + 5, -2);
+  }
+  ctx.stroke();
+  // The module: a drum with its windows lit in rows, and a dish.
+  ctx.fillStyle = '#232c3f';
+  ctx.fillRect(-h * 0.55, -9, h * 0.5, 18);
+  ctx.fillStyle = '#2f3a52';
+  ctx.fillRect(-h * 0.55, -9, h * 0.5, 1.2);
+  for (const y of [-5, -1, 3]) {
+    for (let x = -h * 0.52; x < -h * 0.1; x += 2.2) radial(ctx, x + 0.6, y, 0.6, PORT_INK.lamp, 0.7);
+  }
+  ctx.fillStyle = '#2a3346';
+  ctx.beginPath();
+  ctx.ellipse(-h * 0.3, -12, 5, 2, 0, Math.PI, 0);
+  ctx.fill();
+  radial(ctx, -h * 0.3, -14.5, 1.2, PORT_INK.alarm, 0.9);
+}
+
+/** 0680: a wall fan in its round housing, its four blades turned by `third` thirds of a quarter turn. */
+function paintFan(ctx: CanvasRenderingContext2D, h: number, third: number): void {
+  ctx.fillStyle = '#121826';
+  ctx.beginPath();
+  ctx.arc(0, 0, h * 0.95, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#39445c';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  ctx.fillStyle = '#4a5670';
+  for (let b = 0; b < 4; b++) {
+    const a = (b * Math.PI) / 2 + (third * Math.PI) / 6;
+    ctx.save();
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.ellipse(h * 0.42, 0, h * 0.38, h * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#2a3346';
+  ctx.beginPath();
+  ctx.arc(0, 0, h * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+  // The grille over it.
+  ctx.strokeStyle = 'rgba(57, 68, 92, 0.8)';
+  ctx.lineWidth = 0.2;
+  for (let y = -h * 0.8; y <= h * 0.8; y += h * 0.27) {
+    const w = Math.sqrt(Math.max(0, h * h * 0.81 - y * y));
+    ctx.beginPath();
+    ctx.moveTo(-w, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+}
+
 /** A ship's pad: its field's glow in `glow`, the plate and its hazard band, and its edge lights in `light` — 0679: hers or the pilot's. */
 function paintPad(ctx: CanvasRenderingContext2D, glow: string, light: string): void {
   radialEllipse(ctx, 0, -1.2, 16, 2.6, glow, 0.28);
@@ -1177,36 +1401,7 @@ function paintBar(ctx: CanvasRenderingContext2D, palette: Palette, px: number): 
   ctx.fillStyle = PORT_INK.woodLight;
   ctx.fillRect(-17, -8.5, 0.6, 21);
   // The neon, hung between the window and the door: a parrot on a perch, in the bar's green.
-  ctx.fillStyle = '#0d1512';
-  ctx.fillRect(-3.5, -16, 10, 21);
-  ctx.save();
-  ctx.shadowColor = PORT_INK.neon;
-  ctx.shadowBlur = 1.4 * px;
-  ctx.strokeStyle = PORT_INK.neon;
-  ctx.lineWidth = 0.45;
-  ctx.lineCap = 'round';
-  ctx.strokeRect(-3, -15.5, 9, 20);
-  ctx.strokeStyle = '#d6ffe6';
-  ctx.beginPath();
-  ctx.arc(2.4, -9.5, 1.6, 0, Math.PI * 2);
-  ctx.moveTo(3.9, -10.1);
-  ctx.lineTo(5.2, -9.2);
-  ctx.lineTo(3.8, -8.5);
-  ctx.moveTo(1.2, -8.2);
-  ctx.bezierCurveTo(-0.6, -6.5, -0.4, -2.6, 1.4, -1.8);
-  ctx.bezierCurveTo(3.2, -2.4, 3.8, -5.6, 3.1, -8.1);
-  ctx.moveTo(1, -2);
-  ctx.lineTo(-0.4, 2.8);
-  ctx.moveTo(1.6, -2);
-  ctx.lineTo(1.2, 3.2);
-  ctx.moveTo(-1.8, -1.4);
-  ctx.lineTo(5.2, -1.4);
-  ctx.stroke();
-  ctx.restore();
-  ctx.fillStyle = PORT_INK.neon;
-  ctx.beginPath();
-  ctx.arc(2.9, -9.9, 0.3, 0, Math.PI * 2);
-  ctx.fill();
+  paintNeon(ctx, PORT_INK.neon, '#d6ffe6', 1.4 * px);
   // The doorway: a frame, a lamp over it, and a hole straight through the wall.
   ctx.fillStyle = PORT_INK.woodLight;
   ctx.fillRect(7, 12, 14, 20);
