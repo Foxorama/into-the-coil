@@ -184,13 +184,35 @@ export const PORT_KINDS = [
   // The same band lying the other way, rising from a wall's foot: baked so, because a turned blit rotates the canvas.
   'shadeFoot',
   'spillWall',
+  /*
+    0677: big forms, and the deck as a floor — a vent, a patch and a conduit laid over a wall tile so the grid stops
+    repeating; the truss's brace between its spans; the crane's rail and its hook; a bulkhead door with its wheel,
+    and the bay's number over it; a hose and crates; the door lamp on the bay's frame; and on the deck its lip, the
+    grating under the pads, the Viper's scorch, the car's tyre marks and an oil stain.
+  */
+  'wallVent',
+  'wallPatch',
+  'wallConduit',
+  'trussBrace',
+  'craneRail',
+  'craneHook',
+  'bulkhead',
+  'sign02',
+  'hose',
+  'crates',
+  'doorLamp',
+  'deckLip',
+  'grating',
+  'scorch',
+  'tyres',
+  'oil',
 ] as const;
 
 /**
  * 0676: the port's kinds that are light — added to what is under them rather than laid over it, on 0520's terms
- * for the game's (`Atlas.light`). The pools and the up-light; everything else in the room is body.
+ * for the game's (`Atlas.light`). The pools and the up-light, and 0677's door lamp; everything else in the room is body.
  */
-export const PORT_LIGHT_KINDS: readonly PortKind[] = ['lampPool', 'padPool', 'padLight', 'spillWall'];
+export const PORT_LIGHT_KINDS: readonly PortKind[] = ['lampPool', 'padPool', 'padLight', 'spillWall', 'doorLamp'];
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
   looks super basic compared to the level 1 starfield and it should kinda lead straight into level 1."*
@@ -309,6 +331,23 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   shade: 20,
   shadeFoot: 20,
   spillWall: 40,
+  // 0677: the wall's overlays at the wall's tile; the rest each at its own size in the room's units.
+  wallVent: 20,
+  wallPatch: 20,
+  wallConduit: 20,
+  trussBrace: 20,
+  craneRail: 44,
+  craneHook: 28,
+  bulkhead: 30,
+  sign02: 12,
+  hose: 14,
+  crates: 18,
+  doorLamp: 8,
+  deckLip: 20,
+  grating: 30,
+  scorch: 34,
+  tyres: 30,
+  oil: 14,
 };
 
 /**
@@ -503,6 +542,14 @@ export const STAGE = {
    * painted over shows through it. Over the stall and the pad, between the truss and the awning.
    */
   viewport: { along: 60, across: 40 },
+  /**
+   * 0677: the bulkhead door in the back wall between the pads — its centre, its foot on the deck — and the bay's
+   * number over it; the crates and the hose on the deck past the Viper's pad.
+   */
+  bulkhead: { along: 120, across: 87 },
+  sign: { along: 120, across: 66 },
+  crates: { along: 166, across: 91 },
+  hose: { along: 155, across: 101 },
   /** The alarm beacons, which turn once the Viper has gone. */
   beacons: [
     [174, 30],

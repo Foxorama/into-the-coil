@@ -331,6 +331,22 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'shade':
     case 'shadeFoot':
     case 'spillWall':
+    case 'wallVent':
+    case 'wallPatch':
+    case 'wallConduit':
+    case 'trussBrace':
+    case 'craneRail':
+    case 'craneHook':
+    case 'bulkhead':
+    case 'sign02':
+    case 'hose':
+    case 'crates':
+    case 'doorLamp':
+    case 'deckLip':
+    case 'grating':
+    case 'scorch':
+    case 'tyres':
+    case 'oil':
       break;
     default: {
       const never: never = kind;
@@ -419,17 +435,248 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       // 0676: the bar's light climbing the wall beside its door, tall and soft.
       radialEllipse(ctx, 0, 0, h * 0.42, h, PORT_INK.lamp, 0.32);
       return;
+    /*
+      ── BIG FORMS — 0677 ──────────────────────────────────────────────────────────────────────────
+    */
+    case 'wallVent': {
+      // A grille in the panel's upper half, its slats shadowed, laid over whichever tile is there.
+      ctx.fillStyle = PORT_INK.wallDark;
+      ctx.fillRect(-6, -7, 12, 7.5);
+      ctx.fillStyle = PORT_INK.seam;
+      for (let y = -6.2; y < 0; y += 1.4) ctx.fillRect(-5.4, y, 10.8, 0.5);
+      ctx.strokeStyle = shade(PORT_INK.seam, 0.2);
+      ctx.lineWidth = 0.35;
+      ctx.strokeRect(-6, -7, 12, 7.5);
+      return;
+    }
+    case 'wallPatch': {
+      // A plate welded over the panel, a shade off it, with its own rivets and a weld line round it.
+      ctx.fillStyle = shade(PORT_INK.wall, 0.12);
+      ctx.fillRect(-4.5, -1.5, 9.5, 7);
+      ctx.strokeStyle = shade(PORT_INK.wallDark, -0.1);
+      ctx.lineWidth = 0.3;
+      ctx.strokeRect(-4.5, -1.5, 9.5, 7);
+      ctx.fillStyle = PORT_INK.seam;
+      for (const [x, y] of [[-3.7, -0.7], [4.2, -0.7], [-3.7, 4.7], [4.2, 4.7]] as const) ctx.fillRect(x - 0.25, y - 0.25, 0.5, 0.5);
+      return;
+    }
+    case 'wallConduit': {
+      // A pipe down the panel with its brackets, and a junction box where it meets the panel's own run.
+      ctx.fillStyle = shade(PORT_INK.seam, -0.1);
+      ctx.fillRect(4.6, -h, 1.6, extent);
+      ctx.fillStyle = shade(PORT_INK.seam, 0.3);
+      ctx.fillRect(4.6, -h, 0.4, extent);
+      ctx.fillStyle = PORT_INK.wallDark;
+      for (const y of [-6, 6]) ctx.fillRect(3.8, y, 3.2, 0.8);
+      ctx.fillStyle = shade(PORT_INK.wall, 0.15);
+      ctx.fillRect(2.6, 1.6, 5.6, 4);
+      radial(ctx, 5.4, 3.6, 0.6, PORT_INK.neon, 0.9);
+      return;
+    }
+    case 'trussBrace': {
+      // The brace at a span's end: a post between the chords and an X across the bay of the truss behind it.
+      ctx.strokeStyle = PORT_INK.seam;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-6, -h + 1.4);
+      ctx.lineTo(6, 6.5);
+      ctx.moveTo(6, -h + 1.4);
+      ctx.lineTo(-6, 6.5);
+      ctx.stroke();
+      ctx.fillStyle = shade(PORT_INK.seam, 0.15);
+      ctx.fillRect(-1, -h + 1.4, 2, 6.5 + h - 1.4);
+      ctx.fillStyle = shade(PORT_INK.seam, 0.35);
+      ctx.fillRect(-1, -h + 1.4, 0.4, 6.5 + h - 1.4);
+      return;
+    }
+    case 'craneRail': {
+      // The crane's I-beam under the truss, its trolley at the middle and its cable going down out of the box.
+      ctx.fillStyle = shade(PORT_INK.seam, -0.05);
+      ctx.fillRect(-h, -h + 1, extent, 2.2);
+      ctx.fillStyle = shade(PORT_INK.seam, 0.3);
+      ctx.fillRect(-h, -h + 1, extent, 0.4);
+      ctx.fillStyle = PORT_INK.hazard;
+      for (let x = -h; x < h; x += 4) ctx.fillRect(x, -h + 2.8, 2, 0.4);
+      ctx.fillStyle = PORT_INK.wallDark;
+      ctx.fillRect(-3, -h + 3.2, 6, 2.6);
+      return;
+    }
+    case 'craneHook': {
+      // The cable from the trolley, the block, and the hook — hung from the box's top, swinging about it (`put`'s turn).
+      ctx.strokeStyle = '#7d879b';
+      ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      ctx.moveTo(-0.4, -h);
+      ctx.lineTo(-0.4, 6);
+      ctx.moveTo(0.4, -h);
+      ctx.lineTo(0.4, 6);
+      ctx.stroke();
+      ctx.fillStyle = PORT_INK.hazard;
+      ctx.fillRect(-2, 6, 4, 3.2);
+      ctx.fillStyle = PORT_INK.woodDark;
+      ctx.fillRect(-2, 7.2, 4, 0.6);
+      ctx.strokeStyle = '#9aa4b8';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(0, 9.2);
+      ctx.lineTo(0, 11);
+      ctx.arc(-1.4, 11.4, 1.5, 0, Math.PI * 0.9);
+      ctx.stroke();
+      return;
+    }
+    case 'bulkhead': {
+      // A pressure door in the back wall: a frame, a door with rounded corners and its locking wheel, a step, and a lit panel.
+      ctx.fillStyle = shade(PORT_INK.wallDark, 0.05);
+      ctx.beginPath();
+      ctx.roundRect(-10, -12, 20, 24, 3);
+      ctx.fill();
+      ctx.fillStyle = shade(PORT_INK.wall, 0.06);
+      ctx.beginPath();
+      ctx.roundRect(-8, -10, 16, 21, 2.4);
+      ctx.fill();
+      ctx.strokeStyle = shade(PORT_INK.seam, 0.2);
+      ctx.lineWidth = 0.4;
+      ctx.stroke();
+      ctx.strokeStyle = '#8f99ad';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.4, 0, Math.PI * 2);
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2 + Math.PI / 4;
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * 3.4, Math.sin(a) * 3.4);
+      }
+      ctx.stroke();
+      ctx.fillStyle = PORT_INK.hazard;
+      for (let x = -9; x < 9; x += 3) ctx.fillRect(x, 11.6, 1.5, 0.6);
+      ctx.fillStyle = '#1a2130';
+      ctx.fillRect(11.5, -3, 3, 5);
+      radial(ctx, 13, -1.6, 0.9, PORT_INK.neon, 1);
+      radial(ctx, 13, 0.6, 0.6, PORT_INK.alarm, 0.8);
+      return;
+    }
+    case 'sign02': {
+      // The bay's number, stencilled on a plate — a numeral, not a word (the voice rule).
+      ctx.fillStyle = shade(PORT_INK.hazard, -0.15);
+      ctx.fillRect(-5, -3.2, 10, 6.4);
+      ctx.fillStyle = PORT_INK.wallDark;
+      ctx.font = `bold ${5.4}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('02', 0, 0.3);
+      return;
+    }
+    case 'hose': {
+      // A hose coiled on the deck, seen from the side as a stack of flattened loops, its nozzle out to one side.
+      ctx.strokeStyle = '#3c6b4e';
+      ctx.lineWidth = 0.9;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(0, -0.6 - i * 0.9, 5, 1.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(4.8, -0.6);
+      ctx.lineTo(6.6, 0.4);
+      ctx.stroke();
+      ctx.fillStyle = PORT_INK.hazard;
+      ctx.fillRect(6.2, -0.2, 1.2, 0.9);
+      return;
+    }
+    case 'crates': {
+      // Two crates, one on the other and turned a little, stencilled and strapped, standing on the box's foot.
+      const crate = (x: number, y: number, w: number, hh: number, ink: string): void => {
+        ctx.fillStyle = ink;
+        ctx.fillRect(x, y, w, hh);
+        ctx.strokeStyle = shade(ink, -0.3);
+        ctx.lineWidth = 0.35;
+        ctx.strokeRect(x, y, w, hh);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + w, y + hh);
+        ctx.stroke();
+        ctx.fillStyle = PORT_INK.hazard;
+        ctx.fillRect(x, y + hh * 0.35, w, 0.5);
+      };
+      crate(-8, 1, 10, 8, PORT_INK.wood);
+      crate(2.5, 3, 6, 6, shade(PORT_INK.wood, -0.1));
+      ctx.save();
+      ctx.translate(-2, -3);
+      ctx.rotate(-0.06);
+      crate(-4, -3.5, 7.5, 7.5, PORT_INK.woodLight);
+      ctx.restore();
+      return;
+    }
+    case 'doorLamp':
+      // 0677: the bay door's warning lamp, amber, faded on the clock as it turns.
+      radial(ctx, 0, 0, h, PORT_INK.hazard, 0.95);
+      return;
+    case 'deckLip': {
+      // The deck's front edge: a darker band, a hazard stripe along it, and the shadow it throws under itself.
+      ctx.fillStyle = PORT_INK.deckDark;
+      ctx.fillRect(-h, -2.2, extent, 4.4);
+      ctx.fillStyle = PORT_INK.hazard;
+      for (let x = -h; x < h; x += 3.2) {
+        ctx.beginPath();
+        ctx.moveTo(x, -1.4);
+        ctx.lineTo(x + 1.5, -1.4);
+        ctx.lineTo(x + 2.5, 0.2);
+        ctx.lineTo(x + 1, 0.2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      const under = ctx.createLinearGradient(0, 2.2, 0, 6);
+      under.addColorStop(0, rgba(palette.space, 0.6));
+      under.addColorStop(1, rgba(palette.space, 0));
+      ctx.fillStyle = under;
+      ctx.fillRect(-h, 2.2, extent, 3.8);
+      return;
+    }
+    case 'grating': {
+      // The open grating set in the deck under a pad, seen flat on: a frame and its bars, dark between.
+      ctx.fillStyle = '#10151f';
+      ctx.fillRect(-13, -1.6, 26, 3.6);
+      ctx.fillStyle = PORT_INK.seam;
+      for (let x = -12.5; x < 13; x += 1.6) ctx.fillRect(x, -1.6, 0.5, 3.6);
+      ctx.strokeStyle = shade(PORT_INK.seam, 0.25);
+      ctx.lineWidth = 0.35;
+      ctx.strokeRect(-13, -1.6, 26, 3.6);
+      return;
+    }
+    case 'scorch': {
+      // The Viper's burn on the deck where she stood: soot, darkest at the middle, with a ring of heat-tint.
+      radialEllipse(ctx, 0, 0, h * 0.85, h * 0.12, '#05070b', 0.85);
+      ctx.strokeStyle = rgba('#7a4fd6', 0.35);
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, h * 0.55, h * 0.07, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      return;
+    }
+    case 'tyres': {
+      // Two tyre marks across the car's pad, where it is driven on and off: rubber, darker at its ends.
+      ctx.strokeStyle = rgba('#05070b', 0.55);
+      ctx.lineWidth = 1.1;
+      for (const y of [-1.2, 1.4]) {
+        ctx.beginPath();
+        ctx.moveTo(-h * 0.85, y);
+        ctx.quadraticCurveTo(0, y - 0.8, h * 0.85, y + 0.2);
+        ctx.stroke();
+      }
+      return;
+    }
+    case 'oil':
+      // A stain on the deck, flattened, with the faint sheen oil has.
+      radialEllipse(ctx, 0, 0, h * 0.7, h * 0.16, '#06080c', 0.75);
+      radialEllipse(ctx, -h * 0.15, -h * 0.02, h * 0.3, h * 0.05, '#6a5fd6', 0.25);
+      return;
     case 'ceiling': {
-      // A truss: two chords and the braces between them, and a working light on the lower chord.
+      /*
+        A truss: two chords, and a working light on the lower chord. 0677: the braces are their own piece at every
+        other seam (`trussBrace`), so the truss reads as spans and not as a V repeated eight times.
+      */
       ctx.fillStyle = PORT_INK.wallDark;
       ctx.fillRect(-h, -h, extent, extent);
-      ctx.strokeStyle = PORT_INK.seam;
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(-h, -h + 1);
-      ctx.lineTo(0, 6.5);
-      ctx.lineTo(h, -h + 1);
-      ctx.stroke();
       ctx.fillStyle = PORT_INK.seam;
       ctx.fillRect(-h, -h, extent, 1.4);
       ctx.fillRect(-h, 6.5, extent, 1.6);
@@ -608,6 +855,11 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       ctx.fillRect(-5, -h, 8, h + 7);
       ctx.fillStyle = shade(PORT_INK.wallDark, 0.2);
       ctx.fillRect(2, -h, 1, h + 7);
+      // 0677: the door's slab heavier — its bolts down the frame, and a second rib across it.
+      ctx.fillStyle = shade(PORT_INK.seam, 0.15);
+      for (let y = -h + 3; y < 5; y += 4) ctx.fillRect(-9.2, y, 0.9, 0.9);
+      ctx.fillStyle = shade(PORT_INK.wallDark, 0.12);
+      ctx.fillRect(-5, 1, 8, 1.6);
       ctx.save();
       ctx.beginPath();
       ctx.rect(-6, 7, 10, 3);

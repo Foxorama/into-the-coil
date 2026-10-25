@@ -56,6 +56,7 @@ import { SHIP_BOX, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 import { SCROLL_PER_STEP } from '../sim/flight.ts';
+import { makeRng } from '../sim/rng.ts';
 import { paintSky, type Sky } from './scene.ts';
 import { screenX, screenY, type Surface } from './surface.ts';
 
@@ -180,8 +181,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   if (!behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit, 0, DOCK.moon.grow);
   const wall = PORT_EXTENT.wall;
   for (let along = wall / 2; along < DOCK.bay; along += wall) {
-    // 0676: lit by the lamp over it, half lit beside one, dark between.
-    for (let across = wall / 2; across < STAGE.deck + wall; across += wall) put(surface, view, WALL_TILE[tileLit(along, across, DOCK.lamps)], along, across, 1, 0, TILE_OVERLAP);
+    // 0676: lit by the lamp over it, half lit beside one, dark between. 0677: and its vent, patch or conduit.
+    for (let across = wall / 2; across < STAGE.deck + wall; across += wall) wallTile(surface, view, along, across, DOCK.lamps);
   }
   // 0676: the shade under the truss, under the catwalk, and along the wall's foot.
   shadeAt(surface, view, DOCK.bay / 2, STAGE.ceiling, DOCK.bay, true);
@@ -189,12 +190,17 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   shadeAt(surface, view, DOCK.bay / 2, STAGE.deck, DOCK.bay, false);
   const ceiling = PORT_EXTENT.ceiling;
   for (let along = ceiling / 2; along < DOCK.bay + ceiling; along += ceiling) put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
+  // 0677: the truss's braces between its spans.
+  paintBraces(surface, view, DOCK.bay);
   const lamp = PORT_EXTENT.lamp;
   for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lamp, DOCK.lamps[i]!, STAGE.ceiling - 2 + lamp / 2);
   const deck = PORT_EXTENT.deck;
   for (let along = deck / 2; along < DOCK.bay + deck; along += deck) {
     for (let across = STAGE.deck + deck / 2; across < ACROSS_SPAN + deck / 2; across += deck) put(surface, view, PORT_SPRITE.deck, along, across, 1, 0, TILE_OVERLAP);
   }
+  // 0677: the deck's front edge, and the grating set in it under the cradle.
+  paintLip(surface, view, DOCK.bay);
+  put(surface, view, PORT_SPRITE.grating, DOCK.ship, STAGE.deck + GRATING_DOWN);
   // 0676: each lamp's light on the deck under it, and the cradle's field round its foot.
   for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, DOCK.lamps[i]!, STAGE.deck + POOL_DOWN);
   put(surface, view, PORT_SPRITE.padPool, DOCK.ship, STAGE.deck + POOL_DOWN);
@@ -323,6 +329,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   put(surface, view, PORT_SPRITE.field, DOCK.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
   put(surface, view, PORT_SPRITE.bayTop, DOCK.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
   put(surface, view, PORT_SPRITE.bayBottom, DOCK.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
+  // 0677: and the bay door's warning lamp, turning.
+  paintDoorLamp(surface, view, t, DOCK.bay);
 }
 
 /**
@@ -588,6 +596,82 @@ export function tileLit(along: number, across: number, lamps: readonly number[])
   return near < LAMP_BESIDE && high ? 1 : 0;
 }
 
+/*
+  ── BIG FORMS — 0677 ────────────────────────────────────────────────────────────────────────────
+*/
+
+/** The wall's overlays — a vent, a patch, a conduit — laid over whichever lit tile a place has. */
+// @setup: a table of three indices, built once at module load.
+const OVERLAY = [PORT_SPRITE.wallVent, PORT_SPRITE.wallPatch, PORT_SPRITE.wallConduit] as const;
+/** How many columns and rows of the wall's grid the overlay picks are drawn for; the room repeats past them. */
+const OVERLAY_COLUMNS = 10;
+const OVERLAY_ROWS = 6;
+/** The share of tiles that carry an overlay. */
+const OVERLAY_SHARE = 0.4;
+/**
+ * Each tile's overlay, or -1 — drawn once from the port's own stream for its tiles (0021), so the room is the
+ * same room every visit and a pick costs the frame an index.
+ */
+// @setup: one pick a tile, drawn from the seeded stream once at module load.
+const WALL_OVERLAY: readonly number[] = (() => {
+  const rng = makeRng('port').stream('tiles');
+  const picks: number[] = [];
+  // @setup: sixty picks pushed once, at module load, never in a frame.
+  for (let i = 0; i < OVERLAY_COLUMNS * OVERLAY_ROWS; i++) picks.push(rng.float() < OVERLAY_SHARE ? OVERLAY[Math.floor(rng.float() * OVERLAY.length)]! : -1);
+  return picks;
+})();
+
+/** The overlay on the wall tile centred at `along`, `across`, or -1 for none. */
+export function overlayAt(along: number, across: number): number {
+  const column = Math.floor(along / PORT_EXTENT.wall) % OVERLAY_COLUMNS;
+  const row = Math.floor(across / PORT_EXTENT.wall) % OVERLAY_ROWS;
+  return WALL_OVERLAY[column * OVERLAY_ROWS + row] ?? -1;
+}
+
+/** A wall tile and its overlay, if it has one. */
+function wallTile(surface: Surface, view: View, along: number, across: number, lamps: readonly number[]): void {
+  put(surface, view, WALL_TILE[tileLit(along, across, lamps)], along, across, 1, 0, TILE_OVERLAP);
+  const overlay = overlayAt(along, across);
+  if (overlay >= 0) put(surface, view, overlay, along, across, 1, 0, TILE_OVERLAP);
+}
+
+/** The truss's braces, at every other seam of its tiles to `end`. */
+function paintBraces(surface: Surface, view: View, end: number): void {
+  const ceiling = PORT_EXTENT.ceiling;
+  for (let along = 2 * ceiling; along < end; along += 2 * ceiling) put(surface, view, PORT_SPRITE.trussBrace, along, STAGE.ceiling - ceiling / 2);
+}
+
+/** The deck's front edge, across the whole of it to `end`. */
+function paintLip(surface: Surface, view: View, end: number): void {
+  const lip = PORT_EXTENT.deckLip;
+  for (let along = lip / 2; along < end; along += lip) put(surface, view, PORT_SPRITE.deckLip, along, ACROSS_SPAN - LIP_UP, 1, 0, TILE_OVERLAP);
+}
+
+/** The bay door's warning lamp on its frame, turning on the alarm's period — bright once a turn. */
+function paintDoorLamp(surface: Surface, view: View, t: number, bay: number): void {
+  const turn = (t / ALARM_PERIOD) * Math.PI * 2;
+  const sweep = Math.max(0, Math.cos(turn));
+  put(surface, view, PORT_SPRITE.doorLamp, bay - 1, DOOR_LAMP_ACROSS, 0.3 + 0.7 * sweep * sweep);
+}
+/** How far up from the screen's foot the deck's lip lies, and where across the bay's frame its lamp is. */
+const LIP_UP = 2.5;
+const DOOR_LAMP_ACROSS = 22;
+/** How far onto the deck a pad's grating lies, under the pad's own strip. */
+const GRATING_DOWN = 3;
+/** How far onto the deck its marks lie; how far back from the crates the oil is. */
+const TYRES_DOWN = 5;
+const OIL_BACK = 16;
+/** The Viper's scorch: how long after her burn it starts to show, and how long it takes to come up. */
+const SCORCH_FROM = 30;
+const SCORCH_IN = 60;
+/** How bright a beam's reflection in the deck is, against the beam. */
+const REFLECTION = 0.22;
+/** The crane over the pilot's pad: how far under the truss its rail is, and how far its hook swings, in radians. */
+const CRANE_UNDER = 1;
+const HOOK_SWING = 0.05;
+/** The hook's swing, in steps a period — slow, as a hook on a long cable swings. */
+const HOOK_PERIOD = 300;
+
 /**
  * A band of shade `width` world units wide whose dark edge lies along `edge`, across — under a thing (`below`,
  * the band falling away down the wall) or at a wall's foot (the band rising from it). Each sprite is a band across
@@ -655,18 +739,28 @@ function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
     for (let across = wall / 2; across < STAGE.deck + wall; across += wall) {
       // 0550: no tile where the viewport is, so the sky under the room is what is seen through it.
       if (along > hole.along && along < hole.along + 2 * wall && across > hole.across && across < hole.across + wall) continue;
-      // 0676: lit by the lamp over it, half lit beside one, dark between.
-      put(surface, view, WALL_TILE[tileLit(along, across, STAGE.lamps)], along, across, 1, 0, TILE_OVERLAP);
+      // 0676: lit by the lamp over it, half lit beside one, dark between. 0677: and its vent, patch or conduit.
+      wallTile(surface, view, along, across, STAGE.lamps);
     }
   }
   put(surface, view, PORT_SPRITE.viewport, hole.along + wall, hole.across + wall / 2);
   // 0676: and the shade under the truss and along the wall's foot, where the lamps do not reach.
   shadeAt(surface, view, STAGE.bay / 2, STAGE.ceiling, STAGE.bay, true);
   shadeAt(surface, view, STAGE.bay / 2, STAGE.deck, STAGE.bay, false);
+  // 0677: the bulkhead door between the pads, and the bay's number over it.
+  put(surface, view, PORT_SPRITE.bulkhead, STAGE.bulkhead.along, STAGE.bulkhead.across);
+  put(surface, view, PORT_SPRITE.sign02, STAGE.sign.along, STAGE.sign.across);
   const ceiling = PORT_EXTENT.ceiling;
   for (let along = ceiling / 2; along < STAGE.bay; along += ceiling) {
     put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
   }
+  // 0677: the truss's braces, and the crane's rail under it over the pilot's pad with its hook swinging on the clock.
+  paintBraces(surface, view, STAGE.bay);
+  const rail = PORT_EXTENT.craneRail;
+  put(surface, view, PORT_SPRITE.craneRail, STAGE.bluePad, STAGE.ceiling + CRANE_UNDER + rail / 2 - 1);
+  const hook = PORT_EXTENT.craneHook;
+  const swing = HOOK_SWING * Math.sin((t / HOOK_PERIOD) * Math.PI * 2);
+  put(surface, view, PORT_SPRITE.craneHook, STAGE.bluePad, STAGE.ceiling + CRANE_UNDER + 5.8 + hook / 2, 1, swing);
 }
 
 /** The lamps hung from the truss. */
@@ -688,10 +782,12 @@ function paintDeck(surface: Surface, view: View): void {
 }
 
 /** The edge of the room, over everything that flies out through it. */
-function paintEdge(surface: Surface, view: View): void {
+function paintEdge(surface: Surface, view: View, t: number): void {
   put(surface, view, PORT_SPRITE.field, STAGE.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
   put(surface, view, PORT_SPRITE.bayTop, STAGE.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
   put(surface, view, PORT_SPRITE.bayBottom, STAGE.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
+  // 0677: and the bay door's warning lamp, turning.
+  paintDoorLamp(surface, view, t, STAGE.bay);
 }
 
 /**
@@ -793,12 +889,27 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   // The deck.
   paintDeck(surface, view);
   if (open > 0) put(surface, view, PORT_SPRITE.pool, STAGE.doorway.along + 6, STAGE.deck + 1, open * 0.7);
+  // 0677: the deck as a floor — its front edge, the grating under each pad, the car's tyre marks on its pad, the
+  // Viper's scorch where she stood (coming up once her burn has had the deck a moment), and an oil stain.
+  paintLip(surface, view, STAGE.bay);
+  put(surface, view, PORT_SPRITE.grating, STAGE.viperPad, STAGE.deck + GRATING_DOWN);
+  put(surface, view, PORT_SPRITE.grating, STAGE.bluePad, STAGE.deck + GRATING_DOWN);
+  put(surface, view, PORT_SPRITE.tyres, STAGE.bluePad, STAGE.deck + TYRES_DOWN);
+  const scorch = ease(t, BEATS.viperGo + SCORCH_FROM, BEATS.viperGo + SCORCH_FROM + SCORCH_IN);
+  if (scorch > 0) put(surface, view, PORT_SPRITE.scorch, STAGE.viperPad, STAGE.deck + TYRES_DOWN, scorch);
+  put(surface, view, PORT_SPRITE.oil, STAGE.crates.along - OIL_BACK, STAGE.deck + TYRES_DOWN);
   // 0676: each lamp's light on the deck under it.
   for (let i = 0; i < STAGE.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, STAGE.lamps[i]!, STAGE.deck + POOL_DOWN);
   // The pads, and the beams each ship rides until it goes — 0676: each pad's field lit on the deck as long as its beam.
   const beam = PORT_EXTENT.beam;
   const viperField = 1 - ease(t, BEATS.viperGo, BEATS.viperGo + 30);
   const blueField = 1 - ease(t, BEATS.blueGo, BEATS.blueGo + 30);
+  // 0677: each beam's rings in the polished deck under its pad — the beam turned over and faint.
+  put(surface, view, PORT_SPRITE.beam, STAGE.viperPad, STAGE.deck + beam / 2 - 2, viperField * REFLECTION, Math.PI);
+  put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck + beam / 2 - 2, blueField * REFLECTION, Math.PI);
+  // 0677: and the crates and the hose standing on the deck past the Viper's pad.
+  put(surface, view, PORT_SPRITE.hose, STAGE.hose.along, STAGE.hose.across);
+  put(surface, view, PORT_SPRITE.crates, STAGE.crates.along, STAGE.crates.across);
   put(surface, view, PORT_SPRITE.padPool, STAGE.viperPad, STAGE.deck + POOL_DOWN, viperField);
   put(surface, view, PORT_SPRITE.padPool, STAGE.bluePad, STAGE.deck + POOL_DOWN, blueField);
   put(surface, view, PORT_SPRITE.beam, STAGE.viperPad, STAGE.deck - beam / 2 + 2, viperField);
@@ -853,7 +964,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
     if (blink > 0) put(surface, view, PORT_SPRITE.flash, blueAlong + cockpitAlong, blueAcross + cockpitAcross, blink * 0.5, 0, 0.25);
   }
   // The edge of the room, over everything that flies out through it.
-  paintEdge(surface, view);
+  paintEdge(surface, view, t);
 }
 
 /** The Viper and her engine — the surge its launch is heard in — and the flash she leaves the pad in. */
