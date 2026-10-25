@@ -54,6 +54,17 @@ export const PROBES = [
   },
   {
     decision: '0673',
+    suite: 'tests/tries.browser.test.ts',
+    broke: 'a chip flush with its track’s end taken for a cut one, so the gun a step tries on is put away',
+    guard: 'a shut gun is off the band',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '    const SLACK = 2;\n',
+      replace: '    const SLACK = 0.5;\n',
+    },
+  },
+  {
+    decision: '0673',
     suite: 'tests/cosmo.browser.test.ts',
     broke: 'the way to Cosmo’s never shown beside a lone option',
     guard: 'a lone flame the way to Cosmo’s',

@@ -8214,6 +8214,8 @@ export function makeChrome(
     const left = tried.offsetLeft - track.offsetLeft;
     if (left < track.scrollLeft) track.scrollLeft = left;
     else if (left + tried.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + tried.offsetWidth - track.clientWidth;
+    // 0673: and the cut worked out again now, not on the scroll's event a frame on, so the one tried on is drawn.
+    wholeChips(band);
   };
   /** Mark a band's chosen option on one screen — `setChoice`'s, and 0579's `setSection` for one screen alone. */
   const choose = (screen: Screen, name: ChoiceName, index: number): void => {
@@ -8269,10 +8271,16 @@ export function makeChrome(
     if (!(track instanceof HTMLElement)) return;
     const edge = track.getBoundingClientRect();
     if (edge.width === 0) return;
+    /*
+      0673: a chip flush with the track's end is whole. A scroll stands on a whole pixel and the chips on fractions,
+      so the last one brought in sat up to a pixel past the edge and was put away — the gun tried on, and the fitted
+      one at rest. Two pixels is a cut no eye reads.
+    */
+    const SLACK = 2;
     for (const face of band.buttons) {
       face.style.visibility = '';
       const box = face.getBoundingClientRect();
-      const cut = box.width > 0 && (box.left < edge.left - 0.5 || box.right > edge.right + 0.5) && box.right > edge.left && box.left < edge.right;
+      const cut = box.width > 0 && (box.left < edge.left - SLACK || box.right > edge.right + SLACK) && box.right > edge.left && box.left < edge.right;
       if (cut) face.style.visibility = 'hidden';
     }
   };

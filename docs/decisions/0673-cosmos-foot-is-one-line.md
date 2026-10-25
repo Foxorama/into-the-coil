@@ -45,6 +45,10 @@ the door alone. If a play says the door reads better, that is a new bake and owe
   photograph found it, and the guard was written after. At 480×320, 667×375, 1280×720 and
   2560×1080 no sub-tab is cut short. At 1280×720 Paint & Parts draws no chip in part, the Firebird's lone flame shows
   the way to Cosmo's and it opens the flames shelf, and the art's picture is at least 80 × 44 px.
+- **A chip flush with its track's end is whole.** 0670 put away a face more than half a pixel past the edge. Across
+  every band that put away the gun a step had just tried on, and the fitted one at rest: a scroll stands on a whole
+  pixel and the chips on fractions. 0657's `tests/tries.browser.test.ts` went red. The slack is two pixels, and the
+  cut is worked out again as soon as a step scrolls, not on the scroll's event a frame later.
 - **Spacing the groups down a tall plate was first written for every group.** At 720 rows it opened 70 px gaps
   between bands a glance takes together, and Paint's two bands stood a plate apart. It is kept to a plate 900 px
   tall or more and a group of three bands or more.
