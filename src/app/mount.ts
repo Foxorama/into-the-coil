@@ -59,6 +59,12 @@ import { chargesIn, livesFor, ownSpecial, startingArsenal, type Arsenal } from '
  */
 const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive', ward: 'voidMissile' };
 
+/**
+ * 0678: the closest any tab's camera asks to be, which the port's ship and keepers are baked sharp for — read off
+ * the rows, so a fourth tab that stands closer is baked for without a line here.
+ */
+const STAND_SHARP = Math.max(...(Object.keys(SCREENS) as Screen[]).map((screen) => SCREENS[screen].stand?.camera.zoom ?? 1));
+
 /** The four pushes a key can make on a menu — 0458. Built once, so a key press allocates nothing. */
 const MENU_UP = [-1, 'y'] as const;
 const MENU_DOWN = [1, 'y'] as const;
@@ -110,7 +116,7 @@ import {
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakeCodaOf, bakePlace, bakeTitle, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone, type PlaceBake } from './sound.ts';
-import { DOCK, INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
+import { DOCK, DOLLY_STEPS, INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
 import { makeFinaleScene } from '../render/finale.ts';
@@ -1070,7 +1076,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0563: how much sharper than the room the port's ship and keepers were baked — the stand camera's zoom, or 1 for the intro's.
   let portSharp = 1;
   // @setup: 0563's camera fitted to the stand's column, written in place by `frameStand`.
-  const framed: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0 };
+  const framed: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0, keep: 'room' };
+  /*
+    0678: the dolly between two tabs' cameras. `dollyFrom` is the camera the screen showed when the tab changed,
+    `dollyNow` the one it shows on this step of the ease, and `dollyStep` how far through it is — `DOLLY_STEPS`
+    when there is none. The camera at a step is the two cameras and the step, so nothing accumulates (0548).
+  */
+  // @setup: 0678's two scratch cameras, written in place by `frameStand` and `dollyOn`.
+  const dollyFrom: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0, keep: 'room' };
+  // @setup: as above.
+  const dollyNow: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0, keep: 'room' };
+  let dollyStep = DOLLY_STEPS;
+  // 0678: the tab `framed` was fitted for, so a framing knows a change of tab from a resize; `null` off the stand.
+  let framedFor: Screen | null = null;
+  // 0678: and how much of the screen's foot is under the plate, as the last framing found it.
+  let framedBelow = 0;
   /*
     ⚠️ **THE INTRO DRAWS FROM ITS PIECES AND THE GAME'S TOGETHER — 0416**, because the sky it flies is
     the first level's and is in the game's atlas. Composed again whenever the game's changes — a place
@@ -1656,21 +1676,26 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const resolution = view.scale * dpr;
       const standing = GOLFERS[state.settings.pilot];
       // 0563: the ship and the keepers sharper by as much as the camera is closer — and the intro's port, baked plain, is baked again.
-      if (port === null || atlasIsStale(port, 'side', resolution) || portSharp !== stand.camera.zoom * DOCK.shipGrow) {
+      // 0678: at the closest tab's camera, so the dolly between the three never bakes the room again.
+      if (port === null || atlasIsStale(port, 'side', resolution) || portSharp !== STAND_SHARP * DOCK.shipGrow) {
         // 0542: in the fit the stand wears — the ware in Cosmo's window tried on, on the shop.
-        port = withFit(standing.ship, standFit(standing.ship), () => bakePort(colours, resolution, standing, stand.camera.zoom * DOCK.shipGrow));
+        port = withFit(standing.ship, standFit(standing.ship), () => bakePort(colours, resolution, standing, STAND_SHARP * DOCK.shipGrow));
         portFit = { ship: standing.ship, fit: standFit(standing.ship) };
-        portSharp = stand.camera.zoom * DOCK.shipGrow;
+        portSharp = STAND_SHARP * DOCK.shipGrow;
       }
       if (world.stand === null) world.stand = 0;
       // 0563: the row's camera until the chrome is laid out; `frameStand` fits it to the column once it is.
-      standViewInto(view, stand.camera, viewportWidth(host), viewportHeight(host), world.standView);
+      // 0678: only coming onto the stand — from another tab, the dolly starts from the camera the screen shows.
+      if (framedFor === null) standViewInto(view, stand.camera, viewportWidth(host), viewportHeight(host), world.standView);
       world.standKeeper = stand.keeper;
       // And no bar over the room: the bar is the play readout's (0500), and here the readout is in the dash.
       surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, 0);
       showPort();
     } else if (world.stand !== null) {
       world.stand = null;
+      // 0678: and a tab opened from off the stand is cut to, never dollied to.
+      framedFor = null;
+      dollyStep = DOLLY_STEPS;
       surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, view.barAcross);
       if (world.intro === null) {
         port = null;
@@ -1787,12 +1812,55 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const box = chrome.standBox(state.screen.current);
     if (box === null) return;
     const height = viewportHeight(host);
+    // 0678: a change of tab on the stand starts the dolly from the camera the screen shows — mid-ease, where it has got to.
+    const current = state.screen.current;
+    if (framedFor !== null && framedFor !== current) {
+      copyCamera(dollyStep < DOLLY_STEPS ? dollyNow : framed, dollyFrom);
+      dollyStep = 0;
+    }
+    framedFor = current;
     fitStand(stand.camera, view, width, box, stand.keeper, framed, height);
     // 0566: in portrait the plate is under the stand, and the deck may stop above the screen's foot.
-    standViewInto(view, framed, width, height, world.standView, Math.max(0, height - (box.top + box.height)));
+    framedBelow = Math.max(0, height - (box.top + box.height));
+    standViewInto(view, dollyStep < DOLLY_STEPS ? dollyOn() : framed, width, height, world.standView, framedBelow);
     // 0572: and where the ship's foot and the keeper's head are on it, for the monitor and the bubble.
     standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks);
-    chrome.setStandMarks(state.screen.current, marks);
+    chrome.setStandMarks(current, marks);
+  }
+
+  /**
+   * One step of the dolly — 0678: the camera eased on toward the tab's own, the view and the marks written again
+   * in place. On its last step the camera is the tab's own, so the dolly ends where a cut would have.
+   */
+  function dollyStepOn(): void {
+    const stand = SCREENS[state.screen.current].stand;
+    if (stand === null || dollyStep >= DOLLY_STEPS) return;
+    dollyStep++;
+    standViewInto(view, dollyStep < DOLLY_STEPS ? dollyOn() : framed, viewportWidth(host), viewportHeight(host), world.standView, framedBelow);
+    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks);
+    chrome.moveStandMarks(state.screen.current, marks);
+  }
+
+  /** The camera at the dolly's step, written into `dollyNow` — a smoothstep from `dollyFrom` to `framed`. */
+  function dollyOn(): StandCamera {
+    const t = dollyStep / DOLLY_STEPS;
+    const ease = t * t * (3 - 2 * t);
+    dollyNow.along = dollyFrom.along + (framed.along - dollyFrom.along) * ease;
+    dollyNow.across = dollyFrom.across + (framed.across - dollyFrom.across) * ease;
+    dollyNow.zoom = dollyFrom.zoom + (framed.zoom - dollyFrom.zoom) * ease;
+    dollyNow.x = dollyFrom.x + (framed.x - dollyFrom.x) * ease;
+    dollyNow.y = dollyFrom.y + (framed.y - dollyFrom.y) * ease;
+    dollyNow.keep = framed.keep;
+    return dollyNow;
+  }
+
+  function copyCamera(from: StandCamera, to: StandCamera): void {
+    to.along = from.along;
+    to.across = from.across;
+    to.zoom = from.zoom;
+    to.x = from.x;
+    to.y = from.y;
+    to.keep = from.keep;
   }
 
   /**
@@ -5217,7 +5285,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       }
     }
     // The stand's clock — 0540: what idles on it, the bob, the flame and the sky past the bay.
-    if (world.stand !== null) world.stand++;
+    if (world.stand !== null) {
+      world.stand++;
+      // 0678: and the dolly between two tabs' cameras, on the same clock.
+      dollyStepOn();
+    }
     // The intro's clock — 0411. Its countdown below is what ends it; this is what it has shown.
     if (world.intro !== null) {
       world.intro++;

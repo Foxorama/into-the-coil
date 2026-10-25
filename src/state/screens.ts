@@ -28,7 +28,7 @@ import { HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { CREDITS, CREDIT_KINDS } from '../content/credits.ts';
-import { INTRO_STEPS, type StandCamera } from '../content/port.ts';
+import { INTRO_STEPS, STAND_PAD_AT, type StandCamera } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, lockLeft, type GolferKind, type PilotLock, type PilotRecord } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
@@ -569,14 +569,25 @@ function pilotHint(kind: GolferKind): string {
 const pilotOptions = GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) }));
 
 /**
- * Where the port's camera stands on the hangar's three tabs — 0548: one place, between Cosmo's stall and
- * the pilot's pad, at one zoom. Each tab had its own (0540, 0542), and stepping the tabs moved the room
- * and the ship under the player's eye three ways at once. Each row still names its camera; this is the
- * one they share today, and a tab that wants another writes its own.
+ * Where the port's camera stands on Hangin' Out — 0548 made it the one place all three tabs stood, because
+ * stepping tabs that each had their own moved the room and the ship under the player's eye three ways at once.
+ * 0678: each tab stands somewhere again, and the stand dollies from one to the next (`DOLLY_STEPS`) rather
+ * than cutting, which is what 0548's jump was.
  */
 // 0568: no closer than the room's whole height and a little — the truss to the deck — so a bigger screen shows more hangar.
-// 0571: on the ship on its cradle in the dock.
-const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };
+// 0571: on the ship on its cradle in the dock. 0678: its point at `STAND_PAD_AT` of the column, as every tab's was.
+const HANGAR_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: STAND_PAD_AT, y: 0.5, keep: 'room' };
+/**
+ * 0678: Paint & Parts low and close on the cradle, so what is fitted to the ship is what the picture is about — a
+ * rim reads at sixty pixels and more across on a laptop. It keeps the workshop wall the cockpit monitor hangs
+ * from, not the lift and the shops, which a camera this close cannot.
+ */
+const PARTS_CAMERA: StandCamera = { along: 131, across: 78, zoom: 2, x: 0.8, y: 0.5, keep: 'workshop' };
+/**
+ * 0678: Cosmo's at the mezzanine, their counter large and the ship still in frame under it. It keeps the workshop
+ * wall too: kept to their own shopfront, the cockpit monitor on the wall went under the plate.
+ */
+const COSMO_CAMERA: StandCamera = { along: 144, across: 52, zoom: 1.3, x: 0.66, y: 0.45, keep: 'workshop' };
 
 /**
  * The band of a tabbed stand's headings — 0579: one option a group, in the stand's order, so a group added
@@ -611,8 +622,9 @@ const PARTS_STAND: StandRow = {
     0548: the port's one camera. It was closer on the pad at 2.3 (0540), so the wheels, the nose and the
     flame were large — and the room jumped a size every time the tab was stepped onto, which was asked
     to stop. The looks are still read close on rig/looks.html.
+    0678: its own again, close on the cradle, and the stand dollies to it rather than jumping.
   */
-  camera: PORT_CAMERA,
+  camera: PARTS_CAMERA,
   // 0550: MMXXVI, who paints it.
   keeper: 'mmxxvi',
 };
@@ -631,8 +643,8 @@ const HANGAR_STAND: StandRow = {
     sub-tabs: a later group is a tab, and the plate is never more than three bands tall.
   */
   tabbed: true,
-  // 0548: the port's one camera, the pad and the keeper's counter in it — it was on the pad at 1.5 (0540).
-  camera: PORT_CAMERA,
+  // 0548: the port's one camera, the pad and the keeper's counter in it — it was on the pad at 1.5 (0540). 0678: the hangar's own.
+  camera: HANGAR_CAMERA,
   // 0550: Unity, who puts the loadout and the dash together.
   keeper: 'unity',
 };
@@ -1489,8 +1501,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       bar's window and the pad are sixty-four units apart, which no camera that fills the screen fits in a
       stand a third of it wide: at the bar the ship stood under the plate. So Cosmo keeps a stall on the deck
       beside the pad, and the camera stands between the two — the port's one camera since 0548.
+      0678: Cosmo's own again, at their counter on the mezzanine.
     */
-    stand: { groups: [], tabbed: false, camera: PORT_CAMERA, keeper: 'cosmo' },
+    stand: { groups: [], tabbed: false, camera: COSMO_CAMERA, keeper: 'cosmo' },
     // 0542: Buy names the price of the ware in the window, written by the shell — `Buy · 250 ✦`.
     actions: [
       { label: 'Buy', hint: '' },

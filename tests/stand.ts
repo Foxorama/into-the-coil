@@ -19,7 +19,7 @@ import type { Page } from 'playwright-core';
 import { prefixFor } from '../src/app/chrome.ts';
 import { BLUE_BOB_RATE } from '../src/render/port.ts';
 import { STAND_PAD_AT } from '../src/content/port.ts';
-import { STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
 
 /** How far a channel must move for a pixel to count as changed — past the edge a sub-pixel bob blurs. */
 const MARGIN = 48;
@@ -34,7 +34,7 @@ const BOB_MS = ((Math.PI * 2) / BLUE_BOB_RATE / STEPS_PER_SECOND) * 1000;
  * the screen: a wall, the keeper, and the open bay with its stars drifting past. A look changed on the ship
  * was then two thousandths of the box against a noise of one, the stars' — under CI, every look's guard
  * read *no change*. So what is read is the ship's own part of the stand: a band of its width about the pad
- * (`STAND_PAD_AT`), from above the ship to the deck, where the stars are not.
+ * (the tab's camera's `x`, 0678), from above the ship to the deck, where the stars are not.
  */
 async function snap(page: Page, screen: Screen, key: string): Promise<void> {
   await page.evaluate(
@@ -51,7 +51,8 @@ async function snap(page: Page, screen: Screen, key: string): Promise<void> {
       const kept = ((window as unknown as { itcStand?: Record<string, Uint8ClampedArray> }).itcStand ??= {});
       kept[key] = canvas.getContext('2d')!.getImageData(x, y, w, h).data;
     },
-    { prefix: prefixFor(screen), key, pad: STAND_PAD_AT, half: SHIP_BAND },
+    // 0678: about the tab's own camera's point, which was `STAND_PAD_AT` on every tab.
+    { prefix: prefixFor(screen), key, pad: SCREENS[screen].stand?.camera.x ?? STAND_PAD_AT, half: SHIP_BAND },
   );
 }
 

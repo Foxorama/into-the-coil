@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'shows the end of the hangar and the open stars past it',
     edit: {
       path: 'src/state/screens.ts',
-      find: 'const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };',
-      replace: 'const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.9, x: 0.6, y: 0.5 };',
+      // ⚠️ Re-anchored by 0678, which gave each tab its camera: the hangar's is the one this ask was made on.
+      find: "const HANGAR_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: STAND_PAD_AT, y: 0.5, keep: 'room' };",
+      replace: "const HANGAR_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.9, x: STAND_PAD_AT, y: 0.5, keep: 'room' };",
     },
   },
   {
@@ -23,8 +24,8 @@ export const PROBES = [
     guard: 'shows the end of the hangar and the open stars past it',
     edit: {
       path: 'src/state/screens.ts',
-      find: 'const PORT_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };',
-      replace: 'const PORT_CAMERA: StandCamera = { along: 40, across: 64, zoom: 1.15, x: 0.6, y: 0.5 };',
+      find: "const HANGAR_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: STAND_PAD_AT, y: 0.5, keep: 'room' };",
+      replace: "const HANGAR_CAMERA: StandCamera = { along: 40, across: 64, zoom: 1.15, x: STAND_PAD_AT, y: 0.5, keep: 'room' };",
     },
   },
   {
