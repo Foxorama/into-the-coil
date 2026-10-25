@@ -46,6 +46,8 @@ export async function choose(page: Page, setting: ChoiceName, index: number): Pr
     }
     throw new Error(`the ${setting} chip never came round to option ${index}`);
   }
+  // 0672: a band of two is a switch, and a click on the chip that is on flips it — so a choice already made is left.
+  if ((await page.locator(`${options} >> nth=${index}`).getAttribute('aria-pressed')) === 'true') return;
   await page.locator(`${options} >> nth=${index}`).click();
 }
 

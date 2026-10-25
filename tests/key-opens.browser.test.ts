@@ -25,7 +25,13 @@ import { OWNABLES, OWNABLE_KINDS } from '../src/content/wares.ts';
  * ⚠️ **READ THE SKIPPED COUNT.** `runIf` means a machine with no browser still passes.
  */
 
-vi.setConfig({ testTimeout: 120_000 });
+/*
+  0245: three times the worst cost measured. The slowest test here opens fourteen sheets at two sizes, and at
+  1280×720 a frame of software-drawn canvas costs a quarter of a second, the same on 0671's tree and 0672's, so
+  every press waits on it. It took 96 s in CI's suite on #660, ran past the old 120 s there on #661, and took
+  116 s and 125 s alone in a cloud container. Three times 125.
+*/
+vi.setConfig({ testTimeout: 375_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 const GUIDE = prefixFor('guide');

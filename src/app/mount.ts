@@ -2025,7 +2025,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (guarded === true) lines.push('Protected: the browser will not clear it to make room.');
     if (guarded === false) lines.push('Not protected: the browser may clear it to make room. A file keeps a copy it cannot.');
     lines.push('Here: ' + summary(keptNow()));
-    chrome.setNote(lines);
+    // 0672: a save that may be lost is said at the sheet's weight — nothing kept, or kept where the browser may clear it.
+    chrome.setNote(lines, keptStore === null ? 0 : guarded === false ? 1 : -1);
     // 0642: Undo only where a load has put a save aside.
     chrome.setActionShown('save', 4, undoOf(keptStore) !== null);
     if (guarded === null && storage !== null && typeof storage.persisted === 'function') {

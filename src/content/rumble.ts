@@ -22,7 +22,12 @@ export interface RumbleRow {
 }
 
 export const RUMBLES: Record<RumbleKind, RumbleRow> = {
-  on: { title: 'On', hint: 'A pad or phone taps when the ball lands.', felt: true },
+  /*
+    0672: the one thing it is felt for, named. The review read *"when the ball lands"* as one ship's special said as
+    if it were the rule; the frame plays a feel only for the Hamster Ball's ram (`onFeel`: a landing, a kill, the
+    dance's bar full, a shield burnt off), so the rule is the ball's, and the line says whose ball it is.
+  */
+  on: { title: 'On', hint: 'A pad or phone taps when the Hamster Ball lands.', felt: true },
   off: { title: 'Off', hint: 'Nothing in the hands.', felt: false },
 };
 

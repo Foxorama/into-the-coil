@@ -734,6 +734,31 @@ export const CONTROL_ROWS: readonly ControlRow[] = [
  */
 const FLY_WAYS: Partial<Record<Action, string>> = { acrossMinus: 'Fly up', acrossPlus: 'Fly down', alongMinus: 'Fly left', alongPlus: 'Fly right' };
 
+/**
+ * The Controls tab as a table — 0672: a row per thing a hand does, a column per device. Each cell is the
+ * `CONTROL_ROWS` button that binds it, by its place there; a pad's movement is the stick, which binds nothing,
+ * and says so. Read by the Controls tab and by How to play's CONTROLS, so the two cannot disagree.
+ */
+export interface ControlTableRow {
+  /** What the row does — the movement by its way, a trigger by its side. */
+  readonly label: string;
+  /** Its keyboard cell: a place in `CONTROL_ROWS`. */
+  readonly keys: number;
+  /** Its pad cell: a place in `CONTROL_ROWS`, or `null` where the pad's stick does it. */
+  readonly pad: number | null;
+  /** Whether the row is the ship's movement, which How to play says once as *Fly*. */
+  readonly moves: boolean;
+}
+export const CONTROL_TABLE: readonly ControlTableRow[] = [
+  ...CONTROL_ROWS.flatMap((row, keys): ControlTableRow[] => {
+    if (row.device !== 'keys') return [];
+    const slot = ACTIONS[row.action].slot;
+    if (slot === null) return [{ label: FLY_WAYS[row.action] ?? ACTIONS[row.action].label, keys, pad: null, moves: true }];
+    const pad = CONTROL_ROWS.findIndex((other) => other.device === 'pad' && other.slot === slot);
+    return [{ label: SIDE_LABELS[SIDES[slot] ?? 'gun'], keys, pad: pad < 0 ? null : pad, moves: false }];
+  }),
+];
+
 /** What a Controls button is called — 0664: the movement by its way, a trigger by its side and the hand that throws it. */
 export function controlLabel(row: ControlRow): string {
   if (row.device === 'pad') return SIDE_LABELS[SIDES[row.slot] ?? 'gun'] + ' · pad';
