@@ -1191,7 +1191,7 @@ with the defects first and the per-tab stands last, and [`the-port-planned`](../
 six PRs with the station outside first and the dock's shops last. The plans hold the order and what each
 owes; the menus' item 8 waits for the port's first three.
 
-**Being built in the plans' order, one PR at a time — owed a play.** Landed: the menus' item 1,
+**Both plans are built — owed a play.** Landed in the plans' order, one PR at a time: the menus' item 1,
 [0668](decisions/0668-the-band-arms.md) (A on the pilot band arms, the hover lifts, the hint breaks, the
 Settings strip stays), and item 2, [0669](decisions/0669-one-cursor.md) (the brackets are the one cursor, and the
 title says why a pilot is locked), and item 3, [0670](decisions/0670-the-plate-from-the-short-side.md) (the hangar
@@ -1210,9 +1210,11 @@ floor); and the menus' item 8, [0678](decisions/0678-a-stand-per-tab.md) (a came
 them); and the port's item 4, [0679](decisions/0679-the-intros-staging.md) (her pad violet, the alarm's wash, the
 field's ripple, the camera pushing in and no bar over the intro), and item 5, [0680](decisions/0680-depth-and-life.md)
 (the spar and a shuttle past the bay, the rail at the dock's foot, and the room's life), and item 6,
-[0681](decisions/0681-the-dock-dressed.md) (three shopfronts, staggered, the neon mark, the arm, the polish).
-**Next is the menus' item 9**, the last; the rest follow the order the player gave — the menus' 1–7, the port's 1–3,
-the menus' 8, the port's 4–6, the menus' 9.
+[0681](decisions/0681-the-dock-dressed.md) (three shopfronts, staggered, the neon mark, the arm, the polish); and the
+menus' item 9, [0682](decisions/0682-the-phone-pass-again.md) (no cockpit strip on a phone, the pause plate clear of
+the score, the chosen pilot named, portrait photographed, a keeper's bubble clear of the balance). **Next is the
+play** both plans owe, with a pad, a keyboard and a phone in a hand, each decision's *What is owed* its questions;
+then whatever it names.
 
 ### ⚠️ THE BALL'S PAGE: ALL SIX LINES BUILT — OWED A PLAY — 2026-10-24
 

@@ -436,12 +436,124 @@ describe.runIf(chromePath)('every screen fits the screen it is drawn on', () => 
     const page = await open({ width: 480, height: 320 });
     for (const screen of DRAWN) {
       await showOnly(page, screen);
-      const overflow = await page.evaluate((prefix: string) => {
-        const root = document.querySelector('.' + prefix.slice(0, -1));
-        if (!(root instanceof HTMLElement)) return -1;
-        return root.scrollHeight - root.clientHeight;
-      }, prefixFor(screen));
-      expect(overflow, `${screen} needs scrolling on the smallest landscape phone`).toBeLessThanOrEqual(1);
+      expect(await overflowOf(page, screen), `${screen} needs scrolling on the smallest landscape phone`).toBeLessThanOrEqual(1);
+    }
+    await page.context().close();
+  });
+});
+
+/** How far a screen's root overflows its own height, in CSS pixels — what a player would have to scroll. */
+function overflowOf(page: Page, screen: Screen): Promise<number> {
+  return page.evaluate((prefix: string) => {
+    const root = document.querySelector('.' + prefix.slice(0, -1));
+    if (!(root instanceof HTMLElement)) return -1;
+    return root.scrollHeight - root.clientHeight;
+  }, prefixFor(screen));
+}
+
+/**
+ * Two phones held upright, touch — 0682. 0566 stood the gate down for the screens that stand in the port, so
+ * those are drawn upright and held here as the landscape six are; every other screen is gated (0031), which
+ * `tests/upright.browser.test.ts` holds.
+ */
+const UPRIGHT = [
+  { what: 'a phone held upright', width: 390, height: 844 },
+  { what: 'a large phone held upright', width: 412, height: 915 },
+] as const;
+
+/** The screens a phone may be held upright on: the ones that stand in the port. Derived from the table. */
+const STANDING: Screen[] = DRAWN.filter((s) => SCREENS[s].stand !== null);
+
+describe.runIf(chromePath)('0682 — every screen drawn upright fits the upright screen', () => {
+  for (const viewport of UPRIGHT) {
+    it(`draws all of every standing screen on ${viewport.what} (${viewport.width}x${viewport.height}), unscrolled`, async () => {
+      /*
+        Walked in landscape and turned upright, as a phone is: the title is gated upright, so the hangar is
+        opened on its side first. Waited for the room turned and baked again, as 0572 waits.
+      */
+      const page = await open({ width: viewport.height, height: viewport.width }, 'table', true);
+      await openHangar(page);
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.waitForFunction((h: number) => (document.querySelector('#app > canvas')?.getBoundingClientRect().height ?? 0) > h * 0.6, viewport.height, { timeout: 15_000 });
+      expect(STANDING.length, 'no screen stands in the port, so nothing here is measured').toBeGreaterThan(0);
+      for (const screen of STANDING) {
+        await showOnly(page, screen);
+        const boxes = await boxesOf(page, screen);
+        expect(boxes.length, `${screen} drew nothing at all`).toBeGreaterThan(0);
+        const outside = boxes.filter(
+          (b) =>
+            b.top < -0.5 || b.left < -0.5 || b.bottom > viewport.height + 0.5 || b.right > viewport.width + 0.5,
+        );
+        expect(
+          outside.map((b) => `${b.what} [${Math.round(b.left)},${Math.round(b.top)} to ${Math.round(b.right)},${Math.round(b.bottom)}]`),
+          `on ${screen}, these are outside a ${viewport.width}x${viewport.height} display`,
+        ).toEqual([]);
+        expect(await controlsAreHittable(page, screen), `on ${screen}, a control cannot be pressed where it is drawn`).toEqual([]);
+        expect(await overflowOf(page, screen), `${screen} needs scrolling held upright`).toBeLessThanOrEqual(1);
+      }
+      await page.context().close();
+    });
+  }
+
+  for (const viewport of [{ width: 844, height: 390 }, ...UPRIGHT]) {
+    it(`stands the keeper's bubble clear of the balance on every tab, on a touch phone at ${viewport.width}x${viewport.height}`, async () => {
+      /*
+        The player's answer: the shards sheet stays. Photographed for this item, Cosmo's bubble stood over the
+        balance's second line on a phone and over all of it held upright — 0681 had stood his shop taller. In CSS
+        pixels: the bubble's box and the sheet's share no area, on each tab, reached by its tab as a thumb reaches it.
+      */
+      const upright = viewport.height > viewport.width;
+      const page = await open(upright ? { width: viewport.height, height: viewport.width } : viewport, 'table', true);
+      await openHangar(page);
+      if (upright) {
+        await page.setViewportSize(viewport);
+        await page.waitForFunction((h: number) => (document.querySelector('#app > canvas')?.getBoundingClientRect().height ?? 0) > h * 0.6, viewport.height, { timeout: 15_000 });
+      }
+      for (const [index, screen] of STANDING.entries()) {
+        if (index > 0) {
+          const from = STANDING[index - 1]!;
+          await page.locator(`${shown(from)} .${prefixFor(from)}tab`).nth(index).dispatchEvent('click');
+          await page.waitForSelector(shown(screen));
+        }
+        await page.waitForSelector(`${shown(screen)} .${prefixFor(screen)}keeper-placed`, { timeout: 10_000 });
+        await page.waitForTimeout(300);
+        const seen = await page.evaluate((p: string) => {
+          const a = document.querySelector('.' + p + 'keeper-placed')!.getBoundingClientRect();
+          const b = document.querySelector('.' + p + 'stand .' + p + 'sheet')?.getBoundingClientRect();
+          if (b === undefined || b.height === 0) return { sheet: false, shared: 0 };
+          const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+          const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          return { sheet: true, shared: w > 0 && h > 0 ? w * h : 0 };
+        }, prefixFor(screen));
+        expect(seen.sheet, `the ${screen} tab's stand shows no balance`).toBe(true);
+        expect(seen.shared, `on the ${screen} tab the keeper's bubble stands over ${Math.round(seen.shared)} px² of the balance`).toBeLessThanOrEqual(1);
+      }
+      await page.context().close();
+    });
+  }
+
+  it('on a touch phone draws no cockpit strip on the stand, and names the chosen pilot under their face', async () => {
+    /*
+      The player's answer: the strip is not drawn on a phone. And the review's: the phone's pilot band showed faces
+      and no names, so the one picked said nothing. In CSS pixels on a 844x390 touch screen: the chosen face's name
+      has a box, whole on the display; on each tab, the dash has none.
+    */
+    const page = await open({ width: 844, height: 390 }, 'table', true);
+    const name = await page.evaluate(() => {
+      const el = document.querySelector('.itc-title-band-faces .itc-title-option-on .itc-title-option-name');
+      const r = el?.getBoundingClientRect();
+      return r === undefined ? null : { text: (el!.textContent ?? '').trim(), left: r.left, right: r.right, top: r.top, bottom: r.bottom, h: r.height };
+    });
+    expect(name, 'the title has no chosen pilot with a name').not.toBeNull();
+    expect(name!.h, 'the chosen pilot is not named on a touch phone').toBeGreaterThan(0);
+    expect(name!.text.length, 'the chosen pilot’s name says nothing').toBeGreaterThan(0);
+    expect(name!.left >= -0.5 && name!.right <= 844.5 && name!.top >= -0.5 && name!.bottom <= 390.5, 'the chosen pilot’s name is off the display').toBe(true);
+    await openHangar(page);
+    for (const screen of STANDING) {
+      await showOnly(page, screen);
+      const dash = await page.evaluate((p: string) => document.querySelector('.' + p + 'dash')?.getBoundingClientRect().height ?? -1, prefixFor(screen));
+      expect(dash, `the ${screen} tab has no dash to hide`).toBeGreaterThanOrEqual(0);
+      expect(dash, `the cockpit strip is drawn on the ${screen} tab of a touch phone`).toBe(0);
     }
     await page.context().close();
   });
