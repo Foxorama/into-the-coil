@@ -11,7 +11,7 @@ import { DOCK_PLACES, DOCK_PLACE_KINDS, KEEPERS, KEEPER_KINDS, drawSpots, isDock
 import { makeRng } from '../src/sim/rng.ts';
 import { SHIPS, fitted } from '../src/content/ships.ts';
 import { SKY } from '../src/app/mount.ts';
-import { fitStand, paintStand, standViewInto } from '../src/render/port.ts';
+import { BLUE_BOB_RATE, fitStand, paintStand, standViewInto } from '../src/render/port.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -23,6 +23,7 @@ interface Blit {
   y: number;
   scale: number;
   turn: number;
+  alpha: number;
 }
 
 class RecordingSurface implements Surface {
@@ -30,8 +31,8 @@ class RecordingSurface implements Surface {
   clear(): void {
     this.blits = [];
   }
-  blit(sprite: number, x: number, y: number, scale: number, turn = 0): void {
-    this.blits.push({ sprite, x, y, scale, turn });
+  blit(sprite: number, x: number, y: number, scale: number, turn = 0, alpha = 1): void {
+    this.blits.push({ sprite, x, y, scale, turn, alpha });
   }
   bolt(): void {}
 }
@@ -141,6 +142,33 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     for (let a = 0; a < STANDING.length; a++) {
       for (let b = a + 1; b < STANDING.length; b++) {
         expect(place(STANDING[a]!), `${STANDING[a]} and ${STANDING[b]} stand their cameras in one place`).not.toBe(place(STANDING[b]!));
+      }
+    }
+  });
+
+  /*
+    ⚠️ **WHAT THE STAND'S GUARDS READ A BOB APART IS THE SAME PICTURE — 0680.** The pad's guards (`tests/stand.ts`,
+    `samePhase`) tell a fitting from what moves by itself by reading the stand twice a bob apart, in a band from
+    behind the ship to short of the bay and from a third of the way down the stand. So everything drawn there is a
+    whole number of its cycles a bob or does not move — and a piece of life added later that is not would make every
+    one of those guards read noise. Held blit by blit: the band's blits at a step and a bob later, as two sets.
+  */
+  it('0680 — draws the same picture a bob apart where the stand’s guards read it, on every tab', () => {
+    const bob = Math.round((Math.PI * 2) / BLUE_BOB_RATE);
+    const key = (b: Blit): string => [b.sprite, b.x.toFixed(2), b.y.toFixed(2), b.scale.toFixed(3), b.turn.toFixed(3), b.alpha.toFixed(3)].join(' ');
+    for (const screen of STANDING) {
+      for (const t of [0, 37, 211, 1234, 3333]) {
+        const at = (step: number): string[] => {
+          const blits = drawStand(screen, 1280, 720, step);
+          const cradle = all(blits, 'cradle')[0]!;
+          const unit = cradle.scale;
+          const box = standColumn(1280, 720);
+          // The band, in the room's units off the cradle, as `tests/stand.ts` reads it; the sky past it is the game's.
+          const inBand = (b: Blit): boolean =>
+            b.sprite < PORT_KINDS.length && b.x >= cradle.x - 30 * unit && b.x <= cradle.x + (Math.min(DOCK.bay - 1, DOCK.ship + 25) - DOCK.ship) * unit && b.y >= box.top + box.height * 0.3;
+          return blits.filter(inBand).map(key).sort();
+        };
+        expect(at(t + bob), `${screen} at step ${t}: the band is not the same picture a bob later`).toEqual(at(t));
       }
     }
   });
