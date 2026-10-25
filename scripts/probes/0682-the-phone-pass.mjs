@@ -1,8 +1,9 @@
 // The breaks behind docs/decisions/0682-the-phone-pass.md.
 //
 // ⚠️ Four ways back to the phone the review played: the pause plate at the score's elbow again, the score's digits
-// popping over the plate with no reach kept beside them, the plate held upright growing past the screen's foot, and
-// a keeper's bubble over the balance.
+// popping over the plate with no reach kept beside them, the plate held upright typeset for a desktop, and a keeper's
+// bubble over the balance. A plate held upright that no longer scrolls was tried first and stayed green: at both
+// sizes every tab's plate fits without scrolling, so that break put nothing off the screen.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -27,12 +28,12 @@ export const PROBES = [
   {
     decision: '0682',
     suite: 'tests/layout.browser.test.ts',
-    broke: 'the plate held upright no longer scrolls, so it grows past the screen',
+    broke: 'the desktop type worn upright, its largest size and not the width’s share',
     guard: 'draws all of every standing screen on a phone held upright',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { min-height: 0; overflow-y: auto; }',
-      replace: '.itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { min-height: auto; overflow-y: visible; }',
+      find: '    font-size: clamp(0.8rem, 3.9cqw, 1.3rem);',
+      replace: '    font-size: 1.3rem;',
     },
   },
   {
