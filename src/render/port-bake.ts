@@ -18,7 +18,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { DOCK, FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
+import { DOCK, FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, PORT_LIGHT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import { figureOf, type GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
 import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, shade, trace, withFit, type Atlas, type Frame, type Pt } from './bake.ts';
@@ -58,6 +58,8 @@ export function bakePort(palette: Palette, pixelsPerUnit: number, pilot: GolferR
     // 0563: what the stand's camera comes close on, baked as much sharper as it is closer; the room is not.
     bitmaps: PORT_KINDS.map((kind) => bakePiece(kind, palette, SHARP_PIECES.has(kind) ? pixelsPerUnit * sharp : pixelsPerUnit, pilot)),
     extents: PORT_KINDS.map((kind) => PORT_EXTENT[kind]),
+    // 0676: the pools and the up-light are added to what is under them — 0520's mark, read by the blit.
+    light: PORT_KINDS.map((kind) => PORT_LIGHT_KINDS.includes(kind)),
     pixelsPerUnit,
   };
 }
@@ -106,8 +108,8 @@ export function withTheGame(port: Atlas, game: Atlas): Atlas {
     ...port,
     bitmaps: [...port.bitmaps, ...game.bitmaps],
     extents: [...port.extents, ...game.extents],
-    // The game's lights at the game's indices — 0520. The port's own pieces are all body.
-    light: [...port.bitmaps.map(() => false), ...(game.light ?? game.bitmaps.map(() => false))],
+    // The game's lights at the game's indices — 0520. 0676: and the port's own, which were all body until its pools.
+    light: [...(port.light ?? port.bitmaps.map(() => false)), ...(game.light ?? game.bitmaps.map(() => false))],
   };
 }
 
@@ -321,6 +323,14 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'contrail':
     case 'veil':
     case 'sill':
+    case 'wallHalf':
+    case 'wallLit':
+    case 'lampPool':
+    case 'padPool':
+    case 'padLight':
+    case 'shade':
+    case 'shadeFoot':
+    case 'spillWall':
       break;
     default: {
       const never: never = kind;
@@ -340,7 +350,9 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
 function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Palette, extent: number, px: number, pilot: GolferRow): void {
   const h = extent / 2;
   switch (kind) {
-    case 'wall': {
+    case 'wall':
+    case 'wallHalf':
+    case 'wallLit': {
       // One panel a tile, inset from its seams, with a rivet at each corner and a conduit through it.
       ctx.fillStyle = PORT_INK.wall;
       ctx.fillRect(-h, -h, extent, extent);
@@ -359,8 +371,54 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       ctx.fillRect(-h, 3, extent, 1.3);
       ctx.fillStyle = shade(PORT_INK.seam, 0.25);
       ctx.fillRect(-h, 3, extent, 0.3);
+      /*
+        0676: and the lamp's light on it — the panel warmed and brighter toward the top, where the lamp is, and its
+        upper edge catching it. Half for a tile beside a lamp or under one but low on the wall; whole under one.
+      */
+      if (kind !== 'wall') {
+        const warm = kind === 'wallLit' ? 0.2 : 0.1;
+        const fall = ctx.createLinearGradient(0, -h, 0, h);
+        fall.addColorStop(0, rgba(PORT_INK.lamp, warm));
+        fall.addColorStop(1, rgba(PORT_INK.lamp, warm * 0.35));
+        ctx.fillStyle = fall;
+        ctx.fillRect(-h + 1.2, -h + 1.2, extent - 2.4, extent - 2.4);
+        ctx.fillStyle = rgba(PORT_INK.lamp, warm * 1.8);
+        ctx.fillRect(-h + 1.2, -h + 1.2, extent - 2.4, 0.4);
+      }
       return;
     }
+    case 'lampPool':
+      // 0676: a lamp's light on the deck under it, flattened — added to the planks, not laid over them.
+      radialEllipse(ctx, 0, 0, h, h * 0.18, PORT_INK.lamp, 0.5);
+      return;
+    case 'padPool':
+      // 0676: a pad's field on the deck round it, in the player's ink.
+      radialEllipse(ctx, 0, 0, h, h * 0.22, palette.player, 0.55);
+      return;
+    case 'padLight':
+      // 0676: the pad's light up the ship's underside, in the ship's own box — strongest at its keel.
+      radialEllipse(ctx, 0, h * 0.42, h * 0.62, h * 0.3, palette.player, 0.45);
+      return;
+    case 'shade':
+    case 'shadeFoot': {
+      /*
+        0676: a band of the void across the box's top eighth, at half and to nothing, laid stretched — and for a
+        wall's foot across its bottom eighth, rising, so it is never laid turned (a turn rotates the canvas).
+      */
+      const foot = kind === 'shadeFoot';
+      const edge = foot ? h : -h;
+      const inner = foot ? h - extent * 0.125 : -h + extent * 0.125;
+      const fall = ctx.createLinearGradient(0, edge, 0, inner);
+      fall.addColorStop(0, rgba(palette.space, 0.5));
+      fall.addColorStop(1, rgba(palette.space, 0));
+      ctx.fillStyle = fall;
+      ctx.fillRect(-h, Math.min(edge, inner), extent, extent * 0.125);
+      return;
+    }
+    case 'spillWall':
+      // 0676: the bar's light climbing the wall beside its door, tall and soft.
+      radialEllipse(ctx, 0, 0, h * 0.42, h, PORT_INK.lamp, 0.32);
+      return;
     case 'ceiling': {
       // A truss: two chords and the braces between them, and a working light on the lower chord.
       ctx.fillStyle = PORT_INK.wallDark;

@@ -180,8 +180,13 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   if (!behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit, 0, DOCK.moon.grow);
   const wall = PORT_EXTENT.wall;
   for (let along = wall / 2; along < DOCK.bay; along += wall) {
-    for (let across = wall / 2; across < STAGE.deck + wall; across += wall) put(surface, view, PORT_SPRITE.wall, along, across, 1, 0, TILE_OVERLAP);
+    // 0676: lit by the lamp over it, half lit beside one, dark between.
+    for (let across = wall / 2; across < STAGE.deck + wall; across += wall) put(surface, view, WALL_TILE[tileLit(along, across, DOCK.lamps)], along, across, 1, 0, TILE_OVERLAP);
   }
+  // 0676: the shade under the truss, under the catwalk, and along the wall's foot.
+  shadeAt(surface, view, DOCK.bay / 2, STAGE.ceiling, DOCK.bay, true);
+  shadeAt(surface, view, (DOCK.catwalkFrom + DOCK.catwalkTo) / 2, DOCK.catwalk + CATWALK_UNDER, DOCK.catwalkTo - DOCK.catwalkFrom, true);
+  shadeAt(surface, view, DOCK.bay / 2, STAGE.deck, DOCK.bay, false);
   const ceiling = PORT_EXTENT.ceiling;
   for (let along = ceiling / 2; along < DOCK.bay + ceiling; along += ceiling) put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
   const lamp = PORT_EXTENT.lamp;
@@ -190,6 +195,9 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   for (let along = deck / 2; along < DOCK.bay + deck; along += deck) {
     for (let across = STAGE.deck + deck / 2; across < ACROSS_SPAN + deck / 2; across += deck) put(surface, view, PORT_SPRITE.deck, along, across, 1, 0, TILE_OVERLAP);
   }
+  // 0676: each lamp's light on the deck under it, and the cradle's field round its foot.
+  for (let i = 0; i < DOCK.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, DOCK.lamps[i]!, STAGE.deck + POOL_DOWN);
+  put(surface, view, PORT_SPRITE.padPool, DOCK.ship, STAGE.deck + POOL_DOWN);
   // The mezzanine's catwalk along the back wall, and each keeper's shopfront standing on it.
   const walk = PORT_EXTENT.catwalk;
   for (let along = DOCK.catwalkFrom + walk / 2; along < DOCK.catwalkTo; along += walk) put(surface, view, PORT_SPRITE.catwalk, along, DOCK.catwalk, 1, 0, TILE_OVERLAP);
@@ -247,7 +255,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     0569 stood a keeper at the ship here, riding its bob — a bust over its roof from behind, or Unity on it.
     0611: *"kinda floating in mid air"*. They stand on the deck round it, before the cradle and after the ship.
   */
-  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false);
+  // 0676: lit from the cradle's field under it, for as long as it stands on it.
+  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false, 1);
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
     picture over each tyre its row names, swelled to that tyre — the spinners rolling front and back at
@@ -542,6 +551,55 @@ function put(surface: Surface, view: View, sprite: number, along: number, across
   surface.blit(sprite, screenX(view, along, across), screenY(view, along, across), view.scale * grow, turn, alpha);
 }
 
+/*
+  ── THE LIGHT CAST — 0676 ────────────────────────────────────────────────────────────────────────
+*/
+
+/** The wall's tile by how lit it is — `tileLit`'s nought, one and two. */
+// @setup: a table of three indices, built once at module load.
+const WALL_TILE = [PORT_SPRITE.wall, PORT_SPRITE.wallHalf, PORT_SPRITE.wallLit] as const;
+/** How far onto the deck, from its top edge, a pool of light lies. */
+const POOL_DOWN = 2;
+/**
+ * Where the bar's light climbs the wall, from the bar's centre — past its right-hand end, where the wall is open —
+ * and how much of it shows through the bar's window before the door opens.
+ */
+const SPILL_WALL = { along: 38, across: 4, shut: 0.45 } as const;
+/** How far under the catwalk's walking surface its underside is, where the shade under it begins. */
+const CATWALK_UNDER = 4;
+/** How near a lamp, along, a tile stands in its light, and beside it; and how high on the wall is near the truss. */
+const LAMP_UNDER = 14;
+const LAMP_BESIDE = 30;
+const LAMP_HIGH = 50;
+
+/**
+ * How lit the wall tile centred at `along`, `across` is by `lamps`: whole under a lamp and high on the wall, half
+ * under one but low or beside one but high, and not at all between them. A pure function of where the tile is,
+ * so the frame pays for an index and nothing else.
+ */
+export function tileLit(along: number, across: number, lamps: readonly number[]): 0 | 1 | 2 {
+  let near = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < lamps.length; i++) {
+    const d = Math.abs(along - lamps[i]!);
+    if (d < near) near = d;
+  }
+  const high = across < LAMP_HIGH;
+  if (near < LAMP_UNDER) return high ? 2 : 1;
+  return near < LAMP_BESIDE && high ? 1 : 0;
+}
+
+/**
+ * A band of shade `width` world units wide whose dark edge lies along `edge`, across — under a thing (`below`,
+ * the band falling away down the wall) or at a wall's foot (the band rising from it). Each sprite is a band across
+ * one edge of its box, so it is laid at the box's centre stretched to the width — and never turned, because a
+ * turned blit rotates the canvas every frame, which `tests/run-ends.browser.test.ts` counts on the stand.
+ */
+function shadeAt(surface: Surface, view: View, along: number, edge: number, width: number, below: boolean): void {
+  const grow = width / PORT_EXTENT.shade;
+  const half = width / 2;
+  put(surface, view, below ? PORT_SPRITE.shade : PORT_SPRITE.shadeFoot, along, below ? edge + half : edge - half, 1, 0, grow);
+}
+
 /** Smooth from 0 at `from` to 1 at `to`, and flat either side. */
 function ease(t: number, from: number, to: number): number {
   const u = Math.min(1, Math.max(0, (t - from) / (to - from)));
@@ -597,10 +655,14 @@ function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
     for (let across = wall / 2; across < STAGE.deck + wall; across += wall) {
       // 0550: no tile where the viewport is, so the sky under the room is what is seen through it.
       if (along > hole.along && along < hole.along + 2 * wall && across > hole.across && across < hole.across + wall) continue;
-      put(surface, view, PORT_SPRITE.wall, along, across, 1, 0, TILE_OVERLAP);
+      // 0676: lit by the lamp over it, half lit beside one, dark between.
+      put(surface, view, WALL_TILE[tileLit(along, across, STAGE.lamps)], along, across, 1, 0, TILE_OVERLAP);
     }
   }
   put(surface, view, PORT_SPRITE.viewport, hole.along + wall, hole.across + wall / 2);
+  // 0676: and the shade under the truss and along the wall's foot, where the lamps do not reach.
+  shadeAt(surface, view, STAGE.bay / 2, STAGE.ceiling, STAGE.bay, true);
+  shadeAt(surface, view, STAGE.bay / 2, STAGE.deck, STAGE.bay, false);
   const ceiling = PORT_EXTENT.ceiling;
   for (let along = ceiling / 2; along < STAGE.bay; along += ceiling) {
     put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
@@ -723,16 +785,24 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
     opens once, for the pilot, and stays open — it opened for Venoma too from 0416 until 0444.
   */
   const open = ease(t, BEATS.door, BEATS.pilotOut);
+  // 0676: its light up the wall past its end, the room's warm side — there through its window, and more once it is open.
+  put(surface, view, PORT_SPRITE.spillWall, STAGE.bar.along + SPILL_WALL.along, STAGE.bar.across + SPILL_WALL.across, SPILL_WALL.shut + (1 - SPILL_WALL.shut) * open);
   if (open > 0) put(surface, view, PORT_SPRITE.spill, STAGE.doorway.along, STAGE.doorway.across, open);
   put(surface, view, PORT_SPRITE.door, STAGE.doorway.along - 13 * open, STAGE.doorway.across);
   put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
   // The deck.
   paintDeck(surface, view);
   if (open > 0) put(surface, view, PORT_SPRITE.pool, STAGE.doorway.along + 6, STAGE.deck + 1, open * 0.7);
-  // The pads, and the beams each ship rides until it goes.
+  // 0676: each lamp's light on the deck under it.
+  for (let i = 0; i < STAGE.lamps.length; i++) put(surface, view, PORT_SPRITE.lampPool, STAGE.lamps[i]!, STAGE.deck + POOL_DOWN);
+  // The pads, and the beams each ship rides until it goes — 0676: each pad's field lit on the deck as long as its beam.
   const beam = PORT_EXTENT.beam;
-  put(surface, view, PORT_SPRITE.beam, STAGE.viperPad, STAGE.deck - beam / 2 + 2, 1 - ease(t, BEATS.viperGo, BEATS.viperGo + 30));
-  put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck - beam / 2 + 2, 1 - ease(t, BEATS.blueGo, BEATS.blueGo + 30));
+  const viperField = 1 - ease(t, BEATS.viperGo, BEATS.viperGo + 30);
+  const blueField = 1 - ease(t, BEATS.blueGo, BEATS.blueGo + 30);
+  put(surface, view, PORT_SPRITE.padPool, STAGE.viperPad, STAGE.deck + POOL_DOWN, viperField);
+  put(surface, view, PORT_SPRITE.padPool, STAGE.bluePad, STAGE.deck + POOL_DOWN, blueField);
+  put(surface, view, PORT_SPRITE.beam, STAGE.viperPad, STAGE.deck - beam / 2 + 2, viperField);
+  put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck - beam / 2 + 2, blueField);
   put(surface, view, PORT_SPRITE.pad, STAGE.viperPad, STAGE.deck);
   put(surface, view, PORT_SPRITE.pad, STAGE.bluePad, STAGE.deck);
   // The Viper: a bob on the beam, the lift, and the burn out through the bay.
@@ -748,7 +818,8 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
     figure fades into it — the same last two fifths of the leap, so one becomes the other.
   */
   const aboard = seated ? ease(t, BEATS.pilotLeap + LANDS * (BEATS.pilotIn - BEATS.pilotLeap), BEATS.pilotIn) : 0;
-  paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo, size, aboard);
+  // 0676: lit from its pad until it lifts off it.
+  paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo, size, aboard, true, 1 - ease(t, BEATS.blueLift, BEATS.blueGo));
   /*
     ⚠️ **VENOMA RAN HERE — 0416 — OUT OF THE DOOR AND UP INTO THE VIPER, UNTIL 0444.** *"it doesn't add
     anything and makes the ending worse when you see the villain running with no captive."* She is
@@ -803,12 +874,14 @@ function paintViper(surface: Surface, view: View, t: number, along: number, acro
  * rides it, laid over it at `rider`'s share of the way aboard — nought on the pad, and in the intro until
  * the pilot's leap lands.
  */
-function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number, size: number, rider = 0, tubes = true): void {
+function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number, size: number, rider = 0, tubes = true, uplight = 0): void {
   const flame = flameOf(t, lit, go, PORT_SPRITE.blueIdle, PORT_SPRITE.blueBurn, PORT_SPRITE.blueFlare);
   if (flame >= 0) put(surface, view, flame, along, across, 1, 0, size);
   const surge = surgeAt(t, go);
   if (surge > 0) put(surface, view, PORT_SPRITE.blueSurge, along, across, surge, 0, size);
   put(surface, view, PORT_SPRITE.blueSide, along, across, 1, 0, size);
+  // 0676: the pad's field lighting its underside, after the hull and before its tubes, at `uplight`'s share.
+  if (uplight > 0) put(surface, view, PORT_SPRITE.padLight, along, across, uplight, 0, size);
   // 0621: its side-on tubes on it — unless the caller lays its lights first, as the pad does.
   if (tubes) put(surface, view, PORT_SPRITE.blueTubes, along, across, 1, 0, size);
   if (rider > 0) put(surface, view, PORT_SPRITE.blueRider, along, across, rider, 0, size);

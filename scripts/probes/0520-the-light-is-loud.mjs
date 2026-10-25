@@ -36,7 +36,8 @@ export const PROBES = [
     guard: 'the port keeps the game’s lights at the game’s indices',
     edit: {
       path: 'src/render/port-bake.ts',
-      find: '    light: [...port.bitmaps.map(() => false), ...(game.light ?? game.bitmaps.map(() => false))],',
+      // Re-anchored by 0676, whose port carries lights of its own ahead of the game's.
+      find: '    light: [...(port.light ?? port.bitmaps.map(() => false)), ...(game.light ?? game.bitmaps.map(() => false))],',
       replace: '    light: game.light,',
     },
   },

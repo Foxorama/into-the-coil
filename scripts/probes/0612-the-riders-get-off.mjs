@@ -43,8 +43,9 @@ export const PROBES = [
     edit: {
       path: 'src/render/port.ts',
       // 0621: re-anchored; the pad lays the tubes itself.
-      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false);',
-      replace: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 1, false);',
+      // Re-anchored by 0676, which lights the ship from its cradle in the same call.
+      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 0, false, 1);',
+      replace: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size, 1, false, 1);',
     },
   },
   {
