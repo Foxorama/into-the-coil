@@ -70,8 +70,8 @@ export const PROBES = [
     guard: 'counts a cleared run already on the table',
     edit: {
       path: 'src/app/chrome.ts',
-      find: "    const lands = band.faces === 'chip';",
-      replace: '    const lands = false;',
+      find: "    const lands = (i: number): boolean => (band.faces === 'chip' || band.open[i] !== false) && band.hidden[i] !== true;",
+      replace: '    const lands = (i: number): boolean => band.open[i] !== false && band.hidden[i] !== true;',
     },
   },
   {
