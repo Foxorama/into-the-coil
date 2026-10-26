@@ -17,7 +17,7 @@ import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { OPENING_CHARGES } from '../src/content/specials.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 // 0669: what the title's line says on a locked pilot.
-import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
+import { GOLFERS, GOLFER_KINDS, HIDDEN_NAME } from '../src/content/golfers.ts';
 import { lockHint } from '../src/state/screens.ts';
 import { initialHangar, pilotRecord } from '../src/state/slices/hangar.ts';
 import { hangarFrom } from '../src/save/hangar.ts';
@@ -765,7 +765,7 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await afterFrames(page, 8);
     const p = prefixFor('title');
     const record = pilotRecord(hangarFrom(EVERY_TIER_FINISHED, initialHangar));
-    const shut = GOLFER_KINDS.filter((kind) => lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name) !== null);
+    const shut = GOLFER_KINDS.filter((kind) => lockHint(GOLFERS[kind].opens, record, HIDDEN_NAME) !== null);
     expect(shut.length, 'this store opens every pilot, so there is no lock to look at').toBeGreaterThan(0);
     const looked = (): Promise<{ look: number; line: string; chosen: string }> =>
       page.evaluate(
@@ -793,7 +793,7 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     expect(seen, 'right along the pilot band never stood on a locked pilot').not.toBeNull();
     const kind = GOLFER_KINDS[seen!.look]!;
     expect(shut, `the cursor looked at ${kind}, who is not locked`).toContain(kind);
-    expect(seen!.line, `on ${kind} the line says ${seen!.line}`).toContain(lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name)!);
+    expect(seen!.line, `on ${kind} the line says ${seen!.line}`).toContain(lockHint(GOLFERS[kind].opens, record, HIDDEN_NAME)!);
     expect(seen!.chosen, 'looking at a locked pilot chose them').toBe(chosen);
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
     expect(await shown(page, shownScreen('title')), 'A on a locked pilot flew').toBe(true);

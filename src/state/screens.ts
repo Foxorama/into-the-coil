@@ -30,7 +30,7 @@ import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { CREDITS, CREDIT_KINDS } from '../content/credits.ts';
 import { INTRO_STEPS, STAND_PAD_AT, type StandCamera } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
-import { GOLFERS, GOLFER_KINDS, lockLeft, type GolferKind, type PilotLock, type PilotRecord } from '../content/golfers.ts';
+import { GOLFERS, GOLFER_KINDS, HIDDEN_NAME, lockLeft, type GolferKind, type PilotLock, type PilotRecord } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
@@ -667,7 +667,8 @@ function listed(parts: readonly string[]): string {
  */
 export function pilotWhy(record: PilotRecord): string | null {
   for (const kind of GOLFER_KINDS) {
-    const hint = lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name);
+    // 0684: a shut pilot is not named, on the card or in the sentence that says what opens them.
+    const hint = lockHint(GOLFERS[kind].opens, record, HIDDEN_NAME);
     if (hint !== null) return hint;
   }
   return null;
@@ -1116,8 +1117,10 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         of a 1280x720 laptop, and on a phone the title's grid has one cell for the tier. Chosen by the
         player of three ways to fit it: a chip costs the screen no height.
 
-        ⚠️ **SHOWN ONLY ON A TIER FINISHED — 0608.** Freeplay is earned per tier, so on any other the
-        shell hides the chip and the run is one credit (`creditsFor`, `src/state/slices/hangar.ts`).
+        ⚠️ **FREEPLAY IS SHUT ON A TIER NOT FINISHED — 0608, 0685.** Freeplay is earned per tier. 0608 hid
+        the whole chip on any other; 0685 shows it on every tier with Freeplay padlocked, a press onto it
+        says what finishes the tier, and the run is one credit there whatever the chip says (`creditsFor`,
+        `src/state/slices/hangar.ts`).
       */
       {
         name: 'credits',

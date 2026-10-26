@@ -3040,7 +3040,7 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   // The ray gun, run out through the rim at the nose: its outline from inside the rim, and the gun on it — 0461.
   // 0526: or, flying another ship's gun, that gun's side-on mount standing on the rim at the nose.
   const fitted = gunNow('caddie');
-  // 0587: its own ray gun rides the top half and is painted last, over the saucer, below.
+  // 0587: its own ray gun is painted last, over the saucer, below — and since 0683 it hangs under the rim.
   if (fitted !== SHIPS.caddie.weapon) {
     // The rim's nose is the top view's hardpoint (`CADDIE_DISC` of the box), so the mount stands where
     // the fight's drawing has it, and goes under the lens with its root as the ray gun's does.
@@ -3152,7 +3152,8 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   ctx.stroke();
   /*
     0587: *"it should show on the top half of the ship. It should be more saucer shaped."* Its own ray gun,
-    a little saucer riding a pylon above the rim at the nose — it hung under the rim here since 0493.
+    a little saucer on a pylon at the nose. 0683: hung UNDER the rim again, as 0493 had it — *"it'd be
+    blocking the pilot's view"* — and still painted last, over the belly and its hover light.
   */
   if (fitted === SHIPS.caddie.weapon) paintRaygunSide(ctx, box, palette, lean);
 }

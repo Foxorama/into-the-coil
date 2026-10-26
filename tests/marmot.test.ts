@@ -77,8 +77,9 @@ describe('0546 — the Marmot is locked behind the four', () => {
   });
 
   it('the band says who still has to clear the game, and nothing once he is open', () => {
-    expect(pilotWhy(pilotRecord(initialState.hangar))).toBe('Beat the jellyfish with Feather Fade, Huang-Woo Hook, Longshot Larry and Backspin Bo to fly The Marmot');
-    expect(pilotWhy(pilotRecord(wonIn('caddie', 'fighter', 'estate').hangar))).toBe('Beat the jellyfish with Backspin Bo to fly The Marmot');
+    // 0684: and never who it opens — a shut pilot is ????? on the card and in the sentence alike.
+    expect(pilotWhy(pilotRecord(initialState.hangar))).toBe('Beat the jellyfish with Feather Fade, Huang-Woo Hook, Longshot Larry and Backspin Bo to fly ?????');
+    expect(pilotWhy(pilotRecord(wonIn('caddie', 'fighter', 'estate').hangar))).toBe('Beat the jellyfish with Backspin Bo to fly ?????');
     // His hint is gone once he is open — 0593's Unity, shut on crashes and not wins, says theirs after him.
     expect(lockHint(GOLFERS.marmot.opens, pilotRecord(wonIn(...SHIP_KINDS).hangar), GOLFERS.marmot.name)).toBe(null);
     expect(pilotWhy(pilotRecord(wonIn(...SHIP_KINDS).hangar))).not.toContain('Marmot');
