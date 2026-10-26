@@ -52,14 +52,37 @@ export const PROBES = [
     },
   },
   {
-    decision: '0608',
+    // 0685: the chip is on every tier now; what must not happen is Freeplay OPEN on one not finished.
+    decision: '0685',
     suite: 'tests/credits.browser.test.ts',
-    broke: 'the continues chip on the title whatever the tier',
-    guard: 'is not offered on another',
+    broke: 'Freeplay open on the chip whatever the tier',
+    guard: 'is shut on another',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    chrome.setBandShown('credits', state.hangar.finished[state.settings.difficulty]);",
-      replace: "    chrome.setBandShown('credits', true);",
+      find: '    const open = CREDIT_KINDS.map((kind) => finished || !CREDITS[kind].continues);',
+      replace: '    const open = CREDIT_KINDS.map(() => true);',
+    },
+  },
+  {
+    decision: '0685',
+    suite: 'tests/credits.browser.test.ts',
+    broke: 'the chip stepping past the shut Freeplay rather than onto it, so nothing is ever said',
+    guard: 'counts a cleared run already on the table',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: "    const lands = (i: number): boolean => (band.faces === 'chip' || band.open[i] !== false) && band.hidden[i] !== true;",
+      replace: '    const lands = (i: number): boolean => band.open[i] !== false && band.hidden[i] !== true;',
+    },
+  },
+  {
+    decision: '0685',
+    suite: 'tests/credits.browser.test.ts',
+    broke: 'the borrowed line never written, so a press onto the shut Freeplay says nothing',
+    guard: 'counts a cleared run already on the table',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: "      band.hint.textContent = band.lent.whys[band.lent.index] ?? band.lent.why ?? '';",
+      replace: '      band.hint.textContent = band.hint.textContent;',
     },
   },
 ];

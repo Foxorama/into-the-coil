@@ -214,24 +214,25 @@ describe('0493 — the ray gun hangs under the lip, and its muzzle is a ring —
 
 });
 
-describe('0587 — the ray gun is a little saucer, on the top half', () => {
+describe('0587 — the ray gun is a little saucer, and 0683 hangs it under the rim', () => {
   /*
-    *"The ray gun still looks bad, it should show on the top half of the ship. It should be more saucer
-    shaped."* Held off the side view's own trace — the pad's and the intro's picture of the saucer, whose
-    rim is the frame's centreline: every solid mark of the gun is above it, and the gun's outline is a
-    saucer's, far wider than it is tall.
+    0587: *"The ray gun still looks bad, it should show on the top half of the ship. It should be more saucer
+    shaped."* 0683: *"the ray gun/weapon for the Lil Caddie should be below the ship, not above it in the
+    graphic, it'd be blocking the pilots view currently."* Held off the side view's own trace — the pad's and
+    the intro's picture of the saucer, whose rim is the frame's centreline: every solid mark of the gun is
+    below it, and the gun's outline is a saucer's, far wider than it is tall.
   */
-  it('THE ASK: from the side, every mark of it is above the rim, and it is wider than it is tall', () => {
+  it('THE ASK: from the side, every mark of it is below the rim, and it is wider than it is tall', () => {
     const size = 400;
     const { pen, trace } = tracingPen();
     paintRaygunSide(pen, { half: size / 2, r: size * 0.42 }, PALETTES[DEFAULT_PALETTE], 0);
     const points = trace.passes.flatMap((pass) => pass.subpaths.flat());
     expect(points.length, 'the side view draws no gun').toBeGreaterThan(0);
-    // The pylon reaches down to the rim; nothing goes under it.
-    for (const [, y] of points) expect(y, 'a mark of the gun is below the rim').toBeLessThanOrEqual(size / 2 + 0.5);
-    const above = points.filter(([, y]) => y < size / 2 - size * 0.42 * 0.08);
-    const xs = above.map(([x]) => x);
-    const ys = above.map(([, y]) => y);
+    // The pylon reaches up to the rim; nothing goes over it, where it would stand in the pilot's view.
+    for (const [, y] of points) expect(y, 'a mark of the gun is above the rim').toBeGreaterThanOrEqual(size / 2 - 0.5);
+    const below = points.filter(([, y]) => y > size / 2 + size * 0.42 * 0.08);
+    const xs = below.map(([x]) => x);
+    const ys = below.map(([, y]) => y);
     const wide = Math.max(...xs) - Math.min(...xs);
     const tall = Math.max(...ys) - Math.min(...ys);
     expect(wide / tall, 'the gun is not saucer-shaped: it is not much wider than it is tall').toBeGreaterThan(1.8);

@@ -507,6 +507,14 @@ export function pilotOpen(golfer: GolferKind, record: PilotRecord): boolean {
 }
 
 /**
+ * What a shut pilot is called wherever their name would be — 0684: *"secret characters should show ?????
+ * instead of their name until they're unlocked."* Their face is a silhouette already (0546); the name under
+ * it, the card's tooltip, the reader's label and the lock's own hint all say this until the lock is met. The
+ * Marmot's teaser in the Viper (0546) and the keepers' shops (0550) are not the band, and keep their names.
+ */
+export const HIDDEN_NAME = '?????';
+
+/**
  * What body a runner is drawn with, the golfer's own named — 0612, so a table can be keyed on it: a ship
  * that shows its pilot aboard draws them by this (`src/render/bake.ts`, `RIDERS`).
  */
