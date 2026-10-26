@@ -144,6 +144,9 @@ const BANDED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].ch
 /** `rule` once per screen with a band, on `faced`'s terms. */
 const banded = (rule: (p: string) => string): string => BANDED.map((screen) => rule(prefixFor(screen))).join(', ');
 
+/** The three shops' prefixes — the screens that stand in the dock (0693 dresses their cards alone). */
+const SHOPPED: readonly string[] = PANELLED.filter((screen) => SCREENS[screen].stand !== null).map(prefixFor);
+
 /**
  * The cursor — 0571's four white corner brackets, and since 0669 the one cursor on every screen: a band's
  * option wears them, and every other control. Declarations for a before- or after-box laid over the control.
@@ -4723,6 +4726,124 @@ ${each('-action[hidden]')} { display: none; }
   /* What hangs: the readout's dangle, set in the picture's box. */
   .itc-hangar-option-pic .itc-shop-art-dangle { position: absolute; left: 50%; top: 0; font-size: 0.8em; }
 }
+/*
+  ── THE SHOPS SPEAK THE TITLE'S VOICE — 0693 ─────────────────────────────────────────────────────
+
+  *"the Main menu, settings and music menus all look pretty slick now, but the menus inside the three
+  shops in hanging out are still fairly basic and don't quite match the overall look."* The title's
+  controls wear a glass of the void under a rim run violet into cyan (0440), and the three plates wear
+  the same frame (0539) — but every card inside them was still a 2px outline of one colour on nothing,
+  every group heading one colour over one line, and the pilot's card and the captions a grey wash. Now:
+
+  **A card** is the glass under the rim, as an action is; the fitted card keeps its lit rim of the ink
+  and its glow (0572), and the card under the cursor its gold wash over the same glass. **A group
+  heading** is the wordmark's run of the two inks with the banner's diamond-tipped rule under it. **The
+  pilot's card** is a plate in small: the glass and the rim. **A caption** stands on a bar of the run,
+  over a wash of the violet that thins to the right.
+
+  The three shops only, named by prefix: the title's and the settings' bands have the one-voice dress
+  above and keep it. After the desktop's query, so it wins on source order over the card rules there;
+  it touches only paint, so every size's layout stands. A face, a swatch, a shut option and a tab are
+  not cards and keep their own dress.
+*/
+${SHOPPED.map((p) => `.${p}band:not(.${p}band-faces):not(:has([${SETTING_ATTR}='section'])) .${p}option:not(.${p}option-on):not(.${p}option-face):not(.${p}option-swatch):not(.${p}option-shut)`).join(', ')} {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 74%, transparent);
+  border-color: transparent;
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--itc-glass), var(--itc-glass)),
+    linear-gradient(100deg, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 75%, transparent), color-mix(in srgb, var(--itc-ink) 75%, transparent));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: inset 0 0 0.9em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 9%, transparent);
+  opacity: 0.92;
+}
+${SHOPPED.map((p) => `.${p}band:not(.${p}band-faces):not(:has([${SETTING_ATTR}='section'])) .${p}option:not(.${p}option-on):not(.${p}option-face):not(.${p}option-swatch):not(.${p}option-shut):hover`).join(', ')} {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 68%, var(--itc-ally, var(--itc-ink)));
+}
+${SHOPPED.map((p) => `.${p}band:not(.${p}band-faces):not(:has([${SETTING_ATTR}='section'])) .${p}option-look:not(.${p}option-on):not(.${p}option-face):not(.${p}option-swatch):not(.${p}option-shut)`).join(', ')} {
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--itc-gold, var(--itc-ink)) 18%, transparent), transparent),
+    linear-gradient(var(--itc-glass), var(--itc-glass)),
+    linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
+  background-clip: padding-box, padding-box, border-box;
+  opacity: 1;
+}
+.itc-hangar-group-heading, .itc-parts-group-heading {
+  position: relative;
+  border-bottom: 0;
+  padding-bottom: 0.45em;
+  color: transparent;
+  background: linear-gradient(90deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink) 60%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.itc-hangar-group-heading::after, .itc-parts-group-heading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0.1em;
+  width: 100%;
+  height: 0.32em;
+  pointer-events: none;
+  --itc-diamond: url("data:image/svg+xml,%3Csvg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 2 2'%3E%3Cpath d='M1 0 2 1 1 2 0 1z'/%3E%3C/svg%3E");
+  background: linear-gradient(90deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
+  -webkit-mask:
+    var(--itc-diamond) left center / 0.32em 0.32em no-repeat,
+    var(--itc-diamond) right center / 0.32em 0.32em no-repeat,
+    linear-gradient(#000, #000) center / calc(100% - 0.5em) 1.5px no-repeat;
+  mask:
+    var(--itc-diamond) left center / 0.32em 0.32em no-repeat,
+    var(--itc-diamond) right center / 0.32em 0.32em no-repeat,
+    linear-gradient(#000, #000) center / calc(100% - 0.5em) 1.5px no-repeat;
+  opacity: 0.7;
+}
+.itc-hangar-pilot-card {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 74%, transparent);
+  border: 1px solid transparent;
+  padding: calc(0.5em - 1px) calc(0.9em - 1px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 10%, transparent), transparent 60%) padding-box,
+    linear-gradient(var(--itc-glass), var(--itc-glass)) padding-box,
+    linear-gradient(100deg, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 75%, transparent), color-mix(in srgb, var(--itc-ink) 75%, transparent)) border-box;
+  box-shadow: inset 0 0 1em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 8%, transparent);
+}
+.itc-hangar-pilot-card .itc-hangar-pilot-name {
+  color: transparent;
+  background: linear-gradient(90deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink) 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.itc-hangar-band-said, .itc-parts-band-said, .itc-shop-band-said {
+  position: relative;
+  border-left-color: transparent;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 16%, transparent), color-mix(in srgb, var(--itc-ink) 5%, transparent));
+}
+.itc-hangar-band-said::before, .itc-parts-band-said::before, .itc-shop-band-said::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
+  pointer-events: none;
+}
+.itc-hangar-band-said-shut::before, .itc-parts-band-said-shut::before, .itc-shop-band-said-shut::before { opacity: 0.4; }
+/*
+  ── COSMO'S WARES ARE THE PICTURE — 0693 ─────────────────────────────────────────────────────────
+
+  *"the items for sale in Cosmo's shop, the graphic display is still kinda overwhelmed by the menus and
+  names and things."* A tile was a name in the card's own type with a price under it and the thing
+  itself in a box three lines high between them. The thing is what is for sale: its box is half again
+  as high, and the name and the price are its caption, a size down.
+*/
+.itc-shop-option.itc-shop-option-tile { gap: 0.06em; padding-top: 0.3em; padding-bottom: 0.28em; }
+.itc-shop-option-art { height: 4.5em; }
+/* A rim and a shield are canvases and grow with the box; a dangle and a flame are set in em, so they are told. */
+.itc-shop-option-art .itc-shop-art-dangle, .itc-shop-option-art .itc-shop-art-flame { font-size: 1.45em; }
+.itc-shop-option-label { font-size: 0.8em; }
+.itc-shop-option-tag { font-size: 0.68em; opacity: 0.85; }
 /*
   Under 900 pixels tall the plate is the screen's height less its frame, and Hangin' Out's four bands with
   pictures and captions ran 170 pixels past it on CI's wider letters. So the cards are a size shorter, their
