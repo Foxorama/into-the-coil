@@ -348,6 +348,10 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'contrail':
     case 'veil':
     case 'sill':
+    case 'sun':
+    case 'halo':
+    case 'streak':
+    case 'rock':
     case 'wallHalf':
     case 'wallLit':
     case 'lampPool':
@@ -1027,8 +1031,80 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       paintNeonMark(ctx, px);
       return;
     case 'dockArm':
-      paintDockArm(ctx, h);
+      paintDockArm(ctx, palette, h);
       return;
+    case 'sun': {
+      // 0695: a far sun — a white-hot core in a warm glow, and four soft spikes of its glare across the box.
+      const warm = mix(palette.fire, palette.impact, 0.55);
+      radial(ctx, 0, 0, h, warm, 0.3);
+      radial(ctx, 0, 0, h * 0.45, mix(warm, '#ffffff', 0.5), 0.85);
+      radial(ctx, 0, 0, h * 0.16, '#ffffff', 1);
+      ctx.save();
+      for (let k = 0; k < 4; k++) {
+        ctx.rotate(Math.PI / 4);
+        const spike = ctx.createLinearGradient(-h, 0, h, 0);
+        spike.addColorStop(0, rgba(warm, 0));
+        spike.addColorStop(0.5, rgba('#ffffff', 0.35));
+        spike.addColorStop(1, rgba(warm, 0));
+        ctx.fillStyle = spike;
+        ctx.fillRect(-h, -0.35, h * 2, 0.7);
+      }
+      ctx.restore();
+      return;
+    }
+    case 'halo': {
+      // 0695: a planet's air, lit round its limb — the sky's blue, brightest at the disc's edge and thinning out
+      // to half again its radius. The disc is 17 of the planet's 80; this box is 96, so the limb is at 0.354 of
+      // its half, and the gradient starts a hair inside it so no dark seam shows between the two.
+      const limb = h * 0.354;
+      const air = ctx.createRadialGradient(0, 0, limb * 0.9, 0, 0, limb * 1.9);
+      air.addColorStop(0, rgba(PORT_INK.pad, 0.85));
+      air.addColorStop(0.12, rgba(PORT_INK.pad, 0.75));
+      air.addColorStop(0.4, rgba(PORT_INK.pad, 0.22));
+      air.addColorStop(1, rgba(PORT_INK.pad, 0));
+      ctx.fillStyle = air;
+      ctx.beginPath();
+      ctx.arc(0, 0, limb * 1.9, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+    case 'streak': {
+      // 0695: a star drawn out by speed — a hair-thin line, bright at its middle and gone at both ends.
+      const along = ctx.createLinearGradient(-h, 0, h, 0);
+      along.addColorStop(0, 'rgba(235, 244, 255, 0)');
+      along.addColorStop(0.5, 'rgba(235, 244, 255, 0.95)');
+      along.addColorStop(1, 'rgba(235, 244, 255, 0)');
+      ctx.fillStyle = along;
+      ctx.fillRect(-h, -0.18, h * 2, 0.36);
+      return;
+    }
+    case 'rock': {
+      // 0695: a rock — an uneven lump, lit from above left, with two craters in its shadowed half.
+      const stone = shade(palette.blade, -0.66);
+      ctx.fillStyle = stone;
+      ctx.beginPath();
+      ctx.moveTo(-h * 0.9, -h * 0.2);
+      ctx.lineTo(-h * 0.5, -h * 0.85);
+      ctx.lineTo(h * 0.3, -h * 0.9);
+      ctx.lineTo(h * 0.9, -h * 0.3);
+      ctx.lineTo(h * 0.8, h * 0.5);
+      ctx.lineTo(h * 0.1, h * 0.9);
+      ctx.lineTo(-h * 0.7, h * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      const lit = ctx.createLinearGradient(-h, -h, h, h);
+      lit.addColorStop(0, rgba(shade(stone, 0.45), 0.9));
+      lit.addColorStop(0.5, rgba(stone, 0));
+      lit.addColorStop(1, rgba(palette.space, 0.75));
+      ctx.fillStyle = lit;
+      ctx.fill();
+      ctx.fillStyle = rgba(palette.space, 0.5);
+      ctx.beginPath();
+      ctx.arc(h * 0.3, h * 0.25, h * 0.22, 0, Math.PI * 2);
+      ctx.arc(-h * 0.25, h * 0.35, h * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
     case 'grime': {
       // 0681: the wall's foot where the deck meets it, grimed — a brown-dark band rising off the box's bottom, laid stretched.
       const grime = ctx.createLinearGradient(0, h, 0, h - extent * 0.3);
@@ -1271,28 +1347,17 @@ function paintSpar(ctx: CanvasRenderingContext2D, palette: Palette, h: number): 
   const hull = shade(palette.blade, -0.5);
   const dark = shade(hull, -0.45);
   const lit = shade(hull, 0.3);
-  // The truss: two chords, a web of diagonals between them, and a flange where it meets the box's right edge.
+  // The truss: a boxed one with its top lit and its underside in shadow (0694), from the drum to a collar at the
+  // box's right edge, where the dock's arm takes over.
   const chord = shade(hull, -0.15);
-  ctx.fillStyle = chord;
-  ctx.fillRect(-h * 0.12, -2.6, h * 1.12, 1.1);
-  ctx.fillRect(-h * 0.12, 1.5, h * 1.12, 1.1);
-  ctx.strokeStyle = shade(hull, 0.05);
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  for (let x = -h * 0.12; x < h; x += 4.5) {
-    ctx.moveTo(x, -1.5);
-    ctx.lineTo(x + 2.25, 1.5);
-    ctx.lineTo(x + 4.5, -1.5);
-  }
-  ctx.stroke();
-  ctx.fillStyle = shade(hull, 0.1);
-  ctx.fillRect(h * 0.94, -4, 2.2, 8);
-  ctx.fillRect(h * 0.06, -3.4, 1.6, 6.8);
+  paintTruss(ctx, -h * 0.12, h * 0.94, 2.6, hull, 4.5);
+  paintCollar(ctx, h * 0.94, 4.6, 2.4, hull);
+  paintCollar(ctx, h * 0.06, 3.6, 1.6, hull);
   // A cable run along the truss's top chord.
   ctx.strokeStyle = shade(palette.hazard, -0.3);
   ctx.lineWidth = 0.35;
   ctx.beginPath();
-  ctx.moveTo(-h * 0.1, -2.9);
+  ctx.moveTo(-h * 0.1, -3.1);
   ctx.lineTo(h, -2.9);
   ctx.stroke();
   // The drum: a horizontal cylinder, its top lit by the planet's light and its underside in shadow.
@@ -1530,25 +1595,147 @@ function paintNeonMark(ctx: CanvasRenderingContext2D, px: number): void {
 }
 
 /** 0681: the dock's arm past the bay on a wide screen's right — a long girder reaching in from the right to a lit docking collar. */
-function paintDockArm(ctx: CanvasRenderingContext2D, h: number): void {
-  ctx.fillStyle = '#1a2130';
-  ctx.fillRect(-h * 0.62, -1.6, h * 1.62, 3.2);
-  ctx.strokeStyle = '#283247';
-  ctx.lineWidth = 0.35;
+/**
+ * 0681's arm reaching out past the bay, repainted in 0694. Played: *"newer additions to the graphics in the space
+ * outside the station look kinda dodgy"* — it was a flat girder with a zigzag and a flat box with three dots at
+ * its end. Now: a boxed truss of two chords and a web, a run of guide lights along it, and at its far end a
+ * docking head — a control pod with a lit window on top, two clamp jaws open round a docking ring lit at four
+ * points, and a beacon on a short mast. In the box's units; `h` is its half, 45.
+ */
+/**
+ * 0694: a boxed truss from `x0` to `x1`, centred on y = 0 and `half` high — its back web dim and a hair up, its
+ * bottom chord in shadow, its top chord lit with a highlight along it, its front web bright, and a post every
+ * fourth bay. The flat girder it replaces was one grey and one zigzag, and read as a drawing of a truss.
+ */
+function paintTruss(ctx: CanvasRenderingContext2D, x0: number, x1: number, half: number, hull: string, bay: number): void {
+  const web = (y0: number, y1: number, dx: number): void => {
+    ctx.beginPath();
+    for (let x = x0; x < x1; x += bay) {
+      ctx.moveTo(x + dx, y0);
+      ctx.lineTo(x + dx + bay / 2, y1);
+      ctx.lineTo(x + dx + bay, y0);
+    }
+    ctx.stroke();
+  };
+  ctx.save();
   ctx.beginPath();
-  for (let x = -h * 0.62; x < h; x += 4) {
-    ctx.moveTo(x, -1.6);
-    ctx.lineTo(x + 2, 1.6);
-    ctx.lineTo(x + 4, -1.6);
+  ctx.rect(x0, -half - 1, x1 - x0, half * 2 + 2);
+  ctx.clip();
+  // The back web, seen through the front one: dimmer, thinner, and a little up and over.
+  ctx.strokeStyle = shade(hull, -0.32);
+  ctx.lineWidth = 0.4;
+  web(-half + 1.2, half - 1.4, 1.2);
+  // The bottom chord, in shadow, with a darker strip under it.
+  ctx.fillStyle = shade(hull, -0.38);
+  ctx.fillRect(x0, half - 1.1, x1 - x0, 1.1);
+  ctx.fillStyle = rgba(shade(hull, -0.7), 0.6);
+  ctx.fillRect(x0, half - 0.35, x1 - x0, 0.35);
+  // The front web, lit.
+  ctx.strokeStyle = shade(hull, 0.08);
+  ctx.lineWidth = 0.55;
+  web(-half + 1, half - 1.1, 0);
+  // The top chord: lit, a highlight along its top edge and a shadow line under it.
+  ctx.fillStyle = shade(hull, 0.22);
+  ctx.fillRect(x0, -half, x1 - x0, 1.1);
+  ctx.fillStyle = shade(hull, 0.5);
+  ctx.fillRect(x0, -half, x1 - x0, 0.3);
+  ctx.fillStyle = rgba(shade(hull, -0.5), 0.7);
+  ctx.fillRect(x0, -half + 1.1, x1 - x0, 0.3);
+  // A post every fourth bay, its left edge lit.
+  for (let x = x0 + bay * 4; x < x1 - bay; x += bay * 4) {
+    ctx.fillStyle = shade(hull, -0.05);
+    ctx.fillRect(x - 0.45, -half, 0.9, half * 2);
+    ctx.fillStyle = shade(hull, 0.3);
+    ctx.fillRect(x - 0.45, -half, 0.25, half * 2);
   }
+  ctx.restore();
+}
+
+/** 0694: a collar round a truss at `x` — a short upright drum, lit on its left, `half` high and `w` across. */
+function paintCollar(ctx: CanvasRenderingContext2D, x: number, half: number, w: number, hull: string): void {
+  const across = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+  across.addColorStop(0, shade(hull, 0.35));
+  across.addColorStop(0.45, shade(hull, 0.05));
+  across.addColorStop(1, shade(hull, -0.4));
+  ctx.fillStyle = across;
+  ctx.fillRect(x - w / 2, -half, w, half * 2);
+  ctx.fillStyle = shade(hull, 0.4);
+  ctx.fillRect(x - w / 2, -half, w, 0.35);
+  ctx.fillStyle = shade(hull, -0.5);
+  ctx.fillRect(x - w / 2, half - 0.35, w, 0.35);
+}
+
+function paintDockArm(ctx: CanvasRenderingContext2D, palette: Palette, h: number): void {
+  const steel = shade(palette.blade, -0.5);
+  const dark = shade(steel, -0.45);
+  const chord = shade(steel, -0.15);
+  // The truss, boxed, from the head to where it leaves the box's right edge, a collar there.
+  paintTruss(ctx, -h * 0.6, h, 2.2, steel, 4);
+  paintCollar(ctx, h * 0.95, 3.4, 2, steel);
+  // Guide lights along the top chord, every eight units.
+  for (let x = -h * 0.5; x < h * 0.9; x += 8) radial(ctx, x, -2.9, 0.7, PORT_INK.pad, 0.85);
+  // The docking head's body: a short drum the truss ends in.
+  const headX = -h * 0.62;
+  const body = ctx.createLinearGradient(0, -5, 0, 5);
+  body.addColorStop(0, shade(steel, 0.25));
+  body.addColorStop(0.4, steel);
+  body.addColorStop(1, dark);
+  ctx.fillStyle = body;
+  ctx.fillRect(headX - 6, -5, 8, 10);
+  ctx.fillStyle = rgba(dark, 0.8);
+  ctx.fillRect(headX - 3.2, -5, 0.4, 10);
+  // The control pod on top, with its lit window and a shaded roof.
+  ctx.fillStyle = shade(steel, 0.12);
+  ctx.fillRect(headX - 4.5, -8.6, 5.5, 3.8);
+  ctx.fillStyle = shade(steel, 0.3);
+  ctx.fillRect(headX - 4.5, -8.6, 5.5, 0.6);
+  ctx.fillStyle = rgba(PORT_INK.lamp, 0.9);
+  ctx.fillRect(headX - 3.6, -7.6, 3.4, 1.6);
+  radial(ctx, headX - 1.9, -6.8, 2.2, PORT_INK.lamp, 0.25);
+  // The jaws: two clamps open round the ring, the upper one lit on top and the lower in shadow, a hazard band on each.
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = side < 0 ? shade(steel, 0.05) : shade(steel, -0.3);
+    ctx.beginPath();
+    ctx.moveTo(headX - 6, side * 4.2);
+    ctx.lineTo(headX - 13.5, side * 6.4);
+    ctx.lineTo(headX - 15.5, side * 4.4);
+    ctx.lineTo(headX - 8.5, side * 2.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = side < 0 ? shade(steel, 0.4) : shade(steel, -0.55);
+    ctx.beginPath();
+    ctx.moveTo(headX - 6, side * 4.2);
+    ctx.lineTo(headX - 13.5, side * 6.4);
+    ctx.lineTo(headX - 13.3, side * 5.7);
+    ctx.lineTo(headX - 6.3, side * 3.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = PORT_INK.hazard;
+    ctx.fillRect(headX - 10.5, side * 4.9 - 0.4, 2.2, 0.8);
+  }
+  // The docking ring in the jaws' mouth: a torus, lit over its top and dark under, and four lights round it.
+  const rim = ctx.createLinearGradient(0, -5, 0, 5);
+  rim.addColorStop(0, shade(steel, 0.55));
+  rim.addColorStop(0.5, shade(steel, 0.1));
+  rim.addColorStop(1, shade(steel, -0.4));
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.ellipse(headX - 11, 0, 2.2, 4.6, 0, 0, Math.PI * 2);
   ctx.stroke();
-  // The collar at its end, lit round its mouth, and a beacon on it.
-  ctx.fillStyle = '#232c3f';
-  ctx.fillRect(-h * 0.8, -6, h * 0.2, 12);
-  ctx.fillStyle = '#2f3a52';
-  ctx.fillRect(-h * 0.8, -6, h * 0.2, 1);
-  for (const y of [-3.5, 0, 3.5]) radial(ctx, -h * 0.82, y, 0.9, '#7fd8ff', 0.8);
-  radial(ctx, -h * 0.7, -7.2, 1.1, PORT_INK.alarm, 0.9);
+  ctx.strokeStyle = rgba(PORT_INK.pad, 0.6);
+  ctx.lineWidth = 0.4;
+  ctx.beginPath();
+  ctx.ellipse(headX - 11, 0, 2.2, 4.6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  radial(ctx, headX - 11, -4.6, 0.9, PORT_INK.pad, 0.95);
+  radial(ctx, headX - 11, 4.6, 0.9, PORT_INK.pad, 0.95);
+  radial(ctx, headX - 13.2, 0, 0.9, PORT_INK.pad, 0.95);
+  radial(ctx, headX - 8.8, 0, 0.9, PORT_INK.pad, 0.95);
+  // The beacon, on a mast off the pod.
+  ctx.fillStyle = chord;
+  ctx.fillRect(headX - 1.4, -11.5, 0.7, 3);
+  radial(ctx, headX - 1, -12.2, 1.2, PORT_INK.alarm, 0.95);
 }
 
 /** 0680: a wall fan in its round housing, its four blades turned by `third` thirds of a quarter turn. */

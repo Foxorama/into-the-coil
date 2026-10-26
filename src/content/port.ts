@@ -247,6 +247,14 @@ export const PORT_KINDS = [
   'dockArm',
   'grime',
   'wallDent',
+  /*
+    0695: the chase's sky has more in it — a sun far off the station's side, the planet's air lit round it, and
+    rocks drifting past between it and the ships.
+  */
+  'sun',
+  'halo',
+  'streak',
+  'rock',
 ] as const;
 
 /**
@@ -417,6 +425,11 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   dockArm: 90,
   grime: 20,
   wallDent: 20,
+  // 0695: the sun a wide soft glow, the halo the planet's box and a margin, a rock small.
+  sun: 70,
+  halo: 96,
+  streak: 40,
+  rock: 7,
 };
 
 /**
