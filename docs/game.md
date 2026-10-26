@@ -331,8 +331,9 @@ scripts.
 
 **A tier also sets the shell** — [0355](decisions/0355-a-tier-opens-on-a-shell.md). On *Legendary
 Pilot* every life opens on three shields and every level renews them; on *Savior of the Galaxy* every
-level and every life after a death opens on at least one
-([0650](decisions/0650-a-savior-death-opens-on-a-shield.md)), and the rest are flown for up to three; on *Let the Galaxy Burn* every level and life opens on the hull and three are flown for, from the
+life after a death opens on one
+([0650](decisions/0650-a-savior-death-opens-on-a-shield.md)), every level adds one to whatever the ship
+carries across, up to three ([0692](decisions/0692-a-levels-shell-adds.md)), and the rest are flown for up to three; on *Let the Galaxy Burn* every level and life opens on the hull and three are flown for, from the
 mid-boss and the level's pickups alike
 ([0614](decisions/0614-the-shields-come-down-a-tier.md)), and a run opens with one
 void unless its ship opens on novas ([0447](decisions/0447-the-ward-is-a-third-trigger.md)).

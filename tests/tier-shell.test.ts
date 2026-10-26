@@ -179,6 +179,36 @@ describe('0614, 0650 — a life’s shell and a level’s are read apart', () =>
     advanceLevel(world, NO_LEVEL, 1);
     expect(shields(world), 'a boundary renewed to the life’s shell, not the level’s').toBe(split.shellLevel);
   });
+
+  it('0692 — a boundary ADDS the level’s shell to what the ship carries, up to the tier’s cap', () => {
+    /*
+      *"on saviour difficulty, the level shield you get at the start of a level should add to your current shields,
+      not replace it, if you survive the previous level with shields you get a new one, unless you have 3 shields in
+      which case you don't get a 4th."* Every tier, every count it could carry across: the sum, capped.
+    */
+    for (const tier of DIFFICULTY_KINDS) {
+      const row = DIFFICULTIES[tier];
+      for (let carried = 0; carried <= row.shellCap; carried++) {
+        const { world } = playableWorld(NO_LEVEL);
+        world.difficulty = row;
+        resetScene(world);
+        world.ship.health = world.shipRow.health + carried;
+        advanceLevel(world, NO_LEVEL, 1);
+        const want = Math.min(row.shellCap, carried + row.shellLevel);
+        expect(shields(world), `${tier}: a ship carrying ${carried} crossed a boundary with ${shields(world)}, not ${want}`).toBe(want);
+      }
+    }
+    // The ask in its own numbers: Savior, one carried, two after; three carried, three after.
+    const { world } = playableWorld(NO_LEVEL);
+    world.difficulty = DIFFICULTIES.savior;
+    resetScene(world);
+    world.ship.health = world.shipRow.health + 1;
+    advanceLevel(world, NO_LEVEL, 1);
+    expect(shields(world), 'a Savior ship carrying one did not get a second').toBe(2);
+    world.ship.health = world.shipRow.health + 3;
+    advanceLevel(world, NO_LEVEL, 2);
+    expect(shields(world), 'a Savior ship carrying three was handed a fourth').toBe(3);
+  });
 });
 
 describe('0355 — a level boundary renews the shell and never lowers it', () => {
@@ -190,8 +220,8 @@ describe('0355 — a level boundary renews the shell and never lowers it', () =>
         const frame = new GameFrame(world);
         world.ship.health = world.shipRow.health + carried;
         advanceLevel(world, NO_LEVEL, 1);
-        // The LEVEL's shell since 0614 — a life's no longer reaches a boundary.
-        const want = Math.max(carried, row.shellLevel);
+        // The LEVEL's shell since 0614 — a life's no longer reaches a boundary. 0692: added to what is carried, capped.
+        const want = Math.min(row.shellCap, carried + row.shellLevel);
         expect(shields(world), `${tier}: a ship carrying ${carried} crossed a boundary with ${shields(world)}`).toBe(want);
         frame.step();
         expect(world.shieldOrbs.size, `${tier}: the renewed shell is a number with no marks`).toBe(want);

@@ -7,24 +7,20 @@ export const PROBES = [
   {
     decision: '0615',
     suite: 'tests/solid.test.ts',
+    // 0691 re-pointed these two at the boss: a body breaks on the landing now, and only a boss is there to come off.
     broke: 'a ball that goes on through whatever it rams, as it did',
-    guard: 'THE REPORTED ONE: flown into a body it cannot break, the ball comes back off it — and never through it',
+    guard: 'every boss knocks it back, and the ball is never inside one',
     edit: { path: 'src/app/frame.ts', find: '    knockRam(w);\n', replace: '' },
   },
   {
     decision: '0615',
     suite: 'tests/solid.test.ts',
     broke: 'a knock that only puts the ball back out of the body and sends it nowhere',
-    guard: 'THE REPORTED ONE: flown into a body it cannot break, the ball comes back off it — and never through it',
+    guard: 'off a boss the ball comes back over twelve pixels with the stick held into it',
     edit: { path: 'src/app/frame.ts', find: '  ship.velAlong = bodyAlong + vAlong;\n  ship.velAcross = bodyAcross + vAcross;\n', replace: '' },
   },
-  {
-    decision: '0615',
-    suite: 'tests/solid.test.ts',
-    broke: 'a knock off the bodies before the ram has landed, so a body it would have broken is bounced off',
-    guard: 'a body the ram breaks it goes on through, slowed by nothing',
-    edit: { path: 'src/app/frame.ts', find: '    let ramKills = collideInto(', replace: '    knockRam(w);\n    let ramKills = collideInto(' },
-  },
+  // 0691 took the steered ball's twin of the next-but-one break out: the ball never comes off a body now, so a knock
+  // before the landing changes nothing for it; the dance's entry below is the same break on the thing that still does.
   {
     decision: '0615',
     suite: 'tests/solid.test.ts',

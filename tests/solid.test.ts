@@ -62,33 +62,34 @@ const gapTo = (world: World, body: Entity, reach: number): number =>
   Math.hypot(body.along - world.ship.along, body.across - world.ship.across) - body.radius - reach;
 
 describe('0615 — the ball is solid', () => {
-  it('THE REPORTED ONE: flown into a body it cannot break, the ball comes back off it — and never through it', () => {
+  it('0691 — THE ASK: flown into a body, however tough, the ball breaks it on contact and goes on through', () => {
+    /*
+      0615's reported one was a body of a thousand the ball came back off. Played: *"hitting non-boss enemies feels
+      off, I think it should instantly kill them instead of bouncing off, but have some haptic vibration feedback."*
+      The same body of a thousand — more than any spawned body's eleven — dies on the first landing.
+    */
     const { world, frame, stick, cues } = flying('ball');
     world.ship.invulnFor = Number.MAX_SAFE_INTEGER;
-    const body = bodyAt(world, 1000, world.ship.along + 20, world.ship.across);
+    const at = world.ship.along + 20;
+    bodyAt(world, 1000, at, world.ship.across);
     stick.along = 1;
-    let deepest = Number.POSITIVE_INFINITY;
     let first = -1;
-    let backAt = -1;
-    let farthest = 0;
-    for (let step = 0; step < 3 * STEPS_PER_SECOND; step++) {
+    let killedAt = -1;
+    let slowed = false;
+    for (let step = 0; step < 2 * STEPS_PER_SECOND && killedAt < 0; step++) {
       world.ramHeat = 0;
+      const was = world.ship.along - world.cameraAlong;
       frame.step();
-      const gap = gapTo(world, body, RAM.reach);
-      deepest = Math.min(deepest, gap);
       if (first < 0 && cues.includes('ram')) first = step;
-      // The first knock: how far the ball gets back off the body before the held stick wins.
-      if (first >= 0 && backAt < 0 && step > first && gap < farthest) backAt = step;
-      if (first >= 0 && backAt < 0) farthest = Math.max(farthest, gap);
+      if (world.enemies.size === 0) killedAt = step;
+      if (step > 6 && world.ship.along - world.cameraAlong < was) slowed = true;
     }
     expect(first, 'the ball never reached the body').toBeGreaterThanOrEqual(0);
-    // Pressed on with the stick, the ball is in the body no deeper than one step of its flight carries it.
-    expect(-deepest * PX, `the ball went ${(-deepest * PX).toFixed(1)} px into a body it could not break`).toBeLessThan(2 * PX);
-    expect(world.ship.along, 'the ball passed through the body').toBeLessThan(body.along);
-    // And is seen to come off it, with the stick still held into it — 0617: half as far as off a boss, below.
-    expect(farthest * PX, `knocked off, the ball came ${(farthest * PX).toFixed(1)} px back`).toBeGreaterThan(5);
-    // And comes back, and lands again: a ram still rams.
-    expect(cues.filter((c) => c === 'ram').length, 'the ball came off and never landed again').toBeGreaterThanOrEqual(6);
+    expect(killedAt, 'a body of a thousand survived the landing').toBe(first);
+    // The smash it is felt as is held in tests/charge.test.ts, with the hands.
+    expect(slowed, 'the ball was knocked back off a body it broke').toBe(false);
+    for (let step = 0; step < STEPS_PER_SECOND; step++) frame.step();
+    expect(world.ship.along, 'the ball did not go on through where the body was').toBeGreaterThan(at);
   });
 
   it('a body the ram breaks it goes on through, slowed by nothing', () => {
@@ -186,7 +187,7 @@ describe('0617 — the War Dance stops, swings and burns', () => {
   });
 });
 
-describe('0617 — the knock is half as far off a body as off a boss', () => {
+describe('0617 — the knock off a boss, and 0691 — none off a body', () => {
   /**
    * How far the ball comes back off `target` the first time it lands on it, flown straight at it with the stick
    * held there — in pixels, the player's units (0027).
@@ -215,11 +216,23 @@ describe('0617 — the knock is half as far off a body as off a boss', () => {
     return farthest * PX;
   }
 
-  it('THE REPORTED ONE: off a body the ball comes back about half as far as off a boss, the stick held into both', () => {
+  it('off a boss the ball comes back over twelve pixels with the stick held into it; a body breaks and gives nothing back', () => {
+    /*
+      0617's reported one measured a body's knock at about half a boss's. 0691: a body breaks on contact, so the
+      ball flies on through it — the same body of a million, the stick held, is gone on the first landing and the
+      ball is past where it stood inside a second.
+    */
     const body = flying('ball');
     body.world.ship.invulnFor = Number.MAX_SAFE_INTEGER;
-    const drifter = bodyAt(body.world, 1e6, body.world.ship.along + 20, body.world.ship.across);
-    const offBody = firstKnock(body.world, body.frame, body.stick, () => drifter, body.cues);
+    const stood = body.world.ship.along + 20;
+    bodyAt(body.world, 1e6, stood, body.world.ship.across);
+    body.stick.along = 1;
+    for (let step = 0; step < STEPS_PER_SECOND; step++) {
+      body.world.ramHeat = 0;
+      body.frame.step();
+    }
+    expect(body.world.enemies.size, 'a body of a million survived the ball').toBe(0);
+    expect(body.world.ship.along, 'the ball was held off a body it broke').toBeGreaterThan(stood);
 
     const level: LevelRow = { ...LEVELS.approach, waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS };
     const boss = flying('ball', level);
@@ -232,9 +245,6 @@ describe('0617 — the knock is half as far off a body as off a boss', () => {
     const offBoss = firstKnock(boss.world, boss.frame, boss.stick, () => boss.world.bossPool.at(0), boss.cues);
 
     expect(offBoss, `off the boss the ball came ${offBoss.toFixed(1)} px back`).toBeGreaterThan(12);
-    const share = offBody / offBoss;
-    expect(share, `off a body it came ${offBody.toFixed(1)} px back, ${(share * 100).toFixed(0)}% of the boss's ${offBoss.toFixed(1)}`).toBeGreaterThan(0.35);
-    expect(share, `off a body it came ${offBody.toFixed(1)} px back, ${(share * 100).toFixed(0)}% of the boss's ${offBoss.toFixed(1)}`).toBeLessThan(0.65);
   });
 });
 

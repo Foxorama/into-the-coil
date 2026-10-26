@@ -1163,6 +1163,27 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE PLAY OF 2026-10-26: TWELVE ITEMS, ALL BUILT IN THREE PRs — OWED A PLAY — 2026-10-26
+
+A play of `main` as 0682 left it, twelve items in one message and three more mid-way, built as three PRs in
+turn: [0683](decisions/0683-the-ray-gun-hangs-under-the-rim.md) (the Caddie's side-view gun under the rim),
+[0684](decisions/0684-a-shut-pilot-is-unnamed.md) (a shut pilot is `?????`),
+[0685](decisions/0685-freeplay-is-shown-shut.md) (the continues chip on every tier, Freeplay padlocked and the
+tier line saying what opens it — 0608's owed veto); [0686](decisions/0686-the-menus-are-one-game.md) (the
+settings family centred in the plate with folder tabs, the music room in the plate, its bar laid over — 0668's
+top anchoring undone), [0687](decisions/0687-paint-and-parts-stands-on-the-ship.md) (Paint & Parts on the ship
+at 1.4, the cockpit monitor one size on every tab — 0678's close-up undone),
+[0688](decisions/0688-the-break-presses-for-itself-quietly.md) (no cursor on the break's *Onward*, and its own
+press unheard — 0669 and 0659 on that screen), [0689](decisions/0689-nobody-is-armed-after-a-run.md) (no *Ready*
+on the title after a run — 0668's owed question), [0690](decisions/0690-the-spar-is-a-module.md) (the spar past
+the bay a drum on a truss); [0691](decisions/0691-the-ball-breaks-what-it-lands-on.md) (a landing on a body kills
+it, only a boss or a mid-boss knocks the ball back, the heat three fifths — 0615, 0617 and 0648 moved),
+[0692](decisions/0692-a-levels-shell-adds.md) (a level's shell adds to what the ship carries, capped — 0355 and
+0614 moved). **Next is the play**, with each decision's *Owed*; and two things this session could not settle:
+*"the menu system inside Hangin' Out is still basic and could use a lot more polish"* is not built — it is a
+taste with no named defect, and wants the player's own list; and `tests/sound.browser.test.ts`'s *THE WHOLE
+CHAIN* was red on `main` itself at 0682 (192 buffers baked for 185 expected), before any of this.
+
 ### ⚠️ THE NOTEBOOK PAGES ARE A QUEUE OF TWENTY-ONE: NINETEEN BUILT — OWED A PLAY — 2026-10-24
 
 [`the-notebook-pages`](../reports/the-notebook-pages-2026-10-24.md) is every item on four handwritten pages and two

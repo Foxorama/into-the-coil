@@ -93,9 +93,11 @@ function gained(world: World, before: number, banks: number): number {
   return world.charge - before + banks * CHARGE.fill;
 }
 
-/** Land `count` rams on a body that never dies, the ball held cool so its heat says nothing here. */
+/**
+ * Land `count` rams on bodies, the ball held cool so its heat says nothing here — 0691: no body lives a landing,
+ * so a fresh one is stood on the ball whenever the last has died, and every step is a landing.
+ */
 function landRams(world: World, frame: GameFrame, count: number): void {
-  const body = bodyOn(world, 1e9);
   const was = world.onEarned;
   let banks = 0;
   world.onEarned = (special) => {
@@ -104,13 +106,18 @@ function landRams(world: World, frame: GameFrame, count: number): void {
   };
   let landed = 0;
   for (let step = 0; landed < count && step < count * 20; step++) {
+    if (world.enemies.size === 0) bodyOn(world, 1);
+    // Laid back on the ball every step: a ball a boss has just knocked is still moving.
+    for (let i = 0; i < world.enemies.size; i++) {
+      const e = world.enemies.at(i);
+      e.along = e.prevAlong = world.ship.along;
+      e.across = e.prevAcross = world.ship.across;
+    }
     world.ramHeat = 0;
     const before = world.charge;
     banks = 0;
     frame.step();
     landed += gained(world, before, banks);
-    body.along = world.ship.along;
-    body.across = world.ship.across;
   }
   world.onEarned = was;
 }
@@ -317,17 +324,20 @@ describe('0613 — a ball that keeps ramming fills its bar in the ask’s window
 });
 
 describe('0613 — a landing is felt, and seen, and never overwhelms', () => {
-  it('a landing is a knock, a kill a smash, a boss a smash, and the heat burning a shield a burn', () => {
+  it('a landing on a body is a kill and a smash, a boss a smash, and the heat burning a shield a burn', () => {
+    /*
+      0613 felt a landing on a body that lived as a knock. 0691: no body lives a landing, so every landing on one
+      is the kill's smash — the haptic the ask wanted on the kill, *"but have some haptic vibration feedback"*.
+    */
     const { world, frame, feels } = flying();
     const body = bodyOn(world, 1e9);
-    for (let i = 0; i < 4; i++) {
-      world.ramHeat = 0;
-      body.along = world.ship.along;
-      body.across = world.ship.across;
-      frame.step();
-    }
-    expect(feels, 'a landing on a body that lives was not a knock').toContain('knock');
-    expect(feels).not.toContain('smash');
+    world.ramHeat = 0;
+    body.along = world.ship.along;
+    body.across = world.ship.across;
+    frame.step();
+    expect(world.enemies.size, 'a body of a billion lived a landing').toBe(0);
+    expect(feels, 'the landing that broke a body was not a smash').toContain('smash');
+    expect(feels, 'a landing that broke a body was felt as a knock').not.toContain('knock');
     world.enemies.clear();
     bodyOn(world, 1);
     world.ramHeat = 0;

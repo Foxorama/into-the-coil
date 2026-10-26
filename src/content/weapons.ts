@@ -147,11 +147,6 @@ export interface Ram {
   readonly knock: number;
   /** The share of the speed it met the body at that it keeps, back the other way — 0615: its restitution. */
   readonly give: number;
-  /**
-   * The share of `knock` and `give` it comes off a body with that is not a boss or a mid-boss — 0617:
-   * *"kickback needs to be about half way it is on non-boss and non-miniboss enemies."*
-   */
-  readonly bodyKnock: number;
 }
 
 /**
@@ -739,11 +734,16 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       /*
         0648: *"heat gauge +10% slower to fill"* — every way the gauge fills, divided by 1.1: a landing 0.15 → 0.136,
         a boss's 0.11 → 0.1, a scrape 0.01 → 0.009. How it cools is not touched.
+
+        0691: *"hamster ball needs to get hit at about 40% slower than it currently does"* — the gauge is what hits
+        the ball (a full one burns a shield, 0609), so every way it fills is three fifths of what it was: a landing
+        0.136 → 0.082, a boss's 0.1 → 0.06, a scrape 0.009 → 0.0054. Twelve landings to a burn on a body, seventeen
+        on a boss. How it cools is still not touched.
       */
-      heat: 0.136,
-      // 0639: eight landings on a boss before a burn, where it was six or seven; ten since 0648.
-      bossHeat: 0.1,
-      scrape: 0.009,
+      heat: 0.082,
+      // 0639: eight landings on a boss before a burn, where it was six or seven; ten since 0648, seventeen since 0691.
+      bossHeat: 0.06,
+      scrape: 0.0054,
       cool: 30,
       drain: 0.01,
       /*
@@ -753,14 +753,12 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
         and 2.4 cost a held ram a third of its landings on a boss; at 2.0 it lands 5.3 a second where it
         landed 6.6, and the War Dance it earns lands two and a half times what it did. 0615 has the table.
       */
+      /*
+        0691: off a boss and a mid-boss only. A body in the enemies' pool breaks on contact now, so nothing in it is
+        left to knock off — 0617's `bodyKnock`, the share of this a body gave back, went with it.
+      */
       knock: 2.0,
       give: 0.4,
-      /*
-        0617: half as far off a body, as asked; the boss and the mid-boss keep the whole knock. Half the SPEED
-        came back a quarter as far with the stick held into it — 2.9 px against the boss's 12.8 — because the
-        stick wins sooner; seven tenths of it comes back half as far, and seven tenths as far with it let go.
-      */
-      bodyKnock: 0.7,
     },
     paint: null,
     lends: false,

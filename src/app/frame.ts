@@ -93,7 +93,7 @@ import { ROWS_OF } from '../content/arms.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { RIMS, WHEEL_PACE_EASE, wheelFrame, wheelTurn } from '../content/rims.ts';
-import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellCapFor, shellOrbit, fullHealthFor, hullFor, lampFrame, lampTurn, levelHealthFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
+import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellCapFor, shellOrbit, fullHealthFor, hullFor, lampFrame, lampTurn, levelHealthFor, openingHealthFor, shellLevelFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
@@ -2687,7 +2687,14 @@ export class GameFrame implements Frame {
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, shotLog, bladeGap, null, -1, RAM_KIND);
     // The ram, in its own pass: a landing sparks where it was — 0593.
     // 0613: and what it killed and landed on the enemies kept apart from the boss's, for the bar and the hands.
-    let ramKills = collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, ramGap, null, RAM_KIND);
+    /*
+      0691: a landing on a body breaks it, whatever its health — *"hitting non-boss enemies feels off, I think it
+      should instantly kill them instead of bouncing off"*. The scale is the steered ram's landing on this pool
+      alone: the boss and the mid-boss are in their own pools, paired below on the gun's own weight, and still knock
+      the ball back; and the War Dance keeps 0615's pinball, landing its own damage and coming off what it does not
+      break.
+    */
+    let ramKills = collideInto(w.playerShots, w.enemies, 1, dancing === null ? RAM_BREAKS : 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, ramGap, null, RAM_KIND);
     killedByShots += ramKills;
     const ramOnBodies = ramLanded(w);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
@@ -4377,6 +4384,13 @@ function steerBlades(w: World): void {
 
 /** The `kind` the ram carries in `playerShots` — beside a pulse's 0, a blade's 1, a ring's 2, a wheel's 3 and an ember's 4. */
 export const RAM_KIND = 5;
+/**
+ * What a ram landing's damage is scaled by on the enemies' pool — 0691: enough that no body in it survives one.
+ * The largest spawned body is eleven on Burn (base four at 2.56); the ram lands three. A million million of that
+ * is past any body a guard stands up as unbreakable (a billion, `tests/charge.test.ts`), and not infinity, which
+ * a health log would have to say something about.
+ */
+export const RAM_BREAKS = 1e12;
 
 // @setup: the gauge's four pictures, coolest first.
 const RAM_HEAT = [SPRITE.ramHeat0, SPRITE.ramHeat1, SPRITE.ramHeat2, SPRITE.ramHeat3] as const;
@@ -4955,9 +4969,13 @@ function knockRam(w: World): void {
   const ram = WEAPONS[w.weapon.kind].ram;
   const reach = dance !== null ? dance.reach : ram !== null ? ram.reach : 0;
   knockDepth = 0;
-  const onBody = deepest(w.enemies, ship.along, ship.across, reach, null);
-  let body = onBody;
-  // A beaten boss does nothing back (0337), and nothing knocks off it.
+  /*
+    0691: the steered ball comes off a boss or a mid-boss, never one of the enemies — its landing breaks those on
+    contact, so it goes on through what it kills (0615's own line) and there is nothing in that pool left standing
+    to come off. The War Dance keeps 0615's pinball and comes off a body it did not break. A beaten boss does
+    nothing back (0337), and nothing knocks off it.
+  */
+  let body: Entity | null = dance !== null ? deepest(w.enemies, ship.along, ship.across, reach, null) : null;
   if (!w.bossBeaten) body = deepest(w.bossBody, ship.along, ship.across, reach, deepest(w.bossPool, ship.along, ship.across, reach, body));
   if (body === null) return;
   let nAlong = ship.along - body.along;
@@ -5008,10 +5026,9 @@ function knockRam(w: World): void {
   const bodyAcross = body.across - body.prevAcross;
   let vAlong = ship.velAlong - bodyAlong;
   let vAcross = ship.velAcross - bodyAcross;
-  // 0617: half as hard off a body as off a boss or a mid-boss — the deepest found was one of the enemies.
-  const share = body === onBody ? ram.bodyKnock : 1;
-  const give = ram.give * share;
-  const knock = ram.knock * share;
+  // 0691: the whole knock — only a boss or a mid-boss is here now; 0617's half-share was a body's.
+  const give = ram.give;
+  const knock = ram.knock;
   const into = vAlong * nAlong + vAcross * nAcross;
   if (into < 0) {
     vAlong -= (1 + give) * into * nAlong;
@@ -13598,8 +13615,15 @@ export function advanceLevel(w: World, level: LevelRow, levelIndex: number): voi
     handed health to a ship in its death beat would un-kill it.
   */
   // The LEVEL's shell since 0614, which a death's no longer is: *"once per start of level."*
-  const opens = levelHealthFor(w.shipRow, w.difficulty);
-  if (w.ship.health > 0 && w.ship.health < opens) w.ship.health = opens;
+  /*
+    0692: ADDED to what the ship carries, up to the tier's shell, where 0355 raised a ship carrying less to it and
+    left one carrying more alone — *"the level shield you get at the start of a level should add to your current
+    shields, not replace it … unless you have 3 shields in which case you don't get a 4th."* Legend's three to a
+    cap of three is the same number either way; Savior's one is the difference.
+  */
+  const adds = shellLevelFor(w.shipRow, w.difficulty);
+  const capped = fullHealthFor(w.shipRow, w.difficulty);
+  if (w.ship.health > 0 && adds > 0) w.ship.health = Math.min(capped, w.ship.health + adds);
 }
 
 /**

@@ -22,13 +22,13 @@ export const PROBES = [
   {
     decision: '0355',
     suite: 'tests/tier-shell.test.ts',
-    // The boundary keeps the shell (0058) and renews nothing: *"3 shields fully renewed"* undone.
+    // The boundary keeps the shell (0058) and renews nothing: *"3 shields fully renewed"* undone. 0692 re-anchored it on the add.
     broke: 'a level boundary keeping the shell without topping it up',
     guard: 'raises what the ship carries to the tier’s opening shell',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (w.ship.health > 0 && w.ship.health < opens) w.ship.health = opens;\n',
-      replace: '  void opens;\n',
+      find: '  if (w.ship.health > 0 && adds > 0) w.ship.health = Math.min(capped, w.ship.health + adds);\n',
+      replace: '  void adds;\n  void capped;\n',
     },
   },
   {
