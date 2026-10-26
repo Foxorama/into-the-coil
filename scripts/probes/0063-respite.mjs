@@ -114,8 +114,9 @@ export const PROBES = [
     guard: 'counts down and returns to the title with no input at all',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    if (then == null) chrome.activate();\n    else expireTo(state.screen.current, then);',
-      replace: '    chrome.activate();',
+      // 0688 re-anchored it: the self-press is flagged round the one call, and the break is the same bug either way.
+      find: '    if (then == null) {\n      // 0688: the screen\'s own press, which is not heard as a hand\'s.\n      selfPressing = true;\n      chrome.activate();\n      selfPressing = false;\n    } else expireTo(state.screen.current, then);',
+      replace: '    selfPressing = true;\n    chrome.activate();\n    selfPressing = false;',
     },
   },
   {

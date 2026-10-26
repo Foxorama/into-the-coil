@@ -919,7 +919,7 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       radialEllipse(ctx, 0, 0, h, h * 0.42, PORT_INK.alarm, 0.85);
       return;
     case 'spar':
-      paintSpar(ctx, h);
+      paintSpar(ctx, palette, h);
       return;
     case 'shuttle': {
       // 0680: a far shuttle side-on, nose to the right — a hull, a cockpit's glow and its engine, small and dim with distance.
@@ -1259,32 +1259,107 @@ function paintNeon(ctx: CanvasRenderingContext2D, frame: string, tube: string, b
  * 0680: the station's own structure past the bay — a lit module on the end of an arm reaching in from the right,
  * with rows of windows and a beacon, in the dark and dim with distance.
  */
-function paintSpar(ctx: CanvasRenderingContext2D, h: number): void {
-  // The arm: a girder from the box's right edge to the module.
-  ctx.fillStyle = '#1b2232';
-  ctx.fillRect(-h * 0.1, -2, h * 1.1, 4);
-  ctx.strokeStyle = '#2a3346';
-  ctx.lineWidth = 0.4;
+/**
+ * The station's own structure past the bay — 0680's spar, repainted in 0690. Played: *"the new art on the right
+ * outside the space station still looks blocky and basic."* It was a flat box with a grid of dots on a stick. Now:
+ * a boxed truss reaching in from the right, and at its end a drum — a cylinder lit from above and dark under, its
+ * hull in panels with seams, a band of windows under a glow, a docking collar with its ring of lights at the far
+ * end, a radiator hung under it, a dish and a mast with the beacon on top, and running lights red and green. In
+ * the box's units; `h` is its half, 35.
+ */
+function paintSpar(ctx: CanvasRenderingContext2D, palette: Palette, h: number): void {
+  const hull = shade(palette.blade, -0.5);
+  const dark = shade(hull, -0.45);
+  const lit = shade(hull, 0.3);
+  // The truss: two chords, a web of diagonals between them, and a flange where it meets the box's right edge.
+  const chord = shade(hull, -0.15);
+  ctx.fillStyle = chord;
+  ctx.fillRect(-h * 0.12, -2.6, h * 1.12, 1.1);
+  ctx.fillRect(-h * 0.12, 1.5, h * 1.12, 1.1);
+  ctx.strokeStyle = shade(hull, 0.05);
+  ctx.lineWidth = 0.5;
   ctx.beginPath();
-  for (let x = -h * 0.1; x < h; x += 5) {
-    ctx.moveTo(x, -2);
-    ctx.lineTo(x + 2.5, 2);
-    ctx.lineTo(x + 5, -2);
+  for (let x = -h * 0.12; x < h; x += 4.5) {
+    ctx.moveTo(x, -1.5);
+    ctx.lineTo(x + 2.25, 1.5);
+    ctx.lineTo(x + 4.5, -1.5);
   }
   ctx.stroke();
-  // The module: a drum with its windows lit in rows, and a dish.
-  ctx.fillStyle = '#232c3f';
-  ctx.fillRect(-h * 0.55, -9, h * 0.5, 18);
-  ctx.fillStyle = '#2f3a52';
-  ctx.fillRect(-h * 0.55, -9, h * 0.5, 1.2);
-  for (const y of [-5, -1, 3]) {
-    for (let x = -h * 0.52; x < -h * 0.1; x += 2.2) radial(ctx, x + 0.6, y, 0.6, PORT_INK.lamp, 0.7);
-  }
-  ctx.fillStyle = '#2a3346';
+  ctx.fillStyle = shade(hull, 0.1);
+  ctx.fillRect(h * 0.94, -4, 2.2, 8);
+  ctx.fillRect(h * 0.06, -3.4, 1.6, 6.8);
+  // A cable run along the truss's top chord.
+  ctx.strokeStyle = shade(palette.hazard, -0.3);
+  ctx.lineWidth = 0.35;
   ctx.beginPath();
-  ctx.ellipse(-h * 0.3, -12, 5, 2, 0, Math.PI, 0);
+  ctx.moveTo(-h * 0.1, -2.9);
+  ctx.lineTo(h, -2.9);
+  ctx.stroke();
+  // The drum: a horizontal cylinder, its top lit by the planet's light and its underside in shadow.
+  const left = -h * 0.62;
+  const right = -h * 0.08;
+  const r = 10;
+  const body = ctx.createLinearGradient(0, -r, 0, r);
+  body.addColorStop(0, lit);
+  body.addColorStop(0.35, hull);
+  body.addColorStop(1, dark);
+  ctx.fillStyle = body;
+  ctx.fillRect(left, -r, right - left, r * 2);
+  // Its far end: a cap drawn as a shaded ellipse, the collar's base.
+  ctx.beginPath();
+  ctx.ellipse(left, 0, 3.2, r, 0, 0, Math.PI * 2);
   ctx.fill();
-  radial(ctx, -h * 0.3, -14.5, 1.2, PORT_INK.alarm, 0.9);
+  ctx.fillStyle = shade(hull, -0.25);
+  ctx.beginPath();
+  ctx.ellipse(right, 0, 2.6, r, 0, -Math.PI / 2, Math.PI / 2);
+  ctx.fill();
+  // Panel seams round the hull, and a pair of longitudinal ones.
+  ctx.fillStyle = rgba(dark, 0.8);
+  for (let x = left + 6; x < right - 2; x += 6.5) ctx.fillRect(x, -r, 0.45, r * 2);
+  ctx.fillRect(left, -r * 0.55, right - left, 0.35);
+  ctx.fillRect(left, r * 0.62, right - left, 0.35);
+  // The window band: a dark strip across the drum with its windows lit, and the light they throw under them.
+  ctx.fillStyle = shade(dark, -0.3);
+  ctx.fillRect(left + 3, -2.4, right - left - 6, 4.4);
+  for (let x = left + 4; x < right - 4; x += 2.6) {
+    ctx.fillStyle = rgba(PORT_INK.lamp, 0.9);
+    ctx.fillRect(x, -1.7, 1.7, 3);
+  }
+  const under = ctx.createLinearGradient(0, 2, 0, 7);
+  under.addColorStop(0, rgba(PORT_INK.lamp, 0.22));
+  under.addColorStop(1, rgba(PORT_INK.lamp, 0));
+  ctx.fillStyle = under;
+  ctx.fillRect(left + 3, 2, right - left - 6, 5);
+  // The docking collar at the far end: a ring standing proud of the drum, with its lights round it.
+  ctx.fillStyle = shade(hull, 0.15);
+  ctx.beginPath();
+  ctx.ellipse(left - 1.5, 0, 2.4, r * 0.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = dark;
+  ctx.beginPath();
+  ctx.ellipse(left - 1.5, 0, 1.3, r * 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  for (const t of [-0.6, -0.2, 0.2, 0.6]) radial(ctx, left - 1.5, t * r * 0.8, 0.9, PORT_INK.pad, 0.9);
+  // The radiator slung under the drum: a dark panel with its fins.
+  ctx.fillStyle = shade(dark, -0.2);
+  ctx.fillRect(left + 8, r + 1.5, right - left - 16, 3.2);
+  ctx.fillStyle = shade(hull, -0.1);
+  for (let x = left + 9; x < right - 9; x += 2) ctx.fillRect(x, r + 1.5, 0.5, 3.2);
+  ctx.fillRect(left + 12, r, 1, 1.5);
+  ctx.fillRect(right - 13, r, 1, 1.5);
+  // The dish on top, tilted toward the room, and the mast with its beacon.
+  ctx.fillStyle = shade(hull, 0.2);
+  ctx.beginPath();
+  ctx.ellipse(left + 12, -r - 3, 5.5, 1.8, -0.35, Math.PI, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = chord;
+  ctx.fillRect(left + 11.6, -r - 3, 0.8, 3);
+  ctx.fillRect(right - 9, -r - 9, 0.9, 9);
+  ctx.fillRect(right - 11, -r - 6.5, 5, 0.6);
+  radial(ctx, right - 8.5, -r - 10, 1.4, PORT_INK.alarm, 0.95);
+  // Running lights: red to port, green to starboard, as a ship has them.
+  radial(ctx, left + 2, -r + 1.5, 1, PORT_INK.alarm, 0.8);
+  radial(ctx, right - 2, -r + 1.5, 1, '#4cff88', 0.8);
 }
 
 /*

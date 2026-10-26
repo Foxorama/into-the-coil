@@ -178,6 +178,15 @@ describe.runIf(chromePath)('0558 — a run quit is over', () => {
     // Nobody at the stick: the run runs out, and the offer is left to.
     await page.waitForSelector(shown('gameOver'), { state: 'attached', timeout: 90_000 });
     await page.waitForSelector(shown('title'), { state: 'attached', timeout: 30_000 });
+    /*
+      0689: and back on the title after a run, nobody is armed — *"when you die and go back to the menu screen, it has
+      a big READY next to the character name"*. The pill is a press's answer (0668), and nothing has been pressed.
+    */
+    await page.waitForTimeout(300);
+    expect(
+      await page.locator(`${shown('title')} .${prefixFor('title')}pilot-armed`).first().evaluate((pill) => (pill as HTMLElement).hidden),
+      'back on the title after a run, the pilot flown last is still armed and says Ready',
+    ).toBe(true);
     const table = await page.evaluate((key) => localStorage.getItem(key), SCORES_KEY);
     const rows = table === null ? [] : (JSON.parse(table) as { entries?: unknown[] } | unknown[]);
     const count = Array.isArray(rows) ? rows.length : (rows.entries?.length ?? 0);

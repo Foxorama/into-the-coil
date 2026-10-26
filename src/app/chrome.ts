@@ -29,7 +29,7 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { CONTROL_ROWS, CONTROL_TABLE, SCREENS, SLOT_SHELVES, faceCard, isSlot, type ChoiceName, type Screen } from '../state/screens.ts';
+import { CONTROL_ROWS, CONTROL_TABLE, SCREENS, SLOT_SHELVES, cursorDrawn, faceCard, isSlot, type ChoiceName, type Screen } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf, type PickupKind } from '../content/pickups.ts';
 import { SIDES, SPECIALS } from '../content/specials.ts';
@@ -203,8 +203,8 @@ function starSky(): string {
       to.push(`${-layer.tile * layer.tiles}px 0`);
     }
   }
-  // 0671: every screen that stands on it, one drift.
-  const skies = SKIED.map((s) => `.${prefixFor(s)}sky`).join(', ');
+  // 0671: every screen that stands on it, one drift. 0686: and the music room's bar, over its flythrough.
+  const skies = [...SKIED.map((s) => `.${prefixFor(s)}sky`), `.${prefixFor('music').slice(0, -1)}::before`].join(', ');
   return (
     `${skies} { background-image: ${images.join(', ')}; background-size: ${sizes.join(', ')}; ` +
     `animation: ${prefixFor('title')}drift 60s linear infinite; }\n` +
@@ -331,10 +331,16 @@ ${each('-panel')} {
   where it is, with the content filling down; it still falls back to the top and scrolls when it overflows.
   On a phone's height the margin is the one thing on the screen with nothing to say: How to play scrolled by
   10 px at 480x320 with it, and a touch Settings by 8 at 667x375, so there it is none.
+
+  ⚠️ **CENTRED AGAIN, AND THE STRIP STILL STANDS AT ONE HEIGHT — 0686.** Played: *"The settings menu is at the
+  top of the screen instead of centered like the main screen and the music room screen."* The margin is gone, so
+  the auto margins every other panel has centre the plate; what keeps the strip at one height is that the four
+  plates share one height, the tallest tab's — a floor on the plate, which the content fills down from the top.
+  On a phone's height the floor is none and the plate stands at the top, where 0668 found it had to.
 */
-${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { margin-top: min(2rem, 6cqh); }
+${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { min-height: min(40rem, 88cqh); justify-content: flex-start; }
 @container (max-height: 460px) {
-  ${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { margin-top: 0; }
+  ${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { min-height: 0; margin-top: 0; }
 }
 .itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem); letter-spacing: 0.02em; margin: 0; }
 /*
@@ -608,8 +614,7 @@ ${each('-choices')} {
   that you can see where you are; a solid box is the dim back again with extra steps.
 */
 .itc-music-panel {
-  background: color-mix(in srgb, var(--itc-void) 78%, transparent);
-  border-radius: 0.6em;
+  /* 0686: the cut-corner plate every other menu stands in, below; it was a rounded backing of its own. */
   /*
     ⚠️ **CAPPED, BECAUSE THE PANEL WAS 1280 WIDE OVER ABOUT 480 OF CONTENT** — 0213. On every other
     screen that costs nothing, because every other screen paints over the scene anyway. Here the
@@ -623,6 +628,22 @@ ${each('-choices')} {
     already agree on rather than a new opinion about it.
   */
   max-width: min(100%, 66ch);
+}
+/*
+  0686: on a desktop the camera keeps a bar at the top for the HUD (0500), and in the music room nothing stood
+  in it — a black band over the flythrough's sky. The shell says the bar's height (setBar, below), and the room
+  lays the title's stars across it: none on a touch screen, whose bar is nought.
+*/
+.itc-music::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--itc-bar-px, 0px);
+  /* The flythrough's own sky, read off the built page at 1920x1080 (eleven, eleven, twenty-one), under the stars. */
+  background-color: #0b0b15;
+  pointer-events: none;
 }
 /*
   ── THE CROSSING IS A CAPTION OVER A GAME THAT IS STILL BEING FLOWN — 0340 ─────────────────────
@@ -2136,7 +2157,7 @@ ${faced((p) => `.${p}band-armed .${p}option-face.${p}option-on > canvas`)} {
   0539: and the hangar family's plate, on the same terms — one frame for every plate a menu stands in. 0671: and
   Settings' four tabs, whose panel is the plate, the tab strip its head.
 */
-.itc-title-board, .itc-title-main, .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate, ${TABBED.map((s) => `.${prefixFor(s)}panel`).join(', ')} {
+.itc-title-board, .itc-title-main, .itc-hangar-plate, .itc-parts-plate, .itc-music-panel, .itc-shop-plate, ${TABBED.map((s) => `.${prefixFor(s)}panel`).join(', ')} {
   --itc-cut: 0.9em;
   --itc-plate-glass: color-mix(in srgb, var(--itc-void) 84%, transparent);
   border: 1px solid transparent;
@@ -2731,6 +2752,20 @@ ${each('-band:focus-visible')} { outline: none; }
 }
 .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { white-space: nowrap; padding: 0.35em 0.9em 0.3em; border-radius: 0.55em 0.55em 0 0; border-bottom-width: 0; }
 .itc-hangar-tab:not(.itc-hangar-tab-on), .itc-parts-tab:not(.itc-parts-tab-on), .itc-shop-tab:not(.itc-shop-tab-on) { opacity: 0.6; }
+/*
+  0686: and the settings family's strip is the plate's folder tabs too — the same tabs on the same rule as the
+  hangar's, across the plate's head, where it was four heading-sized pills (0458). Played: *"the sizing of them
+  all is a little out of whack, it looks a bit like screens from three different games."* One plate, one strip.
+*/
+${TABBED.map((s) => `.${prefixFor(s)}tabs`).join(', ')} {
+  align-self: stretch;
+  font-size: max(0.8rem, min(1em, 1.9cqw, 4.6cqh));
+  gap: 0.3em;
+  justify-content: flex-start;
+  border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 60%, var(--itc-ink));
+}
+${TABBED.map((s) => `.${prefixFor(s)}tab`).join(', ')} { white-space: nowrap; padding: 0.35em 0.9em 0.3em; border-radius: 0.55em 0.55em 0 0; border-bottom-width: 0; }
+${TABBED.map((s) => `.${prefixFor(s)}tab:not(.${prefixFor(s)}tab-on)`).join(', ')} { opacity: 0.6; }
 /* Settings' bands and its two buttons, at the title's column width. */
 .itc-settings-settings-box, .itc-settings-choices { width: min(100%, 34em); }
 .itc-settings-choices { flex-direction: row; justify-content: center; gap: min(0.8rem, 2cqw); }
@@ -5403,6 +5438,8 @@ export interface Chrome {
    * stand's view (`standMarksInto`); a keeper mark that is not a number takes the bubble down.
    */
   setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void;
+  /** 0686: how tall the desktop's HUD bar is (0500), in CSS pixels, so the music room can lay its sky across it. */
+  setBar(px: number): void;
   /**
    * The same marks moved, and nothing else laid out — 0678: a step of the dolly between two tabs' cameras, where
    * the column is the one already framed and only the picture under it has moved.
@@ -8137,8 +8174,14 @@ export function makeChrome(
     if (panel === undefined) return;
     const here = atCursor();
     const ring = prefixFor(shownScreen!) + 'action-cursor';
+    /*
+      0688: no cursor on a screen that presses its own button — the break's *Onward* (0063). Played: *"the
+      interlevel bits have the flashing cursor on the 'onward' sign"*: brackets breathing on a thing that goes by
+      itself read as a wait for the player. The button is still pressable, and Enter still lands on it.
+    */
+    const drawn = cursorDrawn(shownScreen!);
     for (const row of panel.rows) {
-      for (const control of row) control.classList.toggle(ring, control === here);
+      for (const control of row) control.classList.toggle(ring, drawn && control === here);
     }
     // 0562: the focus card speaks for the band the cursor is on, and keeps speaking for it when the cursor leaves the bands.
     // 0568: never the pilots — who they are is said at the plate's head, and the foot said it again.
@@ -9294,6 +9337,9 @@ export function makeChrome(
       for (const kind of KEEPER_KINDS) Object.assign(said.shops[kind], marks.shops[kind]);
       Object.assign(said.hang, marks.hang);
       placeStand(screen);
+    },
+    setBar(px: number): void {
+      panels.music?.root.style.setProperty('--itc-bar-px', String(Math.round(px)) + 'px');
     },
     setStandMarks(screen: Screen, marks: Readonly<StandMarks>): void {
       this.moveStandMarks(screen, marks);

@@ -15,7 +15,7 @@ import {
   type MenuAsk,
 } from '../src/app/menu.ts';
 import { PAD_AXIS_X, PAD_AXIS_Y, PAD_DEADZONE } from '../src/app/pad.ts';
-import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND, type Screen } from '../src/state/screens.ts';
+import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND, cursorDrawn, type Screen } from '../src/state/screens.ts';
 import { GameFrame } from '../src/app/frame.ts';
 // 0212: a screen that does not dim has to carry its own legibility, and that lives in the stylesheet.
 import { STYLE } from '../src/app/chrome.ts';
@@ -378,6 +378,20 @@ describe('a screen that expires presses its own control, and says how long it wa
     );
   });
 
+  it('0688 — and draws no cursor, since it presses for the player; every other screen draws one', () => {
+    /*
+      Played: *"the interlevel bits have the flashing cursor on the 'onward' sign"* — brackets breathing on a button
+      that goes by itself read as a wait. The one screen that presses its own control is the break (0063).
+    */
+    for (const screen of SCREEN_KINDS) {
+      const timeout = SCREENS[screen].timeout;
+      const presses = timeout !== null && timeout.then === null;
+      expect(cursorDrawn(screen), `${screen} ${presses ? 'presses its own control and still draws a cursor' : 'draws no cursor'}`).toBe(!presses);
+    }
+    expect(cursorDrawn('cleared'), 'the break draws a cursor on Onward').toBe(false);
+    expect(cursorDrawn('title')).toBe(true);
+  });
+
   it('and a screen that expires onto its own control has a control to press', () => {
     /*
       ⚠️ **`then: null` means press the first control**, so a screen that expires with nothing to
@@ -516,8 +530,9 @@ describe('a screen says whether it stops the world and whether it hides it', () 
   */
   it('the music room, which does not dim, gives its panel a backing of its own', () => {
     expect(SCREENS.music.dims, 'the room stopped showing the place and this guard is now vacuous').toBe(false);
+    // 0686: the backing is the cut-corner plate every menu stands in — a rule whose selector list names the panel.
     expect(
-      /\.itc-music-panel\s*\{[^}]*background:/.test(STYLE),
+      /\.itc-music-panel[^{]*\{[^}]*background:/.test(STYLE),
       'the music room does not dim and its panel has no background — the readout is on the star field',
     ).toBe(true);
   });

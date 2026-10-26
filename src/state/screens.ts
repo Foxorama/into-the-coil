@@ -582,7 +582,14 @@ const HANGAR_CAMERA: StandCamera = { along: 112, across: 64, zoom: 1.15, x: STAN
  * rim reads at sixty pixels and more across on a laptop. It keeps the workshop wall the cockpit monitor hangs
  * from, not the lift and the shops, which a camera this close cannot.
  */
-const PARTS_CAMERA: StandCamera = { along: 131, across: 78, zoom: 2, x: 0.8, y: 0.5, keep: 'workshop' };
+/*
+  0687: played — *"the desktop zoom in for paint and parts zooms into the workbench for some reason and it completely
+  changes the cockpit sizing display on the workbench."* 0678's camera stood at the cradle at 2, its point at 0.8 of
+  the column, and what filled the picture was the workshop wall and a monitor twice its size. It stands on the ship
+  now, a step closer than Hangin' Out and no more, and the monitor keeps the hangar's size on every tab
+  (`standMarksInto`'s `hangScale`).
+*/
+const PARTS_CAMERA: StandCamera = { along: 128, across: 70, zoom: 1.4, x: 0.6, y: 0.5, keep: 'workshop' };
 /**
  * 0678: Cosmo's at the mezzanine, their counter large and the ship still in frame under it. It keeps the workshop
  * wall too: kept to their own shopfront, the cockpit monitor on the wall went under the plate.
@@ -657,6 +664,16 @@ function plainLabel(kind: ShipKind): string {
 /** `parts` as a sentence's list: *a*, *a and b*, *a, b and c*. */
 function listed(parts: readonly string[]): string {
   return parts.length === 1 ? parts[0]! : parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1]!;
+}
+
+/**
+ * Whether the cursor is drawn on `screen` — 0688: on every screen but one that presses its own button, which is
+ * the break (0063, `timeout.then` of `null`): its *Onward* goes by itself, and a cursor breathing on it read as a
+ * wait for the player. Played: *"the interlevel bits have the flashing cursor on the 'onward' sign."*
+ */
+export function cursorDrawn(screen: Screen): boolean {
+  const timeout = SCREENS[screen].timeout;
+  return timeout === null || timeout.then !== null;
 }
 
 /**
