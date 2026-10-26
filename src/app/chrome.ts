@@ -4837,11 +4837,17 @@ ${SHOPPED.map((p) => `.${p}band:not(.${p}band-faces):not(:has([${SETTING_ATTR}='
   names and things."* A tile was a name in the card's own type with a price under it and the thing
   itself in a box three lines high between them. The thing is what is for sale: its box is half again
   as high, and the name and the price are its caption, a size down.
+
+  ⚠️ **ON THE DESKTOP ONLY.** A taller tile is a taller plate, and on a phone held upright (0682) the
+  plate's foot went off the screen's bottom — 0682's guard said so on the first push. A phone's tiles
+  keep the sizes 0370's query gives them.
 */
-.itc-shop-option.itc-shop-option-tile { gap: 0.06em; padding-top: 0.3em; padding-bottom: 0.28em; }
-.itc-shop-option-art { height: 4.5em; }
-/* A rim and a shield are canvases and grow with the box; a dangle and a flame are set in em, so they are told. */
-.itc-shop-option-art .itc-shop-art-dangle, .itc-shop-option-art .itc-shop-art-flame { font-size: 1.45em; }
+@container (min-height: 461px) and (orientation: landscape) {
+  .itc-shop-option.itc-shop-option-tile { gap: 0.06em; padding-top: 0.3em; padding-bottom: 0.28em; }
+  .itc-shop-option-art { height: 4.5em; }
+  /* A rim and a shield are canvases and grow with the box; a dangle and a flame are set in em, so they are told. */
+  .itc-shop-option-art .itc-shop-art-dangle, .itc-shop-option-art .itc-shop-art-flame { font-size: 1.45em; }
+}
 .itc-shop-option-label { font-size: 0.8em; }
 .itc-shop-option-tag { font-size: 0.68em; opacity: 0.85; }
 /*
