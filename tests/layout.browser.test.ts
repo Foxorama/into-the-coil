@@ -36,7 +36,15 @@ import { SCORES_KEY, TABLE_SIZE, serialiseScores, type ScoreEntry } from '../src
  * ⚠️ **READ THE SKIPPED COUNT.** `runIf` means a machine with no browser still passes.
  */
 
-vi.setConfig({ testTimeout: 120_000 });
+/*
+  ⚠️ **SIZED UNDER LOAD, AS 0245 SAYS, AND THE MEASUREMENT IS HERE.** 0547's plates guard walks six
+  devices, three tabs and every pilot: 20 s alone on the development box — the same 20 s on `main` and
+  on the branch that first tripped this — and 105 s on CI's shard in a green run (run 40316204486),
+  then over the 120 s this was on the next push (run 40416397643) with no change to what it measures.
+  Three times the worst cost under the whole suite is 315 s; a hang still fails inside the job.
+  `docs/decisions/0245-a-budget-is-sized-under-load.md`.
+*/
+vi.setConfig({ testTimeout: 320_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
