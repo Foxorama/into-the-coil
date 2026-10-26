@@ -47,7 +47,7 @@ import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { KEEPERS, KEEPER_KINDS, type KeeperKind } from '../content/keepers.ts';
 import { SHELF_KINDS, SHELVES, type OwnableKind } from '../content/wares.ts';
-import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
+import { GOLFERS, GOLFER_KINDS, HIDDEN_NAME, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
 import { PAD_SPECIAL_BUTTONS, slotsLeftToRight } from './pad.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
@@ -3457,8 +3457,14 @@ ${faced((p) => `.${p}option-face, .${p}option-face:not(.${p}option-on)`)} { bord
   that cost nothing, and in a row of three the size of the screen it was the word that wrapped the row.
 */
 .itc-title-choices > .itc-title-chip { display: flex; flex: 1 1 0; min-width: 0; padding: 0; opacity: 1; order: -1; }
-/* 0608: and gone on a tier not yet finished, where the run is one credit and there is nothing to choose. */
+/* 0608 hid it on a tier not yet finished; 0648 shows it on every tier, Freeplay padlocked. The rule stays for a shell that hides a band. */
 .itc-title-choices > .itc-title-chip[hidden] { display: none; }
+/*
+  A shut option on the chip — 0648: dashed and padlocked as a band's is (0561), and the words it stands on
+  still read. What opens it is said on the line under the tier band, which the chip borrows while it stands
+  there: the sentence names the tier, and the title has no height for a line of the chip's own (0517).
+*/
+.itc-title-chip .itc-title-option.itc-title-option-shut { opacity: 0.7; padding-right: 1.9em; }
 .itc-title-chip .itc-title-options { flex: 1 1 auto; min-width: 0; }
 .itc-title-chip .itc-title-option { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .itc-title-chip .itc-title-option:not(.itc-title-option-on) { display: none; }
@@ -4452,6 +4458,13 @@ interface Band {
    * a chip is one button among the actions (0517).
    */
   faces: 'words' | 'portraits' | 'chip';
+  /**
+   * 0648: on a chip, the band whose hint line it borrows to say why the option it stands on is shut — the
+   * band built before it on the same screen, the title's tier band; `null` on a band, or with none before it.
+   */
+  lends: Band | null;
+  /** 0648: on that band, the chip that borrows its line; `null` otherwise. */
+  lent: Band | null;
 }
 
 /**
@@ -6527,6 +6540,8 @@ export function makeChrome(
         buttons,
         faces: choice.faces,
         caption: null,
+        lends: null,
+        lent: null,
       };
       /*
         0572: on a screen that stands, a caption under the band — the option under the cursor or fitted, what
@@ -6546,6 +6561,18 @@ export function makeChrome(
           return element;
         };
         band.caption = { root, name: part('name'), said: part('said'), state: part('state') };
+      }
+      if (chip) {
+        /*
+          0648: a chip has no hint line, so what a shut option it stands on says goes on the line of the band
+          built before it — the title's tier band, whose line is right over the chip's row and whose name the
+          sentence says. The lender re-says its own hint once the chip steps off.
+        */
+        const lender = choiceBands[choiceBands.length - 1];
+        if (lender !== undefined && lender.faces !== 'chip') {
+          band.lends = lender;
+          lender.lent = band;
+        }
       }
       choiceBands.push(band);
       if (chip) {
@@ -7540,6 +7567,15 @@ export function makeChrome(
       return;
     }
     band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
+    /*
+      0648: a chip standing on a shut option says why on the line it borrows — the band before it re-says
+      itself, and that band's line carries the chip's sentence while the chip stands there, its own hint once
+      it steps off. The lender's line is `aria-live`, so the reader hears the change as the chip's.
+    */
+    if (band.lends !== null) sayBand(band.lends);
+    else if (band.lent !== null && band.lent.open[band.lent.index] === false) {
+      band.hint.textContent = band.lent.whys[band.lent.index] ?? band.lent.why ?? '';
+    }
     // 0607: and one that comes round can go either way while any other option is open.
     const elsewhere = band.ends === 'round' && band.open.some((open, i) => open !== false && i !== band.index);
     band.less.disabled = !elsewhere && !band.open.some((open, i) => open && i < band.index);
@@ -7714,15 +7750,17 @@ export function makeChrome(
       if (next >= 0 && next < count && next !== from) tryOn(band, next, true);
       return;
     }
+    // 0648: a chip steps onto a shut option too — it is shown padlocked, and the note says what opens it.
+    const lands = band.faces === 'chip';
     let next = band.index;
     for (let tried = 0; tried < count; tried++) {
       let at = next + delta;
       if (rounds) at = (at + count) % count;
       else if (at < 0 || at >= count) return;
       next = at;
-      if (band.open[next] !== false) break;
+      if (lands || band.open[next] !== false) break;
     }
-    if (next !== band.index && band.open[next] !== false) onChoice(band.name, next, false);
+    if (next !== band.index && (lands || band.open[next] !== false)) onChoice(band.name, next, false);
   };
   /** The band whose row the cursor is on, or `undefined` on a row of buttons. */
   const bandAtCursor = (): Band | undefined => {
@@ -8401,13 +8439,33 @@ export function makeChrome(
           ⚠️ **EXCEPT ON A BAND THAT TRIES — 0561**, where a shut option is somewhere to look: it is marked
           shut for the reader and the stylesheet and stays pressable, and a press on it is refused.
         */
+        /*
+          ⚠️ **AND ON A CHIP — 0648**, whose shut option is somewhere to step to: it shows padlocked, its
+          tooltip says why, and the note over the chip says it too (`sayBand`). The run reads `creditsFor`,
+          never the chip, so a shut option shown is not a shut option flown.
+        */
         const shut = prefixFor(screen) + 'option-shut';
         for (let i = 0; i < buttons.length; i++) {
           const closed = open[i] === false;
-          if (band.press === 'tries') {
+          if (band.press === 'tries' || band.faces === 'chip') {
             buttons[i]!.classList.toggle(shut, closed);
             buttons[i]!.setAttribute('aria-disabled', closed ? 'true' : 'false');
+            if (band.faces === 'chip') buttons[i]!.title = closed ? (whys[i] ?? why ?? '') : (band.hints[i] ?? '');
           } else buttons[i]!.disabled = closed;
+          /*
+            0647: a shut pilot is a silhouette (0546) AND unnamed — under the card, in its tooltip and for the
+            reader — until their lock is met. The position IS the golfer (0513).
+          */
+          if (band.faces === 'portraits') {
+            const golfer = GOLFER_KINDS[i];
+            if (golfer !== undefined) {
+              const said = closed ? HIDDEN_NAME : GOLFERS[golfer].name;
+              buttons[i]!.setAttribute('aria-label', said);
+              buttons[i]!.title = said;
+              const shownName = buttons[i]!.lastElementChild;
+              if (shownName instanceof HTMLElement) shownName.textContent = closed ? HIDDEN_NAME : GOLFERS[golfer].goesBy;
+            }
+          }
         }
         sayBand(band);
       }

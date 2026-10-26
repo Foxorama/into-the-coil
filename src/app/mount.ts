@@ -41,7 +41,7 @@ import {
   warpAt,
 } from '../content/travel.ts';
 // 0517: whether a run that runs out may be continued.
-import { CREDIT_KINDS, DEFAULT_CREDIT } from '../content/credits.ts';
+import { CREDITS, CREDIT_KINDS, DEFAULT_CREDIT, freeplayWhy } from '../content/credits.ts';
 // 0512: the touch section — which side the discs stand on, and how quick the steering is.
 import { DEFAULT_HAND, DEFAULT_STEER, HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
@@ -109,7 +109,7 @@ import {
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakeCodaOf, bakePlace, bakeTitle, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone, type PlaceBake } from './sound.ts';
 import { DOCK, INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
-import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
+import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, HIDDEN_NAME, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
@@ -2641,12 +2641,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /** Whether the splash has had a press the page could turn the sound on with — 0513. */
   let splashPressed = false;
   /**
-   * 0608: the continues chip, on the title only for a tier that has been finished — Freeplay is earned
-   * per tier, and on any other the run is one credit with nothing to choose. Re-read when the tier moves
-   * and when the hangar does, which is when a tier is finished.
+   * 0608: Freeplay is earned per tier. 0648: the continues chip is on the title on every tier, and on one
+   * not yet finished Freeplay is shut — shown padlocked, and a press onto it says what finishes the tier;
+   * the run there is one credit whatever the chip shows (`creditsFor`, at `startRun`). Re-read when the tier
+   * moves and when the hangar does, which is when a tier is finished.
    */
   function showCredits(): void {
-    chrome.setBandShown('credits', state.hangar.finished[state.settings.difficulty]);
+    const tier = state.settings.difficulty;
+    const finished = state.hangar.finished[tier];
+    const why = finished ? null : freeplayWhy(tier);
+    const open = CREDIT_KINDS.map((kind) => finished || !CREDITS[kind].continues);
+    chrome.setOpen('credits', open, why, open.map((is) => (is ? null : why)));
   }
   const startRun = (): void => {
     pilotArmed = true;
@@ -2952,7 +2957,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       'pilot',
       GOLFER_KINDS.map((kind) => pilotOpen(kind, record)),
       pilotWhy(record),
-      GOLFER_KINDS.map((kind) => lockHint(GOLFERS[kind].opens, record, GOLFERS[kind].name)),
+      // 0647: and none of them names the pilot it is about — the card says ????? until it opens.
+      GOLFER_KINDS.map((kind) => lockHint(GOLFERS[kind].opens, record, HIDDEN_NAME)),
     );
     // 0594: and what waits on a pilot, kept from the pickups and from How to play's key alike.
     world.pickupShut = shutFor(state.hangar);

@@ -42,7 +42,8 @@ export async function choose(page: Page, setting: ChoiceName, index: number): Pr
   if (SCREENS[screen].choices.find((c) => c.name === setting)?.faces === 'chip') {
     for (let tries = 0; tries < 8; tries++) {
       if ((await page.locator(`${options} >> nth=${index}`).getAttribute('aria-pressed')) === 'true') return;
-      await page.locator(`${options}[aria-pressed="true"]`).click();
+      // 0648: a shut option the chip stands on is `aria-disabled` for the reader and still takes a press; Playwright's own check would wait on it.
+      await page.locator(`${options}[aria-pressed="true"]`).click({ force: true });
     }
     throw new Error(`the ${setting} chip never came round to option ${index}`);
   }
@@ -82,15 +83,18 @@ export async function launch(page: Page, tier: DifficultyKind): Promise<void> {
  * On the title: choose `credits` on the continues band — 0517. A test whose subject is the run-over
  * screen and its *Continue* chooses Freeplay first, because no quarters is the default.
  *
- * ⚠️ **ON A PAGE OPENED ON `EVERY_TIER_FINISHED` — 0608.** The chip is on the title only for a tier
- * finished, so a fresh store has nothing to press; `seeded` (`tests/seed.ts`) opens on one that has.
+ * ⚠️ **ON A PAGE OPENED ON `EVERY_TIER_FINISHED` — 0608.** Freeplay is earned per tier: on a fresh store
+ * the chip steps onto it shut (0648) and the run is one credit all the same, so a test whose subject is
+ * the continue opens on `seeded` (`tests/seed.ts`), where every tier has been finished.
  */
 export async function credit(page: Page, credits: CreditKind): Promise<void> {
   await page.waitForSelector(shown('title'), { state: 'attached' });
   if (!(await page.locator(`[${SETTING_ATTR}="credits"]`).first().isVisible())) {
-    throw new Error('the continues chip is not on the title — open the page on EVERY_TIER_FINISHED (0608)');
+    throw new Error('the continues chip is not on the title');
   }
   await choose(page, 'credits', CREDIT_KINDS.indexOf(credits));
+  const shut = await page.locator(`[${SETTING_ATTR}="credits"] .${prefixFor('title')}option[aria-pressed="true"]`).getAttribute('aria-disabled');
+  if (credits === 'free' && shut === 'true') throw new Error('Freeplay is shut on this tier — open the page on EVERY_TIER_FINISHED (0608)');
 }
 
 /** A kept hangar in which every tier has been finished, so Freeplay is offered on all of them — 0608. */

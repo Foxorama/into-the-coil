@@ -45,9 +45,10 @@ second shield, so the complement only goes down. See *Upgrades*.
 **A run is one credit unless the player chose Freeplay** —
 [0517](decisions/0517-no-quarters-given.md) — **and Freeplay is earned, one tier at a time**: it is
 offered on a tier once that tier has been finished, by any pilot —
-[0608](decisions/0608-freeplay-is-earned.md). Until then the title has no continues chip for it. Where
-there is one it is *No quarters given* until it is pressed: a run that runs out ends on the game-over
-screen, with its account and *Main Menu*.
+[0608](decisions/0608-freeplay-is-earned.md). Until then the title's continues chip shows Freeplay
+padlocked, and pressing onto it says what finishes the tier —
+[0648](decisions/0648-freeplay-is-shown-shut.md). The chip is *No quarters given* until it is pressed:
+a run that runs out ends on the game-over screen, with its account and *Main Menu*.
 On *Freeplay*, kept between visits like the other settings, **a run that ends may be continued**,
 once per ending and only from the screen it ends on —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The level does not restart: the field is frozen
@@ -118,7 +119,8 @@ Longshot Larry, Backspin Bo — **and three secret pilots, each behind a lock**
 ([0546](decisions/0546-the-marmot-rides.md), [0592](decisions/0592-the-crashes-are-counted.md)): the
 Marmot once all four golfers have cleared the game, Unity after ten lives lost to something the ship
 flew into, and MMXXVI after five things bought. All three can be met as the rescued pilot before they
-are unlocked. The locks are rows in `src/content/golfers.ts`.
+are unlocked. Until then their card is a silhouette called *?????* —
+[0647](decisions/0647-a-shut-pilot-is-unnamed.md). The locks are rows in `src/content/golfers.ts`.
 
 **Each flies their own ship, and the ship owns the gun** —
 [0441](decisions/0441-a-pilot-flies-their-own-ship.md). All are drawn from above in one square box,

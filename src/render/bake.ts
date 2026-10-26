@@ -2797,8 +2797,11 @@ const RAYGUN = {
   housing: { x: 0.66, r: 0.3 },
   /** Where the rings leave: the front of the little saucer. */
   tip: 0.96,
-  /** From the side: its centre above the rim at the nose, and its radius — the top half. */
-  side: { x: 0.6, y: -0.2, r: 0.26 },
+  /**
+   * From the side: its centre under the rim at the nose, and its radius — 0646, hung below the belly, out of
+   * the pilot's line of sight. 0587 rode it above the rim at −0.2.
+   */
+  side: { x: 0.6, y: 0.2, r: 0.26 },
 };
 
 /**
@@ -2943,8 +2946,10 @@ export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true,
 
 /**
  * The caddie's own ray gun seen from the side, at `lean` of the way over toward above — 0587, for the pad
- * and the intro (`paintSaucer`): the little saucer on a short pylon, riding above the rim at the nose. Leaning
- * past half way it is the view from above, sitting on the disc.
+ * and the intro (`paintSaucer`): the little saucer on a short pylon at the nose. Since 0646 it hangs UNDER the
+ * rim, where the fight's view has it (0493) and out of the pilot's line of sight — 0587 rode it above, and the
+ * play said *"it'd be blocking the pilot's view"*. Leaning past half way it is the view from above, sitting on
+ * the disc.
  */
 export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: number): void {
   const { x, y, r } = RAYGUN.side;
@@ -2952,6 +2957,7 @@ export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: numb
     paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r);
     return;
   }
+  // How far under the rim it hangs at this lean: the whole drop side-on, closing on the rim as the view leans over.
   const rise = y * Math.cos((lean * Math.PI) / 2);
   poly(ctx, f, shade(palette.trim, -0.35), [
     [x - r * 0.35, rise],
