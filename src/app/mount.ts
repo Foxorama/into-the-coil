@@ -1079,6 +1079,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const framed: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0, keep: 'room' };
   // @setup: 0687's scratch — the hangar tab's camera fitted to this column, which sizes the cockpit monitor on every tab.
   const hangarFramed: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0, keep: 'room' };
+  // 0687: the pixels a world unit is for the monitor's width — the hangar's, written by every framing and read by the dolly's steps.
+  let monitorScale = 0;
   /*
     0678: the dolly between two tabs' cameras. `dollyFrom` is the camera the screen showed when the tab changed,
     `dollyNow` the one it shows on this step of the ease, and `dollyStep` how far through it is — `DOLLY_STEPS`
@@ -1829,11 +1831,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0687: and the hangar tab's camera fitted to the same column, whose scale the cockpit monitor is sized at on every tab.
     const hangarStand = SCREENS.hangar.stand;
     if (hangarStand !== null) fitStand(hangarStand.camera, view, width, box, hangarStand.keeper, hangarFramed, height);
+    monitorScale = view.scale * hangarFramed.zoom;
     // 0566: in portrait the plate is under the stand, and the deck may stop above the screen's foot.
     framedBelow = Math.max(0, height - (box.top + box.height));
     standViewInto(view, dollyStep < DOLLY_STEPS ? dollyOn() : framed, width, height, world.standView, framedBelow);
     // 0572: and where the ship's foot and the keeper's head are on it, for the monitor and the bubble.
-    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks, view.scale * hangarFramed.zoom);
+    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks, monitorScale);
     chrome.setStandMarks(current, marks);
     // 0680: and the rail along the dock's foot only where it clears the cockpit readout, which a phone stands there.
     const dash = chrome.dashBox(current);
@@ -1849,7 +1852,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (stand === null || dollyStep >= DOLLY_STEPS) return;
     dollyStep++;
     standViewInto(view, dollyStep < DOLLY_STEPS ? dollyOn() : framed, viewportWidth(host), viewportHeight(host), world.standView, framedBelow);
-    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks, view.scale * hangarFramed.zoom);
+    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks, monitorScale);
     chrome.moveStandMarks(state.screen.current, marks);
   }
 
