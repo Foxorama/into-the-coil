@@ -114,9 +114,11 @@ describe.runIf(chromePath)('0678 — each tab stands somewhere, and the stand do
     /*
       *"the desktop zoom in for paint and parts … completely changes the cockpit sizing display on the workbench."*
       0678's close-up drew the monitor at the wall's width in its own camera, twice the hangar's. Read in pixels on
-      the built page: the monitor's width on the two tabs, within two pixels of each other.
+      the built page: the monitor's width on the two tabs, within two pixels of each other — at 1920x1080, where the
+      Paint & Parts camera gets its own zoom (at 1280x720 the column holds it near the hangar's, and the two would
+      agree whatever the monitor did).
     */
-    const page = await open(1280, 720);
+    const page = await open(1920, 1080);
     await openHangar(page);
     await page.waitForTimeout(600);
     const monitor = (screen: Screen): Promise<number> =>
