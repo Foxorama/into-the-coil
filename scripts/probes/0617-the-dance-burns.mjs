@@ -4,13 +4,7 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0617',
-    suite: 'tests/solid.test.ts',
-    broke: 'a body that knocks the ball as far as a boss does, as 0615 left it',
-    guard: 'THE REPORTED ONE: off a body the ball comes back about half as far as off a boss, the stick held into both',
-    edit: { path: 'src/app/frame.ts', find: '  const share = body === onBody ? ram.bodyKnock : 1;', replace: '  const share = 1;' },
-  },
+  // 0617's half-knock off a body went with 0691: a body breaks on contact and knocks nothing. Its probe went with it.
   {
     decision: '0617',
     suite: 'tests/solid.test.ts',

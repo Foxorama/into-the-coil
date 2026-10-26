@@ -79,7 +79,11 @@ function bodyOn(world: World, health: number): Entity {
  * One step with every body laid back on the ball — 0615: a body the ball cannot break knocks it off, so a
  * fixture asking what the ball does PRESSED into one holds it there, as a player holding the stick into it does.
  */
+// 0691: no body lives a landing now, so a ball pressed into bodies is pressed into one after another — the fixture
+// stands a fresh one on the ball whenever the last has died, and every step is a landing. A fixture that counted
+// time between landings counts landings.
 function pressed(world: World, frame: GameFrame): void {
+  if (world.enemies.size === 0) bodyOn(world, 1);
   for (let i = 0; i < world.enemies.size; i++) {
     const e = world.enemies.at(i);
     e.along = e.prevAlong = world.ship.along;
@@ -263,7 +267,8 @@ describe('0609 — a full gauge burns a shield off, and the ball rolls on', () =
       const { world, frame } = inTheBall();
       world.ship.invulnFor = 0;
       world.enemies.clear();
-      const target = on === 'body' ? bodyOn(world, 1e9) : world.bossPool.spawn()!;
+      // 0691: a body dies on the landing, so the ball is pressed into one body after another (`pressed`); a boss lives.
+      let target = on === 'body' ? bodyOn(world, 1) : world.bossPool.spawn()!;
       if (on === 'boss') {
         reset(target, world.ship.along, world.ship.across, BOSSES.sentinel);
         target.health = 1e9;
@@ -274,6 +279,7 @@ describe('0609 — a full gauge burns a shield off, and the ball rolls on', () =
       let landings = 0;
       for (let i = 0; i < 20 * STEPS_PER_SECOND && world.ship.health === FULL; i++) {
         const was = world.ramHeat;
+        if (on === 'body' && world.enemies.size === 0) target = bodyOn(world, 1);
         target.along = target.prevAlong = world.ship.along;
         target.across = target.prevAcross = world.ship.across;
         frame.step();
@@ -292,15 +298,17 @@ describe('0609 — a full gauge burns a shield off, and the ball rolls on', () =
     const { world, frame, cues } = inTheBall();
     world.ship.invulnFor = 0;
     expect(world.ship.health, 'the ball did not open on its own shell').toBe(FULL);
-    bodyOn(world, 100000);
     let burnt = -1;
     for (let i = 0; i < 20 * STEPS_PER_SECOND && burnt < 0; i++) {
       pressed(world, frame);
       if (world.ship.health < FULL) burnt = i;
     }
-    expect(burnt, 'pressed into a body that would not die, the heat never cost the ball anything').toBeGreaterThan(0);
-    // At the ram's own clock: one landing every `landGap` steps (four owed at once), each `heat` of the gauge.
-    expect(burnt / STEPS_PER_SECOND, 'burnt sooner than its landings could have heated it').toBeGreaterThan(((1 / RAM.heat - 4) * (WEAPONS.ram.landGap ?? 0)) / STEPS_PER_SECOND);
+    expect(burnt, 'pressed into body after body, the heat never cost the ball anything').toBeGreaterThan(0);
+    /*
+      Each landing `heat` of the gauge, and no fewer landings than that fills it — 0691: counted in landings, since
+      a body dies on each and the ram's clock between landings on one target no longer gates anything here.
+    */
+    expect(cues.filter((c) => c === 'ram').length, 'burnt sooner than its landings could have heated it').toBeGreaterThanOrEqual(Math.ceil(1 / RAM.heat) - 1);
     expect(world.ship.health, 'a burn took more than one shield').toBe(FULL - 1);
     expect(world.ramHeat, 'the gauge did not go cool when it burnt').toBeLessThan(0.25);
     expect(cues, 'a burn was not heard as itself').toContain('ballBurns');

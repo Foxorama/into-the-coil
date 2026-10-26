@@ -35,10 +35,11 @@ export const PROBES = [
     // A boundary renewing to a life's shell — held on the split row, as above.
     broke: 'a level boundary renewing to the life’s shell',
     guard: 'a tier whose two counts differ',
+    // 0692 re-anchored it: the boundary adds the LEVEL's shell; adding the life's is the break.
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const opens = levelHealthFor(w.shipRow, w.difficulty);',
-      replace: '  const opens = openingHealthFor(w.shipRow, w.difficulty);',
+      find: '  const adds = shellLevelFor(w.shipRow, w.difficulty);',
+      replace: '  const adds = shellOpenFor(w.shipRow, w.difficulty);',
     },
   },
   {
