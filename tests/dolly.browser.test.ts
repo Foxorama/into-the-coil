@@ -27,8 +27,12 @@ vi.setConfig({ testTimeout: 180_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
-/** The least a tyre on Paint & Parts may be across at 1280x720 — the plan's sixty pixels, which a rim reads at. */
-const TYRE_PX = 60;
+/**
+ * The least a tyre on Paint & Parts may be across at 1280x720 — the plan's sixty pixels, which a rim reads at.
+ * 0687: forty-four, the camera a step closer than the hangar's (1.4) and no more, on the play that found 0678's
+ * close-up stood in the workshop: still half as big again as the hangar's thirty-eight.
+ */
+const TYRE_PX = 44;
 
 let browser: Browser | undefined;
 afterAll(async () => {
@@ -104,6 +108,26 @@ describe.runIf(chromePath)('0678 — each tab stands somewhere, and the stand do
       if (to === 'parts') parts = px;
     }
     expect(parts, `a tyre on Paint & Parts is ${parts.toFixed(1)} px across, under ${TYRE_PX} (${seen.join(', ')})`).toBeGreaterThanOrEqual(TYRE_PX);    await page.context().close();
+  });
+
+  it('0687 — THE ASK: the cockpit monitor is the same size on Paint & Parts as on Hangin’ Out, whatever the camera', async () => {
+    /*
+      *"the desktop zoom in for paint and parts … completely changes the cockpit sizing display on the workbench."*
+      0678's close-up drew the monitor at the wall's width in its own camera, twice the hangar's. Read in pixels on
+      the built page: the monitor's width on the two tabs, within two pixels of each other.
+    */
+    const page = await open(1280, 720);
+    await openHangar(page);
+    await page.waitForTimeout(600);
+    const monitor = (screen: Screen): Promise<number> =>
+      page.evaluate((p) => document.querySelector(`.${p}shown .${p}dash`)!.getBoundingClientRect().width, prefixFor(screen));
+    const onHangar = await monitor('hangar');
+    await toTab(page, 'hangar', 'parts');
+    await page.waitForTimeout(600);
+    const onParts = await monitor('parts');
+    expect(onHangar, 'the hangar draws no monitor to measure').toBeGreaterThan(40);
+    expect(Math.abs(onParts - onHangar), `the monitor is ${onParts.toFixed(0)} px wide on Paint & Parts and ${onHangar.toFixed(0)} on Hangin’ Out`).toBeLessThanOrEqual(2);
+    await page.context().close();
   });
 
   it('moves the room from one tab’s camera to the next over the dolly’s steps, and does not cut', async () => {

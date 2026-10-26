@@ -1077,6 +1077,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let portSharp = 1;
   // @setup: 0563's camera fitted to the stand's column, written in place by `frameStand`.
   const framed: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0, keep: 'room' };
+  // @setup: 0687's scratch — the hangar tab's camera fitted to this column, which sizes the cockpit monitor on every tab.
+  const hangarFramed: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0, keep: 'room' };
   /*
     0678: the dolly between two tabs' cameras. `dollyFrom` is the camera the screen showed when the tab changed,
     `dollyNow` the one it shows on this step of the ease, and `dollyStep` how far through it is — `DOLLY_STEPS`
@@ -1824,11 +1826,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     framedFor = current;
     fitStand(stand.camera, view, width, box, stand.keeper, framed, height);
+    // 0687: and the hangar tab's camera fitted to the same column, whose scale the cockpit monitor is sized at on every tab.
+    const hangarStand = SCREENS.hangar.stand;
+    if (hangarStand !== null) fitStand(hangarStand.camera, view, width, box, hangarStand.keeper, hangarFramed, height);
     // 0566: in portrait the plate is under the stand, and the deck may stop above the screen's foot.
     framedBelow = Math.max(0, height - (box.top + box.height));
     standViewInto(view, dollyStep < DOLLY_STEPS ? dollyOn() : framed, width, height, world.standView, framedBelow);
     // 0572: and where the ship's foot and the keeper's head are on it, for the monitor and the bubble.
-    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks);
+    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks, view.scale * hangarFramed.zoom);
     chrome.setStandMarks(current, marks);
     // 0680: and the rail along the dock's foot only where it clears the cockpit readout, which a phone stands there.
     const dash = chrome.dashBox(current);
@@ -1844,7 +1849,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (stand === null || dollyStep >= DOLLY_STEPS) return;
     dollyStep++;
     standViewInto(view, dollyStep < DOLLY_STEPS ? dollyOn() : framed, viewportWidth(host), viewportHeight(host), world.standView, framedBelow);
-    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks);
+    standMarksInto(world.standView, stand.keeper, world.standSpots ?? null, marks, view.scale * hangarFramed.zoom);
     chrome.moveStandMarks(state.screen.current, marks);
   }
 
@@ -2411,6 +2416,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     runOnField = false;
     lifecycle.end();
     fitPilot();
+    /*
+      0689: back on the title after a run, nobody is armed. 0668 kept 0513's *the pilot flown last is armed* and owed
+      the question; played: *"when you die and go back to the menu screen, it has a big READY next to the character
+      name that doesn't show at other times."* *Ready* is a press's answer, and nothing has been pressed yet.
+    */
+    armPilot(false);
     syncHud();
     // 0569: and the keepers have moved about while the run was flown.
     moveKeepers();
@@ -2949,12 +2960,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     drift into each other** — `docs/decisions/0042-a-run-is-a-sequence-of-levels.md` and 0068. The
     table at the top of `src/app/lifecycle.ts` is the one description of it.
   */
+  /*
+    0688: whether the press arriving below is a screen pressing its own button — the break's timeout (0063) — rather
+    than a hand's. Played: *"there's a noise that plays going to the next level like you've clicked a button."* Set
+    round the one call that presses for the player, and read by the callback it reaches synchronously.
+  */
+  let selfPressing = false;
   const chrome = makeChrome(colours, (screen: Screen, index: number): void => {
     /*
       0659: a press on a menu's button is heard — *"confirm noise on menus"* — on a sound left on and an unlocked
-      context, as the stand's fitting is. Never on the splash, whose press is the gesture that unlocks it.
+      context, as the stand's fitting is. Never on the splash, whose press is the gesture that unlocks it. 0688: and
+      never on a press the screen made itself.
     */
-    if (screen !== 'splash' && audioOut.ready()) speaker.play('confirm');
+    if (screen !== 'splash' && !selfPressing && audioOut.ready()) speaker.play('confirm');
     if (screen === 'cleared') lifecycle.onward();
     // ⚠️ No arm for `travel`, because it has no control to press — 0340, and its row says why.
     else if (screen === 'gameOver') lifecycle.resume();
@@ -3436,6 +3454,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0517: and the continues band on the credits the state holds, kept between visits.
   chrome.setChoice('credits', CREDIT_KINDS.indexOf(state.settings.credits));
   showCredits();
+  // 0686: the music room told the desktop's bar, so its sky is laid across it from the first frame.
+  chrome.setBar(view.barAcross);
   /*
     BACK — 0458: B on a pad, Escape on a keyboard, and the *Back* buttons. Where it goes is the row's
     `back`; `'opener'` is whichever screen opened the menu (`src/state/slices/screen.ts` records it).
@@ -5350,8 +5370,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     tickTimer();
     if (timeoutLeft > 0) return;
     const then = SCREENS[state.screen.current].timeout?.then;
-    if (then == null) chrome.activate();
-    else expireTo(state.screen.current, then);
+    if (then == null) {
+      // 0688: the screen's own press, which is not heard as a hand's.
+      selfPressing = true;
+      chrome.activate();
+      selfPressing = false;
+    } else expireTo(state.screen.current, then);
   };
 
   /*
@@ -5561,6 +5585,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     dpr = nextDpr;
     world.view = next;
     surface.setSize(width, height, colours.space, next.barAcross);
+    // 0686: and the music room told the bar's height again, to lay its stars across it.
+    chrome.setBar(next.barAcross);
     // Last, so a resumed loop's first frame draws at the size that was just fitted.
     setPlayable(true);
     // 0563: and a stand's camera fitted to its column again — and its bar left off, as the stand leaves it.

@@ -10,7 +10,7 @@ export const PROBES = [
     guard: '0659 — THE ASK: a press on a menu’s button is heard',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    if (screen !== 'splash' && audioOut.ready()) speaker.play('confirm');\n",
+      find: "    if (screen !== 'splash' && !selfPressing && audioOut.ready()) speaker.play('confirm');\n",
       replace: '',
     },
   },

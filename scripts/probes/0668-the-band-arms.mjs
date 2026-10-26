@@ -73,7 +73,8 @@ export const PROBES = [
     guard: 'with their strip at one height, on every device',
     edit: {
       path: 'src/app/chrome.ts',
-      find: "${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { margin-top: min(2rem, 6cqh); }\n",
+      // 0686: the strip is held at one height by the plates' shared floor now, not a margin; taken out, each tab centres on its own content again.
+      find: "${TABBED.map((screen) => `.${prefixFor(screen)}panel`).join(', ')} { min-height: min(40rem, 88cqh); justify-content: flex-start; }\n",
       replace: '',
     },
   },

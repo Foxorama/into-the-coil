@@ -401,13 +401,20 @@ export function standMarksInto(
     shops: Record<KeeperKind, { left: number; top: number; right: number; bottom: number }>;
     hang: { left: number; top: number; width: number };
   },
+  /**
+   * 0687: the pixels a world unit is for the monitor's WIDTH — the hangar tab's, on every tab — or the view's own
+   * when `null`. A tab's camera closer than the hangar's (0678) made the monitor a size bigger and re-wrapped its
+   * readout; played as *"completely changes the cockpit sizing display"*. It still hangs centred on the wall.
+   */
+  hangScale: number | null = null,
 ): void {
   out.shipX = screenX(view, DOCK.ship, STAGE.deck);
   out.shipY = screenY(view, DOCK.ship, STAGE.deck + 1);
   // 0628: where the cockpit monitor hangs on the workshop wall — the line under its hangers, a unit in from its posts.
   const wall = DOCK.workshop;
-  out.hang.left = screenX(view, wall.along - wall.half + HANG_INSET, wall.hang);
-  out.hang.width = screenX(view, wall.along + wall.half - HANG_INSET, wall.hang) - out.hang.left;
+  const hangWide = (wall.half - HANG_INSET) * 2 * (hangScale ?? view.scale);
+  out.hang.left = screenX(view, wall.along, wall.hang) - hangWide / 2;
+  out.hang.width = hangWide;
   out.hang.top = screenY(view, wall.along, wall.hang);
   // 0572: and each shopfront's box, its alcove's — what a click or a tap on the shop lands on.
   // 0681: each at its own size and across.
