@@ -191,6 +191,8 @@ export function paintStand(
   const moonAcross = DOCK.planet.across + Math.sin(orbit) * DOCK.moon.reach * 0.22 - Math.cos(orbit) * DOCK.moon.reach * 0.08;
   const behind = Math.sin(orbit) < 0;
   if (behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit * 0.8, 0, DOCK.moon.grow);
+  // 0695: its air round it here too, so the bay's planet and the chase's are the one planet.
+  put(surface, view, PORT_SPRITE.halo, planetAlong, DOCK.planet.across, planetLit * 0.7, 0, DOCK.planetGrow);
   put(surface, view, PORT_SPRITE.planet, planetAlong, DOCK.planet.across, planetLit, 0, DOCK.planetGrow);
   if (!behind) put(surface, view, PORT_SPRITE.moon, moonAlong, moonAcross, planetLit, 0, DOCK.moon.grow);
   // 0680: a far shuttle crossing the bay once a minute, and the station's own structure past it, nearer than the sky.
@@ -1382,7 +1384,23 @@ const STATION_ACROSS = 58;
  * rate it falls behind at, how lit, and how big beside the dock's own (`DOCK.planetGrow`). A tenth of the
  * rate, so it is the furthest thing in the shot after the stars; small, so it is far.
  */
-const FAR_PLANET = { along: 180, across: 22, rate: 0.1, lit: 0.75, grow: 0.6 } as const;
+const FAR_PLANET = { along: 180, across: 22, rate: 0.1, lit: 0.9, grow: 0.85 } as const;
+/*
+  0695: *"that whole scene could use a bit more pizazz."* The chase's sky, past the planet: a sun far off the
+  station's side, falling behind slower than the planet; the planet's air lit round it, and the planet itself a
+  size up and lit; rocks drifting past between the planet and the ships at half the station's rate, each turning
+  its own way; and the nearest stars drawn out into streaks as the camera gathers speed, which is what speed
+  looks like with nothing beside you to measure it by.
+*/
+const FAR_SUN = { along: 236, across: 6, rate: 0.03, grow: 1.1 } as const;
+const ROCK_RATE = 0.45;
+// @setup: where each rock starts and how far across it drifts, read every frame and never written.
+const ROCK_ALONG: readonly number[] = [150, 205, 262, 331, 398];
+// @setup: as above.
+const ROCK_ACROSS: readonly number[] = [96, 14, 72, 40, 108];
+const STREAKS = 22;
+const STREAK_SPAN = 320;
+const STREAK_SPEED = 2.2;
 
 /**
  * One blit in the dark outside, framed `OUTSIDE_ZOOM` about the middle of the view — 0414. The shot is
@@ -1467,8 +1485,24 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip
     not framed by `OUTSIDE_ZOOM`, because it is the sky the level is drawn in and the level is not zoomed.
   */
   paintSky(surface, view, fallen(s, SKY_SPEED), sky, 0, 0, GAME_BASE);
-  // 0675: the planet Hangin' Out's bay looks out on, far behind, so the chase and the dock are one sky.
-  putOut(surface, view, PORT_SPRITE.planet, FAR_PLANET.along - fallen(s, OUTSIDE.station * FAR_PLANET.rate), FAR_PLANET.across, FAR_PLANET.lit, 0, DOCK.planetGrow * FAR_PLANET.grow);
+  // 0695: the sun, furthest off, and the stars nearest the camera drawn out as it gathers speed.
+  putOut(surface, view, PORT_SPRITE.sun, FAR_SUN.along - fallen(s, OUTSIDE.station * FAR_SUN.rate), FAR_SUN.across, 0.85, 0, FAR_SUN.grow);
+  const speed = Math.min(1, s / OUTSIDE.ramp);
+  if (speed > 0.25) {
+    const streaked = fallen(s, SKY_SPEED * STREAK_SPEED) % STREAK_SPAN;
+    for (let k = 0; k < STREAKS; k++) {
+      const along = ((hash(k + 300) * STREAK_SPAN - streaked + STREAK_SPAN) % STREAK_SPAN) - 40;
+      putOut(surface, view, PORT_SPRITE.streak, along, hash(k + 500) * ACROSS_SPAN, 0.5 * speed * speed * (0.4 + 0.6 * hash(k + 700)), 0, 0.3 + 1.2 * speed);
+    }
+  }
+  // 0675: the planet Hangin' Out's bay looks out on, far behind, so the chase and the dock are one sky. 0695: its air round it.
+  const planetAlong = FAR_PLANET.along - fallen(s, OUTSIDE.station * FAR_PLANET.rate);
+  putOut(surface, view, PORT_SPRITE.halo, planetAlong, FAR_PLANET.across, 0.7, 0, DOCK.planetGrow * FAR_PLANET.grow);
+  putOut(surface, view, PORT_SPRITE.planet, planetAlong, FAR_PLANET.across, FAR_PLANET.lit, 0, DOCK.planetGrow * FAR_PLANET.grow);
+  // 0695: rocks between the planet and the ships, each turning its own way.
+  for (let k = 0; k < ROCK_ALONG.length; k++) {
+    putOut(surface, view, PORT_SPRITE.rock, ROCK_ALONG[k]! - fallen(s, OUTSIDE.station * ROCK_RATE), ROCK_ACROSS[k]!, 0.95, s * 0.012 * (k % 2 === 0 ? 1 : -1) * (1 + k * 0.3), 0.8 + 0.7 * hash(k + 900));
+  }
   const station = stationAlong(s);
   if (station > -PORT_EXTENT.station) {
     putOut(surface, view, PORT_SPRITE.station, station, STATION_ACROSS);

@@ -1163,6 +1163,18 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE PLAY OF 2026-10-27: FOUR ITEMS, BUILT IN TWO PRs — OWED A PLAY — 2026-10-27
+
+A play of `main` as 0692 left it, four items: the outside past the bay *"kinda dodgy"*, the intro's chase
+wanting *"pizazz"*, Cosmo's wares *"overwhelmed by the menus and names"*, and the three shops' menus *"still
+fairly basic"* beside the title's. Built as two PRs: [0693](decisions/0693-the-shops-speak-the-titles-voice.md)
+(the shops' cards, headings, pilot card and captions in 0440's dress, and Cosmo's tiles picture-first);
+[0694](decisions/0694-the-dock-is-built-not-drawn.md) (both trusses boxed and lit, the arm's head a docking
+head) and [0695](decisions/0695-the-chase-has-a-sky.md) (a sun, the planet's air, rocks and speed streaks on
+the chase, the air on the stand's planet too). **Next is the play.** Three calls the player may veto: the sun's
+size and place, the streaks' count, and the halo on the stand's planet — each is one number in `port.ts` or
+`port-bake.ts` and named in 0695.
+
 ### ⚠️ THE PLAY OF 2026-10-26: TWELVE ITEMS, ALL BUILT IN THREE PRs — OWED A PLAY — 2026-10-26
 
 A play of `main` as 0682 left it, twelve items in one message and three more mid-way, built as three PRs in
