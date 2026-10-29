@@ -65,6 +65,23 @@ describe('the product name is single-sourced', () => {
   });
 
   /**
+   * THE UNFURL SURFACE — 0696. A shared link shows `og:title` and `twitter:title`, not `<title>`, and
+   * each is one more spelling HTML cannot import. The same shape as the manifest below: held, or lost
+   * on the day of a rename. Both must be present, because a card with no title is a bare link.
+   */
+  it("index.html's unfurl titles agree with brand.ts", () => {
+    const html = read('index.html');
+    const og = /<meta property="og:title" content="([^"]*)"/.exec(html)?.[1];
+    const twitter = /<meta name="twitter:title" content="([^"]*)"/.exec(html)?.[1];
+    expect(og, 'index.html has no og:title').toBeTruthy();
+    expect(og, 'og:title spells the product name differently from src/brand.ts').toBe(GAME_TITLE);
+    expect(twitter, 'index.html has no twitter:title').toBeTruthy();
+    expect(twitter, 'twitter:title spells the product name differently from src/brand.ts').toBe(GAME_TITLE);
+    expect(/<meta name="description" content="[^"]+"/.test(html), 'index.html has no description').toBe(true);
+    expect(/<meta property="og:image" content="https?:\/\/[^"]+"/.test(html), 'og:image is not an absolute URL').toBe(true);
+  });
+
+  /**
    * THE LAUNCHER-LABEL SURFACE, and the reason `brand.ts` needed a test rather than just a constant.
    *
    * In the predecessor a rename moved five surfaces and missed the sixth — a native resource

@@ -1163,6 +1163,16 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
+
+[`the-release-review`](../reports/the-release-review-2026-10-29.md) answers *"is it ready for release"*: the
+game is finished and the release is not, with the twelve deciding plays' status, what the shipped page looks like,
+and the four steps left. The first step is built as [0696](decisions/0696-the-candidate-is-cut.md): the version
+at `0.9.0`, butler pinned, the page's unfurl tags, and the sound suite's two red counts established on 0044's
+terms. **Next is the tag, which is the player's** (*"never tag unasked"*), then the candidate play the review names:
+a whole run inside the itch embed, the Save tab's QR from inside the iframe, a phone, and **one run by someone who
+has never played**. `v1.0.0` is the same tree with the version moved.
+
 ### ⚠️ THE PLAY OF 2026-10-27: FOUR ITEMS, BUILT IN TWO PRs — OWED A PLAY — 2026-10-27
 
 A play of `main` as 0692 left it, four items: the outside past the bay *"kinda dodgy"*, the intro's chase

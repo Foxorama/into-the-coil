@@ -6,6 +6,19 @@
     <!-- The one place the title is spelled outside src/brand.ts: HTML cannot import.
          `tests/brand.test.ts` asserts the two spellings agree. -->
     <title>Into the Coil</title>
+    <!-- What a shared link unfurls into. The THIRD and FOURTH spellings of the name, held by the same
+         test as the <title>; the description is the itch page's short line, and the image is the
+         home-screen icon because the only files beside the page are the ones that cannot be inlined
+         (docs/decisions/0008-the-shell-sidecars.md). docs/decisions/0696-the-candidate-is-cut.md. -->
+    <meta name="description" content="A free bullet-dodging boss rush to the centre of the galaxy. Seven bosses, one hamster ball." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Into the Coil" />
+    <meta property="og:description" content="A free bullet-dodging boss rush to the centre of the galaxy. Seven bosses, one hamster ball." />
+    <meta property="og:url" content="https://intothecoil.vulpecula.games/" />
+    <meta property="og:image" content="https://intothecoil.vulpecula.games/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Into the Coil" />
+    <meta name="twitter:description" content="A free bullet-dodging boss rush to the centre of the galaxy. Seven bosses, one hamster ball." />
     <!-- The install manifest, and the SECOND place the name is spelled — held by the same test.
          It is a separate file by necessity, not by omission: a manifest is fetched by the browser
          from a URL, so `vite-plugin-singlefile` cannot inline it the way it inlines the bundle.
