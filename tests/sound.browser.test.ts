@@ -567,13 +567,28 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     const sounded = (now: AudioTally, then: AudioTally): number =>
       now.voices - then.voices - (cueVoices(now) - cueVoices(then));
     await page.click(soundOption('off'));
-    const offed = await settled(page);
+    await settled(page);
     await page.click(soundOption('on'));
-    let onceMore = await settled(page, BAKED_TOTAL + 2 * TITLE);
-    for (let i = 0; i < 240 && sounded(onceMore, offed) < MUSIC_LAYERS.length + TITLE; i++) {
-      await page.waitForTimeout(250);
-      onceMore = await tally(page);
-    }
+    await settled(page, BAKED_TOTAL + 2 * TITLE);
+    /*
+      ⚠️ **ITS SOURCES ARE MADE THE FRAME AFTER THE BAKE LANDS, SO FRAMES ARE WAITED, NOT A VOICE COUNT.** This waited
+      for the loops and the title to have sounded, and under 0119's probe — *Off* muting rather than stopping, so *On*
+      starts nothing — that count never arrives: sixty seconds here and sixty more below overran the test's limit on
+      CI's slower polls, and the runner's timeout is not a verdict (0019). Twenty painted frames is the title's one
+      frame many times over, on the file's own terms: counted in frames, never milliseconds.
+    */
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          let painted = 0;
+          const tick = (): void => {
+            painted++;
+            if (painted >= 20) done();
+            else requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
     await page.click(soundOption('off'));
     const quiet = await settled(page);
     await page.click(soundOption('on'));
@@ -595,10 +610,11 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     // The chime, and the press when it is heard. *Off* makes no cue — the speaker is muted before its press lands.
     expect(cueVoices(loud) - cueVoices(quiet), 'switching sound on made no sound of its own — the chime did not sound').toBeGreaterThanOrEqual(1);
     await page.context().close();
-    // ⚠️ Room for the waits above to run out, as the *Off* test has — 0597: 0119's probe leaves the loops unstarted,
-    // so neither voice count ever arrives, and two sixty-second waits plus the bakes must still end in the
-    // assertion rather than the file's limit (0019).
-  }, 200_000);
+    // ⚠️ Room for the wait above to run out, as the *Off* test has — 0597: 0119's probe leaves the loops unstarted,
+    // so the voice count never arrives, and sixty seconds of polls that each cost more on a loaded runner, plus
+    // the bakes, must still end in the assertion rather than the file's limit (0019). It overran 200 s once on CI
+    // with two such waits; there is one now.
+  }, 240_000);
 
   it('0659 — THE ASK: a press on a menu’s button is heard, one cue, and a step along a band is not', async () => {
     /*
