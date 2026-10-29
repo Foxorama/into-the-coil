@@ -48,6 +48,17 @@ by the order of the press and the unmute inside one click. The chime is that pre
 and always sounds, so a player hears feedback either way; whether the press cue should sound there at
 all is 0659's question, not this change's.
 
+## A third guard, found by this PR's own CI
+
+[0596](0596-the-yellow-submarine-hangs.md)'s browser probe — the submarine's width zeroed — went red on
+the first run of this PR and *STILL GREEN* on the second, with nothing changed near it. Measured in the
+page: the dangle on Cosmo's tile swings, and the guard in `tests/cosmo.browser.test.ts` read each part's
+`getBoundingClientRect().width`, which is the box of the *rotated* element. A zero-width box 1.2em tall,
+turned by the swing, is over four pixels wide at some phases of the animation and under at others, so
+the verdict was the animation's phase at the read. It reads `offsetWidth` now — the width the layout
+gave the part, which the swing does not touch. The same shape as a photograph on a round-second grid
+sampling one phase of a periodic motion.
+
 ## What guards it
 
 - **The unfurl titles**: `tests/brand.test.ts` holds `og:title` and `twitter:title` to `GAME_TITLE` the
