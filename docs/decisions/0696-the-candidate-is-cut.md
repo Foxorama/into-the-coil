@@ -59,6 +59,19 @@ the verdict was the animation's phase at the read. It reads `offsetWidth` now �
 gave the part, which the swing does not touch. The same shape as a photograph on a round-second grid
 sampling one phase of a periodic motion.
 
+## A fourth, seen and not established
+
+[0541](0541-the-looks-are-on-the-pad.md)'s flame probe — the flame compared away, so the pad burns the
+one it had — was red on this PR's first two runs and, on the third, in a different shard with different
+neighbours, its guard passed under the break in the filtered run and failed in the whole-suite run that
+followed (the harness calls that *WRONG TEST*). So under one load the pad read as changing with no fit.
+Measured here: `samePhase` with an act that does nothing, eight takes at eight phases, reads 0.00000 of
+the band for noise, change and after, every time — the stand is still, and the hop a fit makes is 26
+steps against a bob of 105. **What would establish it is the proof's own load**, which `tests/stand.ts`
+has met four times before (its comments carry each), and the instrument is the filtered run printing the
+band's three numbers when the guard passes under a break. Not fixed here, because a fix without the
+mechanism is a guess, and the candidate does not wait on it.
+
 ## What guards it
 
 - **The unfurl titles**: `tests/brand.test.ts` holds `og:title` and `twitter:title` to `GAME_TITLE` the
