@@ -93,8 +93,16 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
       els.filter((el) => el.querySelector(`[data-itc-setting]:not([data-itc-setting="aisle"]):not([data-itc-setting="pilot"])`) !== null && el.getBoundingClientRect().height > 0).length);
     expect(drawn, 'more than one shelf is drawn at once on a desktop').toBe(1);
     // A picture is something inside the tile's art box laid out with a width — the thing on the strand.
+    /*
+      ⚠️ **THE LAID-OUT WIDTH, NOT THE BOUNDING BOX — 0696.** 0596's probe zeroes the submarine's width, and this
+      read it red on one CI run and STILL GREEN on the next with nothing changed between them. The dangle on the
+      tile swings, and a bounding box is the box of the ROTATED element: a zero-width box 1.2em tall, turned by
+      the swing, reads over four pixels wide at some phases of the animation and under at others. `offsetWidth`
+      is the width the layout gave it, which the swing does not touch — 0 and its border under the probe, 34 px
+      whole, at every phase.
+    */
     const pictures = await page.locator(`${shown('shop')} [${SETTING_ATTR}="hanging"] .${SHOP}option-art`).evaluateAll((els) =>
-      els.map((el) => [...el.querySelectorAll('*')].some((part) => part.getBoundingClientRect().width > 4)));
+      els.map((el) => [...el.querySelectorAll('*')].some((part) => (part as HTMLElement).offsetWidth > 4)));
     expect(pictures.every(Boolean) && pictures.length === SHELVES.hanging.wares.length, 'a ware on the shelf has no picture').toBe(true);
 
     // 0542: the price on the ware's face, and on Buy.

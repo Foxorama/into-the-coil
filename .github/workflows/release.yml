@@ -139,7 +139,9 @@ jobs:
 
       - name: Install butler
         run: |
-          curl -sL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          # Pinned, not LATEST: a butler release on tag day would change the tool mid-release.
+          # 15.32.0 was LATEST on 2026-10-29 (`curl -s https://broth.itch.zone/butler/linux-amd64/LATEST`).
+          curl -sL -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.32.0/archive/default
           unzip -q butler.zip -d "$HOME/butler"
           chmod +x "$HOME/butler/butler"
           echo "$HOME/butler" >> "$GITHUB_PATH"

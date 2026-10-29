@@ -251,7 +251,17 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     */
     const page = await open();
     await page.click(startButton);
-    const after = await settled(page);
+    /*
+      ⚠️ **AND THE INTRO'S TITLE PIECE IS IN THE COUNT, WHICH WAS RED ON ONE MACHINE AND GREEN ON CI —
+      0696.** *Fly* plays the intro ([0635](../docs/decisions/0635-every-flight-plays-the-intro.md),
+      [0674](../docs/decisions/0674-the-intro-is-a-setting.md)), the intro is a screen that is not part
+      of a run, and such a screen wants the title piece once the prewarm is done (0597, `keepTitle`). So
+      the press bakes the title's seven parts as well — **220 ms after the press on a twelve-core
+      machine, inside the poll that first saw 185**, which read 192; on a two-core runner the seven land
+      after the read, which saw exactly 185 and passed. A total two orders can produce is a race, not a
+      guard (0044), and the fix is the one the *Off* test below already uses: wait for the whole count.
+    */
+    const after = await settled(page, BAKED_TOTAL + TITLE);
     /*
       ⚠️ **Exactly one buffer per cue WEIGHT and one per music layer, which is the bake being a
       BAKE.** More than that is a synthesiser running during play, which is the audio spelling of
@@ -294,8 +304,8 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       would be the drift this file is careful about everywhere else. The terms are still spelled out
       here, which is what the paragraph above is asking for.
     */
-    expect(after.buffers, 'the cues, the music and the level’s own place did not each bake once').toBe(
-      BAKED_BUFFERS + MUSIC_LAYERS.length + ROOM_IMPULSE,
+    expect(after.buffers, 'the cues, the music, the level’s own place and the intro’s title did not each bake once').toBe(
+      BAKED_BUFFERS + MUSIC_LAYERS.length + ROOM_IMPULSE + TITLE,
     );
     expect(after.voices, 'a run played for a second and the game stayed silent').toBeGreaterThan(0);
     /*
@@ -305,7 +315,9 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     */
     expect(after.voices, 'more voices than the cap and the holds could possibly allow').toBeLessThan(240);
     await page.context().close();
-  });
+    // ⚠️ Room for `settled`'s own sixty seconds, as the two *Off*/*On* tests have — 0696: a title that never bakes
+    // (0597's probe) runs the wait out, and the assertion is what should report it, not the file's limit.
+  }, 150_000);
 
   it('0378 — THE HUSH: the field, the room and the music reach the master through one gain, and a second field goes round it', async () => {
     /*
@@ -526,14 +538,57 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     const page = await open();
     await openSettings(page);
     /*
+      ⚠️ **THE MENU'S TITLE IS WAITED FOR BEFORE ANY PRESS, AND IT WAS NOT — 0696.** This read 41 sources for 35 on a
+      twelve-core machine and exactly 35 on CI, since at least 0682. Measured through this very sequence with every
+      source's duration and moment: the *On* press makes TWO cues, not one — the chime, and 0659's press cue, which
+      `mount.ts` plays only when the audio is ready — and whether the prewarm had finished by a press that comes a few
+      milliseconds after `openSettings` is a fact about the machine. The title bakes only once the prewarm is done
+      (`keepTitle`), so its seven buffers are the prewarm's own evidence, and waiting for them makes every press
+      below the same press on every machine, on 0044's terms. The *Off* test above already waits for the same count.
+    */
+    await settled(page, BAKED_TOTAL + TITLE);
+    /*
       ⚠️ **OFF AND ON AGAIN FIRST, SINCE 0672.** A click on the chip that is on flips a band of two, so the press that
       unlocks the page here is on *Off* and the next back on *On*; each lands on the chip that is not on, and the
       pair the guard reads — Off, then On — is the one it always read.
+
+      ⚠️ **AND THE FIRST *ON* IS WAITED OUT TOO** — its title is baked again (seven more buffers) and sourced the frame
+      after it lands; a second *Off* pressed before that stops the bake in flight, and one pressed after it but
+      before the sources are made leaves seven sources to land inside the difference below. Measured both ways.
     */
+    /*
+      ⚠️ **THE CUES ARE COUNTED APART FROM THE LOOPS AND THE TITLE, BECAUSE THE PRESS CUE IS NOT ALWAYS HEARD.**
+      Traced through this sequence: the *On* press made two cues on one run (the chime, and 0659's press) and one on
+      the next, the press landing in the speaker before or after the setting unmutes it. The loops and the title
+      are exact — twenty-seven and seven, every time — so they are what is held to a number, and the chime is held
+      to *at least one cue*, which both orders satisfy. A count that waited for a number the press could not reach
+      waited for the title's next pass instead, and read that pass's seven on top (42 for 36).
+    */
+    const sounded = (now: AudioTally, then: AudioTally): number =>
+      now.voices - then.voices - (cueVoices(now) - cueVoices(then));
     await page.click(soundOption('off'));
     await settled(page);
     await page.click(soundOption('on'));
-    await settled(page);
+    await settled(page, BAKED_TOTAL + 2 * TITLE);
+    /*
+      ⚠️ **ITS SOURCES ARE MADE THE FRAME AFTER THE BAKE LANDS, SO FRAMES ARE WAITED, NOT A VOICE COUNT.** This waited
+      for the loops and the title to have sounded, and under 0119's probe — *Off* muting rather than stopping, so *On*
+      starts nothing — that count never arrives: sixty seconds here and sixty more below overran the test's limit on
+      CI's slower polls, and the runner's timeout is not a verdict (0019). Twenty painted frames is the title's one
+      frame many times over, on the file's own terms: counted in frames, never milliseconds.
+    */
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          let painted = 0;
+          const tick = (): void => {
+            painted++;
+            if (painted >= 20) done();
+            else requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
     await page.click(soundOption('off'));
     const quiet = await settled(page);
     await page.click(soundOption('on'));
@@ -541,21 +596,25 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       ⚠️ **AND THE MENU'S TITLE COMES BACK WITH IT, BAKED AGAIN** — 0597: *Off* let it go, so *On* bakes it and it
       takes over at a bar, seven sources. Waited for by its count, as everything in this file is: the chime and
       the run's loops land on the press and the title a bake later, so a read on the press would see a total that
-      is still climbing.
+      is still climbing. Three bakes of the title by now: the menu's, the first *On*'s, and this one.
     */
-    let loud = await settled(page);
-    for (let i = 0; i < 240 && loud.voices - quiet.voices < 1 + MUSIC_LAYERS.length + TITLE; i++) {
+    let loud = await settled(page, BAKED_TOTAL + 3 * TITLE);
+    for (let i = 0; i < 240 && sounded(loud, quiet) < MUSIC_LAYERS.length + TITLE; i++) {
       await page.waitForTimeout(250);
       loud = await tally(page);
     }
     expect(
-      loud.voices - quiet.voices,
-      'switching sound on made no sound, on the one press that is about sound — the chime, the loops and the menu’s title',
-    ).toBe(1 + MUSIC_LAYERS.length + TITLE);
+      sounded(loud, quiet),
+      'switching sound on did not start the loops and the menu’s title, once each, on the one press that is about sound',
+    ).toBe(MUSIC_LAYERS.length + TITLE);
+    // The chime, and the press when it is heard. *Off* makes no cue — the speaker is muted before its press lands.
+    expect(cueVoices(loud) - cueVoices(quiet), 'switching sound on made no sound of its own — the chime did not sound').toBeGreaterThanOrEqual(1);
     await page.context().close();
     // ⚠️ Room for the wait above to run out, as the *Off* test has — 0597: 0119's probe leaves the loops unstarted,
-    // so the count never arrives, and the file's sixty seconds cut the test off before it said so.
-  }, 150_000);
+    // so the voice count never arrives, and sixty seconds of polls that each cost more on a loaded runner, plus
+    // the bakes, must still end in the assertion rather than the file's limit (0019). It overran 200 s once on CI
+    // with two such waits; there is one now.
+  }, 240_000);
 
   it('0659 — THE ASK: a press on a menu’s button is heard, one cue, and a step along a band is not', async () => {
     /*
