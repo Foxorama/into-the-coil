@@ -1190,7 +1190,7 @@ describe('paint costs nothing to draw', () => {
     }
   });
 
-  it('0698: the fighter is finished — a rim light inside its edges, wide enough to be drawn', () => {
+  it('0698: every finished ship wears a rim light inside its edges, wide enough to be drawn', () => {
     /*
       ⚠️ **THE ONE THING ABOUT THE FINISH THAT IS AN INVARIANT.** 0698 lights the fighter as a set of parts and
       finishes it over its paint; every strength in that is the fighter's own and is not held. What is held is
@@ -1198,9 +1198,14 @@ describe('paint costs nothing to draw', () => {
       silhouette, and wide enough to be drawn at the fight's camera. Every other guard in this file was green on
       the flat fighter, which is why this one exists — a finish left off is a ship nobody notices is a cut-out.
       At every stage and every pose, because each is its own drawing of the same ship.
+
+      ⚠️ **THE LIST IS THE QUEUE'S PROGRESS** (`reports/the-ships-and-weapons-polished-2026-10-31.md`): a ship
+      joins it with its own decision, and the day every ship is on it the list is `SHIP_KINDS`. 0699 added the
+      Firebird.
     */
-    const finished = SPRITE_KINDS.filter((kind) => kind.startsWith('fighter') && !kind.endsWith('Hit'));
-    expect(finished.length, 'no fighter sprite to measure').toBeGreaterThan(0);
+    const FINISHED = ['fighter', 'firebird'] as const;
+    const finished = SPRITE_KINDS.filter((kind) => FINISHED.some((ship) => kind.startsWith(ship)) && !kind.endsWith('Hit'));
+    expect(finished.length, 'no finished ship sprite to measure').toBeGreaterThan(0);
     for (const kind of finished) {
       const rims = trace(kind).inks.filter((ink) => ink.composite === 'source-atop' && ink.colour === 'gradient');
       expect(rims.length, `the ${kind} has no rim light`).toBeGreaterThan(0);
