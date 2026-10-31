@@ -154,9 +154,11 @@ Collected here as the queue runs, each dated.
 ### The open calls, batch by batch
 
 Each is a thing the pictures could not settle, with the one number that moves it; none was asked when it was built.
+Each batch's preview is the deployment URL read off its PR's Cloudflare Pages check — the build of that batch on
+top of the ones before it, which outlives the branch.
 
 - **Batch A — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)** (the estate, the
-  Thunderbolt, the Hamster Ball):
+  Thunderbolt, the Hamster Ball) — Foxorama/into-the-coil#682, preview <https://92d38cf8.into-the-coil.pages.dev>:
   - the Thunderbolt's rim light is in the chrome, so its black lacquer and the Marmot's helmet are found by a lit
     edge — if it reads as a second outline, it is the `chrome` handed to `rimLight` in `drawThunderbolt`;
   - the ball's window on its crown is what says *clear plastic* on the pad, and a lighter smudge in the fight — if
