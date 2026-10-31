@@ -170,7 +170,8 @@ top of the ones before it, which outlives the branch.
     read as cracks, they are the two `seam`s after the wing's shadow in `drawDuck`;
   - the port's Viper keeps its dark Wyrm-Ship inks and gains only the finish — if the intro's racer should look like
     the fight's venom-green one, that is a change of its colours, not made here.
-- **Batch C — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** (the eight guns: mounts, shots, impacts):
+- **Batch C — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** (the eight guns: mounts, shots, impacts)
+  — Foxorama/into-the-coil#684, preview <https://140aff40.into-the-coil.pages.dev>:
   - the paintball's seam round its middle reads as a ball on the pad and as a darker crescent in the fight — if it
     reads as a dent, it is the second `seam` in the `paintballPink` case;
   - the dry splat's three cracks say *dried paint* — if a dry splat should be a stain, they go.
