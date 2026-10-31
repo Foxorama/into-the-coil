@@ -124,14 +124,14 @@ one review at the end.
 | 6 | **the Aqua Duck** | the bath-duck's rubber, the marker, the hopper, the periscope | B | **built — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)** |
 | 7 | **the little caddie** | the disc's rim and dome from above; its edge-on drawing for the pad (`paintSaucer`) is the one second drawing in the game and gets the same pass | B | **built — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)**, both drawings |
 | 8 | **the Viper** | the fight's drawing and the port's own pieces for the intro and the finale | B | **built — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)**, both drawings; every ship is now on 0698's guard |
-| 9 | **the pulse** | the mount on every ship it fits, the bullet, its impact | C | |
-| 10 | **the arc** | the mount, the node, the bolt's inks ([0470](../docs/decisions/0470-the-light-is-additive.md) stays) | C | |
-| 11 | **the shuriken** | the mount and drum, the blade in flight and turning | C | |
-| 12 | **the ray gun** | the saucer's turret and the mount elsewhere, the ring, its ripple, swell, burst and fade | C | |
-| 13 | **the Catherine wheel** | the spindle, the wheel and its fade, the tether's rope | C | |
-| 14 | **the ram** | the nose, its heat and glow stack | C | |
-| 15 | **the paintball** | the marker, the four balls, the splats wet and dry, the spray | C | |
-| 16 | **the acid** | the Viper's fangs, the spit, the void, the splat | C | |
+| 9 | **the pulse** | the mount on every ship it fits, the bullet, its impact | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
+| 10 | **the arc** | the mount, the node, the bolt's inks ([0470](../docs/decisions/0470-the-light-is-additive.md) stays) | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
+| 11 | **the shuriken** | the mount and drum, the blade in flight and turning | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
+| 12 | **the ray gun** | the saucer's turret and the mount elsewhere, the ring, its ripple, swell, burst and fade | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
+| 13 | **the Catherine wheel** | the spindle, the wheel and its fade, the tether's rope | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
+| 14 | **the ram** | the nose, its heat and glow stack | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
+| 15 | **the paintball** | the marker, the four balls, the splats wet and dry, the spray | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
+| 16 | **the acid** | the Viper's fangs, the spit, the void, the splat | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
 | 17 | **the missiles and tubes** | the missile and the seeker in flight; the loaded tube, the warhead nose; the pods and turrets each ship carries them in; the bomb | D | |
 | 18 | **the specials' pictures** | the candle's star, the storm and void balls, the dance's flares and wave, the nova's arc, the two auras | D | |
 | 19 | **the pickups' faces** | the twelve glyphs in their bubbles, and the readout's bare copies of them | E | |
@@ -164,11 +164,16 @@ top of the ones before it, which outlives the branch.
   - the ball's window on its crown is what says *clear plastic* on the pad, and a lighter smudge in the fight — if
     it reads as a smudge, it is the `pane` in `drawBall`.
 - **Batch B — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)** (the Aqua Duck, the
-  little caddie top-down and edge-on, the Viper in the fight and in the port):
+  little caddie top-down and edge-on, the Viper in the fight and in the port) — Foxorama/into-the-coil#683, preview
+  <https://76e9673c.into-the-coil.pages.dev>:
   - the duck's two feather contours across its wing read as feathers on the pad and as nothing in the fight — if they
     read as cracks, they are the two `seam`s after the wing's shadow in `drawDuck`;
   - the port's Viper keeps its dark Wyrm-Ship inks and gains only the finish — if the intro's racer should look like
     the fight's venom-green one, that is a change of its colours, not made here.
+- **Batch C — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** (the eight guns: mounts, shots, impacts):
+  - the paintball's seam round its middle reads as a ball on the pad and as a darker crescent in the fight — if it
+    reads as a dent, it is the second `seam` in the `paintballPink` case;
+  - the dry splat's three cracks say *dried paint* — if a dry splat should be a stain, they go.
 - **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
   material read at 85 px; a contour half a pixel wide there fades to nothing and is a line on the pad. Nothing
   in the queue adds a solid mark under 0106's floor to get detail into the fight.
