@@ -165,20 +165,47 @@ export function atlasIsStale(
  *
  * Baking below the blit resolution is a blurry game; baking far above it is memory spent on detail
  * nobody sees — and the sky is the one bitmap where *far above* would be measured in megabytes.
+ *
+ * ⚠️ **AND IT IS THE CEILING ONLY FOR A BITMAP THAT IS BIG — 0697.** Ten a unit was the sky's number,
+ * and it was being applied to a ship: the hangar's camera draws the pilot's ship at seventeen pixels a
+ * unit on a 2560×1080 monitor and its bitmap was baked at ten, so the car on the pad was a 240 px
+ * bitmap stretched to 365 — every pinstripe and spoke a smear — and its wheels, baked as glyphs, were
+ * 21 px stretched to ninety. `BITMAP_BUDGET` below is the other half of the ceiling.
  */
 const MAX_PIXELS_PER_UNIT = 10;
+
+/**
+ * The pixels square a bitmap may reach at its blit resolution before the resolution ceiling applies to
+ * it — `docs/decisions/0697-the-bitmap-has-a-budget.md`.
+ *
+ * ⚠️ **THE COST OF A BITMAP IS ITS PIXELS, AND THE PIXELS ARE IN THE BIG ONES.** The whole atlas at a
+ * 1080p monitor's nine a unit is some 330 MB, two thirds of it bosses and a third the sky; the eight
+ * ships, every shot and every pickup together are under a tenth of that. So a bitmap that would be
+ * under this many pixels square is baked at whatever resolution it is blitted at — the ship sharp on
+ * the pad, on a 1440p monitor and on a Retina laptop — and the ceiling above still holds the sky and
+ * the bosses, which is where the memory is. Measured in the decision: +23 MB at twelve a unit, +76 MB
+ * at eighteen, against +180 MB and +920 MB for lifting the ceiling itself to twenty or thirty.
+ */
+export const BITMAP_BUDGET = 480;
 
 /**
  * How many pixels square a bitmap of `extent` world units is baked at.
  *
  * ⚠️ **Exported and pure so the CEILING can be proved without a canvas**, which is the only way the
  * property that matters can be stated: the cap is a **resolution**, so it is the same pixels-per-unit
- * for every kind. A flat pixel ceiling is not — it silently bakes anything bigger than a boss at a
- * fraction of the detail, and the picture is only wrong on the biggest thing on the screen.
- * `tests/budget.test.ts` holds it; `docs/decisions/0065-the-sky-is-baked-and-blitted.md` has the why.
+ * for every kind big enough to meet it. A flat pixel ceiling is not — it silently bakes anything
+ * bigger than a boss at a fraction of the detail, and the picture is only wrong on the biggest thing
+ * on the screen. `tests/budget.test.ts` holds it; `docs/decisions/0065-the-sky-is-baked-and-blitted.md`
+ * has the why.
+ *
+ * ⚠️ **AND UNDER `budget` PIXELS SQUARE THE ASK IS HONOURED WHATEVER THE RESOLUTION — 0697.** The
+ * ceiling is the larger of the two, so nothing bakes smaller than it did before the budget, and a
+ * caller that comes close on a few pieces — the hangar's pad on its ship (`src/render/port-bake.ts`)
+ * — says its own budget for them.
  */
-export function bakeSize(extent: number, pixelsPerUnit: number): number {
-  return Math.max(8, Math.min(extent * MAX_PIXELS_PER_UNIT, Math.ceil(extent * pixelsPerUnit)));
+export function bakeSize(extent: number, pixelsPerUnit: number, budget = BITMAP_BUDGET): number {
+  const ceiling = Math.max(extent * MAX_PIXELS_PER_UNIT, budget);
+  return Math.max(8, Math.min(ceiling, Math.ceil(extent * pixelsPerUnit)));
 }
 
 /**

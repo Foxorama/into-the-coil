@@ -63,7 +63,7 @@ const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive',
  * 0678: the closest any tab's camera asks to be, which the port's ship and keepers are baked sharp for — read off
  * the rows, so a fourth tab that stands closer is baked for without a line here.
  */
-const STAND_SHARP = Math.max(...(Object.keys(SCREENS) as Screen[]).map((screen) => SCREENS[screen].stand?.camera.zoom ?? 1));
+export const STAND_SHARP = Math.max(...(Object.keys(SCREENS) as Screen[]).map((screen) => SCREENS[screen].stand?.camera.zoom ?? 1));
 
 /** The four pushes a key can make on a menu — 0458. Built once, so a key press allocates nothing. */
 const MENU_UP = [-1, 'y'] as const;

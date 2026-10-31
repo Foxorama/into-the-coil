@@ -31,11 +31,16 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { paintScene } from '../src/render/scene.ts';
-import { bakeSize, nebulaField, skyField, type SkyKind } from '../src/render/bake.ts';
+import { BITMAP_BUDGET, bakeSize, nebulaField, skyField, type SkyKind } from '../src/render/bake.ts';
 import { THEME_KINDS } from '../src/content/themes.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
-import { CAPACITY, SKY, SKY_ON_A_PLANET, SKY_UNDER_A_RANGE } from '../src/app/mount.ts';
+import { CAPACITY, SKY, SKY_ON_A_PLANET, SKY_UNDER_A_RANGE, STAND_SHARP } from '../src/app/mount.ts';
+// 0697: the cameras the ship is baked for — the pad's, and the fight's at a Retina display's pixels.
+import { SHARP_BUDGET } from '../src/render/port-bake.ts';
+import { DOCK, PORT_EXTENT } from '../src/content/port.ts';
+import { MAX_DPR } from '../src/render/canvas.ts';
+import { VIEWPORTS } from '../rig/sheet.ts';
 
 /**
  * Every sky a place can have — 0221.
@@ -709,10 +714,17 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
       the picture is wrong on the biggest thing on the screen and nowhere else.
 
       Stated as the property rather than as the number: at a resolution high enough that everything is
-      capped, every kind is capped at the SAME pixels per world unit.
+      capped, every kind BIG ENOUGH TO MEET THE CEILING is capped at the SAME pixels per world unit.
+
+      ⚠️ **AND THE SMALL ONES ARE NOT CAPPED THERE AT ALL — 0697.** The ceiling is the larger of the
+      resolution and a bitmap budget in pixels, so a sprite whose bitmap stays under the budget bakes at
+      whatever it is blitted at. The sky is held by the first half, the ships by the second; the kinds
+      this walks are the ones the sky's half decides, and the sky itself is one of them.
     */
     const far = 10_000;
-    const resolutions = SPRITE_KINDS.map((kind) => bakeSize(SPRITE_EXTENT[kind], far) / SPRITE_EXTENT[kind]);
+    const big = SPRITE_KINDS.filter((kind) => bakeSize(SPRITE_EXTENT[kind], far) > BITMAP_BUDGET);
+    expect(big, 'no kind is over the budget, so the resolution ceiling decides nothing').toContain('skyFar');
+    const resolutions = big.map((kind) => bakeSize(SPRITE_EXTENT[kind], far) / SPRITE_EXTENT[kind]);
     for (const ppu of resolutions) {
       expect(ppu, `the cap gives ${ppu} pixels per unit where another kind gets ${resolutions[0]}`).toBeCloseTo(
         resolutions[0]!,
@@ -721,6 +733,44 @@ describe('the sky costs a fixed number of calls, whatever the camera is doing', 
     }
     // And it is a ceiling rather than a floor: below it, the ask is honoured.
     expect(bakeSize(10, 4), 'a modest resolution was rounded up to the ceiling').toBe(40);
+  });
+
+  it('and under the budget a ship is baked at the pixels it is drawn at, on the pad and in the fight — 0697', () => {
+    /*
+      ⚠️ **IN PIXELS, BECAUSE THAT IS THE UNIT THE PLAYER SAW IT IN** — 0027. Photographed on a 2560×1080
+      monitor, the Firebird on the Paint & Parts pad was drawn 365 px long from a bitmap baked 240 px square,
+      and its wheels, baked as glyphs at the fight's ceiling, were 21 px bitmaps drawn at ninety: *"blocky
+      and badly pixelated."* The claim is the one the picture makes: the bitmap under the ship has at least
+      as many pixels as the screen draws it with, at every camera the game puts on it.
+
+      ⚠️ **The stand's camera is the one the rows ask for, at the resolution `src/app/mount.ts` bakes the
+      port at** — `view.scale × dpr × STAND_SHARP × DOCK.shipGrow`, the same product `bakePort` is handed —
+      on the widest desktop the sheet offers and on a 1440p monitor, both at one device pixel per CSS pixel.
+      The fitted camera may draw back from the row's zoom (`fitStand`); it never comes closer, so a bake
+      that covers the ask covers the picture.
+    */
+    const stand = STAND_SHARP * DOCK.shipGrow;
+    for (const [w, h] of [[2560, 1080], [2560, 1440]] as const) {
+      const ppu = viewOf(w, h).scale * stand;
+      const drawn = PORT_EXTENT.blue * ppu;
+      expect(
+        bakeSize(PORT_EXTENT.blue, ppu, SHARP_BUDGET),
+        `at ${w}×${h} the pad draws the ship ${drawn.toFixed(0)} px across from a smaller bitmap`,
+      ).toBeGreaterThanOrEqual(Math.floor(drawn));
+    }
+    // And the fight's own sprites, on every desktop the sheet offers at a Retina display's two device pixels
+    // per CSS pixel (`MAX_DPR`): the ship's box, and the smallest shot, which has the least room to lose.
+    for (const { w, h } of VIEWPORTS) {
+      const ppu = viewOf(w, h).scale * MAX_DPR;
+      for (const kind of ['fighter', 'firebird', 'bullet', 'spinnerWheel'] as const) {
+        expect(
+          bakeSize(SPRITE_EXTENT[kind], ppu),
+          `at ${w}×${h} ×2 the ${kind} is drawn at ${(SPRITE_EXTENT[kind] * ppu).toFixed(0)} px from a smaller bitmap`,
+        ).toBe(Math.ceil(SPRITE_EXTENT[kind] * ppu));
+      }
+    }
+    // And the budget is a budget: a sky tile is over it, and the resolution ceiling is what holds it.
+    expect(bakeSize(SPRITE_EXTENT.skyFar, 10_000), 'the sky tile came under the budget').toBeGreaterThan(BITMAP_BUDGET);
   });
 
   /**

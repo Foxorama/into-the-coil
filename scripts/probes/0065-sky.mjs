@@ -69,8 +69,10 @@ export const PROBES = [
     guard: 'the bake ceiling is a RESOLUTION, so the biggest bitmap is not the blurriest',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  return Math.max(8, Math.min(extent * MAX_PIXELS_PER_UNIT, Math.ceil(extent * pixelsPerUnit)));',
-      replace: '  void MAX_PIXELS_PER_UNIT;\n  return Math.max(8, Math.min(256, Math.ceil(extent * pixelsPerUnit)));',
+      // Re-anchored by 0697: the ceiling is the larger of the resolution and a bitmap budget now, and a
+      // flat 256 in its place is still exactly the break this probe plants.
+      find: '  const ceiling = Math.max(extent * MAX_PIXELS_PER_UNIT, budget);',
+      replace: '  const ceiling = 256 + 0 * budget;\n  void MAX_PIXELS_PER_UNIT;',
     },
   },
 ];

@@ -97,6 +97,16 @@ export function bakePortShip(port: Atlas, palette: Palette, pilot: GolferRow, sh
 const SHARP_PIECES: ReadonlySet<PortKind> = new Set<PortKind>([...SHIP_PIECES, ...KEEPER_KINDS.flatMap((kind) => [KEEPERS[kind].figure, KEEPERS[kind].counter, KEEPERS[kind].about.figure])]);
 
 /**
+ * The pixels square a sharp piece may reach at its blit resolution — 0697. The ship's box on the pad is
+ * `HANGAR_SCALE` times the fight's, and the Paint & Parts camera on a 1440p monitor draws it at some 545 px;
+ * `bakeSize`'s own budget is sized for the fight's sprites and stopped the ship at 240, so the pad showed a
+ * stretched bitmap. Sized for a 1440p monitor and a Retina laptop (680 px); a 4K monitor at one device pixel
+ * per CSS pixel asks 817 and is a sixteenth soft, which is the cost of these two dozen pieces staying under
+ * sixty megabytes at that size.
+ */
+export const SHARP_BUDGET = 768;
+
+/**
  * The port's pieces with the game's after them — 0416. The sky outside is the first level's, and it
  * is in the GAME's atlas, recoloured for the place it is; the surface draws from one atlas at a time
  * and is never swapped mid-frame (`CanvasSurface.setAtlas`), so the intro draws from both by drawing
@@ -126,7 +136,8 @@ function bakeWheel(n: number, palette: Palette, pixelsPerUnit: number, pilot: Go
 
 function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilot: GolferRow): HTMLCanvasElement {
   const extent = PORT_EXTENT[kind];
-  const size = bakeSize(extent, pixelsPerUnit);
+  // 0697: the pieces the camera comes close on may be as big as that camera draws them; the room keeps the fight's budget.
+  const size = bakeSize(extent, pixelsPerUnit, SHARP_PIECES.has(kind) ? SHARP_BUDGET : undefined);
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
