@@ -185,7 +185,8 @@ top of the ones before it, which outlives the branch.
   - **found, not fixed**: the void missile reads 7 general flashes in its worst second on `scripts/weigh-flashes.mjs`,
     over 0024's cap of three — on `main` before any of this work as well as after it (0703 has the four runs).
 - **Batch E — [0704](../docs/decisions/0704-the-pickup-faces-are-finished.md)** (the twelve pickup faces and the
-  readout's bare copies):
+  readout's bare copies) — Foxorama/into-the-coil#686, preview <https://a0d272c9.into-the-coil.pages.dev>, which is
+  the whole queue built:
   - each face's rim is its own ink brightened, as a ship's is — near white on the gold faces, faint on the lavender
     ones; if the lavender faces want more, it is the `0.5` in `faceRim`, which is every face's at once.
 - **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
