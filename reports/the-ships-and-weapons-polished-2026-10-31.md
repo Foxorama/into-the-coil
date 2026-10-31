@@ -106,32 +106,35 @@ A red one is answered by the drawing or by the guard with a reason, never by the
 
 ## The queue
 
-Each a decision and a PR from `main`, one open at a time, each played on its branch preview. The
-fighter first because it is the sample the rest are vetoed against; the Firebird second because it is
-the ship the photographs were taken of and the one on the pad in every menu picture.
+Each batch a decision and a PR from `main`, one open at a time. The fighter first because it is the sample
+the rest are vetoed against; the Firebird second because it is the ship the photographs were taken of and
+the one on the pad in every menu picture. **Past the Firebird the items land in five batches, A to E**, because
+the player asked for the rest in fewer PRs (*The player's answers*, below), and **at full auto**: no batch
+waits on a play or a veto, and each batch's open calls are recorded under the answers with its preview, for
+one review at the end.
 
-| # | item | what it covers | status |
-|---|---|---|---|
-| 0 | **the bitmap has a budget** | `bakeSize` honours the blit resolution under a pixel budget; the pad's pieces and glyphs sharp | **built — [0697](../docs/decisions/0697-the-bitmap-has-a-budget.md)** |
-| 1 | **the fighter** — the style sample | the hull, wings, canards, canopy, nacelles and lamps; its three tube stages, hurt twin and dance poses; its three nose arts; its pylons. The same drawing stands on the pad | **built — [0698](../docs/decisions/0698-the-fighter-is-finished.md)**; owed the two vetoes below |
-| 2 | **the Firebird** | lacquer, glass, the bird and the flames, the snowflakes and every rim, the shaker, the lamps; the tilt poses | **built — [0699](../docs/decisions/0699-the-firebird-is-finished.md)**; its gold rim is a veto of its own |
-| 3 | **the estate** | the woody's panels, the roof rack and drum, the glass, every rim, the dice | next |
-| 4 | **the Thunderbolt** | tank, forks, pipes, the lightning ball, the Marmot and the Duck aboard | |
-| 5 | **the Hamster Ball** | the sphere's reflection and refraction, the cradle, Unity inside | |
-| 6 | **the Aqua Duck** | the bath-duck's rubber, the marker, the hopper, the periscope | |
-| 7 | **the little caddie** | the disc's rim and dome from above; its edge-on drawing for the pad (`paintSaucer`) is the one second drawing in the game and gets the same pass | |
-| 8 | **the Viper** | the fight's drawing and the port's own pieces for the intro and the finale | |
-| 9 | **the pulse** | the mount on every ship it fits, the bullet, its impact | |
-| 10 | **the arc** | the mount, the node, the bolt's inks ([0470](../docs/decisions/0470-the-light-is-additive.md) stays) | |
-| 11 | **the shuriken** | the mount and drum, the blade in flight and turning | |
-| 12 | **the ray gun** | the saucer's turret and the mount elsewhere, the ring, its ripple, swell, burst and fade | |
-| 13 | **the Catherine wheel** | the spindle, the wheel and its fade, the tether's rope | |
-| 14 | **the ram** | the nose, its heat and glow stack | |
-| 15 | **the paintball** | the marker, the four balls, the splats wet and dry, the spray | |
-| 16 | **the acid** | the Viper's fangs, the spit, the void, the splat | |
-| 17 | **the missiles and tubes** | the missile and the seeker in flight; the loaded tube, the warhead nose; the pods and turrets each ship carries them in; the bomb | |
-| 18 | **the specials' pictures** | the candle's star, the storm and void balls, the dance's flares and wave, the nova's arc, the two auras | |
-| 19 | **the pickups' faces** | the twelve glyphs in their bubbles, and the readout's bare copies of them | |
+| # | item | what it covers | batch | status |
+|---|---|---|---|---|
+| 0 | **the bitmap has a budget** | `bakeSize` honours the blit resolution under a pixel budget; the pad's pieces and glyphs sharp | — | **built — [0697](../docs/decisions/0697-the-bitmap-has-a-budget.md)** |
+| 1 | **the fighter** — the style sample | the hull, wings, canards, canopy, nacelles and lamps; its three tube stages, hurt twin and dance poses; its three nose arts; its pylons. The same drawing stands on the pad | — | **built — [0698](../docs/decisions/0698-the-fighter-is-finished.md)**; owed the two vetoes below |
+| 2 | **the Firebird** | lacquer, glass, the bird and the flames, the snowflakes and every rim, the shaker, the lamps; the tilt poses | — | **built — [0699](../docs/decisions/0699-the-firebird-is-finished.md)**; its gold rim is a veto of its own |
+| 3 | **the estate** | the woody's panels, the roof rack and drum, the glass, every rim, the dice | A | **built — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)**; the dice were already lit (0466) and are left |
+| 4 | **the Thunderbolt** | tank, forks, pipes, the lightning ball, the Marmot and the Duck aboard | A | **built — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)**; no Duck is ever drawn aboard, so that part names nothing |
+| 5 | **the Hamster Ball** | the sphere's reflection and refraction, the cradle, Unity inside | A | **built — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)**; the cradles are item 17's |
+| 6 | **the Aqua Duck** | the bath-duck's rubber, the marker, the hopper, the periscope | B | |
+| 7 | **the little caddie** | the disc's rim and dome from above; its edge-on drawing for the pad (`paintSaucer`) is the one second drawing in the game and gets the same pass | B | |
+| 8 | **the Viper** | the fight's drawing and the port's own pieces for the intro and the finale | B | |
+| 9 | **the pulse** | the mount on every ship it fits, the bullet, its impact | C | |
+| 10 | **the arc** | the mount, the node, the bolt's inks ([0470](../docs/decisions/0470-the-light-is-additive.md) stays) | C | |
+| 11 | **the shuriken** | the mount and drum, the blade in flight and turning | C | |
+| 12 | **the ray gun** | the saucer's turret and the mount elsewhere, the ring, its ripple, swell, burst and fade | C | |
+| 13 | **the Catherine wheel** | the spindle, the wheel and its fade, the tether's rope | C | |
+| 14 | **the ram** | the nose, its heat and glow stack | C | |
+| 15 | **the paintball** | the marker, the four balls, the splats wet and dry, the spray | C | |
+| 16 | **the acid** | the Viper's fangs, the spit, the void, the splat | C | |
+| 17 | **the missiles and tubes** | the missile and the seeker in flight; the loaded tube, the warhead nose; the pods and turrets each ship carries them in; the bomb | D | |
+| 18 | **the specials' pictures** | the candle's star, the storm and void balls, the dance's flares and wave, the nova's arc, the two auras | D | |
+| 19 | **the pickups' faces** | the twelve glyphs in their bubbles, and the readout's bare copies of them | E | |
 
 ## The player's answers
 
@@ -141,7 +144,23 @@ Collected here as the queue runs, each dated.
   (0698's *two vetoes*); the pictures are on its branch preview, the sheet at 4× and the pad at 2560×1080.
 - **Curves on the fighter** (direction 4): *open.* Item 1 curved the canopy and left the wedge; a curved cowl
   or wing root moves the silhouette and is asked for here before it is drawn.
-- **The order past the Firebird**: *open — the table's order until told otherwise.*
+- **The order past the Firebird**: *answered 2026-10-31 — the table's order, in fewer PRs.* Asked for the rest of
+  the queue in **fewer than twenty PRs in total, on Opus to save usage**: items 3 to 19 land as five batches, A to E
+  in the table.
+- **When the player looks**: *answered 2026-11-01 — once, at the end.* *"also run the rest of it at full auto and
+  then I'll review once it's all done and we can make changes then."* So no batch waits on a veto; each batch's open
+  calls are listed here, with the batch's preview, and the review takes them all at once.
+
+### The open calls, batch by batch
+
+Each is a thing the pictures could not settle, with the one number that moves it; none was asked when it was built.
+
+- **Batch A — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)** (the estate, the
+  Thunderbolt, the Hamster Ball):
+  - the Thunderbolt's rim light is in the chrome, so its black lacquer and the Marmot's helmet are found by a lit
+    edge — if it reads as a second outline, it is the `chrome` handed to `rimLight` in `drawThunderbolt`;
+  - the ball's window on its crown is what says *clear plastic* on the pad, and a lighter smudge in the fight — if
+    it reads as a smudge, it is the `pane` in `drawBall`.
 - **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
   material read at 85 px; a contour half a pixel wide there fades to nothing and is a line on the pad. Nothing
   in the queue adds a solid mark under 0106's floor to get detail into the fight.

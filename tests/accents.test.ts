@@ -1201,9 +1201,9 @@ describe('paint costs nothing to draw', () => {
 
       ⚠️ **THE LIST IS THE QUEUE'S PROGRESS** (`reports/the-ships-and-weapons-polished-2026-10-31.md`): a ship
       joins it with its own decision, and the day every ship is on it the list is `SHIP_KINDS`. 0699 added the
-      Firebird.
+      Firebird; 0700 the estate, the Thunderbolt and the Hamster Ball.
     */
-    const FINISHED = ['fighter', 'firebird'] as const;
+    const FINISHED = ['fighter', 'firebird', 'estate', 'thunderbolt', 'ball'] as const;
     const finished = SPRITE_KINDS.filter((kind) => FINISHED.some((ship) => kind.startsWith(ship)) && !kind.endsWith('Hit'));
     expect(finished.length, 'no finished ship sprite to measure').toBeGreaterThan(0);
     for (const kind of finished) {

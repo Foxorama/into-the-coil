@@ -1163,20 +1163,20 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE: ITEMS 0 TO 2 BUILT, THE ESTATE IS NEXT — 2026-10-31
+### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE IN BATCHES: ITEMS 0 TO 5 BUILT, BATCH B IS NEXT — 2026-11-01
 
 Asked: *"a pass over all the spaceships and weapons … blocky and badly pixelated."*
 [`the-ships-and-weapons-polished`](../reports/the-ships-and-weapons-polished-2026-10-31.md) is the
 queue — twenty items, what was photographed first, the direction and the vetoes. Half of *pixelated*
 was a resolution cap on the pad and is built as [0697](decisions/0697-the-bitmap-has-a-budget.md); the
 other half is the drawing: the fighter is the style sample —
-[0698](decisions/0698-the-fighter-is-finished.md), lit as parts and finished over its paint — and the
-Firebird follows it — [0699](decisions/0699-the-firebird-is-finished.md). **Owed: the player's vetoes
-from the pictures** (0698's two — the outline near black, the wedge uncurved — and 0699's gold rim),
-recorded in the report's *answers*. **Next is item 3, the estate**, on 0698's terms: light and material
-for the fight's camera, contours for the pad, everything added translucent, and the ship joins the
-finished list in `tests/accents.test.ts`. Hand each item over with the sheet, the fight and the pad
-photographed.
+[0698](decisions/0698-the-fighter-is-finished.md), lit as parts and finished over its paint — the
+Firebird follows it — [0699](decisions/0699-the-firebird-is-finished.md) — and batch A, the estate, the
+Thunderbolt and the Hamster Ball, is [0700](decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md).
+**The rest lands at full auto in batches B to E** (the report's table), at the player's asking, and **the
+review is once, at the end**: every open call is listed in the report's *answers* with its batch.
+**Next is batch B** — the Aqua Duck, the little caddie and the Viper — on 0698's terms, each ship joining
+the finished list in `tests/accents.test.ts`.
 
 ### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
 
