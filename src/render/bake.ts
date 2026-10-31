@@ -3022,10 +3022,13 @@ function podHalf(x: number): number {
  * pylon's front, forward down the pod's inner edge, round the warhead, back along its outer edge, round
  * the tail, forward to the pylon's back and in to the disc. The top one is this mirrored.
  */
-function podDetour(): Pt[] {
-  const { y, tail, mouth, wide, point } = CADDIE_POD;
+/*
+  0705: on any round hull, at any distance out — `D` the hull's radius where the pylon meets it and `y` the
+  pod's axis — so the ball hangs the same pods off its axle (`ballHull`). The caddie's are the defaults.
+*/
+function podDetour(D = CADDIE_DISC, y = CADDIE_POD.y): Pt[] {
+  const { tail, mouth, wide, point } = CADDIE_POD;
   const [back, front] = CADDIE_PYLON;
-  const D = CADDIE_DISC;
   const out: Pt[] = [[front, Math.sqrt(D * D - front * front)]];
   const steps = 8;
   for (let i = 0; i <= steps; i++) {
@@ -3120,10 +3123,10 @@ export function caddieMounts(): { muzzle: Pt; tubes: readonly (readonly Pt[])[] 
   — the caddie's own gun, and the hangar's — `place` is the identity and `s` is one, which return the very
   numbers this drew before there was a choice: no arithmetic is added to the caddie's own pixels.
 */
-export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true, at?: Pt, s = 1): void {
-  // The caddie's own sits at its housing; a borrowed one is placed with its front on the mount's muzzle.
+export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true, at?: Pt, s = 1, skin: string | null = null): void {
+  // The caddie's own sits at its housing, in its hull's skin (0705); a borrowed one is placed with its front on the mount's muzzle.
   const { x: hx, r: hr } = RAYGUN.housing;
-  if (at === undefined) paintEmitter(ctx, f, palette, 'top', hx, 0, hr, onDisc);
+  if (at === undefined) paintEmitter(ctx, f, palette, 'top', hx, 0, hr, onDisc, skin);
   else paintEmitter(ctx, f, palette, 'top', at[0], at[1], hr * s, false);
 }
 
@@ -3134,21 +3137,55 @@ export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true,
  * play said *"it'd be blocking the pilot's view"*. Leaning past half way it is the view from above, sitting on
  * the disc.
  */
-export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: number): void {
+/*
+  0705: *"I'm still not happy with the side or top down view of the ray gun for the lil caddie … it just doesn't
+  look like part of the ship design at the moment at all."* From the side it was a chrome saucer on a stub
+  under the nose with a mouth bigger than itself — a thing bolted on. Now it is a FAIRING: a shallow blister
+  faired into the belly under the nose, in the hull's own ink and the belly's shading, its top edge the rim
+  line and its tail lost in the belly, the rings' lavender running down its flank to a lens set in its front.
+  Still every mark of it below the rim and far wider than tall, which is what 0587 and 0683 hold.
+*/
+export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: number, skin: string | null = null): void {
   const { x, y, r } = RAYGUN.side;
   if (lean > 0.5) {
-    paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r);
+    paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r, false, skin);
     return;
   }
-  // How far under the rim it hangs at this lean: the whole drop side-on, closing on the rim as the view leans over.
-  const rise = y * Math.cos((lean * Math.PI) / 2);
-  poly(ctx, f, shade(palette.trim, -0.35), [
-    [x - r * 0.35, rise],
-    [x - r * 0.15, rise],
-    [x - r * 0.25, 0],
-    [x - r * 0.55, 0],
-  ]);
-  paintEmitter(ctx, f, palette, 'side', x, rise, r);
+  const body = skin ?? mix(palette.player, palette.acid, 0.55);
+  const lav = palette.ally;
+  // How deep under the rim it hangs at this lean: the whole drop side-on, closing on the rim as the view leans over.
+  // Half again as deep as the saucer hung (0.3 of the box to its 0.2): a blister, not a plank.
+  const deep = y * 1.5 * Math.cos((lean * Math.PI) / 2);
+  const back = x - r * 0.75;
+  const tip = RAYGUN.tip;
+  // The blister: its top edge on the rim line, its belly a curve from the tail round to the lens at the front.
+  const blister: Pt[] = [
+    [back, 0],
+    [tip, 0],
+    [tip - 0.01, deep * 0.5],
+    [x + r * 0.55, deep * 0.9],
+    [x, deep],
+    [x - r * 0.5, deep * 0.86],
+    [back + 0.02, deep * 0.45],
+  ];
+  shaded(ctx, f, [x, 0], [x, deep], shade(body, -0.15), shade(body, -0.6), blister);
+  // Outlined on the pen the saucer's own outline was stroked with, so it is one silhouette with the hull.
+  ctx.beginPath();
+  trace(ctx, f, blister);
+  ctx.stroke();
+  // Its curve: the room's light along the belly's lower edge and the hover light's cyan under that.
+  seam(ctx, f, shade(body, 0.5), 0.03, [[back + 0.08, deep * 0.5], [x - r * 0.4, deep * 0.78], [x + r * 0.3, deep * 0.84], [tip - 0.08, deep * 0.5]], 0.35, true);
+  seam(ctx, f, shade(palette.player, 0.3), 0.025, [[x - r * 0.45, deep * 0.86], [x + r * 0.35, deep * 0.9]], 0.35);
+  // The rings' light down its flank to the lens, and the lens: an upright ring of lavender set in the front,
+  // lit, with its inside deep — what comes out of it is a ring like it.
+  seam(ctx, f, shade(lav, 0.35), 0.03, [[back + 0.1, deep * 0.42], [tip - 0.16, deep * 0.45]], 0.8);
+  const lensX = tip - 0.08;
+  const lensY = deep * 0.5;
+  // No further up than the rim line: the glow's reach is the lens's drop (0587's guard reads every mark, glows too).
+  glow(ctx, f, lav, lensX, lensY, deep * 0.48, 0.6);
+  const oval = (rx: number, ry: number): Pt[] => roundel(0, 0, 1, 20, 0, Math.PI * 2).map(([c, d]): Pt => [lensX + c * rx, lensY + d * ry]);
+  poly(ctx, f, shade(lav, 0.55), oval(0.06, deep * 0.42));
+  poly(ctx, f, shade(lav, -0.45), oval(0.028, deep * 0.26));
 }
 
 /**
@@ -3156,8 +3193,14 @@ export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: numb
  * side. `under`: from above, painted before the disc it hangs under, so only its front past the rim shows and
  * the lens on top is not drawn.
  */
-export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView, cx: number, cy: number, R: number, under = false): void {
-  const chrome = shade(palette.trim, 0.65);
+/*
+  0705: *"it just doesn't look like part of the ship design at the moment at all."* With `skin` — the caddie's own
+  hull ink — the housing is the hull's: its disc in the hull's ink lit as the saucer's disc is, its band the
+  saucer's dark rim band carried round it, so what shows past the rim reads as the saucer's nose and not a
+  chrome thing bolted on. A borrowed ray gun on another ship keeps its chrome.
+*/
+export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView, cx: number, cy: number, R: number, under = false, skin: string | null = null): void {
+  const chrome = skin ?? shade(palette.trim, 0.65);
   const lav = palette.ally;
   const oval = (x: number, y: number, rx: number, ry: number, count: number, from = 0, to = Math.PI * 2): Pt[] =>
     roundel(0, 0, 1, count, from, to).map(([c, d]): Pt => [x + c * rx, y + d * ry]);
@@ -3176,9 +3219,9 @@ export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView
   };
   if (view === 'top') {
     // The disc: chrome lit from ahead, dark where it goes under the rim.
-    shaded(ctx, f, [cx - R * 0.6, cy], [cx + R, cy], shade(chrome, under ? -0.35 : -0.2), shade(chrome, 0.45), oval(cx, cy, R, R, 32));
-    // Its rim band and the six lights round it.
-    band(ctx, f, shade(palette.trim, -0.2), cx, cy, R * 0.97, R * 0.8, 0.9);
+    shaded(ctx, f, [cx - R * 0.6, cy], [cx + R, cy], shade(chrome, under ? -0.35 : -0.2), shade(chrome, skin === null ? 0.45 : 0.3), oval(cx, cy, R, R, 32));
+    // Its rim band and the six lights round it. 0705: on the hull's skin, the band is the saucer's own rim band.
+    band(ctx, f, skin === null ? shade(palette.trim, -0.2) : shade(skin, -0.5), cx, cy, R * 0.97, R * 0.8, 0.9);
     // 0702: the band's chrome glinting along its upper arc, toward the light.
     seam(ctx, f, palette.impact, R * 0.05, roundel(cx, cy, R * 0.885, 10, Math.PI * 1.2, Math.PI * 1.8), 0.45, true);
     // Lights, not marks: a glow each, so none is a solid speck under the floor at the fight's size.
@@ -3217,16 +3260,20 @@ export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView
 }
 
 /** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
-function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1, paint: string | null = null): void {
-  const { y, tail, mouth, wide, point } = CADDIE_POD;
+// 0705: and on the ball — `on` is the hull's radius at the pylon and the pod's axis, the caddie's by default.
+function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1, paint: string | null = null, on: { D: number; y: number; sunk: number } = { D: CADDIE_DISC, y: CADDIE_POD.y, sunk: 0.04 }): void {
+  const { tail, mouth, wide, point } = CADDIE_POD;
+  // `sunk`: how far inside the hull the pylon starts — under the saucer's opaque face a little is enough; through
+  // the ball's clear plastic it is the axle, seen.
+  const { D, y, sunk } = on;
   const at = (x: number, off: number): Pt => [x, (y + off) * side];
   const [back, front] = CADDIE_PYLON;
   // 0529: in the saucer's paint, when it has one.
   const body = paint ?? mix(palette.player, palette.acid, 0.55);
   // The pylon, in the saucer's own shadow, and a seam where it meets the pod.
   poly(ctx, f, shade(body, -0.45), [
-    [back + 0.03, (CADDIE_DISC - 0.04) * side],
-    [front - 0.03, (CADDIE_DISC - 0.04) * side],
+    [back + 0.03, (D - sunk) * side],
+    [front - 0.03, (D - sunk) * side],
     [front - 0.03, (y - podHalf(front - 0.03) + 0.02) * side],
     [back + 0.03, (y - podHalf(back + 0.03) + 0.02) * side],
   ]);
@@ -4595,17 +4642,29 @@ const VIPER_CANOPY: readonly Pt[] = [
   [0.11, -0.19],
 ];
 /** The dorsal fin, from its root up round its hook and back down to the hull. */
+/*
+  0705: *"the unlocked venoma krait ship looks terrible compared to the intro title venoma krait ship, it doesn't
+  have as much detail or style."* Beside the port's (`paintViper`) the fin was the plainest difference: the port's
+  is a tendril, a stroke a fifteenth of the frame thick that curls over and back on itself; this was a blade a
+  third of the frame wide at the root. Now it is the tendril: an outer edge up and over to a curl, an inner edge
+  back down, a tenth of the frame between them — four pixels at the fight's camera, over 0106's floor.
+*/
 const VIPER_FIN: readonly Pt[] = [
   [-0.3, -0.165],
-  [-0.42, -0.33],
-  [-0.56, -0.46],
-  [-0.72, -0.53],
-  [-0.85, -0.48],
-  [-0.88, -0.36],
-  [-0.8, -0.32],
-  [-0.72, -0.38],
-  [-0.64, -0.32],
-  [-0.62, -0.13],
+  [-0.36, -0.3],
+  [-0.46, -0.44],
+  [-0.6, -0.54],
+  [-0.76, -0.55],
+  [-0.87, -0.46],
+  [-0.87, -0.36],
+  [-0.8, -0.31],
+  [-0.77, -0.37],
+  [-0.8, -0.45],
+  [-0.72, -0.47],
+  [-0.6, -0.44],
+  [-0.5, -0.36],
+  [-0.44, -0.25],
+  [-0.42, -0.165],
 ];
 /** The stern and the belly back to the wing, the wing, and the belly on to the jaw. */
 const VIPER_BELLY: readonly Pt[] = [
@@ -4699,6 +4758,9 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
   const sealWidth = ctx.lineWidth;
   // Lit along its back and dark along its belly, as the port's is.
   shaded(ctx, f, at(0, -0.3), at(0, 0.3), shade(body, 0.25), shade(body, -0.3), outline);
+  // 0705: and a wash of the port's dark green over the hull, so the accent and the scales have something to stand
+  // against — laid here, under the canopy and every mark, so the glass keeps its own light.
+  poly(ctx, f, shade(body, -0.55), outline, 0.42);
   // The fin, a shade darker than the back it rises from, so it reads as a fin and not more hull.
   poly(ctx, f, shade(body, -0.18), onEdge(VIPER_FIN));
   // The wing, its leading edge lit.
@@ -4710,11 +4772,14 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
     Its looks, on the flank — 0528's slot. Each mark two units and more across, so it clears 0106's floor at the
     shipped camera: a band or a diamond a tenth of the port's frame or more, which is 1.8 of the predecessor's.
   */
+  // 0705: the port's accent, the hull's green lifted toward the acid — what its lateral line and its scales are drawn in.
+  const accent = shade(mix(body, palette.acid, 0.5), 0.45);
   if (art === 'wyrmGreen') {
     // As it came: the port's lateral line, and the scales along it as chevrons.
     // Each arm a twentieth of the port's frame thick — 0106's floor at the shipped camera.
+    // 0705: in the accent, as the port's are, and no longer dark on a pale hull.
     for (let x = 0.42; x > -0.66; x -= 0.2) {
-      poly(ctx, f, dark, port([[x, -0.04], [x - 0.1, 0.02], [x, 0.08], [x + 0.07, 0.08], [x - 0.02, 0.02], [x + 0.07, -0.04]]));
+      poly(ctx, f, accent, port([[x, -0.04], [x - 0.1, 0.02], [x, 0.08], [x + 0.07, 0.08], [x - 0.02, 0.02], [x + 0.07, -0.04]]), 0.85);
     }
   } else if (art === 'kraitBands') {
     // A krait's bands round the hull, dark and evenly spaced from the neck to the stern.
@@ -4750,13 +4815,17 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
     const [, belly] = viperGirth(x);
     seam(ctx, f, shade(dark, -0.5), 0.025, port([[x, belly - 0.085], [x - 0.02, belly - 0.015]]), 0.35);
   }
-  seam(ctx, f, shade(body, 0.6), 0.035, port([[-0.32, -0.19], [-0.43, -0.34], [-0.57, -0.45], [-0.71, -0.5]]), 0.55, true);
-  for (const [x0, y0, x1, y1] of [
-    [-0.42, -0.2, -0.6, -0.42],
-    [-0.52, -0.16, -0.7, -0.45],
-  ] as const) {
-    seam(ctx, f, shade(body, -0.55), 0.025, port([[x0, y0], [x1, y1]]), 0.35);
-  }
+  // 0705: the tendril's outer edge lit, and the port's accent core down its middle to the curl.
+  seam(ctx, f, shade(body, 0.6), 0.03, port([[-0.32, -0.19], [-0.4, -0.34], [-0.5, -0.47], [-0.64, -0.55], [-0.78, -0.54]]), 0.55, true);
+  seam(ctx, f, accent, 0.03, port([[-0.36, -0.18], [-0.42, -0.33], [-0.54, -0.47], [-0.68, -0.5], [-0.81, -0.43], [-0.82, -0.36]]), 0.75, true);
+  /*
+    0705: the rest of what the port's racer has and this did not — the lateral line in the accent from the eye to
+    the stern; a nostril; the second fang, translucent, where the port's slender pair was under 0106's floor as
+    two solid marks. (The dark wash is laid under the canopy, above.)
+  */
+  seam(ctx, f, accent, 0.022, port([[0.62, -0.03], [0.2, -0.04], [-0.3, -0.03], [-0.78, 0]]), 0.8);
+  disc(ctx, f, palette.space, at(0.93, -0.01)[0], at(0.93, -0.01)[1], 0.25 * 0.062, 0.85);
+  if (own) poly(ctx, f, palette.impact, port([[0.62, 0.115], [0.67, 0.25], [0.72, 0.105]]), 0.85);
   seam(ctx, f, shade(body, -0.6), 0.03, port([[0.16, 0.2], [-0.36, 0.195]]), 0.45);
   seam(ctx, f, shade(body, 0.65), 0.03, port([[0.84, -0.11], [0.76, -0.13], [0.68, -0.13]]), 0.55, true);
   // The canopy — glass with the sky in it, and a glint.
@@ -5096,8 +5165,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   seal(ctx);
   // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
   const sealWidth = ctx.lineWidth;
-  // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493.
-  if (own) paintRaygun(ctx, f, palette);
+  // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493. In the hull's skin — 0705.
+  if (own) paintRaygun(ctx, f, palette, true, undefined, 1, body);
   if (stage >= 1) paintPod(ctx, f, palette, -1, livery);
   if (stage >= 2) paintPod(ctx, f, palette, 1, livery);
   // The disc lit from above and ahead, in shadow behind and below, so it has a top and turns — 0461.
@@ -5178,7 +5247,7 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   ── THE HAMSTER BALL — `docs/decisions/0593-the-hamster-ball-rolls.md` ──────────────────────────────
 
   Unity in a clear plastic ball, from above, running nose-first up the lane, with a thruster pack strapped
-  behind and, for each tube it carries, a cradle on a stub of axle out of the ball's side. It never breaks
+  behind and, for each tube it carries, a pod off the ball's side (0705; a cradle on a stub of axle before). It never breaks
   since 0609, so it is never drawn without the ball.
 
   ⚠️ **THE PLASTIC IS TRANSLUCENT AND ITS RIM IS NOT.** The ball is filled at a low alpha so Unity and the
@@ -5200,22 +5269,27 @@ const BALL_PACK_R = (BALL_RADIUS + 0.55) / (SHIP_BOX * 0.42);
  * so no fill finds a hole where the two meet. Walked from the nose, which no stub stands on.
  */
 function ballHull(stage: number, rx: number, ry: number): Pt[] {
-  const axle = 0.13;
-  const cradle = BALL_CRADLE_R + 0.09;
   const pack = 0.27;
   const steps = 48;
-  // Where each stub leaves the ellipse, and the half-angle of the arc it covers.
-  const axleOn = ry * Math.sqrt(1 - (axle / rx) ** 2);
+  // Where the pack's stub leaves the ellipse, and the half-angle of the arc it covers.
   const packOn = rx * Math.sqrt(1 - (pack / ry) ** 2);
-  const axleArc = Math.asin(axle / rx);
   const packArc = Math.asin(pack / ry);
+  /*
+    0705: a pod on each side that carries a tube, the caddie's own (`podDetour`), hung off the ball on the pylon
+    the caddie's hangs from — it was a cradle on a stub of axle. The detour runs from the pylon's front round the
+    pod to its back, which going round the ball is the arc from `podFrom` to `podTo` on the lower side and its
+    mirror on the upper. The ball is round (`rx` is `ry`), so the detour's own sense of where the hull is holds.
+  */
+  const [podBack, podFront] = CADDIE_PYLON;
+  const podFrom = Math.acos(podFront / rx);
+  const podTo = Math.acos(podBack / rx);
   const cuts: { from: number; to: number; corners: Pt[] }[] = [
     // Down the screen: x runs from + to − across it.
-    ...(stage >= 2 ? [{ from: Math.PI / 2 - axleArc, to: Math.PI / 2 + axleArc, corners: [[axle, axleOn], [axle, cradle], [-axle, cradle], [-axle, axleOn]] as Pt[] }] : []),
+    ...(stage >= 2 ? [{ from: podFrom, to: podTo, corners: podDetour(rx, BALL_CRADLE_R) }] : []),
     // Behind: y runs from + to −.
     { from: Math.PI - packArc, to: Math.PI + packArc, corners: [[-packOn, pack], [-BALL_PACK_R, pack], [-BALL_PACK_R, -pack], [-packOn, -pack]] },
     // Up the screen: x runs from − to +.
-    ...(stage >= 1 ? [{ from: (3 * Math.PI) / 2 - axleArc, to: (3 * Math.PI) / 2 + axleArc, corners: [[-axle, -axleOn], [-axle, -cradle], [axle, -cradle], [axle, -axleOn]] as Pt[] }] : []),
+    ...(stage >= 1 ? [{ from: Math.PI * 2 - podTo, to: Math.PI * 2 - podFrom, corners: mirrored(podDetour(rx, BALL_CRADLE_R)).reverse() }] : []),
   ];
   const out: Pt[] = [];
   let next = 0;
@@ -5441,10 +5515,15 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtK
     [-BALL_R - 0.06, -0.22],
     [-BALL_R - 0.06, 0.22],
   ], 0.45);
-  // A cradle on each axle stub that carries a tube; the tube itself is the frame's (`stepLoaded`).
-  for (const place of SHIPS.ball.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
-    paintPylon(ctx, f, palette, [(place.along - SHIPS.ball.tubeLength / 2) / BOX_R, place.across / BOX_R]);
-  }
+  /*
+    0705: *"the tubes on the hamster wheel also look pretty bad, should be closer to the tubes on the lil caddie or the
+    same as the lil caddie so it's consistent."* The caddie's own pods, one off each side of the axle that carries a
+    tube, on the ball's slate; the dart in each is the frame's (`stepLoaded`). They were a cradle on each axle stub.
+  */
+  // Each pylon runs 0.14 into the ball — the axle, seen through the plastic — so it is over 0106's floor where the
+  // ball's rounder side leaves it less room than the saucer's flat one.
+  if (stage >= 1) paintPod(ctx, f, palette, -1, slate, { D: BALL_R, y: BALL_CRADLE_R, sunk: 0.14 });
+  if (stage >= 2) paintPod(ctx, f, palette, 1, slate, { D: BALL_R, y: BALL_CRADLE_R, sunk: 0.14 });
   // 0612: whoever runs in it, under the plastic.
   if (rider !== null) insideAs(rider)(ctx, f, palette, 1, pose);
   // The plastic over them: its tint, the look on it, and the rim and its light — what says *ball*.
@@ -17377,39 +17456,33 @@ function drawGaze(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n:
  * The ray's four rings, back to front — 0588: where each stands along the line of flight and how tall it is,
  * in the shot's frame. Each is seen edge-on, a quarter as wide as it is tall, and each a size up on the last.
  */
+/*
+  0705: *"The four rings pulse from the lil caddie don't actually look like a pulse of four separate rings, it looks
+  connected like a band of energy."* Photographed on the bench at 4×: the four stood 0.42 of the frame apart with
+  the biggest two 0.21 and 0.175 wide, so their edges touched, and the dark cone (`RAY_FIELD`) and the glow about
+  each filled what was left between them — one lavender cone. Now the train is spread to the frame's ends, each
+  ring is a sixth as wide as it is tall rather than a quarter, and there is no field: between the rings is sky.
+*/
 export const RAY_RINGS: readonly (readonly [number, number])[] = [
-  [-0.66, 0.42],
-  [-0.2, 0.56],
-  [0.22, 0.7],
-  [0.58, 0.85],
+  [-0.78, 0.42],
+  [-0.3, 0.56],
+  [0.2, 0.7],
+  [0.72, 0.85],
 ];
 
-/** The dark field the train sweeps: a cone round the four rings, narrow at the back. */
-const RAY_FIELD: readonly Pt[] = [
-  [-0.97, 0],
-  [-0.86, -0.5],
-  [-0.4, -0.72],
-  [0.1, -0.9],
-  [0.5, -1.02],
-  [0.82, -0.8],
-  [1.05, -0.4],
-  [1.08, 0],
-  [1.05, 0.4],
-  [0.82, 0.8],
-  [0.5, 1.02],
-  [0.1, 0.9],
-  [-0.4, 0.72],
-  [-0.86, 0.5],
-];
+/** How wide an edge-on ring is for its height — 0705: a sixth, so the train has sky between the rings. */
+export const RAY_RING_LEAN = 1 / 6;
 
 /** An edge-on ring at `x`, `ry` tall and a quarter of that wide, `thick` across its band — 0588. */
-function edgeRing(ctx: Pen, f: Frame, colour: string, x: number, ry: number, thick: number, alpha: number): void {
+function edgeRing(ctx: Pen, f: Frame, colour: string, x: number, ry: number, thick: number, alpha: number, lean = 1 / 4): void {
   const oval = (rx: number, h: number): Pt[] => roundel(0, 0, 1, 28, 0, Math.PI * 2).map(([c, d]): Pt => [x + c * rx, d * h]);
   ctx.globalAlpha = alpha;
   ctx.fillStyle = colour;
   ctx.beginPath();
-  // Never narrower than 0.18 of the frame, so even the smallest ring has an inside two and a half pixels across.
-  const rx = Math.max(ry / 4, 0.18);
+  // Never narrower than 0.18 of the frame, so even the smallest ring has an inside two and a half pixels across —
+  // at a quarter's lean. 0705's sixth leans the ray's rings nearer edge-on: never narrower than 0.1, so with its
+  // thickness the smallest is still three pixels across at the fight's size, a lens of light with no inside.
+  const rx = Math.max(ry * lean, lean < 1 / 4 ? 0.1 : 0.18);
   trace(ctx, f, oval(rx + thick / 2, ry + thick / 2));
   // A ring too small to have an inside that shows is one lens of light: a sliver of a hole is no mark.
   if (rx - thick / 2 >= 0.12) trace(ctx, f, oval(rx - thick / 2, ry - thick / 2));
@@ -20821,16 +20894,13 @@ export function drawKind(
         rings read on the palest sky; the lit ring steps forward a page at a time and the front one is
         always lit, so the pulse surges toward what it is thrown at.
       */
-      ctx.fillStyle = shade(ring, -0.62);
-      ctx.beginPath();
-      trace(ctx, f, RAY_FIELD);
-      seal(ctx);
-      glow(ctx, f, ring, 0.2, 0, 0.85, 0.4);
+      // 0705: no field and no glow over the whole train — each ring has its own small light, and sky between.
       RAY_RINGS.forEach(([x, ry], k) => {
         const lit = k === page + 1 || k === RAY_RINGS.length - 1;
+        glow(ctx, f, ring, x, 0, ry * 0.45, lit ? 0.4 : 0.25);
         // A tenth of the frame thick: at the fight's size a ring is two and a half pixels across, the floor.
-        if (lit) edgeRing(ctx, f, ring, x, ry, 0.17, 0.5);
-        edgeRing(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), x, ry, 0.1, lit ? 1 : 0.8);
+        if (lit) edgeRing(ctx, f, ring, x, ry, 0.17, 0.5, RAY_RING_LEAN);
+        edgeRing(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), x, ry, 0.1, lit ? 1 : 0.8, RAY_RING_LEAN);
       });
       glow(ctx, f, palette.impact, RAY_RINGS[RAY_RINGS.length - 1]![0], 0, 0.3, 0.7);
       // 0702: each lit ring catching its own light where it is nearest — a white point on its upper arc — so the

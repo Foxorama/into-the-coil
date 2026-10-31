@@ -395,6 +395,15 @@ const HULLLESS: readonly SpriteKind[] = [
   'burst3',
   'spark0',
   'spark1',
+  /*
+    The ray's train — 0705: four rings seen edge-on with sky between them, on the burst's terms. It was a body
+    while 0588's dark field ran the length of the train under the rings, and the field is what the play saw as
+    *"a band of energy"*: the hull was the defect. Its rings are lenses of light, each over 0106's floor, with
+    no silhouette to seal.
+  */
+  'ray',
+  'rayRipple',
+  'raySwell',
 ];
 
 /** Every kind with a hull: the ships, the enemies, the bosses, the shots, the pickups, the shell. */

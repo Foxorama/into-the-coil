@@ -70,8 +70,9 @@ export const PROBES = [
       // is only which path the missile pops to now. Every tube the fighter carries, on the centreline.
       // ⚠️ And by 0581, which hangs the fighter's tubes under its wings.
       path: 'src/content/ships.ts',
-      find: "[[], [{ along: -0.45, across: -1.76 }], [{ along: -0.45, across: -1.76 }, { along: -0.45, across: 1.76 }]];",
-      replace: '[[], [{ along: -0.45, across: 0 }], [{ along: -0.45, across: 0 }, { along: -0.45, across: 0 }]];',
+      // ⚠️ And by 0705, which makes them warheads out from under the wings, further in and forward.
+      find: "[[], [{ along: -0.05, across: -1.5 }], [{ along: -0.05, across: -1.5 }, { along: -0.05, across: 1.5 }]];",
+      replace: '[[], [{ along: -0.05, across: 0 }], [{ along: -0.05, across: 0 }, { along: -0.05, across: 0 }]];',
     },
   },
   {

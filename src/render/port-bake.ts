@@ -3454,7 +3454,8 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     a little saucer on a pylon at the nose. 0683: hung UNDER the rim again, as 0493 had it — *"it'd be
     blocking the pilot's view"* — and still painted last, over the belly and its hover light.
   */
-  if (fitted === SHIPS.caddie.weapon) paintRaygunSide(ctx, box, palette, lean);
+  // 0705: in the hull's own ink, a fairing on the belly.
+  if (fitted === SHIPS.caddie.weapon) paintRaygunSide(ctx, box, palette, lean, body);
 }
 
 /**

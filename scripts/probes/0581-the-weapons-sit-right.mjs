@@ -25,7 +25,8 @@ export const PROBES = [
     suite: 'tests/weapons-sit.test.ts',
     broke: 'the fighter’s tubes back at its nose',
     guard: 'hangs its tubes under its wings',
-    edit: { path: 'src/content/ships.ts', find: '{ along: -0.45, across: -1.76 }], [{ along: -0.45', replace: '{ along: 3, across: -1.76 }], [{ along: -0.45' },
+    // ⚠️ Re-anchored by 0705, which makes the tubes warheads out from under the wings, further in and forward.
+    edit: { path: 'src/content/ships.ts', find: '{ along: -0.05, across: -1.5 }], [{ along: -0.05', replace: '{ along: 3, across: -1.5 }], [{ along: -0.05' },
   },
   {
     decision: '0581',
