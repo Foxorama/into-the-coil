@@ -21,7 +21,7 @@ import type { Palette } from '../content/palette.ts';
 import { DOCK, FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, PORT_LIGHT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import { figureOf, type GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, shade, trace, withFit, type Atlas, type Frame, type Pt } from './bake.ts';
+import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, rimLight, seam, shade, shaded, trace, withFit, type Atlas, type Frame, type Pen, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHELL_SPAN, SHIPS, type ShipKind } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
@@ -3375,6 +3375,24 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   half(0, 0, 1, under, 0, Math.PI);
   ctx.closePath();
   ctx.stroke();
+  /*
+    0701: the pass the top view has (`drawCaddie`), edge-on — every mark translucent, on 0698's terms. The upper face
+    picks up the room as pressed metal does, brightest at its crown; the rim's near edge is chrome with a glint along
+    it; the belly carries a line of bounced light; and the rim light runs inside every edge that faces up, the lens's
+    here and the dome's once it is drawn. `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
+  */
+  const arcOf = (cx: number, cy: number, rx: number, ry: number, from: number, to: number, n = 16): Pt[] =>
+    Array.from({ length: n + 1 }, (_, i): Pt => {
+      const t = from + ((to - from) * i) / n;
+      return [cx + Math.cos(t) * rx, cy + Math.sin(t) * Math.max(0.004, ry)];
+    });
+  shaded(ctx, f, [0, -over], [0, 0], shade(body, 0.7), rgba(body, 0), [...arcOf(0, 0, 0.98, over * 0.98, Math.PI, Math.PI * 2), ...arcOf(0, 0, 0.98, rim * 0.98, 0, Math.PI).reverse()], 0.35);
+  seam(ctx, f, palette.impact, 0.025, arcOf(0, 0, 0.94, rim * 0.94 - 0.02, Math.PI * 0.12, Math.PI * 0.88), 0.5, true);
+  seam(ctx, f, shade(body, 0.25), 0.03, arcOf(0, 0, 0.78, under * 0.78, Math.PI * 0.25, Math.PI * 0.75), 0.35, true);
+  const domeAt = -e * SAUCER_DOME_SITS;
+  const domeHigh = Math.sqrt((SAUCER_DOME * c) ** 2 + (SAUCER_DOME_HIGH * e) ** 2);
+  const lensOutline = (pen: Pen): void => trace(pen, f, [...arcOf(0, 0, 1, over, Math.PI, Math.PI * 2, 24), ...arcOf(0, 0, 1, under, 0, Math.PI, 24)]);
+  rimLight(ctx, f, shade(body, 0.5), 0.75, Y(domeAt - domeHigh), Y(under), outline, lensOutline);
   // The near three, over the rim, with a light round each so they read as lit from the side.
   for (let k = 0; k < 6; k++) {
     const a = Math.PI / 6 + (k * Math.PI) / 3;
@@ -3385,8 +3403,6 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     disc(ctx, f, palette.player, x, y, 0.085);
   }
   // The dome: glass on the hub, its base on the face and its crown above it.
-  const domeAt = -e * SAUCER_DOME_SITS;
-  const domeHigh = Math.sqrt((SAUCER_DOME * c) ** 2 + (SAUCER_DOME_HIGH * e) ** 2);
   const domePath = (): void => {
     ctx.beginPath();
     half(0, domeAt, SAUCER_DOME, domeHigh, Math.PI, Math.PI * 2);
@@ -3418,11 +3434,21 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   }
   disc(ctx, f, shade(glass, 0.35), -0.06, domeAt - 0.18 * domeHigh, 0.3, pilot ? 0.3 : 0.8);
   disc(ctx, f, palette.impact, -0.14, domeAt - 0.36 * domeHigh, 0.11, 0.85);
+  // 0701: the room's window on the glass ahead of the glint, as on the top view's dome, and the glass deep at its base.
+  shaded(ctx, f, [0, domeAt - 0.82 * domeHigh], [0, domeAt - 0.45 * domeHigh], palette.impact, rgba(palette.impact, 0), [
+    [0.02, domeAt - 0.82 * domeHigh],
+    [0.2, domeAt - 0.72 * domeHigh],
+    [0.24, domeAt - 0.45 * domeHigh],
+    [0.04, domeAt - 0.5 * domeHigh],
+  ], 0.3, true);
+  shaded(ctx, f, [0, domeAt - 0.3 * domeHigh], [0, domeAt + SAUCER_DOME * c], rgba(glass, 0), shade(glass, -0.6), [...arcOf(0, domeAt, SAUCER_DOME, domeHigh, Math.PI, Math.PI * 2), ...arcOf(0, domeAt, SAUCER_DOME, SAUCER_DOME * c, 0, Math.PI)], 0.45);
   ctx.restore();
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = outline;
   domePath();
   ctx.stroke();
+  const domeOutline = (pen: Pen): void => trace(pen, f, [...arcOf(0, domeAt, SAUCER_DOME, domeHigh, Math.PI, Math.PI * 2, 24), ...arcOf(0, domeAt, SAUCER_DOME, SAUCER_DOME * c, 0, Math.PI, 24)]);
+  rimLight(ctx, f, shade(glass, 0.5), 0.75, Y(domeAt - domeHigh), Y(under), outline, domeOutline);
   /*
     0587: *"it should show on the top half of the ship. It should be more saucer shaped."* Its own ray gun,
     a little saucer on a pylon at the nose. 0683: hung UNDER the rim again, as 0493 had it — *"it'd be
@@ -3464,19 +3490,23 @@ function paintJets(
 function paintViper(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number): void {
   const X = (x: number): number => f.half + x * f.r;
   const Y = (y: number): number => f.half + y * f.r;
+  // 0701: the hull's path on any pen, so the rim light can lay it lowered (`rimLight`); `hullPath` is it on this one.
+  const hullOn = (pen: Pen): void => {
+    pen.moveTo(X(1), Y(0.03));
+    pen.bezierCurveTo(X(0.95), Y(-0.06), X(0.84), Y(-0.13), X(0.72), Y(-0.14));
+    pen.bezierCurveTo(X(0.62), Y(-0.16), X(0.48), Y(-0.2), X(0.36), Y(-0.16));
+    pen.lineTo(X(-0.1), Y(-0.17));
+    pen.bezierCurveTo(X(-0.4), Y(-0.17), X(-0.66), Y(-0.12), X(-0.8), Y(-0.06));
+    pen.lineTo(X(-0.88), Y(-0.05));
+    pen.lineTo(X(-0.88), Y(0.1));
+    pen.bezierCurveTo(X(-0.6), Y(0.18), X(-0.4), Y(0.21), X(-0.2), Y(0.2));
+    pen.bezierCurveTo(X(0.1), Y(0.2), X(0.4), Y(0.19), X(0.6), Y(0.13));
+    pen.bezierCurveTo(X(0.8), Y(0.09), X(0.93), Y(0.07), X(1), Y(0.03));
+    pen.closePath();
+  };
   const hullPath = (): void => {
     ctx.beginPath();
-    ctx.moveTo(X(1), Y(0.03));
-    ctx.bezierCurveTo(X(0.95), Y(-0.06), X(0.84), Y(-0.13), X(0.72), Y(-0.14));
-    ctx.bezierCurveTo(X(0.62), Y(-0.16), X(0.48), Y(-0.2), X(0.36), Y(-0.16));
-    ctx.lineTo(X(-0.1), Y(-0.17));
-    ctx.bezierCurveTo(X(-0.4), Y(-0.17), X(-0.66), Y(-0.12), X(-0.8), Y(-0.06));
-    ctx.lineTo(X(-0.88), Y(-0.05));
-    ctx.lineTo(X(-0.88), Y(0.1));
-    ctx.bezierCurveTo(X(-0.6), Y(0.18), X(-0.4), Y(0.21), X(-0.2), Y(0.2));
-    ctx.bezierCurveTo(X(0.1), Y(0.2), X(0.4), Y(0.19), X(0.6), Y(0.13));
-    ctx.bezierCurveTo(X(0.8), Y(0.09), X(0.93), Y(0.07), X(1), Y(0.03));
-    ctx.closePath();
+    hullOn(ctx);
   };
   const outline = Math.max(1, size * 0.012);
   // The far wing, in shadow, behind the hull.
@@ -3540,6 +3570,17 @@ function paintViper(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, s
   ctx.beginPath();
   ctx.ellipse(X(0.17), Y(-0.235), f.r * 0.07, f.r * 0.022, 0, 0, Math.PI * 2);
   ctx.fill();
+  /*
+    0701: the port's racer given the pass the fight's Viper has (`drawViper`), in its own inks — every mark
+    translucent: a horizon along the scales of its upper flank, the belly's plates as contours, the fin's
+    leading edge lit, the canopy deep at its sill, and the rim light inside every edge that faces up.
+    `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
+  */
+  shaded(ctx, f, [0, -0.15], [0, -0.05], shade(VIPER.body, 0.6), rgba(VIPER.body, 0), [[0.6, -0.14], [0.1, -0.16], [-0.5, -0.13], [-0.8, -0.06], [-0.8, -0.03], [-0.5, -0.08], [0.1, -0.1], [0.6, -0.09]], 0.35);
+  for (let x = 0.5; x > -0.7; x -= 0.12) seam(ctx, f, shade(VIPER.belly, -0.4), 0.02, [[x, 0.13], [x - 0.02, 0.185]], 0.35);
+  seam(ctx, f, shade(VIPER.accent, 0.5), 0.02, [[-0.15, -0.2], [-0.3, -0.42], [-0.5, -0.5], [-0.66, -0.47]], 0.5, true);
+  shaded(ctx, f, [0, -0.27], [0, -0.19], rgba(VIPER.glass, 0), shade(VIPER.glass, -0.6), [[-0.08, -0.19], [0, -0.25], [0.12, -0.275], [0.24, -0.25], [0.32, -0.19]], 0.45, true);
+  rimLight(ctx, f, shade(VIPER.body, 0.45), 0.75, Y(-0.21), Y(0.21), outline, hullOn);
   // The head: an eye with a slit in it, a nostril, the mouth line and two fangs under the jaw.
   glow(ctx, f, VIPER.eye, 0.74, -0.07, 0.09, 0.8);
   disc(ctx, f, VIPER.eye, 0.74, -0.07, 0.036);

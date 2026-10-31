@@ -4283,6 +4283,8 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
   ctx.fillStyle = body;
   trace(ctx, f, outline);
   seal(ctx);
+  // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
+  const sealWidth = ctx.lineWidth;
   // Lit from above: the crown of the head and the back bright, the keel in shade.
   shaded(ctx, f, at(0, -11), at(0, 6.6), shade(body, 0.3), shade(body, -0.18), outline);
   // The keel band, darker, from the chest to the stern — where a bath duck sits in the water. Two units
@@ -4313,6 +4315,43 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
     [-5, -1.6],
     [-9.2, -1.4],
   ]), 0.8);
+  /*
+    0701: the duck lit as a bath toy is — rubber, so its light is broad and soft and never a hard glint: a sheen
+    along the back, the head a ball with its crown catching the room and its underside in shadow where it meets
+    the neck, the wing's shadow on the flank under it and its feathers contours in the body's own deep shade, and
+    the waterline's light along the top of the keel band. Every mark translucent, on 0698's terms.
+    `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
+  */
+  shaded(ctx, f, at(0, -3), at(0, -1), shade(body, 0.55), body, box([
+    [-11.6, -2.7],
+    [-4, -2.9],
+    [5.4, -2.9],
+    [6, -1.4],
+    [-11, -1.2],
+  ]), 0.35);
+  glow(ctx, f, shade(body, 0.75), ...at(DUCK_HEAD[0] - 1.3, DUCK_HEAD[1] - 2), 0.15, 0.45);
+  shaded(ctx, f, at(0, DUCK_HEAD[1] + 1.5), at(0, DUCK_HEAD[1] + 4.4), rgba(body, 0), shade(body, -0.45), box(roundel(DUCK_HEAD[0], DUCK_HEAD[1], DUCK_HEAD_R - 0.4, 16, Math.PI * 0.15, Math.PI * 0.85)), 0.45);
+  poly(ctx, f, shade(body, -0.7), box([
+    [0.2, 0.5],
+    [-2.4, 1.7],
+    [-6.6, 1.7],
+    [-10.6, 0.7],
+    [-10.2, 1.5],
+    [-6.6, 2.5],
+    [-2.4, 2.5],
+  ]), 0.25);
+  for (const x of [-4.6, -8]) {
+    seam(ctx, f, shade(body, -0.55), 0.03, box([
+      [x + 0.8, -1.3],
+      [x - 0.6, 1.2],
+    ]), 0.35);
+  }
+  seam(ctx, f, shade(body, 0.4), 0.03, box([
+    [-13.6, 4.4],
+    [-10, 4.45],
+    [6, 4.45],
+    [9.6, 4.35],
+  ]), 0.4);
   /*
     Its looks, on the flank — 0528's slot. Paint on the hull, each mark two units and more across so it
     clears 0106's floor at the shipped camera.
@@ -4355,6 +4394,9 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
   const [hx, hy] = at(DUCK_PORTHOLE[0], DUCK_PORTHOLE[1]);
   disc(ctx, f, shade(palette.hazard, -0.35), hx, hy, DUCK_PORTHOLE_R * 0.062);
   disc(ctx, f, mix(palette.frost, palette.space, 0.55), hx, hy, (DUCK_PORTHOLE_R - 0.5) * 0.062);
+  // 0701: the glass deep at its bottom where the hull's dark is behind it, and the brass ring lit along its top.
+  shaded(ctx, f, at(0, DUCK_PORTHOLE[1] - 1.4), at(0, DUCK_PORTHOLE[1] + 1.4), rgba(palette.frost, 0), shade(palette.space, 0.05), box(roundel(DUCK_PORTHOLE[0], DUCK_PORTHOLE[1], DUCK_PORTHOLE_R - 0.5, 16, 0, Math.PI * 2)), 0.5);
+  seam(ctx, f, shade(palette.hazard, 0.45), 0.03, box(roundel(DUCK_PORTHOLE[0], DUCK_PORTHOLE[1], DUCK_PORTHOLE_R - 0.25, 8, Math.PI * 1.1, Math.PI * 1.9)), 0.6, true);
   const [gx, gy] = at(DUCK_PORTHOLE[0] - 0.5, DUCK_PORTHOLE[1] - 0.5);
   disc(ctx, f, palette.impact, gx, gy, 0.45 * 0.062, 0.8);
   // The bill, in the shot's orange, a darker line where the lower bill closes under it, and its nostril.
@@ -4372,6 +4414,19 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
   ]), 0.9);
   const [nx, ny] = at(15.4, -6.9);
   disc(ctx, f, shade(bill, -0.45), nx, ny, 0.35 * 0.062, 0.8);
+  // 0701: the upper bill catching the light along its ridge, the lower one in shadow under the closing line.
+  seam(ctx, f, shade(bill, 0.55), 0.035, box([
+    [15.9, -7.4],
+    [17.3, -7.25],
+    [18, -6.95],
+  ]), 0.5, true);
+  shaded(ctx, f, at(0, -5.8), at(0, -4.8), rgba(bill, 0), shade(bill, -0.55), box([
+    [14.7, -5.4],
+    [17, -5.75],
+    [18, -5.45],
+    [16.6, -5],
+    [14.6, -4.7],
+  ]), 0.5);
   // The eye: a dark bead set high, and its glint — far enough in from the crown that it is no notch in it.
   const [ex, ey] = at(10.2, -7.2);
   disc(ctx, f, palette.space, ex, ey, 0.95 * 0.062);
@@ -4395,6 +4450,13 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
     [-0.9, -9.9],
     [-1.6, -9.9],
   ]), 0.85);
+  // 0701: the periscope's chrome as chrome is at this size — a glint down the lit side of its tube, round its elbow.
+  seam(ctx, f, palette.impact, 0.025, box([
+    [-4.05, DUCK_BACK - 0.3],
+    [-4.05, -10.3],
+    [-3.6, -11.3],
+    [-2.4, -11.55],
+  ]), 0.55, true);
   // The marker under its chin: a dark body, a chrome barrel, and the hopper over it in the paint's pink.
   // 0629: the body tapering in under the barrel with a grip under it, where it was a box (`DUCK_MARKER_BELOW`).
   if (own) {
@@ -4416,9 +4478,30 @@ function drawDuck(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tru
       const [bx, by] = at(DUCK_HOPPER[0] + dx, DUCK_HOPPER[1] + dy);
       disc(ctx, f, WEAPONS.paintball.paint!.colours[i]!.ink, bx, by, 0.9 * 0.062);
     }
+    /*
+      0701: the marker finished — its body lit along its top, the barrel chrome with a dark lower edge and a glint
+      along its top, and the hopper a clear shell over the balls, a crescent of light on its upper edge.
+    */
+    seam(ctx, f, shade(palette.space, 0.55), 0.03, box([
+      [11.8, -0.2],
+      [15.9, 0.25],
+    ]), 0.55);
+    seam(ctx, f, palette.impact, 0.025, box([
+      [15.5, DUCK_MUZZLE[1] - DUCK_BORE + 0.3],
+      [DUCK_MUZZLE[0] - 0.2, DUCK_MUZZLE[1] - DUCK_BORE + 0.3],
+    ]), 0.6);
+    seam(ctx, f, shade(chrome, -0.6), 0.035, box([
+      [15.5, DUCK_MUZZLE[1] + DUCK_BORE - 0.3],
+      [DUCK_MUZZLE[0] - 0.2, DUCK_MUZZLE[1] + DUCK_BORE - 0.3],
+    ]), 0.5);
+    seam(ctx, f, palette.impact, 0.03, box(roundel(DUCK_HOPPER[0], DUCK_HOPPER[1], DUCK_HOPPER_R - 0.35, 8, Math.PI * 1.1, Math.PI * 1.75)), 0.6, true);
   }
   // The pods on its back, in its own yellow banded in chrome.
   paintTurrets(ctx, f, DUCK_PODS[stage]!, DUCK_POD_TOP, DUCK_BACK, box, { shell: shade(body, -0.1), band: chrome });
+  // 0701: and the rim light inside every edge that faces up (0698's), in the rubber's own yellow brightened.
+  const duckOutlinePen = (pen: Pen): void => trace(pen, f, outline);
+  const [top, bottom] = heightOf(ctx, duckOutlinePen);
+  rimLight(ctx, f, shade(body, 0.55), 0.7, top, bottom, sealWidth, duckOutlinePen);
 }
 
 /*
@@ -4581,6 +4664,8 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
   ctx.fillStyle = body;
   trace(ctx, f, outline);
   seal(ctx);
+  // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
+  const sealWidth = ctx.lineWidth;
   // Lit along its back and dark along its belly, as the port's is.
   shaded(ctx, f, at(0, -0.3), at(0, 0.3), shade(body, 0.25), shade(body, -0.3), outline);
   // The fin, a shade darker than the back it rises from, so it reads as a fin and not more hull.
@@ -4623,8 +4708,32 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
     const [gx, gy] = at(0, 0.05);
     glow(ctx, f, palette.pickup, gx, gy, 0.5, 0.35);
   }
+  /*
+    0701: the serpent lit as a lacquered racer, on 0698's terms — every mark translucent. A horizon along the scales
+    of its upper flank; the belly's broad plates as contours across the dark band, in its own deep shade; the fin's
+    leading edge catching the light and two ribs down its membrane; the wing's root a contour against the hull; the
+    brow over the eye lit. `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
+  */
+  shaded(ctx, f, at(0, -0.15), at(0, -0.05), shade(body, 0.7), rgba(body, 0), port([[0.6, -0.15], [0.1, -0.155], [-0.5, -0.12], [-0.8, -0.06], [-0.8, -0.03], [-0.5, -0.075], [0.1, -0.1], [0.6, -0.1]]), 0.35);
+  for (let x = 0.5; x > -0.8; x -= 0.12) {
+    const [, belly] = viperGirth(x);
+    seam(ctx, f, shade(dark, -0.5), 0.025, port([[x, belly - 0.085], [x - 0.02, belly - 0.015]]), 0.35);
+  }
+  seam(ctx, f, shade(body, 0.6), 0.035, port([[-0.32, -0.19], [-0.43, -0.34], [-0.57, -0.45], [-0.71, -0.5]]), 0.55, true);
+  for (const [x0, y0, x1, y1] of [
+    [-0.42, -0.2, -0.6, -0.42],
+    [-0.52, -0.16, -0.7, -0.45],
+  ] as const) {
+    seam(ctx, f, shade(body, -0.55), 0.025, port([[x0, y0], [x1, y1]]), 0.35);
+  }
+  seam(ctx, f, shade(body, -0.6), 0.03, port([[0.16, 0.2], [-0.36, 0.195]]), 0.45);
+  seam(ctx, f, shade(body, 0.65), 0.03, port([[0.84, -0.11], [0.76, -0.13], [0.68, -0.13]]), 0.55, true);
   // The canopy — glass with the sky in it, and a glint.
   poly(ctx, f, mix(palette.frost, palette.space, 0.55), port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16]]));
+  // 0701: the glass paler under its crown and deep at its sill, a streak along it, and its frame a contour.
+  shaded(ctx, f, at(0, -0.275), at(0, -0.16), shade(palette.frost, -0.1), shade(palette.space, 0.08), port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16]]), 0.55);
+  seam(ctx, f, palette.impact, 0.03, port([[0.44, -0.235], [0.38, -0.258], [0.28, -0.265]]), 0.5, true);
+  seam(ctx, f, shade(body, -0.65), 0.03, port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16], VIPER_CANOPY[0]!]), 0.45);
   const [cx, cy] = at(0.36, -0.23);
   disc(ctx, f, palette.impact, cx, cy, 0.5 * 0.062, 0.7);
   // The eye: lit, and its slit.
@@ -4646,6 +4755,11 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
   glow(ctx, f, palette.ally, nx, ny, 2.2 * 0.062, 0.5);
   // The launcher on its back, in its own green banded in the void's violet.
   paintTurrets(ctx, f, VIPER_PODS[stage]!, VIPER_POD_TOP, VIPER_BACK, box, { shell: shade(body, -0.15), band: mix(palette.ally, palette.void, 0.4) });
+  // 0701: the nozzle's lip catching the light, and the rim light inside every edge that faces up (0698's).
+  seam(ctx, f, shade(palette.trim, 0.5), 0.025, roundel(nx, ny, 0.85 * 0.062, 8, Math.PI * 1.1, Math.PI * 1.9), 0.5, true);
+  const viperOutlinePen = (pen: Pen): void => trace(pen, f, outline);
+  const [top, bottom] = heightOf(ctx, viperOutlinePen);
+  rimLight(ctx, f, shade(body, 0.45), 0.75, top, bottom, sealWidth, viperOutlinePen);
 }
 
 /**
@@ -4949,6 +5063,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   ctx.fillStyle = body;
   trace(ctx, f, caddieHull(stage, own));
   seal(ctx);
+  // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
+  const sealWidth = ctx.lineWidth;
   // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493.
   if (own) paintRaygun(ctx, f, palette);
   if (stage >= 1) paintPod(ctx, f, palette, -1, livery);
@@ -4968,6 +5084,18 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     glow(ctx, f, palette.acid, c * 0.685 * D, s * 0.685 * D, 0.07, 0.6);
   }
   band(ctx, f, shade(body, -0.3), 0, 0, 0.6 * D, 0.5 * D);
+  /*
+    0701: the disc finished as pressed metal under a room's light, on 0698's terms — every mark translucent, and
+    none of it turning with the spin, because it is light and not a part. Bounced light along the inside of the
+    rim's dark band on the side away from the light; the inner ring's lip lit along its upper edge; and the dome's
+    shadow on the face, down and behind it. `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
+  */
+  seam(ctx, f, shade(body, 0.3), 0.03, roundel(0, 0, 0.82 * D, 12, Math.PI * 0.15, Math.PI * 0.85), 0.4, true);
+  seam(ctx, f, shade(body, 0.5), 0.025, roundel(0, 0, 0.59 * D, 12, Math.PI * 1.1, Math.PI * 1.9), 0.5, true);
+  poly(ctx, f, shade(body, -0.75), [
+    ...roundel(leanX - 0.03 * D, leanY + 0.06 * D, 0.52 * D, 16, -Math.PI * 0.15, Math.PI * 1.15),
+    ...roundel(leanX, leanY, 0.46 * D, 16, -Math.PI * 0.15, Math.PI * 1.15).reverse(),
+  ], 0.3);
   // Six running lights round the rim, between the vents, in the player's cyan with a light round each.
   for (let k = 0; k < 6; k++) {
     const a = Math.PI / 6 + (k * Math.PI) / 3 + spin;
@@ -4998,7 +5126,21 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   }
   disc(ctx, f, shade(glass, 0.4), dx - 0.06 * D, dy - 0.1 * D, 0.28 * D, art === 'pilot' ? 0.3 : 0.7);
   seam(ctx, f, shade(visor ? palette.hazard : palette.player, 0.4), 0.04, roundel(dx, dy, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
+  // 0701: the room's window lying on the glass ahead of the glint, as on the ball's plastic; the glass deep where it
+  // meets the face on the side away from the light; and the dome's frame a contour in the body's own deep shade.
+  shaded(ctx, f, [dx, dy - 0.4 * D], [dx, dy - 0.18 * D], palette.impact, rgba(palette.impact, 0), [
+    [dx + 0.02 * D, dy - 0.38 * D],
+    [dx + 0.26 * D, dy - 0.3 * D],
+    [dx + 0.2 * D, dy - 0.16 * D],
+    [dx + 0.02 * D, dy - 0.22 * D],
+  ], 0.3, true);
+  seam(ctx, f, shade(glass, -0.6), 0.035, roundel(dx, dy, 0.41 * D, 12, Math.PI * 0.05, Math.PI * 0.6), 0.45, true);
+  seam(ctx, f, shade(body, -0.6), 0.03, roundel(dx, dy, 0.465 * D, 28, 0, Math.PI * 2), 0.45, true);
   disc(ctx, f, palette.impact, dx - 0.15 * D, dy - 0.17 * D, 0.075, 0.9);
+  // 0701: and the rim light inside every edge that faces up (0698's), the disc's, the pods' and the gun's together.
+  const caddieOutline = (pen: Pen): void => trace(pen, f, caddieHull(stage, own));
+  const [top, bottom] = heightOf(ctx, caddieOutline);
+  rimLight(ctx, f, shade(body, 0.5), 0.75, top, bottom, sealWidth, caddieOutline);
 }
 
 /*
@@ -10099,8 +10241,11 @@ function finishBody(ctx: Pen, f: Frame, skin: FoeSkin, outline: (pen: Pen) => vo
  * ⚠️ **`sealWidth` IS AN ARGUMENT BECAUSE A SEAM MOVES THE PEN'S WIDTH.** `finishBody` reads it off the pen, which
  * is right where nothing between the seal and the finish has stroked; a ship's paint strokes its contours, so the
  * fighter reads the width at its seal and hands it over.
+ *
+ * Exported since 0701, for the one ship drawn a second time outside this file: the saucer edge-on on the pad
+ * (`paintSaucer` in `port-bake.ts`), which wears the rim its top view does.
  */
-function rimLight(ctx: Pen, f: Frame, lit: string, strength: number, top: number, bottom: number, sealWidth: number, outline: (pen: Pen) => void): void {
+export function rimLight(ctx: Pen, f: Frame, lit: string, strength: number, top: number, bottom: number, sealWidth: number, outline: (pen: Pen) => void): void {
   const width = Math.max(RIM_WIDTH * f.r, RIM_FLOOR);
   const rim = ctx.createLinearGradient(f.half, top, f.half, bottom);
   rim.addColorStop(0, rgba(mix(lit, '#ffffff', 0.4), strength));

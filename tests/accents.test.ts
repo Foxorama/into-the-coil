@@ -1200,11 +1200,12 @@ describe('paint costs nothing to draw', () => {
       At every stage and every pose, because each is its own drawing of the same ship.
 
       ⚠️ **THE LIST IS THE QUEUE'S PROGRESS** (`reports/the-ships-and-weapons-polished-2026-10-31.md`): a ship
-      joins it with its own decision, and the day every ship is on it the list is `SHIP_KINDS`. 0699 added the
-      Firebird; 0700 the estate, the Thunderbolt and the Hamster Ball.
+      joined it with its own decision, and the day every ship was on it the list became `SHIP_KINDS`. 0699 added
+      the Firebird; 0700 the estate, the Thunderbolt and the Hamster Ball; 0701 the Aqua Duck, the little caddie
+      and the Viper, the last three — so from 0701 it is an invariant over every ship, and a ship added to the union
+      without a finish fails here rather than being the one cut-out left in the hangar.
     */
-    const FINISHED = ['fighter', 'firebird', 'estate', 'thunderbolt', 'ball'] as const;
-    const finished = SPRITE_KINDS.filter((kind) => FINISHED.some((ship) => kind.startsWith(ship)) && !kind.endsWith('Hit'));
+    const finished = SPRITE_KINDS.filter((kind) => SHIP_KINDS.some((ship) => kind.startsWith(ship)) && !kind.endsWith('Hit'));
     expect(finished.length, 'no finished ship sprite to measure').toBeGreaterThan(0);
     for (const kind of finished) {
       const rims = trace(kind).inks.filter((ink) => ink.composite === 'source-atop' && ink.colour === 'gradient');
