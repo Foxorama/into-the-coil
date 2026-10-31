@@ -121,9 +121,9 @@ one review at the end.
 | 3 | **the estate** | the woody's panels, the roof rack and drum, the glass, every rim, the dice | A | **built — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)**; the dice were already lit (0466) and are left |
 | 4 | **the Thunderbolt** | tank, forks, pipes, the lightning ball, the Marmot and the Duck aboard | A | **built — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)**; no Duck is ever drawn aboard, so that part names nothing |
 | 5 | **the Hamster Ball** | the sphere's reflection and refraction, the cradle, Unity inside | A | **built — [0700](../docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md)**; the cradles are item 17's |
-| 6 | **the Aqua Duck** | the bath-duck's rubber, the marker, the hopper, the periscope | B | |
-| 7 | **the little caddie** | the disc's rim and dome from above; its edge-on drawing for the pad (`paintSaucer`) is the one second drawing in the game and gets the same pass | B | |
-| 8 | **the Viper** | the fight's drawing and the port's own pieces for the intro and the finale | B | |
+| 6 | **the Aqua Duck** | the bath-duck's rubber, the marker, the hopper, the periscope | B | **built — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)** |
+| 7 | **the little caddie** | the disc's rim and dome from above; its edge-on drawing for the pad (`paintSaucer`) is the one second drawing in the game and gets the same pass | B | **built — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)**, both drawings |
+| 8 | **the Viper** | the fight's drawing and the port's own pieces for the intro and the finale | B | **built — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)**, both drawings; every ship is now on 0698's guard |
 | 9 | **the pulse** | the mount on every ship it fits, the bullet, its impact | C | |
 | 10 | **the arc** | the mount, the node, the bolt's inks ([0470](../docs/decisions/0470-the-light-is-additive.md) stays) | C | |
 | 11 | **the shuriken** | the mount and drum, the blade in flight and turning | C | |
@@ -161,6 +161,12 @@ Each is a thing the pictures could not settle, with the one number that moves it
     edge — if it reads as a second outline, it is the `chrome` handed to `rimLight` in `drawThunderbolt`;
   - the ball's window on its crown is what says *clear plastic* on the pad, and a lighter smudge in the fight — if
     it reads as a smudge, it is the `pane` in `drawBall`.
+- **Batch B — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)** (the Aqua Duck, the
+  little caddie top-down and edge-on, the Viper in the fight and in the port):
+  - the duck's two feather contours across its wing read as feathers on the pad and as nothing in the fight — if they
+    read as cracks, they are the two `seam`s after the wing's shadow in `drawDuck`;
+  - the port's Viper keeps its dark Wyrm-Ship inks and gains only the finish — if the intro's racer should look like
+    the fight's venom-green one, that is a change of its colours, not made here.
 - **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
   material read at 85 px; a contour half a pixel wide there fades to nothing and is a line on the pad. Nothing
   in the queue adds a solid mark under 0106's floor to get detail into the fight.
