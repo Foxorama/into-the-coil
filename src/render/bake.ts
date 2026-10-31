@@ -3719,6 +3719,21 @@ const MARMOT_ASTRIDE: Astride = {
       [-6.2, -5.2],
       [-4.6, -6.2],
     ]), 0.8);
+    // 0700: the suit's leather lit across his shoulders and falling into shadow at his waist, and the crease of
+    // his elbow a contour in its own deep shade.
+    shaded(ctx, f, at(0, -7), at(0, -1.6), shade(suit, 0.3), shade(suit, -0.55), box([
+      [-9, -2.8],
+      [-8.2, -3.8],
+      [-6.8, -5.8],
+      [-5, -7],
+      [-2.6, -5.4],
+      [-1, -2.6],
+      [-6, -1.4],
+    ]), 0.5);
+    seam(ctx, f, shade(suit, -0.6), 0.03, box([
+      [2.4, -6.1],
+      [3.4, -5.6],
+    ]), 0.45);
     poly(ctx, f, fur, box([
       [-10.4, -2],
       [-11.6, -3.2],
@@ -3756,6 +3771,9 @@ const MARMOT_ASTRIDE: Astride = {
     // visor down in the shot's amber with a glare across it.
     poly(ctx, f, helmet, box(helmetArc()));
     shaded(ctx, f, at(-3, -12), at(-1, -6), shade(helmet, 0.45), shade(helmet, -0.1), box(helmetArc()));
+    // 0700: the shell's gloss — a specular streak round its crown — and its lower rim in shadow.
+    seam(ctx, f, shade(palette.impact, 0.3), 0.04, box(roundel(THUNDERBOLT_HELMET[0], THUNDERBOLT_HELMET[1], THUNDERBOLT_HELMET_R - 0.8, 8, Math.PI * 1.12, Math.PI * 1.42)), 0.55, true);
+    seam(ctx, f, shade(helmet, -0.6), 0.04, box(roundel(THUNDERBOLT_HELMET[0], THUNDERBOLT_HELMET[1], THUNDERBOLT_HELMET_R - 0.35, 8, Math.PI * 0.62, Math.PI * 0.95)), 0.5, true);
     poly(ctx, f, palette.player, box([
       [-4.6, -10.2],
       [-2.6, -10.4],
@@ -3832,6 +3850,8 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
   trace(ctx, f, outline);
   for (const hole of holes) trace(ctx, f, hole);
   seal(ctx);
+  // 0700: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
+  const sealWidth = ctx.lineWidth;
   // The lacquer, lit from above — with the gap under the rider's arm cut out of it, as it is out of the hull.
   shaded(ctx, f, at(0, -11), at(0, 6), shade(body, 0.3), shade(body, -0.3), outline, 1, false, holes);
   // The tank under the rider's chest, a sheen along its top, and on it one of its three looks — 0528's slot.
@@ -3982,9 +4002,77 @@ function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, ow
     disc(ctx, f, palette.player, bx, by, (THUNDERBOLT_BALL_R - 0.2) * 0.062);
     glow(ctx, f, palette.player, bx, by, 3.2 * 0.062, 0.6);
     disc(ctx, f, palette.impact, bx, by, 0.95 * 0.062);
+    // 0700: the ball as glass — a lit crescent along its upper edge and a glint off it.
+    seam(ctx, f, palette.impact, 0.035, box(roundel(THUNDERBOLT_BALL[0], THUNDERBOLT_BALL[1], THUNDERBOLT_BALL_R - 0.55, 8, Math.PI * 1.1, Math.PI * 1.65)), 0.55, true);
   }
+  /*
+    0700: the bike finished as a hot rod under a room's light, on 0698's terms — every mark translucent. The tank's
+    lacquer carries a horizon along its top and falls into shadow along its belly; each jug is finned, the fins
+    contours in the chrome's own deep shade; the pipe, the fork and the bars are chrome as chrome is at this size,
+    a glint along the top over a dark lower edge; the seat's leather catches the light along its crown; each tyre's
+    rubber is lit along its top with the hub glinting; and the headlamp is a lens.
+    `docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md`.
+  */
+  seam(ctx, f, shade(body, 0.85), 0.03, box([
+    [-0.6, -3.15],
+    [2.6, -3.38],
+    [7.2, -3.4],
+  ]), 0.5, true);
+  shaded(ctx, f, at(0, -2.6), at(0, -1.4), rgba(body, 0), shade(body, -0.7), box([
+    [-1, -2.6],
+    [7.6, -2.6],
+    [7.4, -1.5],
+    [-1, -1.4],
+  ]), 0.6);
+  for (const [x0, lean] of [
+    [-3.2, -1],
+    [1.4, 1],
+  ] as const) {
+    for (const y of [0.4, -0.3, -1]) {
+      const shift = lean * 0.9 * ((1.2 - y) / 2.6);
+      seam(ctx, f, shade(chrome, -0.6), 0.03, box([
+        [x0 - 1.25 + shift, y],
+        [x0 + 1.25 + shift, y],
+      ]), 0.5);
+    }
+  }
+  seam(ctx, f, palette.impact, 0.03, box([
+    [3.2, 2.9],
+    [-14.4, 2.9],
+  ]), 0.6);
+  seam(ctx, f, shade(chrome, -0.65), 0.04, box([
+    [3.4, 4.2],
+    [-14.4, 4.2],
+  ]), 0.5);
+  seam(ctx, f, palette.impact, 0.025, box([
+    [11.15, -4.2],
+    [13.05, 1.1],
+  ]), 0.55);
+  seam(ctx, f, palette.impact, 0.025, box([
+    [10.4, -6.8],
+    [9.95, -10],
+    [7.4, -10.3],
+  ]), 0.5);
+  seam(ctx, f, shade(palette.space, 0.4), 0.03, box([
+    [-8.8, -0.5],
+    [-6, -1.15],
+    [-1.6, -1.6],
+  ]), 0.55, true);
+  for (const [x, y] of [THUNDERBOLT_FRONT, THUNDERBOLT_REAR] as const) {
+    seam(ctx, f, shade(palette.trim, 0.55), 0.035, box(roundel(x, y, THUNDERBOLT_TYRE - 0.3, 8, Math.PI * 1.15, Math.PI * 1.85)), 0.45, true);
+    disc(ctx, f, palette.impact, ...at(x - 0.3, y - 0.3), 0.02, 0.75);
+  }
+  disc(ctx, f, shade(palette.impact, 0.6), ...at(11.9, -1.1), 0.018, 0.8);
   // 0612: and its rider over all of it — over the seat, a leg over the engine, a paw on the grip.
   if (astride !== null) astride.paint(ctx, f, palette, box, at);
+  // 0700: and the rim light inside every edge that faces up (0698's), the rider's with the bike's, in the chrome —
+  // black lacquer and a black helmet both found by a lit edge, as the Firebird's lacquer is by its gold (0699).
+  const bikeOutline = (pen: Pen): void => {
+    trace(pen, f, outline);
+    for (const hole of holes) trace(pen, f, hole);
+  };
+  const [top, bottom] = heightOf(ctx, bikeOutline);
+  rimLight(ctx, f, chrome, 0.7, top, bottom, sealWidth, bikeOutline);
 }
 
 /**
@@ -4005,8 +4093,17 @@ function drawThunderboltRider(ctx: Pen, f: Frame, palette: Palette, rider: Figur
   trace(ctx, f, silhouette);
   trace(ctx, f, gap);
   seal(ctx);
+  const sealWidth = ctx.lineWidth;
   shaded(ctx, f, at(0, -11), at(0, 6), shade(body, 0.3), shade(body, -0.3), silhouette, 1, false, [gap]);
   astride.paint(ctx, f, palette, box, at);
+  // 0700: and the rim light `drawThunderbolt` lays over them, so the rider the port lays on is the rider it drew.
+  const riderOutline = (pen: Pen): void => {
+    trace(pen, f, silhouette);
+    trace(pen, f, gap);
+  };
+  // Its light falls over the whole bike's height, as it does there, so the two pictures agree where they meet.
+  const [top, bottom] = heightOf(ctx, (pen) => trace(pen, f, box(thunderboltOutline(0, true, astride.top))));
+  rimLight(ctx, f, shade(palette.trim, 0.7), 0.7, top, bottom, sealWidth, riderOutline);
 }
 
 /*
@@ -5026,6 +5123,8 @@ function paintUnityAbove(ctx: Pen, f: Frame, palette: Palette, scale: number, po
   }
   const back = ps([...edge.map(([x, y]) => [x, -y] as Pt), ...edge.reverse()]);
   shaded(ctx, f, p(0, -0.1), p(0, 0.1), shade(fur, 0.15), furDark, back);
+  // 0700: the light along the fur of their back on the side toward it — light, not body, finer than the floor.
+  seam(ctx, f, shade(fur, 0.5), 0.025 * k, [p(-0.4, -0.055), p(-0.12, -0.08), p(0.18, -0.052)], 0.45, true);
   /*
     0620: *"why does the weasel take off its pants when it gets into the hamster ball"* — the overalls Unity
     wears at the bench, at the ship and on the bust, seen from above: the seat over the haunches, wrapped
@@ -5149,6 +5248,8 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtK
   ctx.fillStyle = rgba(plastic, 0.32);
   trace(ctx, f, ballHull(stage, BALL_R, BALL_R));
   seal(ctx);
+  // 0700: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
+  const sealWidth = ctx.lineWidth;
   // The thruster pack behind, slate with its nozzle's dark mouth.
   shaded(ctx, f, [-0.95, -0.25], [-0.95, 0.25], shade(slate, 0.25), shade(slate, -0.4), [
     [-BALL_R + 0.05, -0.24],
@@ -5157,6 +5258,16 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtK
     [-BALL_R + 0.05, 0.24],
   ]);
   disc(ctx, f, shade(slate, -0.65), -BALL_PACK_R + 0.12, 0, 0.12);
+  // 0700: the pack's casing lit along its upper edge, the nozzle's lip catching the light, a panel seam across it.
+  seam(ctx, f, shade(slate, 0.7), 0.025, [
+    [-BALL_R + 0.04, -0.21],
+    [-BALL_PACK_R + 0.05, -0.21],
+  ], 0.6);
+  seam(ctx, f, shade(slate, 0.6), 0.02, roundel(-BALL_PACK_R + 0.12, 0, 0.1, 8, Math.PI * 1.1, Math.PI * 1.9), 0.55, true);
+  seam(ctx, f, shade(slate, -0.6), 0.02, [
+    [-BALL_R - 0.06, -0.22],
+    [-BALL_R - 0.06, 0.22],
+  ], 0.45);
   // A cradle on each axle stub that carries a tube; the tube itself is the frame's (`stepLoaded`).
   for (const place of SHIPS.ball.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
     paintPylon(ctx, f, palette, [(place.along - SHIPS.ball.tubeLength / 2) / BOX_R, place.across / BOX_R]);
@@ -5188,8 +5299,33 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtK
     disc(ctx, f, shade(palette.bullet, -0.6), sx, sy, 0.1);
   }
   band(ctx, f, shade(plastic, 0.15), 0, 0, BALL_R * 0.99, BALL_R * 0.86, 0.85);
+  /*
+    0700: the sphere as a sphere of clear plastic, on 0698's terms — every mark translucent, and none of it turning
+    with the ball, because it is the room's light on it and not a thing on it. The plastic bends the light at its
+    rim: deep on the side away from the light, where the wall is seen edge-on, and a thin band of bounced light
+    inside the deep side; the room's window lies on its crown as a soft pane, above the streak and the glint it
+    always had; and the seam where the two halves were moulded runs round it.
+  */
+  const deepRim: Pt[] = [
+    ...roundel(0, 0, BALL_R * 0.86, 16, Math.PI * 0.05, Math.PI * 0.95),
+    ...roundel(0, 0, BALL_R * 0.7, 16, Math.PI * 0.05, Math.PI * 0.95).reverse(),
+  ];
+  shaded(ctx, f, [0, BALL_R * 0.5], [0, BALL_R * 0.86], rgba(shade(plastic, -0.7), 0), shade(plastic, -0.7), deepRim, 0.45);
+  seam(ctx, f, shade(plastic, 0.45), 0.03, roundel(0, 0, BALL_R * 0.78, 12, Math.PI * 0.2, Math.PI * 0.8), 0.35, true);
+  const pane: Pt[] = [
+    [-BALL_R * 0.3, -BALL_R * 0.7],
+    [BALL_R * 0.12, -BALL_R * 0.66],
+    [BALL_R * 0.08, -BALL_R * 0.42],
+    [-BALL_R * 0.28, -BALL_R * 0.46],
+  ];
+  shaded(ctx, f, [0, -BALL_R * 0.7], [0, -BALL_R * 0.42], palette.impact, rgba(palette.impact, 0), pane, 0.35, true);
+  seam(ctx, f, shade(plastic, -0.35), 0.025, roundel(0, 0, BALL_R * 0.92, 20, -Math.PI * 0.42, Math.PI * 0.42), 0.4, true);
   seam(ctx, f, shade(plastic, 0.6), 0.05, roundel(0, 0, BALL_R * 0.8, 14, Math.PI * 1.05, Math.PI * 1.6), 0.8, true);
   disc(ctx, f, palette.impact, -BALL_R * 0.45, -BALL_R * 0.48, 0.07, 0.85);
+  // 0700: and the rim light inside every edge that faces up (0698's), in the plastic brightened.
+  const ballOutline = (pen: Pen): void => trace(pen, f, ballHull(stage, BALL_R, BALL_R));
+  const [top, bottom] = heightOf(ctx, ballOutline);
+  rimLight(ctx, f, shade(plastic, 0.55), 0.75, top, bottom, sealWidth, ballOutline);
 }
 
 /** Which of the marker's colours a paintball or splat sprite is, read off its name — 0595. */
@@ -6129,6 +6265,8 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   ctx.fillStyle = paint;
   trace(ctx, f, outline);
   seal(ctx);
+  // 0700: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
+  const sealWidth = ctx.lineWidth;
   /*
     ── JAZZED — 0461 ──────────────────────────────────────────────────────────────────────────────
     *"They could be way cooler."* A woody, as a gilded estate should be: the gilt burnished — bright
@@ -6177,6 +6315,48 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     [-0.3, 4.9],
     [-0.3, 1.1],
   ]), 0.8);
+  /*
+    0700: the woody lit as panels under a room's light, on 0698's terms — every mark translucent, so the fight's
+    camera sees the light and the pad sees the panels. Each burl panel catches the light along its top and falls
+    into shadow over the sill; the lacquer on the wood carries a horizon along it; the gilt strip under the glass is
+    polished metal, a bright band over a dark one; the door's shut line is a contour in the gilt's own deep shade.
+    `docs/decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md`.
+  */
+  for (const [from, to] of [
+    [-15.9, -1.3],
+    [-0.3, 15.4],
+  ] as const) {
+    shaded(ctx, f, at(0, 1.1), at(0, 2.6), shade(wood, 0.5), wood, box([
+      [from, 1.1],
+      [to, 1.1],
+      [to, 2.6],
+      [from, 2.6],
+    ]), 0.3);
+  }
+  shaded(ctx, f, at(0, 4), at(0, 5.4), shade(wood, -0.1), shade(wood, -0.8), box([
+    [-16.4, 4],
+    [16, 4],
+    [16, 5.4],
+    [-16.4, 5.4],
+  ]), 0.45);
+  seam(ctx, f, shade(wood, 0.75), 0.03, box([
+    [-15.4, 2.05],
+    [-1.8, 2.05],
+  ]), 0.3);
+  seam(ctx, f, shade(wood, 0.75), 0.03, box([
+    [0.2, 2.05],
+    [14.6, 2.6],
+  ]), 0.3);
+  shaded(ctx, f, at(0, -0.4), at(0, 0.6), shade(paint, 0.7), shade(paint, -0.45), box([
+    [-14.4, -0.4],
+    [8.4, -0.4],
+    [10.4, 0.6],
+    [-16.4, 0.6],
+  ]), 0.55);
+  seam(ctx, f, shade(paint, -0.6), 0.03, box([
+    [-0.8, -0.3],
+    [-0.8, 4.9],
+  ]), 0.45);
   // The cyan running light along the top of it, a pinstripe where a woody wears its chrome strip — 0463.
   seam(ctx, f, palette.player, 0.055, box([
     [-15.4, 0.75],
@@ -6243,9 +6423,40 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
       [to, 6],
       [from, 6],
     ]));
+    // 0700: chrome as chrome is at this size — a bright band between two dark ones, and a glint along its top.
+    poly(ctx, f, shade(palette.trim, -0.45), box([
+      [from, 5],
+      [to, 5],
+      [to, 5.45],
+      [from, 5.45],
+    ]), 0.55);
+    seam(ctx, f, palette.impact, 0.03, box([
+      [from + Math.sign(to - from) * 0.3, 4.5],
+      [to - Math.sign(to - from) * 0.3, 4.5],
+    ]), 0.7);
   }
   // The wheels over the sills, on its row — 0527; `paintRim`'s whitewall is this car's own.
   paintWheels(ctx, f, palette, 'estate', rim);
+  /*
+    0700: each tyre in its well, as 0699 sat the Firebird's — the arch in shadow over it, the rubber lit along its
+    top, the rim's dish lit from above so whatever is fitted has a top and a bottom, and the hub glinting; and the
+    underbody in shadow along the rocker between them.
+  */
+  for (const x of [9, -9]) {
+    poly(ctx, f, shade(paint, -0.9), box([
+      ...roundel(x, 6.4, 3.35, 12, Math.PI + 0.3, Math.PI * 2 - 0.3),
+      ...roundel(x, 6.4, 2.95, 12, Math.PI + 0.3, Math.PI * 2 - 0.3).reverse(),
+    ]), 0.5);
+    seam(ctx, f, shade(palette.trim, 0.6), 0.03, box(roundel(x, 6.4, 2.65, 8, Math.PI * 1.15, Math.PI * 1.85)), 0.45, true);
+    shaded(ctx, f, at(x, 4.1), at(x, 8.7), palette.impact, shade(palette.trim, -0.7), box(roundel(x, 6.4, 2.3, 20, 0, Math.PI * 2)), 0.3);
+    disc(ctx, f, palette.impact, ...at(x - 0.3, 6.1), 0.02, 0.8);
+  }
+  poly(ctx, f, shade(paint, -0.9), box([
+    [-5.6, 5.3],
+    [5.6, 5.3],
+    [5.6, 5.95],
+    [-5.6, 5.95],
+  ]), 0.4);
   // The glasshouses, split by a pillar in the gilt.
   poly(ctx, f, palette.glass, box([
     [-12.8, -3.4],
@@ -6259,6 +6470,38 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     [8.6, 0.1],
     [-0.4, 0.1],
   ]));
+  // 0700: the glass as glass — paler under the roof, deep at the sill with the cabin dark behind it — and the gilt
+  // frame round each pane a contour in the gilt's own deep shade.
+  shaded(ctx, f, at(0, -4), at(0, 0), shade(palette.glass, 0.25), shade(palette.glass, -0.6), box([
+    [-12.8, -3.4],
+    [-2.2, -3.9],
+    [-2.2, -0.4],
+    [-12.8, -0.4],
+  ]), 0.6);
+  shaded(ctx, f, at(0, -4.2), at(0, 0.1), shade(palette.glass, 0.25), shade(palette.glass, -0.6), box([
+    [-0.4, -4],
+    [3.4, -4.2],
+    [8.6, 0.1],
+    [-0.4, 0.1],
+  ]), 0.6);
+  for (const pane of [
+    [
+      [-12.8, -3.4],
+      [-2.2, -3.9],
+      [-2.2, -0.4],
+      [-12.8, -0.4],
+      [-12.8, -3.4],
+    ],
+    [
+      [-0.4, -4],
+      [3.4, -4.2],
+      [8.6, 0.1],
+      [-0.4, 0.1],
+      [-0.4, -4],
+    ],
+  ] as const) {
+    seam(ctx, f, shade(paint, -0.55), 0.03, box(pane), 0.5);
+  }
   // A glare across both, raked back — 0461.
   for (const x of [-10.5, 1]) {
     poly(ctx, f, shade(palette.glass, 0.45), box([
@@ -6275,6 +6518,19 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     [0.5, -4.1],
     [-13.5, -4.1],
   ]));
+  // 0700: the rack a rail, lit along its top and in shadow under it, its cross-bars contours in its own deep shade.
+  shaded(ctx, f, at(0, ESTATE_RACK), at(0, -4.1), shade(gilt, 0.85), shade(gilt, -0.35), box([
+    [-13.5, ESTATE_RACK],
+    [0.5, ESTATE_RACK],
+    [0.5, -4.1],
+    [-13.5, -4.1],
+  ]), 0.6);
+  for (const x of [-11, -6.5, -2]) {
+    seam(ctx, f, shade(gilt, -0.5), 0.03, box([
+      [x, ESTATE_RACK + 0.2],
+      [x, -4.3],
+    ]), 0.45);
+  }
   // Its turrets on the rack, in its own burl banded in gilt.
   paintTurrets(ctx, f, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
   /*
@@ -6287,6 +6543,9 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     shaded(ctx, f, at(0, ESTATE_STAR[1] - ESTATE_DRUM), at(0, ESTATE_STAR[1] + ESTATE_DRUM), shade(palette.trim, 0.45), shade(palette.trim, -0.4), box(roundel(ESTATE_STAR[0], ESTATE_STAR[1], ESTATE_DRUM, 24, 0, Math.PI * 2)));
     disc(ctx, f, shade(palette.space, 0.15), ...at(ESTATE_STAR[0], ESTATE_STAR[1]), 1.38 * 0.062);
     poly(ctx, f, palette.blade, box(steelStar(ESTATE_STAR[0], ESTATE_STAR[1], 1.25)));
+    // 0700: the drum's lip catching the light along its top, and the steel star lit across its upper blades.
+    seam(ctx, f, palette.impact, 0.03, box(roundel(ESTATE_STAR[0], ESTATE_STAR[1], ESTATE_DRUM - 0.25, 10, Math.PI * 1.15, Math.PI * 1.85)), 0.6, true);
+    shaded(ctx, f, at(0, ESTATE_STAR[1] - 1.25), at(0, ESTATE_STAR[1] + 1.25), palette.impact, shade(palette.blade, -0.5), box(steelStar(ESTATE_STAR[0], ESTATE_STAR[1], 1.25)), 0.45);
   }
   // A headlamp at the bumper, a tail lamp at the tailgate — the shot's orange, never the enemy's red.
   poly(ctx, f, palette.impact, box([
@@ -6301,6 +6560,27 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     [-16, 5.6],
     [-17.8, 5.6],
   ]));
+  // 0700: each lamp a lens, lit along its top, and its light round it.
+  shaded(ctx, f, at(0, 2.4), at(0, 4.4), palette.impact, shade(palette.impact, -0.4), box([
+    [16, 2.4],
+    [17.8, 2.4],
+    [17.8, 4.4],
+    [16, 4.4],
+  ]), 0.7);
+  // Centred on the lens and no wider than the bumper's overhang, so the light stays inside the box (0227's reach).
+  glow(ctx, f, palette.impact, ...at(16.9, 3.4), 0.09, 0.55);
+  shaded(ctx, f, at(0, 3.6), at(0, 5.6), shade(palette.bullet, 0.5), shade(palette.bullet, -0.35), box([
+    [-17.8, 3.6],
+    [-16, 3.6],
+    [-16, 5.6],
+    [-17.8, 5.6],
+  ]), 0.7);
+  glow(ctx, f, palette.bullet, ...at(-16.9, 4.6), 0.09, 0.55);
+  // 0700: and the rim light inside every edge that faces up (0698's), in the gilt brightened — the roof, the rack,
+  // the bonnet and the drum catch the room as burnished gold does.
+  const carOutline = (pen: Pen): void => trace(pen, f, outline);
+  const [top, bottom] = heightOf(ctx, carOutline);
+  rimLight(ctx, f, shade(paint, 0.45), 0.75, top, bottom, sealWidth, carOutline);
 }
 
 /*
