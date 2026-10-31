@@ -1163,15 +1163,18 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE: ITEM 0 BUILT, THE FIGHTER IS THE SAMPLE — 2026-10-31
+### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE: ITEMS 0 AND 1 BUILT, THE FIREBIRD IS NEXT — 2026-10-31
 
 Asked: *"a pass over all the spaceships and weapons … blocky and badly pixelated."*
 [`the-ships-and-weapons-polished`](../reports/the-ships-and-weapons-polished-2026-10-31.md) is the
-queue — twenty items, what was photographed first, the direction and the two vetoes the first item
-collects. Half of *pixelated* was a resolution cap on the pad and is built as
-[0697](decisions/0697-the-bitmap-has-a-budget.md); the other half is the drawing, and **next is item 1,
-the fighter, as the style sample** every other ship is vetoed against. Read the report's *direction*
-before drawing anything, and hand each item over with the sheet, the fight and the pad photographed.
+queue — twenty items, what was photographed first, the direction and the vetoes. Half of *pixelated*
+was a resolution cap on the pad and is built as [0697](decisions/0697-the-bitmap-has-a-budget.md); the
+other half is the drawing, and the fighter is built as the style sample —
+[0698](decisions/0698-the-fighter-is-finished.md), lit as parts and finished over its paint. **Owed: the
+player's two vetoes from 0698's pictures** (the outline near black; the wedge uncurved), recorded in the
+report's *answers*. **Next is item 2, the Firebird**, on 0698's terms: light and material for the fight's
+camera, contours for the pad, everything added translucent. Hand each item over with the sheet, the fight
+and the pad photographed.
 
 ### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
 

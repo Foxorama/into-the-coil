@@ -2442,6 +2442,58 @@ const SHIP_CANOPY_LIGHT: readonly Pt[] = [
   [0, -0.12],
 ];
 
+/** The cockpit under the canopy's glass — 0698: the canopy's shape, a little inside it. */
+const SHIP_COCKPIT: readonly Pt[] = [
+  [0.32, -0.03],
+  [0.22, -0.14],
+  [0.02, -0.18],
+  [-0.07, -0.1],
+  [-0.07, 0.1],
+  [0.02, 0.18],
+  [0.22, 0.14],
+  [0.32, 0.03],
+];
+
+/*
+  ── THE FIGHTER'S PARTS, LIT — 0698 ───────────────────────────────────────────────────────────────
+
+  `docs/decisions/0698-the-fighter-is-finished.md`. The hull had one wash over the whole of it (0461) and every mark on
+  it was flat, so the ship read as a cut-out with a lighter corner. These are the parts the eye reads a fighter by,
+  each in the hull's own radius and each lit on its own: the fuselage a cylinder down the spine, the wings falling away
+  to their tips with the fuselage's shadow on the one below it, then — over the paint — the contours in the body's own
+  deep shade and a rim light inside every edge that faces up the screen (`rimLight`, 0632's). Every wash and seam is
+  translucent, so `tests/accents.test.ts` holds it inside the box rather than to 0106's floor: at the fight's camera a
+  seam fades to nothing, and on the pad, where 0697 bakes the same drawing four times as large, it is a line.
+*/
+
+/** The fuselage, nose to tail, a little inside the hull's own edges; the lower half is its mirror. */
+const SHIP_FUSELAGE_UPPER: readonly Pt[] = [
+  [0.97, 0],
+  [0.72, -0.12],
+  [0.34, -0.23],
+  [0, -0.3],
+  [-0.5, -0.3],
+  [-0.76, -0.27],
+  [-0.76, -0.12],
+  [-0.42, 0],
+];
+
+/** The wing, root to tip, as the hull has it; the other is its mirror. */
+const SHIP_WING: readonly Pt[] = [
+  [-0.15, -0.48],
+  [-0.42, -0.78],
+  [-0.72, -0.78],
+  [-0.55, -0.42],
+];
+
+/** The fuselage's shadow on the wing below it, the light being from up the screen. */
+const SHIP_WING_SHADOW: readonly Pt[] = [
+  [-0.18, 0.36],
+  [-0.52, 0.36],
+  [-0.58, 0.48],
+  [-0.24, 0.52],
+];
+
 /** The engine housing either side of the notch, in the exhaust's own colour. */
 const SHIP_NACELLE: readonly Pt[] = [
   [-0.74, -0.29],
@@ -2539,10 +2591,18 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, po
     [0.72, -0.09],
     [0.72, 0.09],
   ]);
-  poly(ctx, f, palette.glass, SHIP_CANOPY);
+  /*
+    0698: the canopy is glass with a cockpit under it — a smooth pane (`curveLoop`, where it was an eight-cornered
+    sticker) paler at the front and deep at the back, the cockpit dark under the glass, and the glint over both.
+    `docs/decisions/0698-the-fighter-is-finished.md`.
+  */
+  shaded(ctx, f, [0.42, 0], [-0.12, 0], shade(palette.glass, 0.3), shade(palette.glass, -0.45), SHIP_CANOPY, 1, true);
+  shaded(ctx, f, [0.3, 0], [-0.08, 0], shade(palette.glass, -0.3), shade(palette.glass, -0.75), SHIP_COCKPIT, 0.8, true);
   // The canopy's light in the impact ink since 0241: a glint, not a paler pane.
   poly(ctx, f, palette.impact, SHIP_CANOPY_LIGHT, 0.85);
-  for (const side of [SHIP_NACELLE, mirrored(SHIP_NACELLE)]) poly(ctx, f, palette.flame, side);
+  // 0698: each nacelle a cylinder — lit along the edge that faces up the screen, deep along the other.
+  shaded(ctx, f, [0, -0.29], [0, -0.13], shade(palette.flame, 0.4), shade(palette.flame, -0.35), SHIP_NACELLE);
+  shaded(ctx, f, [0, 0.13], [0, 0.29], shade(palette.flame, 0.4), shade(palette.flame, -0.35), mirrored(SHIP_NACELLE));
   for (const side of [SHIP_CORE, mirrored(SHIP_CORE)]) poly(ctx, f, palette.hazard, side);
   // 0525: the pods are the pulse's, so a fighter flying another ship's gun wears none.
   if (tier >= 1 && pods) {
@@ -4574,16 +4634,23 @@ export function drawPlayerShip(
       // when the gun hangs under the nose, where a silhouette of it in the hull's ink would paint over it.
       if (own && !under) trace(ctx, f, fighterPulseHull());
       seal(ctx);
+      // 0698: the seal's width, read here before a seam below moves the pen's, for the rim light laid last.
+      const sealWidth = ctx.lineWidth;
+      const body = livery ?? palette.player;
       // Lit from above and ahead before the livery goes on, so the hull has volume under it — 0461.
       // Deeper since 0463: lit to near white, the hull left the livery nothing to stand against.
-      shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(livery ?? palette.player, 0.15), shade(livery ?? palette.player, -0.4), SHIP_HULL);
+      shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(body, 0.15), shade(body, -0.4), SHIP_HULL);
+      // 0698: and then each part lit as a form of its own, under the livery — `litFighterParts` says which.
+      litFighterParts(ctx, fh, body);
       /*
         ⚠️ **0581: NO PODS, WHATEVER IT FLIES.** Its pulse was a cigar off each wingtip (0469), over the wings
         the player liked best; it is drawn on the nose as any borrowed gun is, below — so `own` no longer
         changes the fighter's drawing, and its pods' glow went with them.
       */
-      paintShip(ctx, fh, palette, 2, false, livery ?? palette.player, sweeps);
+      paintShip(ctx, fh, palette, 2, false, body, sweeps);
       jazzFighter(ctx, fh, palette, false, art);
+      // 0698: its contours and its rim light, over the paint.
+      finishFighter(ctx, fh, palette, body, sealWidth, sweeps);
       // 0581: its pylons, one under each wing that carries a tube; the tube itself is the frame's (`stepTubes`).
       // Each under the tube's middle: the place is its nose, and the tube lies half its length behind it.
       // 0662: none when the tubes hang under the wing — a rail inside the chord is wholly under it too.
@@ -4701,6 +4768,63 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true, art: Art
     // 0525: the pods' muzzles glow only where there are pods.
     if (pods) glow(ctx, f, palette.hazard, -0.09, -0.96 * side, 0.15, 0.6);
   }
+}
+
+/**
+ * The fighter's parts lit as forms, under its livery — 0698 (THE FIGHTER'S PARTS, LIT, above, says why). The light is
+ * from up the screen and ahead, as 0461's wash has it, so the fuselage is brightest along its spine and deeper on its
+ * lower flank, and the lower wing is the darker one and carries the fuselage's shadow.
+ */
+function litFighterParts(ctx: Pen, f: Frame, body: string): void {
+  shaded(ctx, f, [0, -0.3], [0, 0], shade(body, -0.2), shade(body, 0.3), SHIP_FUSELAGE_UPPER, 0.75);
+  shaded(ctx, f, [0, 0.3], [0, 0], shade(body, -0.42), shade(body, 0.3), mirrored(SHIP_FUSELAGE_UPPER), 0.75);
+  shaded(ctx, f, [-0.35, -0.45], [-0.55, -0.78], shade(body, 0.05), shade(body, -0.3), SHIP_WING, 0.6);
+  shaded(ctx, f, [-0.35, 0.45], [-0.55, 0.78], shade(body, -0.1), shade(body, -0.45), mirrored(SHIP_WING), 0.6);
+  poly(ctx, f, shade(body, -0.8), SHIP_WING_SHADOW, 0.3);
+}
+
+/**
+ * The fighter's finish, over its paint — 0698: its contours in the body's own deep shade (the fuselage's edge against
+ * each wing, a panel line across each wing, the canopy's frame), the glass's specular streak, and the rim light inside
+ * every edge that faces up the screen, the canards swept as they are. `sealWidth` is the seal's, read before any seam.
+ */
+function finishFighter(ctx: Pen, f: Frame, palette: Palette, body: string, sealWidth: number, sweeps: Sweeps): void {
+  const deep = shade(body, -0.6);
+  // The canards as forms, swept as they are: lit at the leading edge, falling away to the trailing one.
+  shaded(ctx, f, [0.58, -0.2], [0.3, -0.72], shade(body, 0.25), shade(body, -0.35), swept(SHIP_CANARD, sweeps.upper), 0.55);
+  shaded(ctx, f, [0.58, 0.2], [0.3, 0.72], shade(body, 0.1), shade(body, -0.45), swept(mirrored(SHIP_CANARD), sweeps.lower), 0.55);
+  for (const side of [1, -1] as const) {
+    // The livery's stripe bevelled: lit along the wing's leading edge, deep along its aft edge (0241's stripe).
+    shaded(ctx, f, [-0.295, -0.615 * side], [-0.435, -0.615 * side], shade(palette.bullet, 0.45), shade(palette.bullet, -0.3), [
+      [-0.17, -0.47 * side],
+      [-0.42, -0.76 * side],
+      [-0.56, -0.76 * side],
+      [-0.31, -0.47 * side],
+    ], 0.6);
+    // The wingtip's gold lit from up the screen, and a light round it.
+    shaded(ctx, f, [0, -0.76 * side], [0, -0.61 * side], shade(palette.hazard, 0.5), shade(palette.hazard, -0.2), [
+      [-0.45, -0.76 * side],
+      [-0.69, -0.76 * side],
+      [-0.63, -0.61 * side],
+      [-0.47, -0.61 * side],
+    ], 0.7);
+    glow(ctx, f, palette.hazard, -0.56, -0.69 * side, 0.16, 0.45);
+    // The engine's core white-hot at its heart.
+    disc(ctx, f, palette.impact, -0.695, -0.21 * side, 0.045, 0.85);
+    seam(ctx, f, deep, 0.03, [[0.02, -0.31 * side], [-0.52, -0.31 * side]], 0.45);
+    seam(ctx, f, deep, 0.03, [[-0.3, -0.5 * side], [-0.5, -0.74 * side]], 0.35);
+  }
+  // The keel's edge caught by the light.
+  seam(ctx, f, shade(palette.trim, 0.6), 0.02, [[-0.33, -0.06], [-0.11, -0.06]], 0.6);
+  seam(ctx, f, deep, 0.03, [...SHIP_CANOPY, SHIP_CANOPY[0]!, SHIP_CANOPY[1]!], 0.55, true);
+  seam(ctx, f, shade(palette.impact, 0.5), 0.025, [[0.34, -0.1], [0.2, -0.19], [0.06, -0.22]], 0.5, true);
+  const outline = (pen: Pen): void => {
+    trace(pen, f, SHIP_HULL);
+    trace(pen, f, swept(SHIP_CANARD, sweeps.upper));
+    trace(pen, f, swept(mirrored(SHIP_CANARD), sweeps.lower));
+  };
+  const [top, bottom] = heightOf(ctx, outline);
+  rimLight(ctx, f, mix(body, '#ffffff', 0.35), 0.8, top, bottom, sealWidth, outline);
 }
 
 /** The rainbow dome's four quarters, front first round the clock — 0589. */
@@ -9613,12 +9737,26 @@ function finishBody(ctx: Pen, f: Frame, skin: FoeSkin, outline: (pen: Pen) => vo
   ctx.beginPath();
   outline(ctx);
   ctx.fill('evenodd');
-  const sealWidth = ctx.lineWidth;
+  rimLight(ctx, f, skin.lit, look.rim, top, bottom, ctx.lineWidth, outline);
+}
+
+/**
+ * A rim light inside every edge of a body that faces up — the second half of 0632's finish, on its own since
+ * `docs/decisions/0698-the-fighter-is-finished.md` so a ship can wear it over its own paint: the outline lowered by
+ * half the seal's width and half its own, stroked `source-atop` in `lit` brightened, fading out by the middle of the
+ * body's height (`top` to `bottom`, in pixels). `source-atop` lands it only where the body already has ink, so it
+ * cannot widen a silhouette; its alpha is under 0.9, so `tests/accents.test.ts` reads it as light rather than ink.
+ *
+ * ⚠️ **`sealWidth` IS AN ARGUMENT BECAUSE A SEAM MOVES THE PEN'S WIDTH.** `finishBody` reads it off the pen, which
+ * is right where nothing between the seal and the finish has stroked; a ship's paint strokes its contours, so the
+ * fighter reads the width at its seal and hands it over.
+ */
+function rimLight(ctx: Pen, f: Frame, lit: string, strength: number, top: number, bottom: number, sealWidth: number, outline: (pen: Pen) => void): void {
   const width = Math.max(RIM_WIDTH * f.r, RIM_FLOOR);
   const rim = ctx.createLinearGradient(f.half, top, f.half, bottom);
-  rim.addColorStop(0, rgba(mix(skin.lit, '#ffffff', 0.4), look.rim));
-  rim.addColorStop(0.5, rgba(skin.lit, 0));
-  rim.addColorStop(1, rgba(skin.lit, 0));
+  rim.addColorStop(0, rgba(mix(lit, '#ffffff', 0.4), strength));
+  rim.addColorStop(0.5, rgba(lit, 0));
+  rim.addColorStop(1, rgba(lit, 0));
   ctx.globalCompositeOperation = 'source-atop';
   ctx.globalAlpha = RIM_ALPHA;
   ctx.strokeStyle = rim;

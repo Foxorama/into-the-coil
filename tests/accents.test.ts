@@ -1190,6 +1190,29 @@ describe('paint costs nothing to draw', () => {
     }
   });
 
+  it('0698: the fighter is finished — a rim light inside its edges, wide enough to be drawn', () => {
+    /*
+      ⚠️ **THE ONE THING ABOUT THE FINISH THAT IS AN INVARIANT.** 0698 lights the fighter as a set of parts and
+      finishes it over its paint; every strength in that is the fighter's own and is not held. What is held is
+      0632's rule carried to a ship: the body wears a rim light, laid `source-atop` so it cannot widen the
+      silhouette, and wide enough to be drawn at the fight's camera. Every other guard in this file was green on
+      the flat fighter, which is why this one exists — a finish left off is a ship nobody notices is a cut-out.
+      At every stage and every pose, because each is its own drawing of the same ship.
+    */
+    const finished = SPRITE_KINDS.filter((kind) => kind.startsWith('fighter') && !kind.endsWith('Hit'));
+    expect(finished.length, 'no fighter sprite to measure').toBeGreaterThan(0);
+    for (const kind of finished) {
+      const rims = trace(kind).inks.filter((ink) => ink.composite === 'source-atop' && ink.colour === 'gradient');
+      expect(rims.length, `the ${kind} has no rim light`).toBeGreaterThan(0);
+      for (const rim of rims) {
+        expect(
+          rim.width,
+          `the ${kind}'s rim light is ${rim.width.toFixed(2)}px wide on a 1280×720 screen, under 0106's floor, so it is not drawn`,
+        ).toBeGreaterThanOrEqual(2.5);
+      }
+    }
+  });
+
   it('and every kind that is not a body is one the list above names on purpose', () => {
     // The hull-less list is a claim about the atlas, so a kind added to the union lands in BODIES
     // and is measured — unless somebody comes here and says why it should not be.
