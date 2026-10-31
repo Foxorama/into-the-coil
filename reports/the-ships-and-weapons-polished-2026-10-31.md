@@ -114,8 +114,8 @@ the ship the photographs were taken of and the one on the pad in every menu pict
 |---|---|---|---|
 | 0 | **the bitmap has a budget** | `bakeSize` honours the blit resolution under a pixel budget; the pad's pieces and glyphs sharp | **built — [0697](../docs/decisions/0697-the-bitmap-has-a-budget.md)** |
 | 1 | **the fighter** — the style sample | the hull, wings, canards, canopy, nacelles and lamps; its three tube stages, hurt twin and dance poses; its three nose arts; its pylons. The same drawing stands on the pad | **built — [0698](../docs/decisions/0698-the-fighter-is-finished.md)**; owed the two vetoes below |
-| 2 | **the Firebird** | lacquer, glass, the bird and the flames, the snowflakes and every rim, the shaker, the lamps; the tilt poses | next |
-| 3 | **the estate** | the woody's panels, the roof rack and drum, the glass, every rim, the dice | |
+| 2 | **the Firebird** | lacquer, glass, the bird and the flames, the snowflakes and every rim, the shaker, the lamps; the tilt poses | **built — [0699](../docs/decisions/0699-the-firebird-is-finished.md)**; its gold rim is a veto of its own |
+| 3 | **the estate** | the woody's panels, the roof rack and drum, the glass, every rim, the dice | next |
 | 4 | **the Thunderbolt** | tank, forks, pipes, the lightning ball, the Marmot and the Duck aboard | |
 | 5 | **the Hamster Ball** | the sphere's reflection and refraction, the cradle, Unity inside | |
 | 6 | **the Aqua Duck** | the bath-duck's rubber, the marker, the hopper, the periscope | |
