@@ -71,9 +71,9 @@ export const PROBES = [
     guard: 'THE BUBBLE: every face',
     edit: {
       path: 'src/render/bake.ts',
-      // ⚠️ Re-anchored by 0431, which hands the bubble the face's own ink.
-      find: '      seal(ctx);\n      bubble(ctx, f, palette, palette[INK_OF[kind]]);\n      // The right half in shadow',
-      replace: '      seal(ctx);\n      // The right half in shadow',
+      // ⚠️ Re-anchored by 0431, which hands the bubble the face's own ink; and by 0704, which lays the rim light first.
+      find: '      );\n      bubble(ctx, f, palette, palette[INK_OF[kind]]);\n      // The right half in shadow',
+      replace: '      );\n      // The right half in shadow',
     },
   },
   {

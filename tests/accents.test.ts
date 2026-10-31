@@ -1219,6 +1219,27 @@ describe('paint costs nothing to draw', () => {
     }
   });
 
+  it('0704: every pickup face wears a rim light inside its edges, wide enough to be drawn', () => {
+    /*
+      ⚠️ **0698's GUARD, ON THE FACES.** The ships are finished, and a pickup face is drawn beside them in the lane and
+      on its own in the readout (`bakeGlyph`, the same drawing). The one invariant of the finish is the same as a
+      ship's: a `source-atop` gradient rim, laid on the glyph, at least 0106's 2.5 px on 1280×720. A face drawn without
+      it is the flat icon the ask was about, beside eleven that are not.
+    */
+    const faces = SPRITE_KINDS.filter((kind) => kind.startsWith('pickup') && !kind.endsWith('Hit'));
+    expect(faces.length, 'no pickup face to measure').toBeGreaterThan(0);
+    for (const kind of faces) {
+      const rims = trace(kind).inks.filter((ink) => ink.composite === 'source-atop' && ink.colour === 'gradient');
+      expect(rims.length, `the ${kind} has no rim light`).toBeGreaterThan(0);
+      for (const rim of rims) {
+        expect(
+          rim.width,
+          `the ${kind}'s rim light is ${rim.width.toFixed(2)}px wide on a 1280×720 screen, under 0106's floor, so it is not drawn`,
+        ).toBeGreaterThanOrEqual(2.5);
+      }
+    }
+  });
+
   it('and every kind that is not a body is one the list above names on purpose', () => {
     // The hull-less list is a claim about the atlas, so a kind added to the union lands in BODIES
     // and is measured — unless somebody comes here and says why it should not be.

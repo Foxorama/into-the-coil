@@ -2090,6 +2090,18 @@ let bubbled = true;
 /** Whether a bake with `bubbled` off asked for one — so `bakeGlyph` knows the face was drawn small. */
 let bubbleRefused = false;
 
+/**
+ * A pickup face's rim light — 0704: the ships' finish (`rimLight`, 0698) on a glyph, inside every edge of it that
+ * faces up, in its own ink brightened. Called straight after the glyph's `seal` and BEFORE its `bubble`, so the pen's
+ * width is still the seal's and the light lands on the glyph alone: `rimLight` is `source-atop`, and the bubble is
+ * laid `destination-over` after it. The readout's bare copy is the same drawing (`bakeGlyph`), so it wears it too.
+ */
+function faceRim(ctx: Pen, f: Frame, ink: string, outline: (pen: Pen) => void): void {
+  const sealWidth = ctx.lineWidth;
+  const [top, bottom] = heightOf(ctx, outline);
+  rimLight(ctx, f, shade(ink, 0.5), 0.75, top, bottom, sealWidth, outline);
+}
+
 function bubble(ctx: Pen, f: Frame, palette: Palette, ink: string): void {
   if (!bubbled) {
     bubbleRefused = true;
@@ -20618,6 +20630,11 @@ export function drawKind(
       traceStar(ctx, fg, 1, 0);
       ring(ctx, fg, 0, 0, 0.16);
       seal(ctx);
+      // 0704: the rim light, before the bubble so it lands on the glyph alone.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) => {
+        traceStar(pen, fg, 1, 0);
+        ring(pen, fg, 0, 0, 0.16);
+      });
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The trailing edge of each blade in shadow, so it has a lit face and a ground one — in
       // steel, the face's own ink since 0239.
@@ -20629,6 +20646,9 @@ export function drawKind(
           [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
         ]);
       }
+      // 0704: polished steel — a streak down the blade that points up the screen, and the hole's lip lit.
+      seam(ctx, fg, palette.impact, 0.05, [[0.03, -0.24], [0.02, -0.7]], 0.5);
+      seam(ctx, fg, shade(palette.blade, 0.6), 0.04, roundel(0, 0, 0.2, 8, Math.PI * 1.1, Math.PI * 1.9), 0.5, true);
       return;
     }
     case 'pickupSmite': {
@@ -20639,7 +20659,7 @@ export function drawKind(
       */
       const fg: Frame = { half, r: r * PICKUP_GLYPH };
       const deg = Math.PI / 180;
-      trace(ctx, fg, [
+      const storm: Pt[] = [
         [0.72, -0.08],
         [0.16, -0.08],
         [0.02, 0.3],
@@ -20652,8 +20672,11 @@ export function drawKind(
         ...roundel(-0.42, -0.3, 0.32, 8, 150 * deg, 300 * deg),
         ...roundel(0.02, -0.42, 0.36, 8, 205 * deg, 335 * deg),
         ...roundel(0.44, -0.26, 0.3, 8, 250 * deg, 400 * deg),
-      ]);
+      ];
+      trace(ctx, fg, storm);
       seal(ctx);
+      // 0704: the rim light, before the bubble — the cloud's crown catches it.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) => trace(pen, fg, storm));
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The cloud's belly in shade, and the bolt's white heart down its middle.
       poly(ctx, fg, shade(palette.enemy, -0.4), [[0.66, -0.08], [-0.66, -0.08], [-0.6, -0.2], [0.6, -0.2]], 0.8);
@@ -20679,6 +20702,8 @@ export function drawKind(
       for (let i = 0; i < 40; i++) outline.push(drop((i / 40) * Math.PI * 2, 1));
       trace(ctx, fg, outline);
       seal(ctx);
+      // 0704: the rim light, before the bubble.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) => trace(pen, fg, outline));
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The ground side: a crescent down the right and round the bottom, between the outline drawn in and
       // the same arc drawn smaller and pushed left.
@@ -20704,6 +20729,8 @@ export function drawKind(
       const fg: Frame = { half, r: r * PICKUP_GLYPH };
       ring(ctx, fg, 0.42, -0.36, 0.34);
       seal(ctx);
+      // 0704: the rim light, before the bubble.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) => ring(pen, fg, 0.42, -0.36, 0.34));
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // Its lit side and glint, so it is a ball and not a dot.
       seam(ctx, fg, shade(palette.acid, 0.5), 0.07, roundel(0.42, -0.36, 0.24, 8, Math.PI * 1.05, Math.PI * 1.6), 0.9, true);
@@ -20736,6 +20763,11 @@ export function drawKind(
       // And the star leaving its mouth, which is body and not light: the hull is the tube and the star.
       ring(ctx, fg, star[0], star[1], 0.19);
       seal(ctx);
+      // 0704: the rim light, before the bubble, and below the tube's lit side a glint along it once it is painted.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) => {
+        trace(pen, fg, [along(0, -1), along(1, -1), along(1, 1), along(0, 1)]);
+        ring(pen, fg, star[0], star[1], 0.19);
+      });
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // Its paper's stripes, in the player's orange across the gold, on the tube.
       for (let k = 0; k < 3; k++) {
@@ -20764,6 +20796,8 @@ export function drawKind(
       disc(ctx, fg, shade(palette.hazard, 0.3), star[0], star[1], 0.17);
       glow(ctx, fg, palette.impact, star[0], star[1], 0.3, 0.8);
       disc(ctx, fg, palette.impact, star[0], star[1], 0.09);
+      // 0704: the tube a cylinder — a glint down its lit side.
+      seam(ctx, fg, palette.impact, 0.05, [along(0.05, -0.6), along(0.9, -0.6)], 0.45);
       return;
     }
     /*
@@ -21092,6 +21126,18 @@ export function drawKind(
       ctx.lineTo(half - g * 0.62, half + g * 0.15);
       ctx.closePath();
       seal(ctx);
+      // 0704: the rim light on the bolt's own path, before the bubble.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) =>
+        trace(pen, fg, [
+          [-0.15, -1],
+          [0.55, -1],
+          [0.12, -0.2],
+          [0.62, -0.2],
+          [-0.55, 1],
+          [-0.15, 0.15],
+          [-0.62, 0.15],
+        ]),
+      );
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The lower half in shadow, so the bolt has a lit edge and an underside like the chevron.
       // In the face's own ink — the ship's, since 0239 — like the fill `INK_OF` gave the seal.
@@ -21140,6 +21186,8 @@ export function drawKind(
       const fg: Frame = { half, r: r * PICKUP_GLYPH };
       ring(ctx, fg, 0, 0, 1);
       seal(ctx);
+      // 0704: the rim light, before the bubble.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) => ring(pen, fg, 0, 0, 1));
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       const dark = shade(palette.ally, -0.45);
       band(ctx, fg, dark, 0, 0, 0.72, 0.5);
@@ -21225,6 +21273,17 @@ export function drawKind(
       ctx.lineTo(half - g * 0.85, half + g * 0.2);
       ctx.closePath();
       seal(ctx);
+      // 0704: the rim light on the chevron's own path, before the bubble.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) =>
+        trace(pen, fg, [
+          [0, -1],
+          [0.85, 0.2],
+          [0.85, 1],
+          [0, 0.25],
+          [-0.85, 1],
+          [-0.85, 0.2],
+        ]),
+      );
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The trailing arm in shadow — the same underside the weapon chevron has, turned with it, and
       // in the missile's own orange since 0240.
@@ -21428,7 +21487,7 @@ export function drawKind(
         ⚠️ **TWO DARK BANDS ON A LIT CASING**, which is the H-bomb's own graphic language and what
         keeps it from reading as a bigger missile at twenty pixels on the trigger button.
       */
-      trace(ctx, fb, [
+      const casingOutline: Pt[] = [
         [1, 0],
         [0.86, -0.14],
         [0.66, -0.22],
@@ -21444,9 +21503,12 @@ export function drawKind(
         [-0.55, 0.22],
         [0.66, 0.22],
         [0.86, 0.14],
-      ]);
+      ];
+      trace(ctx, fb, casingOutline);
       seal(ctx);
       const casing = palette[INK_OF[kind]];
+      // 0704: on the pickup's face, the rim light every face wears, before its bubble.
+      if (pickup) faceRim(ctx, fb, casing, (pen) => trace(pen, fb, casingOutline));
       if (pickup) bubble(ctx, f, palette, casing);
       /*
         The lit upper half of the casing, then the two bands, then the warhead's glass eye. On the
@@ -21675,6 +21737,16 @@ export function drawKind(
       ctx.lineTo(half - g * 0.85, half - g);
       ctx.closePath();
       seal(ctx);
+      // 0704: the rim light on the shield's own path, before the bubble.
+      faceRim(ctx, fg, palette[INK_OF[kind]], (pen) =>
+        trace(pen, fg, [
+          [0.85, -1],
+          [0.85, 0.25],
+          [0, 1],
+          [-0.85, 0.25],
+          [-0.85, -1],
+        ]),
+      );
       bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The right half in shadow, so the face is curved; a band across it and a boss at its centre.
       poly(ctx, fg, shade(palette.pickup, -0.28), [
@@ -21691,6 +21763,9 @@ export function drawKind(
       ]);
       disc(ctx, fg, palette.glass, 0, 0.1, 0.22);
       disc(ctx, fg, shade(palette.glass, 0.5), -0.06, 0.04, 0.11);
+      // 0704: the band's top edge glinting, and the boss's rim lit on its upper arc.
+      seam(ctx, fg, palette.impact, 0.04, [[-0.46, -0.32], [0.46, -0.32]], 0.5);
+      seam(ctx, fg, palette.impact, 0.04, roundel(0, 0.1, 0.2, 8, Math.PI * 1.1, Math.PI * 1.9), 0.45, true);
       return;
     }
     /*
@@ -21702,10 +21777,14 @@ export function drawKind(
       const ink = palette[INK_OF[kind]];
       ctx.arc(half, half, fg.r * 0.9, 0, Math.PI * 2);
       seal(ctx);
+      // 0704: the rim light, before the bubble.
+      faceRim(ctx, fg, ink, (pen) => ring(pen, fg, 0, 0, 0.9));
       bubble(ctx, f, palette, ink);
       disc(ctx, fg, shade(ink, -0.45), 0, 0, 0.62);
       spiralArms(ctx, fg, shade(ink, 0.5), 3, 0.2, 0.8, 2.4, 0.16, 0.85);
       disc(ctx, fg, palette.space, 0, 0, 0.26);
+      // 0704: the dark heart's edge lit, as the ball's is (0703).
+      band(ctx, fg, shade(ink, 0.6), 0, 0, 0.32, 0.27, 0.5);
       return;
     }
     /*
@@ -21723,9 +21802,13 @@ export function drawKind(
       }
       trace(ctx, fg, points);
       seal(ctx);
+      // 0704: the rim light, before the bubble.
+      faceRim(ctx, fg, ink, (pen) => trace(pen, fg, points));
       bubble(ctx, f, palette, ink);
       band(ctx, fg, palette.ally, 0, 0, 0.52, 0.34);
       disc(ctx, fg, shade(ink, 0.3), 0, 0, 0.22);
+      // 0704: the band's inner edge lit.
+      band(ctx, fg, shade(palette.ally, 0.6), 0, 0, 0.38, 0.34, 0.5);
       return;
     }
     /*

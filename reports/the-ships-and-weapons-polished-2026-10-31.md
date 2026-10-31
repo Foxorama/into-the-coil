@@ -134,7 +134,7 @@ one review at the end.
 | 16 | **the acid** | the Viper's fangs, the spit, the void, the splat | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
 | 17 | **the missiles and tubes** | the missile and the seeker in flight; the loaded tube, the warhead nose; the pods and turrets each ship carries them in; the bomb | D | **built — [0703](../docs/decisions/0703-the-tubes-and-the-specials-are-finished.md)** |
 | 18 | **the specials' pictures** | the candle's star, the storm and void balls, the dance's flares and wave, the nova's arc, the two auras | D | **built — [0703](../docs/decisions/0703-the-tubes-and-the-specials-are-finished.md)**; the dance's flares and wave and the nova's arc left as 0520 lit them, pending a flash measurement |
-| 19 | **the pickups' faces** | the twelve glyphs in their bubbles, and the readout's bare copies of them | E | |
+| 19 | **the pickups' faces** | the twelve glyphs in their bubbles, and the readout's bare copies of them | E | **built — [0704](../docs/decisions/0704-the-pickup-faces-are-finished.md)**; the queue is done |
 
 ## The player's answers
 
@@ -176,13 +176,19 @@ top of the ones before it, which outlives the branch.
     reads as a dent, it is the second `seam` in the `paintballPink` case;
   - the dry splat's three cracks say *dried paint* — if a dry splat should be a stain, they go.
 - **Batch D — [0703](../docs/decisions/0703-the-tubes-and-the-specials-are-finished.md)** (the missiles, the tubes and
-  every ship's pods, the bomb, the specials' pictures):
+  every ship's pods, the bomb, the specials' pictures) — Foxorama/into-the-coil#685, preview
+  <https://1e96a7fd.into-the-coil.pages.dev>:
   - the pods' streak is in the shell's own lightest shade, not white, because a pod is the car's paint — on the dark
     Thunderbolt and Viper shells it is faint;
   - the dance's flares and wave and the nova's arc are as 0520 lit them — see 0703 for why, and what finishing them
     would take;
   - **found, not fixed**: the void missile reads 7 general flashes in its worst second on `scripts/weigh-flashes.mjs`,
     over 0024's cap of three — on `main` before any of this work as well as after it (0703 has the four runs).
+- **Batch E — [0704](../docs/decisions/0704-the-pickup-faces-are-finished.md)** (the twelve pickup faces and the
+  readout's bare copies) — Foxorama/into-the-coil#686, preview <https://a0d272c9.into-the-coil.pages.dev>, which is
+  the whole queue built:
+  - each face's rim is its own ink brightened, as a ship's is — near white on the gold faces, faint on the lavender
+    ones; if the lavender faces want more, it is the `0.5` in `faceRim`, which is every face's at once.
 - **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
   material read at 85 px; a contour half a pixel wide there fades to nothing and is a line on the pad. Nothing
   in the queue adds a solid mark under 0106's floor to get detail into the fight.
