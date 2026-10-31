@@ -176,7 +176,8 @@ top of the ones before it, which outlives the branch.
     reads as a dent, it is the second `seam` in the `paintballPink` case;
   - the dry splat's three cracks say *dried paint* — if a dry splat should be a stain, they go.
 - **Batch D — [0703](../docs/decisions/0703-the-tubes-and-the-specials-are-finished.md)** (the missiles, the tubes and
-  every ship's pods, the bomb, the specials' pictures):
+  every ship's pods, the bomb, the specials' pictures) — Foxorama/into-the-coil#685, preview
+  <https://1e96a7fd.into-the-coil.pages.dev>:
   - the pods' streak is in the shell's own lightest shade, not white, because a pod is the car's paint — on the dark
     Thunderbolt and Viper shells it is faint;
   - the dance's flares and wave and the nova's arc are as 0520 lit them — see 0703 for why, and what finishing them
