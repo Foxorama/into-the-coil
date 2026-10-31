@@ -1163,6 +1163,16 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE: ITEM 0 BUILT, THE FIGHTER IS THE SAMPLE — 2026-10-31
+
+Asked: *"a pass over all the spaceships and weapons … blocky and badly pixelated."*
+[`the-ships-and-weapons-polished`](../reports/the-ships-and-weapons-polished-2026-10-31.md) is the
+queue — twenty items, what was photographed first, the direction and the two vetoes the first item
+collects. Half of *pixelated* was a resolution cap on the pad and is built as
+[0697](decisions/0697-the-bitmap-has-a-budget.md); the other half is the drawing, and **next is item 1,
+the fighter, as the style sample** every other ship is vetoed against. Read the report's *direction*
+before drawing anything, and hand each item over with the sheet, the fight and the pad photographed.
+
 ### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
 
 [`the-release-review`](../reports/the-release-review-2026-10-29.md) answers *"is it ready for release"*: the
