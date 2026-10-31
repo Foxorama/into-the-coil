@@ -113,8 +113,8 @@ the ship the photographs were taken of and the one on the pad in every menu pict
 | # | item | what it covers | status |
 |---|---|---|---|
 | 0 | **the bitmap has a budget** | `bakeSize` honours the blit resolution under a pixel budget; the pad's pieces and glyphs sharp | **built — [0697](../docs/decisions/0697-the-bitmap-has-a-budget.md)** |
-| 1 | **the fighter** — the style sample | the hull, wings, canards, canopy, nacelles and lamps; its three tube stages, hurt twin and dance poses; its three nose arts; its pylons. The same drawing stands on the pad | next |
-| 2 | **the Firebird** | lacquer, glass, the bird and the flames, the snowflakes and every rim, the shaker, the lamps; the tilt poses | |
+| 1 | **the fighter** — the style sample | the hull, wings, canards, canopy, nacelles and lamps; its three tube stages, hurt twin and dance poses; its three nose arts; its pylons. The same drawing stands on the pad | **built — [0698](../docs/decisions/0698-the-fighter-is-finished.md)**; owed the two vetoes below |
+| 2 | **the Firebird** | lacquer, glass, the bird and the flames, the snowflakes and every rim, the shaker, the lamps; the tilt poses | next |
 | 3 | **the estate** | the woody's panels, the roof rack and drum, the glass, every rim, the dice | |
 | 4 | **the Thunderbolt** | tank, forks, pipes, the lightning ball, the Marmot and the Duck aboard | |
 | 5 | **the Hamster Ball** | the sphere's reflection and refraction, the cradle, Unity inside | |
@@ -137,6 +137,11 @@ the ship the photographs were taken of and the one on the pad in every menu pict
 
 Collected here as the queue runs, each dated.
 
-- **The contour** (direction 3): *open — vetoed from item 1's pictures.*
-- **Curves on the fighter** (direction 4): *open — vetoed from item 1's pictures.*
+- **The contour** (direction 3): *open.* Item 1 kept the outline near black and lit the edges inside it
+  (0698's *two vetoes*); the pictures are on its branch preview, the sheet at 4× and the pad at 2560×1080.
+- **Curves on the fighter** (direction 4): *open.* Item 1 curved the canopy and left the wedge; a curved cowl
+  or wing root moves the silhouette and is asked for here before it is drawn.
 - **The order past the Firebird**: *open — the table's order until told otherwise.*
+- **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
+  material read at 85 px; a contour half a pixel wide there fades to nothing and is a line on the pad. Nothing
+  in the queue adds a solid mark under 0106's floor to get detail into the fight.
