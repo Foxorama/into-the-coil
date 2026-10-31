@@ -2770,6 +2770,10 @@ function drawLoadedTube(ctx: Pen, f: Frame, palette: Palette, ink: string, at: P
   */
   const [tail] = p([[-0.88, 0]]);
   glow(ctx, f, palette.hazard, tail![0], tail![1], 0.2 * k, 0.7);
+  // 0703: the casing a cylinder of painted metal — a glint along its top, and the warhead's join a contour in its own
+  // deep shade.
+  seam(ctx, f, palette.impact, 0.04 * k, p([[-0.6, -0.14], [0.45, -0.14]]), 0.5);
+  seam(ctx, f, shade(ink, -0.6), 0.04 * k, p([[0.5, -0.24], [0.5, 0.24]]), 0.4);
 }
 
 /** A turret's warhead, tip +x at 1 as the tube's nose is, its base 1.65 of its radius back — 0581. */
@@ -2809,6 +2813,9 @@ function drawLoadedNose(ctx: Pen, f: Frame, palette: Palette, ink: string, at: P
   // 0665: and its tip lit, armed — translucent, as the dart's motor is, and for the same floor.
   const [tip] = p([[0.7, 0]]);
   glow(ctx, f, palette.impact, tip![0], tip![1], 0.3 * k, 0.6);
+  // 0703: the cone's lit flank glinting and its far flank deep, so it reads as a cone and not a flat triangle.
+  seam(ctx, f, palette.impact, 0.06 * k, p([[0.75, -0.12], [-0.45, -0.68]]), 0.45);
+  seam(ctx, f, shade(ink, -0.6), 0.07 * k, p([[0.7, 0.16], [-0.5, 0.76]]), 0.4);
 }
 
 /**
@@ -2845,6 +2852,8 @@ function paintPylon(ctx: Pen, f: Frame, palette: Palette, [x, y]: Pt): void {
     [x + 0.06, y + 0.06],
     [x - 0.09, y + 0.06],
   ]);
+  // 0703: the rail's top edge glinting.
+  seam(ctx, f, shade(palette.trim, 0.65), 0.02, [[x - 0.08, y - 0.04], [x + 0.05, y - 0.04]], 0.5);
 }
 
 /*
@@ -3243,6 +3252,11 @@ function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1, paint: str
     at(point - 0.01, 0),
     at(mouth - 0.08, 0.06),
   ]);
+  // 0703: the pearl's gloss — a streak of the room along the shell on the side toward the light (up the screen on
+  // both pods, so it lies along the top pod's outer edge and the bottom pod's inner one), and the drive ring's edges.
+  const glossAt = y * side - wide * 0.55;
+  seam(ctx, f, palette.impact, 0.025, [[tail + wide, glossAt], [mouth - 0.16, glossAt]], 0.5);
+  for (const x of [ringBack, ringFront]) seam(ctx, f, shade(palette.player, -0.5), 0.02, [at(x, -podHalf(x) + 0.03), at(x, podHalf(x) - 0.03)], 0.4);
 }
 
 /*
@@ -6047,6 +6061,15 @@ function paintTurrets(
     // The face: dark, set back from the lip, which curves in; the frame lays each missile's nose in it (0581).
     const face = Math.max(r * 0.8, 0.9);
     disc(ctx, f, shade(livery.shell, -0.85), ...box([[to - face * 1.2, mid]])[0]!, face * 0.062);
+    /*
+      0703: the pod finished as the rest of its ship is (0698) — every mark translucent, because the pod is eight
+      pixels by three at the fight's camera: a streak of the room along its back, the band's two edges contours in
+      the shell's own deep shade, and the lip round the dark face catching the light along its top.
+    */
+    seam(ctx, f, shade(livery.shell, 0.9), 0.04, box([[from + r * 0.6, mid - r * 0.55], [to - r * 1.6, mid - r * 0.55]]), 0.5);
+    for (const x of [band, band + LAUNCHER_BAND]) seam(ctx, f, shade(livery.shell, -0.65), 0.03, box([[x, mid - r * 0.9], [x, mid + r * 0.9]]), 0.4);
+    const lip = box([[to - face * 1.2, mid]])[0]!;
+    seam(ctx, f, shade(livery.shell, 0.8), 0.03, roundel(lip[0], lip[1], face * 0.062 * 1.05, 8, Math.PI * 1.1, Math.PI * 1.9), 0.5, true);
   }
 }
 
@@ -21172,6 +21195,10 @@ export function drawKind(
       // Back from the nose, where the dart is deep enough to hold an eye this size.
       disc(ctx, fg, palette.glass, 0.3, 0, 0.2);
       disc(ctx, fg, shade(palette.glass, 0.6), 0.34, -0.03, 0.145);
+      // 0703: the dart's lit flank glinting from the nose back to the fin, the fin's root a contour, the eye's glint.
+      seam(ctx, fg, palette.impact, 0.05, [[0.7, -0.08], [-0.15, -0.34]], 0.45);
+      seam(ctx, fg, shade(palette.ally, -0.6), 0.04, [[-0.55, -0.27], [-0.68, -0.04]], 0.4);
+      disc(ctx, fg, palette.impact, 0.38, -0.08, 0.05, 0.8);
       return;
     case 'pickupMissile': {
       /*
@@ -21251,6 +21278,9 @@ export function drawKind(
         [0.45, -0.2],
         [0.45, 0.2],
       ]);
+      // 0703: a glint along its lit flank, and the warhead's join a contour in the casing's own deep shade.
+      seam(ctx, f, palette.impact, 0.06, [[0.55, -0.16], [-0.3, -0.42]], 0.45);
+      seam(ctx, f, shade(palette.bullet, -0.6), 0.05, [[0.45, -0.2], [0.45, 0.2]], 0.4);
       return;
     // The storm's ball — 0374: a round hull in the ship's ink, lit from inside, with a glow round it
     // so it reads as charged rather than as a bigger pulse. Round where the bomb is notched, so the
@@ -21280,6 +21310,8 @@ export function drawKind(
       spiralArms(ctx, f, shade(palette.ally, 0.7), 3, 0.2, 0.9, 2.6, 0.045, 0.85);
       band(ctx, f, shade(palette.ally, 0.7), 0, 0, 0.29, 0.22, 0.85);
       disc(ctx, f, palette.space, 0, 0, 0.22);
+      // 0703: the shell's own edge lit, where the arms are pulled over it — round, because the frame turns the ball.
+      band(ctx, f, shade(palette.ally, 0.55), 0, 0, 0.41, 0.36, 0.45);
       return;
     }
     /*
@@ -21370,6 +21402,10 @@ export function drawKind(
       }
       disc(ctx, f, lit, 0, 0, 0.22);
       glow(ctx, f, '#ffffff', 0, 0, 0.24, 0.7);
+      // 0703: the charge crackling at the shell — a lit ring at its limb, and a dark one just inside it where the
+      // lightning has not reached, so the ball has a skin and a heart rather than one glow.
+      band(ctx, f, shade(palette.player, 0.75), 0, 0, 0.38, 0.33, 0.5);
+      band(ctx, f, shade(palette.player, -0.4), 0, 0, 0.33, 0.29, 0.35);
       return;
     }
     /*
@@ -21439,6 +21475,15 @@ export function drawKind(
       disc(ctx, fb, palette.glass, 0.76, 0, 0.09);
       // The burn behind it — light, not body, so translucent (0227), and inside its own box.
       glow(ctx, fb, palette.flame, -0.84, 0, 0.28, 0.8);
+      /*
+        0703: the casing finished — a streak of the room along its lit top, its belly in shadow, the ogive's join a
+        contour, the fins' roots contours, and the eye glinting. Translucent, on 0698's terms; the bands are 0375's.
+      */
+      seam(ctx, fb, palette.impact, 0.035, [[0.62, -0.14], [-0.5, -0.14]], 0.5);
+      shaded(ctx, fb, [0, 0.04], [0, 0.22], rgba(casing, 0), shade(casing, -0.7), [[0.66, 0.04], [-0.55, 0.04], [-0.55, 0.22], [0.66, 0.22]], 0.5);
+      seam(ctx, fb, shade(casing, -0.6), 0.03, [[0.66, -0.21], [0.66, 0.21]], 0.4);
+      for (const side of [-1, 1] as const) seam(ctx, fb, shade(casing, -0.6), 0.03, [[-0.56, side * 0.21], [-0.82, side * 0.44]], 0.4);
+      disc(ctx, fb, palette.impact, 0.74, -0.03, 0.035, 0.8);
       return;
     }
     // The pyre's rungs are the SAME drawing at a different extent — 0079. Four bitmaps, one shape.
@@ -21530,6 +21575,9 @@ export function drawKind(
       }
       glow(ctx, f, palette.impact, 0, 0, 0.42, 0.85);
       disc(ctx, f, palette.impact, 0, 0, 0.16);
+      // 0703: the ball burning brighter at its limb than across its face, gold going to white — round, because the
+      // frame turns this along its flight and a light from one side would swing with it.
+      band(ctx, f, shade(gold, 0.6), 0, 0, 0.34, 0.27, 0.5);
       return;
     }
     case 'fireworkGold':
@@ -21932,6 +21980,14 @@ export function drawKind(
           [0.22, y + 0.1],
           [-0.42, y + 0.1],
         ]);
+        // 0703: the pod a cylinder of its own light — lit along its top, deep along its belly.
+        shaded(ctx, f, [0, y - 0.1], [0, y + 0.1], lit, shade(ink, -0.5), [
+          [-0.42, y - 0.1],
+          [0.22, y - 0.1],
+          [0.46, y],
+          [0.22, y + 0.1],
+          [-0.42, y + 0.1],
+        ], 0.5);
         disc(ctx, f, lit, 0.28, y, 0.06);
         glow(ctx, f, lit, 0.3, y, 0.22, 0.6);
       }
