@@ -1163,7 +1163,7 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE IN BATCHES: EVERY SHIP BUILT, BATCH C IS NEXT — 2026-11-01
+### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE IN BATCHES: EVERY SHIP AND GUN BUILT, BATCH D IS NEXT — 2026-11-01
 
 Asked: *"a pass over all the spaceships and weapons … blocky and badly pixelated."*
 [`the-ships-and-weapons-polished`](../reports/the-ships-and-weapons-polished-2026-10-31.md) is the
@@ -1175,9 +1175,11 @@ Firebird follows it — [0699](decisions/0699-the-firebird-is-finished.md) — t
 Thunderbolt and the Hamster Ball, [0700](decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md), and
 batch B, the Aqua Duck, the little caddie and the Viper,
 [0701](decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md) — so every ship is finished and 0698's
-guard walks `SHIP_KINDS`. **The rest lands at full auto in batches C to E** (the report's table), at the
-player's asking, and **the review is once, at the end**: every open call is listed in the report's
-*answers* with its batch. **Next is batch C** — the eight guns: each mount, its shot and its impact.
+guard walks `SHIP_KINDS` — and batch C, the eight guns' mounts, shots and impacts, is
+[0702](decisions/0702-the-eight-guns-are-finished.md). **The rest lands at full auto in batches D and E**
+(the report's table), at the player's asking, and **the review is once, at the end**: every open call is
+listed in the report's *answers* with its batch. **Next is batch D** — the missiles and tubes, and the
+specials' pictures.
 
 ### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
 

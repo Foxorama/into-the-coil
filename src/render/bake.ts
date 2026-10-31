@@ -3158,6 +3158,8 @@ export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView
     shaded(ctx, f, [cx - R * 0.6, cy], [cx + R, cy], shade(chrome, under ? -0.35 : -0.2), shade(chrome, 0.45), oval(cx, cy, R, R, 32));
     // Its rim band and the six lights round it.
     band(ctx, f, shade(palette.trim, -0.2), cx, cy, R * 0.97, R * 0.8, 0.9);
+    // 0702: the band's chrome glinting along its upper arc, toward the light.
+    seam(ctx, f, palette.impact, R * 0.05, roundel(cx, cy, R * 0.885, 10, Math.PI * 1.2, Math.PI * 1.8), 0.45, true);
     // Lights, not marks: a glow each, so none is a solid speck under the floor at the fight's size.
     for (let k = 0; k < 6; k++) {
       const a = Math.PI / 6 + (k * Math.PI) / 3;
@@ -3180,6 +3182,9 @@ export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView
   trace(ctx, f, [...oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2), ...oval(cx, cy, R, down, 24, 0, Math.PI)]);
   ctx.fill();
   shaded(ctx, f, [cx, cy - up], [cx, cy], shade(chrome, 0.45), chrome, oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2));
+  // 0702: a glint along the lens's upper face, and its belly in shadow.
+  seam(ctx, f, palette.impact, R * 0.05, oval(cx, cy, R * 0.85, up * 0.7, 12, Math.PI * 1.15, Math.PI * 1.85), 0.45, true);
+  shaded(ctx, f, [cx, cy], [cx, cy + down], rgba(chrome, 0), shade(chrome, -0.7), oval(cx, cy, R * 0.98, down * 0.98, 24, 0, Math.PI), 0.45);
   // The dome: a lavender lens on top, lit at its crown.
   shaded(ctx, f, [cx, cy - up - R * 0.32], [cx, cy - up * 0.5], shade(lav, 0.25), shade(lav, -0.35), oval(cx, cy - up * 0.6, R * 0.38, R * 0.36, 20, Math.PI, Math.PI * 2));
   glow(ctx, f, palette.impact, cx - R * 0.1, cy - up - R * 0.18, R * 0.12, 0.8);
@@ -5509,6 +5514,23 @@ function drawSplat(ctx: Pen, f: Frame, palette: Palette, ink: string, dry: boole
     disc(ctx, f, shade(ink, 0.45), -reach * 0.12, -reach * 0.14, reach * 0.26, 0.6);
     disc(ctx, f, palette.impact, -reach * 0.2, -reach * 0.22, reach * 0.09, 0.85);
   }
+  /*
+    0702: wet, the paint stands up at its edge — a meniscus, darker just inside the rim — and a second glint off
+    the far lobe; dry, it has gone matte and cracked as it shrank, the cracks contours in its own deep shade.
+  */
+  const inside = blob.map(([x, y]): Pt => [x * 0.86, y * 0.86]);
+  if (!dry) {
+    seam(ctx, f, shade(ink, -0.4), 0.06, inside, 0.35, true);
+    disc(ctx, f, palette.impact, reach * 0.3, reach * 0.18, reach * 0.05, 0.7);
+  } else {
+    for (const [a, from, to] of [
+      [0.4, 0.1, 0.55],
+      [2.5, 0.15, 0.5],
+      [4.3, 0.05, 0.45],
+    ] as const) {
+      seam(ctx, f, shade(ink, -0.65), 0.03, [[Math.cos(a) * reach * from, Math.sin(a) * reach * from], [Math.cos(a + 0.25) * reach * (from + to) / 2, Math.sin(a + 0.25) * reach * (from + to) / 2], [Math.cos(a - 0.1) * reach * to, Math.sin(a - 0.1) * reach * to]], 0.4);
+    }
+  }
 }
 
 /**
@@ -5552,6 +5574,8 @@ function drawAcidSplat(ctx: Pen, f: Frame, palette: Palette, dry: boolean): void
     disc(ctx, f, shade(ink, 0.5), x * reach, y * reach, r * reach, 0.75);
     disc(ctx, f, palette.impact, (x - r * 0.35) * reach, (y - r * 0.35) * reach, r * 0.35 * reach, 0.85);
   }
+  // 0702: and the burn's edge eating in — a darker ring just inside the rim, where the venom is thickest.
+  seam(ctx, f, shade(ink, -0.5), 0.06, blob.map(([x, y]): Pt => [x * 0.86, y * 0.86]), 0.35, true);
 }
 
 /**
@@ -6821,6 +6845,9 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
         p(mx - PULSE_BRAKE, 0.14),
       ]);
       seam(ctx, f, shade(palette.trim, -0.55), 0.03, [p(0.08, 0), p(mx, 0)], 0.6);
+      // 0702: chrome as chrome is at this size — a glint along the barrels' lit edge and the brake's lip caught by it.
+      seam(ctx, f, palette.impact, 0.025, [p(0.1, -0.075), p(mx - PULSE_BRAKE - 0.02, -0.075)], 0.55);
+      seam(ctx, f, shade(palette.trim, 0.7), 0.025, [p(mx - PULSE_BRAKE + 0.02, -0.11), p(mx - 0.02, -0.11)], 0.5);
       for (const side of [-1, 1] as const) glow(ctx, f, palette.hazard, ...p(mx, side * 0.05), 0.07, 0.75);
     },
     side: (ctx, f, palette, p, [mx, my]) => {
@@ -6833,8 +6860,12 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       ]);
       for (const dy of [-0.045, 0.045]) {
         poly(ctx, f, chrome, [p(0.05, my + dy - 0.025), p(mx, my + dy - 0.025), p(mx, my + dy + 0.025), p(0.05, my + dy + 0.025)]);
+        // 0702: each barrel's top edge glinting.
+        seam(ctx, f, palette.impact, 0.015, [p(0.07, my + dy - 0.012), p(mx - 0.02, my + dy - 0.012)], 0.5);
         glow(ctx, f, palette.hazard, ...p(mx, my + dy), 0.06, 0.75);
       }
+      // 0702: and the pad's top edge lit, its join to the hull in shadow.
+      seam(ctx, f, shade(palette.trim, 0.55), 0.02, [p(-0.1, -0.18), p(0.08, -0.18)], 0.5);
     },
   },
   /*
@@ -6861,15 +6892,26 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
   shuriken: {
     top: (ctx, f, palette, p, m) => {
       poly(ctx, f, shade(palette.trim, -0.45), [p(-0.06, -0.06), p(m[0], -0.06), p(m[0], 0.06), p(-0.06, 0.06)]);
+      // 0702: the arm a bar, lit along its upper edge.
+      shaded(ctx, f, p(0, -0.06), p(0, 0.06), shade(palette.trim, 0.2), rgba(palette.trim, 0), [p(-0.06, -0.06), p(m[0], -0.06), p(m[0], 0.06), p(-0.06, 0.06)], 0.55);
       disc(ctx, f, shade(palette.space, 0.2), ...p(m[0], m[1]), 0.16);
       band(ctx, f, palette.hazard, ...p(m[0], m[1]), 0.16, 0.13);
       poly(ctx, f, palette.blade, starAt(p(m[0], m[1]), 0.12));
+      // 0702: the gold lip catching the light on its upper arc, and the steel star lit across its upper blades.
+      const [sx, sy] = p(m[0], m[1]);
+      seam(ctx, f, shade(palette.hazard, 0.6), 0.02, roundel(sx, sy, 0.145, 8, Math.PI * 1.1, Math.PI * 1.9), 0.6, true);
+      shaded(ctx, f, [sx, sy - 0.12], [sx, sy + 0.12], palette.impact, shade(palette.blade, -0.5), starAt([sx, sy], 0.12), 0.45);
     },
     side: (ctx, f, palette, p, m) => {
       const body = shade(mix(palette.space, palette.hazard, 0.08), 0.16);
       shaded(ctx, f, p(0, -0.18), p(0, 0), shade(body, 0.35), shade(body, -0.2), [p(-0.124, -0.18), p(0.124, -0.18), p(0.124, 0), p(-0.124, 0)]);
       seam(ctx, f, shade(palette.hazard, 0.15), 0.045, [p(-0.09, -0.152), p(0.09, -0.152)], 0.95);
       poly(ctx, f, palette.blade, starAt(p(m[0], m[1]), 0.074));
+      // 0702: the gold lip's glint, the block's edges contours in its own deep shade, the star lit across its top.
+      seam(ctx, f, palette.impact, 0.015, [p(-0.08, -0.165), p(0.08, -0.165)], 0.55);
+      seam(ctx, f, shade(body, -0.6), 0.02, [p(-0.11, -0.12), p(-0.11, -0.02)], 0.45);
+      const [sx, sy] = p(m[0], m[1]);
+      shaded(ctx, f, [sx, sy - 0.074], [sx, sy + 0.074], palette.impact, shade(palette.blade, -0.5), starAt([sx, sy], 0.074), 0.45);
     },
   },
   /*
@@ -6884,6 +6926,11 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       disc(ctx, f, palette.player, ...p(m[0], m[1]), 0.105);
       glow(ctx, f, palette.player, ...p(m[0], m[1]), 0.2, 0.6);
       disc(ctx, f, palette.impact, ...p(m[0], m[1]), 0.05);
+      // 0702: the rod lit along its upper edge; the coil's chrome glinting on its upper arc; the ball's glass crescent.
+      seam(ctx, f, shade(palette.trim, 0.6), 0.02, [p(-0.04, -0.035), p(m[0] - 0.15, -0.035)], 0.5);
+      const [bx, by] = p(m[0], m[1]);
+      seam(ctx, f, palette.impact, 0.02, roundel(bx, by, 0.13, 8, Math.PI * 1.1, Math.PI * 1.9), 0.55, true);
+      seam(ctx, f, shade(palette.player, 0.7), 0.02, roundel(bx, by, 0.08, 8, Math.PI * 1.15, Math.PI * 1.6), 0.55, true);
     },
     side: (ctx, f, palette, p, m) => {
       poly(ctx, f, palette.trim, [p(-0.068, 0), p(0.068, 0), p(0.068, m[1] + 0.05), p(-0.068, m[1] + 0.05)]);
@@ -6896,6 +6943,11 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       disc(ctx, f, palette.player, ...p(m[0], m[1]), 0.118);
       glow(ctx, f, palette.player, ...p(m[0], m[1]), 0.21, 0.6);
       disc(ctx, f, palette.impact, ...p(m[0], m[1]), 0.056);
+      // 0702: the rod a cylinder — lit down its side toward the light, deep down the other — and the ball's glass crescent.
+      seam(ctx, f, shade(palette.trim, 0.6), 0.02, [p(0.04, -0.02), p(0.04, m[1] + 0.12)], 0.5);
+      seam(ctx, f, shade(palette.trim, -0.6), 0.02, [p(-0.045, -0.02), p(-0.045, m[1] + 0.12)], 0.45);
+      const [bx, by] = p(m[0], m[1]);
+      seam(ctx, f, shade(palette.player, 0.7), 0.02, roundel(bx, by, 0.09, 8, Math.PI * 1.15, Math.PI * 1.65), 0.55, true);
     },
   },
   /*
@@ -6906,10 +6958,16 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
   catherine: {
     top: (ctx, f, palette, p, m) => {
       poly(ctx, f, palette.trim, [p(-0.05, -0.045), p(m[0], -0.045), p(m[0], 0.045), p(-0.05, 0.045)]);
+      // 0702: the arm lit along its upper edge and deep along its lower one.
+      seam(ctx, f, shade(palette.trim, 0.6), 0.02, [p(-0.04, -0.03), p(m[0] - 0.1, -0.03)], 0.5);
+      seam(ctx, f, shade(palette.trim, -0.6), 0.02, [p(-0.04, 0.03), p(m[0] - 0.1, 0.03)], 0.45);
       pinwheelAt(ctx, f, palette, p(m[0], m[1]), 0.13);
     },
     side: (ctx, f, palette, p, m) => {
       poly(ctx, f, palette.trim, [p(-0.055, 0), p(0.055, 0), p(m[0] + 0.03, m[1]), p(m[0] - 0.03, m[1])]);
+      // 0702: the post a cylinder, lit down one side and deep down the other.
+      seam(ctx, f, shade(palette.trim, 0.6), 0.02, [p(0.03, -0.02), p(m[0] + 0.012, m[1] + 0.14)], 0.5);
+      seam(ctx, f, shade(palette.trim, -0.6), 0.02, [p(-0.035, -0.02), p(m[0] - 0.018, m[1] + 0.14)], 0.45);
       pinwheelAt(ctx, f, palette, p(m[0], m[1]), 0.14);
     },
   },
@@ -6918,8 +6976,15 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     same, so the table holds every gun and a reader handed it draws something that says *ram*.
   */
   ram: {
-    top: (ctx, f, palette, p) => disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13),
-    side: (ctx, f, palette, p) => disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13),
+    // 0702: rubber, so its light is broad and soft — one wide sheen on the side toward the light, no glint.
+    top: (ctx, f, palette, p) => {
+      disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13);
+      glow(ctx, f, shade(palette.trim, 0.3), ...p(0.03, -0.04), 0.09, 0.45);
+    },
+    side: (ctx, f, palette, p) => {
+      disc(ctx, f, shade(palette.trim, -0.3), ...p(0, 0), 0.13);
+      glow(ctx, f, shade(palette.trim, 0.3), ...p(0.03, -0.04), 0.09, 0.45);
+    },
   },
   /*
     The paintball marker — 0595: the Aqua Duck's, a dark body with a chrome barrel out to its mouth and the
@@ -6933,6 +6998,11 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       shaded(ctx, f, p(0, -0.06), p(0, 0.06), shade(chrome, 0.3), shade(chrome, -0.35), [p(mx * 0.55, -0.06), p(mx, -0.06), p(mx, 0.06), p(mx * 0.55, 0.06)]);
       disc(ctx, f, shade(palette.frost, -0.2), ...p(0.04, 0), 0.13, 0.85);
       paintHopper(ctx, f, p(0.04, 0), 0.13);
+      // 0702: the barrel's glint and dark lower edge, and the hopper a clear shell — a crescent of light on it.
+      seam(ctx, f, palette.impact, 0.015, [p(mx * 0.57, -0.04), p(mx - 0.02, -0.04)], 0.55);
+      seam(ctx, f, shade(palette.trim, -0.4), 0.02, [p(mx * 0.57, 0.045), p(mx - 0.02, 0.045)], 0.45);
+      const [hx, hy] = p(0.04, 0);
+      seam(ctx, f, palette.impact, 0.02, roundel(hx, hy, 0.105, 8, Math.PI * 1.1, Math.PI * 1.75), 0.55, true);
     },
     side: (ctx, f, palette, p, [mx, my]) => {
       const chrome = shade(palette.trim, 0.65);
@@ -6942,6 +7012,12 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       shaded(ctx, f, p(0, my - 0.06), p(0, my + 0.06), shade(chrome, 0.3), shade(chrome, -0.35), [p(mx * 0.55, my - 0.06), p(mx, my - 0.06), p(mx, my + 0.06), p(mx * 0.55, my + 0.06)]);
       disc(ctx, f, shade(palette.frost, -0.2), ...p(0.02, my - 0.17), 0.12, 0.85);
       paintHopper(ctx, f, p(0.02, my - 0.17), 0.12);
+      // 0702: the body lit along its top, the barrel's glint and dark lower edge, and the hopper's crescent of light.
+      seam(ctx, f, shade(palette.space, 0.55), 0.02, [p(-0.08, my - 0.055), p(mx * 0.58, my - 0.055)], 0.5);
+      seam(ctx, f, palette.impact, 0.015, [p(mx * 0.57, my - 0.04), p(mx - 0.02, my - 0.04)], 0.55);
+      seam(ctx, f, shade(palette.trim, -0.4), 0.02, [p(mx * 0.57, my + 0.045), p(mx - 0.02, my + 0.045)], 0.45);
+      const [hx, hy] = p(0.02, my - 0.17);
+      seam(ctx, f, palette.impact, 0.02, roundel(hx, hy, 0.095, 8, Math.PI * 1.1, Math.PI * 1.75), 0.55, true);
     },
   },
   /*
@@ -6954,6 +7030,10 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       poly(ctx, f, gland, [p(-0.08, -0.11), p(mx * 0.55, -0.12), p(mx * 0.7, 0), p(mx * 0.55, 0.12), p(-0.08, 0.11)]);
       for (const side of [-1, 1] as const) poly(ctx, f, palette.impact, [p(mx * 0.5, side * 0.12), p(mx, side * 0.05), p(mx * 0.5, side * 0.02)]);
       glow(ctx, f, palette.player, ...p(mx, 0), 0.06, 0.75);
+      // 0702: the gland wet — a sheen across its back and a glint on it — and the fangs' far halves in shadow.
+      shaded(ctx, f, p(0, -0.11), p(0, 0.11), shade(gland, 0.55), rgba(gland, 0), [p(-0.06, -0.1), p(mx * 0.53, -0.11), p(mx * 0.6, -0.02), p(-0.06, -0.02)], 0.45);
+      disc(ctx, f, palette.impact, ...p(mx * 0.2, -0.06), 0.02, 0.7);
+      poly(ctx, f, shade(palette.impact, -0.45), [p(mx * 0.5, 0.12), p(mx, 0.05), p(mx * 0.5, 0.07)], 0.45);
     },
     side: (ctx, f, palette, p, [mx, my]) => {
       const gland = shade(mix(palette.player, palette.acid, 0.55), -0.45);
@@ -6962,6 +7042,11 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       poly(ctx, f, gland, [p(-0.12, my - 0.1), p(mx * 0.55, my - 0.11), p(mx * 0.7, my), p(mx * 0.55, my + 0.11), p(-0.12, my + 0.1)]);
       // The fang's point is the mouth the spit leaves.
       poly(ctx, f, palette.impact, [p(mx * 0.5, my - 0.07), p(mx, my), p(mx * 0.5, my + 0.07)]);
+      // 0702: the gland wet, a sheen along its top and a glint; the post lit down one side; the fang's lower half in shadow.
+      shaded(ctx, f, p(0, my - 0.1), p(0, my + 0.04), shade(gland, 0.55), rgba(gland, 0), [p(-0.1, my - 0.09), p(mx * 0.53, my - 0.1), p(mx * 0.62, my - 0.02), p(-0.1, my - 0.02)], 0.45);
+      disc(ctx, f, palette.impact, ...p(mx * 0.18, my - 0.05), 0.02, 0.7);
+      seam(ctx, f, shade(palette.trim, 0.4), 0.02, [p(0.03, -0.02), p(0.03, my + 0.1)], 0.45);
+      poly(ctx, f, shade(palette.impact, -0.45), [p(mx * 0.5, my + 0.02), p(mx, my), p(mx * 0.5, my + 0.07)], 0.45);
     },
   },
 };
@@ -18459,6 +18544,9 @@ export function drawKind(
       seal(ctx);
       band(ctx, f, shade(palette.player, 0.2), 0.2, 0, 0.62, 0.5);
       disc(ctx, f, palette.impact, -0.05, -0.25, 0.1, 0.9);
+      // 0702: the plastic's deep side, where the wall is seen edge-on, and the window on its crown — the ball's own (0700).
+      seam(ctx, f, shade(palette.player, -0.5), 0.06, roundel(0.2, 0, 0.45, 10, Math.PI * 0.1, Math.PI * 0.9), 0.4, true);
+      seam(ctx, f, palette.impact, 0.06, [[0.2, -0.42], [0.42, -0.36]], 0.4);
       for (const y of [-0.35, 0, 0.35]) seam(ctx, f, palette.player, 0.12, [[-0.55, y], [-0.95, y]], 0.85);
       return;
     // 0595: the paintball's glyph — the marker side-on, its hopper over it, and a ball leaving its mouth.
@@ -18507,6 +18595,12 @@ export function drawKind(
       seal(ctx);
       shaded(ctx, f, [-0.4, -0.5], [0.4, 0.6], shade(colour.ink, 0.35), shade(colour.ink, -0.3), roundel(0, 0, 0.8, 16, 0, Math.PI * 2));
       disc(ctx, f, palette.impact, -0.28, -0.3, 0.22, 0.85);
+      /*
+        0702: a glossy gelatin shell — the room's light bounced back up into its underside as a thin crescent, and
+        the seam where its halves were pressed together round its middle, in its own deep shade.
+      */
+      seam(ctx, f, shade(colour.ink, 0.5), 0.07, roundel(0, 0, 0.62, 10, Math.PI * 0.2, Math.PI * 0.8), 0.45, true);
+      seam(ctx, f, shade(colour.ink, -0.55), 0.05, roundel(0, 0, 0.78, 12, Math.PI * 1.75, Math.PI * 2.25).map(([x, y]): Pt => [x * 0.35, y]), 0.35, true);
       return;
     }
     // Where a ball lands — 0595: a splat at exactly the blast's reach, wet, and then the same splat dried flat.
@@ -19457,6 +19551,12 @@ export function drawKind(
       seal(ctx);
       glow(ctx, f, palette.bullet, 0, 0, 1.15, 0.55);
       disc(ctx, f, shade(palette.bullet, 0.65), 0, 0, 0.4);
+      /*
+        0702: plasma as plasma is — brighter at its limb than across its face, where the eye looks through more of
+        it, and a glint off the side toward the light. Translucent, inside the disc, on 0698's terms.
+      */
+      band(ctx, f, shade(palette.bullet, 0.45), 0, 0, 0.74, 0.58, 0.45);
+      disc(ctx, f, palette.impact, 0.22, -0.26, 0.13, 0.8);
       return;
     case 'spit':
       /*
@@ -19592,6 +19692,9 @@ export function drawKind(
       seal(ctx);
       glow(ctx, f, palette.player, 0.1, 0, 0.95, 0.55);
       disc(ctx, f, shade(palette.player, 0.6), 0.32, -0.06, 0.24);
+      // 0702: wet — a glint on the bead's lit side, and its tail thinning to light along its upper edge.
+      disc(ctx, f, palette.impact, 0.4, -0.16, 0.1, 0.8);
+      seam(ctx, f, shade(palette.player, 0.6), 0.05, [[-0.75, -0.04], [-0.3, -0.16], [0.05, -0.26]], 0.45, true);
       return;
     case 'venomVoid':
       /*
@@ -19605,6 +19708,8 @@ export function drawKind(
       glow(ctx, f, palette.ally, 0, 0, 1.05, 0.7);
       band(ctx, f, shade(palette.ally, 0.45), 0, 0, 0.5, 0.4, 0.85);
       disc(ctx, f, shade(palette.ally, 0.75), 0, -0.58, 0.16);
+      // 0702: the hole lit from inside along its lower lip, as the ring's own light falls across it.
+      seam(ctx, f, shade(palette.ally, 0.7), 0.06, roundel(0, 0, 0.42, 8, Math.PI * 0.2, Math.PI * 0.8), 0.5, true);
       return;
     case 'void':
       /*
@@ -20671,6 +20776,11 @@ export function drawKind(
         edgeRing(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), x, ry, 0.1, lit ? 1 : 0.8);
       });
       glow(ctx, f, palette.impact, RAY_RINGS[RAY_RINGS.length - 1]![0], 0, 0.3, 0.7);
+      // 0702: each lit ring catching its own light where it is nearest — a white point on its upper arc — so the
+      // train reads as rings of light in a field and not as flat bands.
+      RAY_RINGS.forEach(([x, ry], k) => {
+        if (k === page + 1 || k === RAY_RINGS.length - 1) disc(ctx, f, palette.impact, x, -ry * 0.72, 0.06, 0.75);
+      });
       return;
     }
     /*
@@ -20694,6 +20804,8 @@ export function drawKind(
       band(ctx, f, fading ? shade(ring, 0.2) : shade(ring, 0.6), 0, 0, rim, rim - 0.16, fading ? 0.6 : 0.95);
       glow(ctx, f, ring, 0, 0, rim * 0.85, fading ? 0.35 : 0.8);
       if (!fading) glow(ctx, f, palette.impact, 0, 0, rim * 0.45, 0.85);
+      // 0702: a second, fainter shock inside the first — a burst rings, and the fade's has spread to meet the rim.
+      band(ctx, f, shade(ring, 0.45), 0, 0, rim * (fading ? 0.8 : 0.6), rim * (fading ? 0.74 : 0.52), fading ? 0.25 : 0.5);
       return;
     }
     case 'catherine':
@@ -20767,6 +20879,13 @@ export function drawKind(
       glow(ctx, f, palette.impact, 0, 0, face * 0.62, 0.85);
       band(ctx, f, shade(gold, 0.75), 0, 0, 0.21, 0.16, 0.9);
       disc(ctx, f, palette.impact, 0, 0, 0.17);
+      /*
+        0702: the rim burning white along its inside edge, where the spokes feed it, and a dark line of soot just
+        inside that — both round the whole wheel, because the frame turns this bitmap and a light from one side
+        would turn with it.
+      */
+      band(ctx, f, shade(gold, 0.7), 0, 0, face - 0.07, face - 0.11, 0.55);
+      band(ctx, f, shade(amber, -0.55), 0, 0, face - 0.11, face - 0.14, 0.35);
       return;
     }
     case 'cinder':
@@ -20917,6 +21036,14 @@ export function drawKind(
         ]);
       }
       disc(ctx, fg, shade(palette.blade, -0.55), 0, 0, 0.16);
+      /*
+        0702: polished steel — a streak of the room down the blade that points toward the light, and the hub's rivet
+        lit round its upper edge. The two turns are an eighth apart, so the streak runs down whichever blade is
+        nearest up the screen on each and the light does not turn with the star.
+      */
+      const up = phase - Math.PI / 2;
+      seam(ctx, fg, palette.impact, 0.05, [[Math.cos(up + 0.08) * 0.24, Math.sin(up + 0.08) * 0.24], [Math.cos(up + 0.03) * 0.68, Math.sin(up + 0.03) * 0.68]], 0.5);
+      seam(ctx, fg, shade(palette.blade, 0.6), 0.04, roundel(0, 0, 0.12, 8, Math.PI * 1.1, Math.PI * 1.9), 0.55, true);
       return;
     }
     case 'pickupArc': {
@@ -20971,6 +21098,8 @@ export function drawKind(
       ring(ctx, f, 0, 0, 0.5);
       seal(ctx);
       glow(ctx, f, palette.impact, 0, 0, 1, 0.85);
+      // 0702: a corona in the bolt's own cyan round the white point, so the join and the bolt it joins are one light.
+      band(ctx, f, palette.player, 0, 0, 0.72, 0.52, 0.4);
       return;
     }
     case 'pickupSeeker': {
