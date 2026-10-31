@@ -1163,24 +1163,26 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE SHIPS AND WEAPONS ARE A QUEUE IN BATCHES: ITEMS 0 TO 18 BUILT, BATCH E IS NEXT — 2026-11-01
+### ⚠️ THE SHIPS AND WEAPONS ARE ALL BUILT, AND OWED ONE REVIEW — 2026-11-01
 
 Asked: *"a pass over all the spaceships and weapons … blocky and badly pixelated."*
 [`the-ships-and-weapons-polished`](../reports/the-ships-and-weapons-polished-2026-10-31.md) is the
-queue — twenty items, what was photographed first, the direction and the vetoes. Half of *pixelated*
-was a resolution cap on the pad and is built as [0697](decisions/0697-the-bitmap-has-a-budget.md); the
-other half is the drawing: the fighter is the style sample —
-[0698](decisions/0698-the-fighter-is-finished.md), lit as parts and finished over its paint — the
-Firebird follows it — [0699](decisions/0699-the-firebird-is-finished.md) — then batch A, the estate, the
-Thunderbolt and the Hamster Ball, [0700](decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md), and
-batch B, the Aqua Duck, the little caddie and the Viper,
-[0701](decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md) — so every ship is finished and 0698's
-guard walks `SHIP_KINDS` — and batch C, the eight guns' mounts, shots and impacts, is
-[0702](decisions/0702-the-eight-guns-are-finished.md) — and batch D, the missiles, tubes, pods, bomb and
-specials' pictures, is [0703](decisions/0703-the-tubes-and-the-specials-are-finished.md). **The last batch,
-E, lands at full auto** (the report's table), at the player's asking, and **the review is once, at the
-end**: every open call is listed in the report's *answers* with its batch. **Next is batch E** — the twelve
-pickup faces and the readout's bare copies of them.
+queue, and **every item in its table is built**: the bitmap budget
+([0697](decisions/0697-the-bitmap-has-a-budget.md)), the fighter as the style sample
+([0698](decisions/0698-the-fighter-is-finished.md)), the Firebird
+([0699](decisions/0699-the-firebird-is-finished.md)), and five batches at full auto —
+[0700](decisions/0700-the-estate-the-bolt-and-the-ball-are-finished.md) (A: the estate, the Thunderbolt, the Hamster
+Ball), [0701](decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md) (B: the Aqua Duck, the caddie, the
+Viper), [0702](decisions/0702-the-eight-guns-are-finished.md) (C: the eight guns),
+[0703](decisions/0703-the-tubes-and-the-specials-are-finished.md) (D: missiles, tubes, specials) and
+[0704](decisions/0704-the-pickup-faces-are-finished.md) (E: the pickup faces).
+
+**Owed: the player's one review**, as they asked — *"I'll review once it's all done and we can make changes
+then."* The report's *answers* hold everything that review takes: 0698's two vetoes and 0699's gold rim, and
+each batch's open calls with the one number that moves it and its preview. **Plays owed**: the pad with each
+pilot, and a run with each gun and each special, on `staging` once the last batch merges. **Found and not
+fixed**: the void missile is over 0024's flash cap on `main` — 0703 has the four runs, and it is its own piece
+of work on the rift's light.
 
 ### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
 
