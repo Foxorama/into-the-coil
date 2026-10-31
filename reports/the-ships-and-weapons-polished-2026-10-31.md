@@ -164,7 +164,8 @@ top of the ones before it, which outlives the branch.
   - the ball's window on its crown is what says *clear plastic* on the pad, and a lighter smudge in the fight — if
     it reads as a smudge, it is the `pane` in `drawBall`.
 - **Batch B — [0701](../docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md)** (the Aqua Duck, the
-  little caddie top-down and edge-on, the Viper in the fight and in the port):
+  little caddie top-down and edge-on, the Viper in the fight and in the port) — Foxorama/into-the-coil#683, preview
+  <https://76e9673c.into-the-coil.pages.dev>:
   - the duck's two feather contours across its wing read as feathers on the pad and as nothing in the fight — if they
     read as cracks, they are the two `seam`s after the wing's shadow in `drawDuck`;
   - the port's Viper keeps its dark Wyrm-Ship inks and gains only the finish — if the intro's racer should look like
