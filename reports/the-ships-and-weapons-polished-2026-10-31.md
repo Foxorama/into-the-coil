@@ -132,8 +132,8 @@ one review at the end.
 | 14 | **the ram** | the nose, its heat and glow stack | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
 | 15 | **the paintball** | the marker, the four balls, the splats wet and dry, the spray | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
 | 16 | **the acid** | the Viper's fangs, the spit, the void, the splat | C | **built — [0702](../docs/decisions/0702-the-eight-guns-are-finished.md)** |
-| 17 | **the missiles and tubes** | the missile and the seeker in flight; the loaded tube, the warhead nose; the pods and turrets each ship carries them in; the bomb | D | |
-| 18 | **the specials' pictures** | the candle's star, the storm and void balls, the dance's flares and wave, the nova's arc, the two auras | D | |
+| 17 | **the missiles and tubes** | the missile and the seeker in flight; the loaded tube, the warhead nose; the pods and turrets each ship carries them in; the bomb | D | **built — [0703](../docs/decisions/0703-the-tubes-and-the-specials-are-finished.md)** |
+| 18 | **the specials' pictures** | the candle's star, the storm and void balls, the dance's flares and wave, the nova's arc, the two auras | D | **built — [0703](../docs/decisions/0703-the-tubes-and-the-specials-are-finished.md)**; the dance's flares and wave and the nova's arc left as 0520 lit them, pending a flash measurement |
 | 19 | **the pickups' faces** | the twelve glyphs in their bubbles, and the readout's bare copies of them | E | |
 
 ## The player's answers
@@ -174,6 +174,14 @@ top of the ones before it, which outlives the branch.
   - the paintball's seam round its middle reads as a ball on the pad and as a darker crescent in the fight — if it
     reads as a dent, it is the second `seam` in the `paintballPink` case;
   - the dry splat's three cracks say *dried paint* — if a dry splat should be a stain, they go.
+- **Batch D — [0703](../docs/decisions/0703-the-tubes-and-the-specials-are-finished.md)** (the missiles, the tubes and
+  every ship's pods, the bomb, the specials' pictures):
+  - the pods' streak is in the shell's own lightest shade, not white, because a pod is the car's paint — on the dark
+    Thunderbolt and Viper shells it is faint;
+  - the dance's flares and wave and the nova's arc are as 0520 lit them — see 0703 for why, and what finishing them
+    would take;
+  - **found, not fixed**: the void missile reads 7 general flashes in its worst second on `scripts/weigh-flashes.mjs`,
+    over 0024's cap of three — on `main` before any of this work as well as after it (0703 has the four runs).
 - **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
   material read at 85 px; a contour half a pixel wide there fades to nothing and is a line on the pad. Nothing
   in the queue adds a solid mark under 0106's floor to get detail into the fight.
