@@ -35,6 +35,8 @@ import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { LEAN_KINDS, THRUST, THRUST_KINDS, THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
 import { BALL_CRADLE, BALL_RADIUS, CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING, SHIELD_ANGLES, SHIELD_LAYOUT, SHIELD_ORBIT, SHIPS, SHIP_KINDS, ownFit, shellOrbit, shellSpan, type Fit, type GunView } from '../content/ships.ts';
+// 0705: the Viper's own inks, the port's, so the ship in play is the one that blasted out of the port.
+import { VIPER } from '../content/port.ts';
 import { SHELLS, shieldPlateOf, type ShellKind, type ShieldLook } from '../content/shells.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
@@ -2975,16 +2977,26 @@ function roundel(cx: number, cy: number, radius: number, count: number, from: nu
 */
 
 /** The ray gun's little saucer, in the box's radius: its centre and radius from above, and its front, the tip. */
+/*
+  ── A NODE WITH A RING OF LIGHT, THE SAME FROM EVERY SIDE — 0705 ──────────────────────────────────
+
+  Played, on 0705's first answer (a fairing on the belly): *"the new ray gun if anything looks worse. maybe make it a
+  node with a purple ring glow or something?"* — and *"the viper in play needs to match on the pad, same with
+  weapons like the ray gun"*: the fight draws the saucer from above and the pad from the side, and every ray gun so
+  far was two drawings, one a view. A ball is the one shape that is the same drawing from any side, so the gun is
+  a NODE: a slate ball half sunk into the rim at the nose with the rings' lavender lit in its heart, and a ring of
+  that light round it (`paintEmitter`, `paintNodeHalo`) — from above, from the side, and borrowed on another ship.
+*/
 const RAYGUN = {
-  /** From above: its centre inside the rim, so its front stands out past the disc and its back is under it. */
-  housing: { x: 0.66, r: 0.3 },
-  /** Where the rings leave: the front of the little saucer. */
-  tip: 0.96,
+  /** From above: the node's centre inside the rim, so its front stands out past the disc and its back is under it. */
+  housing: { x: 0.68, r: 0.2 },
+  /** Where the rings leave: the front of the node. */
+  tip: 0.88,
   /**
-   * From the side: its centre under the rim at the nose, and its radius — 0683, hung below the belly, out of
-   * the pilot's line of sight. 0587 rode it above the rim at −0.2.
+   * From the side: the same node hung under the rim's nose, its ring of light reaching up to the rim and no further —
+   * 0683, out of the pilot's line of sight.
    */
-  side: { x: 0.6, y: 0.2, r: 0.26 },
+  side: { x: 0.68, y: 0.32, r: 0.2 },
 };
 
 /**
@@ -3149,43 +3161,15 @@ export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: numb
   const { x, y, r } = RAYGUN.side;
   if (lean > 0.5) {
     paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r, false, skin);
+    paintNodeHalo(ctx, f, palette, RAYGUN.housing.x, 0, RAYGUN.housing.r);
     return;
   }
-  const body = skin ?? mix(palette.player, palette.acid, 0.55);
-  const lav = palette.ally;
-  // How deep under the rim it hangs at this lean: the whole drop side-on, closing on the rim as the view leans over.
-  // Half again as deep as the saucer hung (0.3 of the box to its 0.2): a blister, not a plank.
-  const deep = y * 1.5 * Math.cos((lean * Math.PI) / 2);
-  const back = x - r * 0.75;
-  const tip = RAYGUN.tip;
-  // The blister: its top edge on the rim line, its belly a curve from the tail round to the lens at the front.
-  const blister: Pt[] = [
-    [back, 0],
-    [tip, 0],
-    [tip - 0.01, deep * 0.5],
-    [x + r * 0.55, deep * 0.9],
-    [x, deep],
-    [x - r * 0.5, deep * 0.86],
-    [back + 0.02, deep * 0.45],
-  ];
-  shaded(ctx, f, [x, 0], [x, deep], shade(body, -0.15), shade(body, -0.6), blister);
-  // Outlined on the pen the saucer's own outline was stroked with, so it is one silhouette with the hull.
-  ctx.beginPath();
-  trace(ctx, f, blister);
-  ctx.stroke();
-  // Its curve: the room's light along the belly's lower edge and the hover light's cyan under that.
-  seam(ctx, f, shade(body, 0.5), 0.03, [[back + 0.08, deep * 0.5], [x - r * 0.4, deep * 0.78], [x + r * 0.3, deep * 0.84], [tip - 0.08, deep * 0.5]], 0.35, true);
-  seam(ctx, f, shade(palette.player, 0.3), 0.025, [[x - r * 0.45, deep * 0.86], [x + r * 0.35, deep * 0.9]], 0.35);
-  // The rings' light down its flank to the lens, and the lens: an upright ring of lavender set in the front,
-  // lit, with its inside deep — what comes out of it is a ring like it.
-  seam(ctx, f, shade(lav, 0.35), 0.03, [[back + 0.1, deep * 0.42], [tip - 0.16, deep * 0.45]], 0.8);
-  const lensX = tip - 0.08;
-  const lensY = deep * 0.5;
-  // No further up than the rim line: the glow's reach is the lens's drop (0587's guard reads every mark, glows too).
-  glow(ctx, f, lav, lensX, lensY, deep * 0.48, 0.6);
-  const oval = (rx: number, ry: number): Pt[] => roundel(0, 0, 1, 20, 0, Math.PI * 2).map(([c, d]): Pt => [lensX + c * rx, lensY + d * ry]);
-  poly(ctx, f, shade(lav, 0.55), oval(0.06, deep * 0.42));
-  poly(ctx, f, shade(lav, -0.45), oval(0.028, deep * 0.26));
+  // The same node as from above, hung under the rim's nose: its whole drop side-on, closing on the rim as the view
+  // leans over. Nothing of it above the rim, its ring of light included — 0683, and `tests/mounts.test.ts` reads
+  // every mark.
+  const drop = y * Math.cos((lean * Math.PI) / 2);
+  paintEmitter(ctx, f, palette, 'side', x, drop, r, false, skin);
+  paintNodeHalo(ctx, f, palette, x, drop, r);
 }
 
 /**
@@ -3200,63 +3184,34 @@ export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: numb
   chrome thing bolted on. A borrowed ray gun on another ship keeps its chrome.
 */
 export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView, cx: number, cy: number, R: number, under = false, skin: string | null = null): void {
-  const chrome = skin ?? shade(palette.trim, 0.65);
+  /*
+    0705: a node — the one drawing from above and from the side, which is what a ball is. `view` and `under` are
+    kept for the callers that say which way they look, and change nothing: the disc painted after it covers what
+    is under the rim (0493), and nothing else differs. On the hull's `skin` the ball is the hull's deep shade; a
+    borrowed one is slate.
+  */
+  void view;
+  void under;
   const lav = palette.ally;
-  const oval = (x: number, y: number, rx: number, ry: number, count: number, from = 0, to = Math.PI * 2): Pt[] =>
-    roundel(0, 0, 1, count, from, to).map(([c, d]): Pt => [x + c * rx, y + d * ry]);
-  const mouth = (x: number, y: number, ry: number): void => {
-    // The mouth: an edge-on ring of the rings' lavender, lit — what comes out of it is a ring like it.
-    glow(ctx, f, lav, x, y, ry * 0.8, 0.7);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = shade(lav, 0.55);
-    ctx.beginPath();
-    // A tenth of the box wider than the ring's own quarter, so at the fight's size it is over the floor.
-    trace(ctx, f, oval(x, y, ry / 4 + 0.05, ry + 0.05, 24));
-    ctx.fill();
-    // And open, deep in the rings' lavender, where the ring is big enough to have an inside that shows.
-    const inside = ry / 4 - 0.05;
-    if (inside >= 0.05) poly(ctx, f, shade(lav, -0.45), oval(x, y, inside, ry - 0.05, 24));
-  };
-  if (view === 'top') {
-    // The disc: chrome lit from ahead, dark where it goes under the rim.
-    shaded(ctx, f, [cx - R * 0.6, cy], [cx + R, cy], shade(chrome, under ? -0.35 : -0.2), shade(chrome, skin === null ? 0.45 : 0.3), oval(cx, cy, R, R, 32));
-    // Its rim band and the six lights round it. 0705: on the hull's skin, the band is the saucer's own rim band.
-    band(ctx, f, skin === null ? shade(palette.trim, -0.2) : shade(skin, -0.5), cx, cy, R * 0.97, R * 0.8, 0.9);
-    // 0702: the band's chrome glinting along its upper arc, toward the light.
-    seam(ctx, f, palette.impact, R * 0.05, roundel(cx, cy, R * 0.885, 10, Math.PI * 1.2, Math.PI * 1.8), 0.45, true);
-    // Lights, not marks: a glow each, so none is a solid speck under the floor at the fight's size.
-    for (let k = 0; k < 6; k++) {
-      const a = Math.PI / 6 + (k * Math.PI) / 3;
-      glow(ctx, f, lav, cx + Math.cos(a) * R * 0.885, cy + Math.sin(a) * R * 0.885, R * 0.18, 0.8);
-    }
-    if (!under) {
-      // The lens on top: lavender, deep at its edge, lit at its crown.
-      shaded(ctx, f, [cx - R * 0.2, cy - R * 0.4], [cx + R * 0.2, cy + R * 0.4], shade(lav, 0.15), shade(lav, -0.45), oval(cx, cy, R * 0.42, R * 0.42, 24));
-      glow(ctx, f, palette.impact, cx - R * 0.12, cy - R * 0.14, R * 0.16, 0.8);
-    }
-    // Inside the disc's own outline: at 0.55 of the way out it is 0.83 of the radius tall, and the ring 0.72.
-    mouth(cx + R * 0.55, cy, R * 0.55);
-    return;
-  }
-  // From the side: a lens on its edge, a lavender band round its rim, a small dome on top, the mouth ahead.
-  const up = R * 0.28;
-  const down = R * 0.22;
-  ctx.fillStyle = shade(chrome, -0.35);
-  ctx.beginPath();
-  trace(ctx, f, [...oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2), ...oval(cx, cy, R, down, 24, 0, Math.PI)]);
-  ctx.fill();
-  shaded(ctx, f, [cx, cy - up], [cx, cy], shade(chrome, 0.45), chrome, oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2));
-  // 0702: a glint along the lens's upper face, and its belly in shadow.
-  seam(ctx, f, palette.impact, R * 0.05, oval(cx, cy, R * 0.85, up * 0.7, 12, Math.PI * 1.15, Math.PI * 1.85), 0.45, true);
-  shaded(ctx, f, [cx, cy], [cx, cy + down], rgba(chrome, 0), shade(chrome, -0.7), oval(cx, cy, R * 0.98, down * 0.98, 24, 0, Math.PI), 0.45);
-  // The dome: a lavender lens on top, lit at its crown.
-  shaded(ctx, f, [cx, cy - up - R * 0.32], [cx, cy - up * 0.5], shade(lav, 0.25), shade(lav, -0.35), oval(cx, cy - up * 0.6, R * 0.38, R * 0.36, 20, Math.PI, Math.PI * 2));
-  glow(ctx, f, palette.impact, cx - R * 0.1, cy - up - R * 0.18, R * 0.12, 0.8);
-  // The band round its rim: a line of the rings' light, and three lights on the near side.
-  seam(ctx, f, shade(lav, 0.4), R * 0.09, [[cx - R * 0.96, cy], [cx + R * 0.96, cy]], 0.95);
-  for (const x of [-0.55, 0, 0.55]) glow(ctx, f, lav, cx + x * R, cy, R * 0.22, 0.85);
-  // Its front edge at the radius, so the saucer and its mouth end where the muzzle is.
-  mouth(cx + R * 0.72, cy, R * 0.5);
+  const ball = skin === null ? shade(palette.trim, 0.1) : shade(skin, -0.5);
+  // The ball, lit from up the screen and ahead, deep on its far side.
+  shaded(ctx, f, [cx - R * 0.45, cy - R * 0.45], [cx + R * 0.7, cy + R * 0.7], shade(ball, 0.55), shade(ball, -0.5), roundel(cx, cy, R, 28, 0, Math.PI * 2));
+  // The rings' lavender lit in its heart, to white at the centre: lights, translucent, not marks.
+  glow(ctx, f, lav, cx, cy, R * 0.8, 0.85);
+  glow(ctx, f, palette.impact, cx, cy, R * 0.35, 0.7);
+  disc(ctx, f, palette.impact, cx - R * 0.32, cy - R * 0.32, R * 0.16, 0.8);
+}
+
+/**
+ * The node's ring of light — 0705: *"a purple ring glow."* A ring of the rings' lavender round the ball, lit where it
+ * catches the light up the screen, and a soft glow past it. Painted over whatever the ball is sunk into, so the ring
+ * is whole; every part translucent. Reaches 1.55 of the ball's radius.
+ */
+export function paintNodeHalo(ctx: Pen, f: Frame, palette: Palette, cx: number, cy: number, R: number): void {
+  const lav = palette.ally;
+  glow(ctx, f, lav, cx, cy, R * 1.55, 0.3);
+  band(ctx, f, shade(lav, 0.25), cx, cy, R * 1.35, R * 1.12, 0.8);
+  seam(ctx, f, palette.impact, R * 0.08, roundel(cx, cy, R * 1.235, 10, Math.PI * 1.12, Math.PI * 1.62), 0.45, true);
 }
 
 /** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
@@ -4741,8 +4696,10 @@ function viperGirth(x: number): readonly [number, number] {
 }
 
 function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'wyrmGreen', livery: string | null = null, pose: DancePose = 0): void {
-  // The player's cyan taken halfway to the acid's lime: a venom green every palette answers.
-  const body = livery ?? mix(palette.player, palette.acid, 0.55);
+  // 0705: the port's own green (`VIPER.body`), lifted a quarter of the way toward the palette's venom green — the
+  // player's cyan taken halfway to the acid's lime, which was the whole of it since 0666 — so the ship in play is
+  // the one that blasted out of the port, and a palette still moves it. *"the viper in play needs to match on the pad."*
+  const body = livery ?? mix(VIPER.body, mix(palette.player, palette.acid, 0.55), 0.25);
   const dark = shade(body, -0.5);
   const bob = viperStrikes(pose === 1 ? VIPER_COIL : pose === 2 ? VIPER_THROW : 0, pose === 2 ? VIPER_REAR : 0);
   const box = (points: readonly Pt[]): Pt[] => inBox(points.map(bob), 0, 1);
@@ -4758,9 +4715,9 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
   const sealWidth = ctx.lineWidth;
   // Lit along its back and dark along its belly, as the port's is.
   shaded(ctx, f, at(0, -0.3), at(0, 0.3), shade(body, 0.25), shade(body, -0.3), outline);
-  // 0705: and a wash of the port's dark green over the hull, so the accent and the scales have something to stand
-  // against — laid here, under the canopy and every mark, so the glass keeps its own light.
-  poly(ctx, f, shade(body, -0.55), outline, 0.42);
+  // 0705: and a light wash of her deeper green over the hull, under the canopy and every mark, so the glass keeps its
+  // own light. (0.42 while the body was the palette's pale mix; the body is the port's green now.)
+  poly(ctx, f, shade(body, -0.55), outline, 0.15);
   // The fin, a shade darker than the back it rises from, so it reads as a fin and not more hull.
   poly(ctx, f, shade(body, -0.18), onEdge(VIPER_FIN));
   // The wing, its leading edge lit.
@@ -5165,7 +5122,7 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   seal(ctx);
   // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
   const sealWidth = ctx.lineWidth;
-  // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493. In the hull's skin — 0705.
+  // The ray gun's node before the disc, so the disc covers it to the rim: it hangs under the lip — 0493, 0705.
   if (own) paintRaygun(ctx, f, palette, true, undefined, 1, body);
   if (stage >= 1) paintPod(ctx, f, palette, -1, livery);
   if (stage >= 2) paintPod(ctx, f, palette, 1, livery);
@@ -5174,6 +5131,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   // The rim: a dark band, a lit lip along its upper edge, and a line of light along the band's inside.
   band(ctx, f, dark, 0, 0, 0.97 * D, 0.8 * D);
   seam(ctx, f, shade(body, 0.55), 0.05, roundel(0, 0, 0.9 * D, 12, Math.PI * 1.08, Math.PI * 1.72), 0.85, true);
+  // 0705: the node's ring of light, over the rim it is sunk into, so the ring is whole.
+  if (own) paintNodeHalo(ctx, f, palette, RAYGUN.housing.x, 0, RAYGUN.housing.r);
   // Six vents between the rim and the inner ring: dark slots, each with the acid it runs on glowing in it.
   for (let k = 0; k < 6; k++) {
     const a = (k * Math.PI) / 3 + spin;
@@ -6983,20 +6942,25 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     },
   },
   /*
-    The ray gun: the caddie's own little saucer (0587), its mouth on the muzzle — from above sitting on the
-    mount, and from the side riding a short pylon, as it rides the caddie's nose on the pad.
+    The ray gun: the caddie's own node (0705; 0587's little saucer before it), its front on the muzzle — from
+    above sitting on the mount, and from the side riding a short pylon, as it hangs under the caddie's nose on
+    the pad. The same node and the same ring of light either way.
   */
   ray: {
     top: (ctx, f, palette, p, [mx]) => {
       const c = p(mx * 0.4, 0);
       const front = p(mx, 0);
-      paintEmitter(ctx, f, palette, 'top', c[0], c[1], Math.hypot(front[0] - c[0], front[1] - c[1]));
+      const r = Math.hypot(front[0] - c[0], front[1] - c[1]);
+      paintEmitter(ctx, f, palette, 'top', c[0], c[1], r);
+      paintNodeHalo(ctx, f, palette, c[0], c[1], r);
     },
     side: (ctx, f, palette, p, [mx, my]) => {
       poly(ctx, f, shade(palette.trim, -0.35), [p(-0.04, 0), p(0.04, 0), p(0.04, my), p(-0.04, my)]);
       const c = p(mx * 0.45, my);
       const front = p(mx, my);
-      paintEmitter(ctx, f, palette, 'side', c[0], c[1], Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.02);
+      const r = Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.02;
+      paintEmitter(ctx, f, palette, 'side', c[0], c[1], r);
+      paintNodeHalo(ctx, f, palette, c[0], c[1], r);
     },
   },
   /*

@@ -202,8 +202,9 @@ firing on the bench, the tubes, the specials, the pickup faces — and came back
 1. the fighter's tubes are warheads out from under its wings, the F-14 asked for;
 2. the Hamster Ball's tubes are the caddie's own pods, one drawing on both;
 3. the ray is four rings with sky between them, its dark field gone;
-4. the caddie's ray gun is the hull's — a fairing on the belly from the side, the saucer's own nose from above;
-5. the Viper on the pad has the port's tendril fin, dark hull, accent scales and second fang.
+4. the caddie's ray gun is a node with a ring of light — one drawing from above and from the side, as asked for
+   by name after the first answer (a fairing) read worse;
+5. the Viper on the pad and in play is the port's: her green, her tendril fin, her accent scales, her second fang.
 
 The same page carries the after, batch by batch. Still open from the batches above: the three early vetoes and
 each batch's open calls, none of which the review raised.

@@ -61,14 +61,25 @@ the burst and the spark on `tests/accents.test.ts`'s hull-less list, with the re
 bolted on; from above, a chrome cap past the rim with a lavender lens. The sixth drawing of this gun (0461, 0463,
 0467, 0493, 0587, 0683): every one a chrome object of its own, and *part of the ship* is what none of them was.
 
-**Done:** the gun is the hull's. `paintEmitter` takes a `skin`, the caddie's own hull ink: from above the housing
-is painted in it, lit as the saucer's disc is, with the saucer's own dark rim band carried round it, so what shows
-past the rim is the saucer's nose. From the side (`paintRaygunSide`) it is a **fairing**: a shallow blister
-faired into the belly under the nose, in the hull's ink and the belly's shading, its top edge the rim line, the
-rings' lavender running down its flank to a lens set in its front, the hover light under it. Every mark of it is
-still below the rim and it is still far wider than tall, which is what 0587 and 0683 hold; the mouth is still an
-edge-on ring as tall as the first ring the gun throws (0493's guard). A ray gun borrowed by another ship keeps its
-chrome. *The player did not know what would look better; this is the answer offered, and the next word is theirs.*
+**Done, twice.** First the gun was made the hull's in the old shapes — the housing in the hull's ink from above,
+a fairing on the belly from the side — and the player's word on that was *"the new ray gun if anything looks
+worse. maybe make it a node with a purple ring glow or something?"*, with, on the Viper and the ray gun both,
+*"the viper in play needs to match on the pad, same with weapons like the ray gun."* The fight draws the saucer
+from above and the pad from the side, and every ray gun so far was two drawings, one a view.
+
+So the gun is a **node**: a ball — the one shape that is the same drawing from any side — half sunk into the rim
+at the nose, the hull's own deep shade, the rings' lavender lit in its heart, and a **ring of that light round it**
+(`paintEmitter`, `paintNodeHalo`). From above (`paintRaygun`, before the disc, as 0493 asks) the ball's front
+stands past the rim and the ring is painted over the rim so it is whole; from the side (`paintRaygunSide`) it is
+the same ball and the same ring, hung under the rim's nose by enough that nothing of it, the ring's glow included,
+stands above the rim (0683). Borrowed on another ship it is the same node on that ship's mount, in slate. The row's
+muzzle moved to the node's front (0.88 of the box from 0.96) and the mounts guard moved with it.
+
+Two guards went with the saucer: *A RING IN, A RING OUT* (0493: the mouth as tall as the first ring thrown — a
+node has no mouth) and 0587's *wider than it is tall* — each replaced or deleted with its note in
+`tests/mounts.test.ts`, their probes likewise. What holds now: every mark of it below the rim (0683's claim on the
+node), **it is round, and it is the one node from above and from the side** — the fight's as round as the pad's,
+and its ring reaching as far.
 
 ## 5. The Viper on the pad
 
@@ -82,11 +93,18 @@ and two fangs. The pad's (`drawViper`, the fight's own bitmap at hangar size) wa
 the frame wide at the root, its chevrons dark on the pale hull, one fang.
 
 **Done, in `drawViper`:** the fin is the tendril (`VIPER_FIN`, a tenth of the frame between its edges — four
-pixels at the fight's camera), with its outer edge lit and the accent core down its middle; a wash of the port's
-dark green over the hull (0.42, under the canopy so the glass keeps its light); the lateral line and the chevrons
-in the port's accent — the hull's green lifted toward the acid; a nostril; the second fang, translucent, where
-two solid slender fangs were under 0106's floor. The far wing the port shows over the back is still left out,
-because the launcher stands there (0666). The inks are still the palette's, not the port's fixed ones (0666).
+pixels at the fight's camera), with its outer edge lit and the accent core down its middle; the lateral line and
+the chevrons in the port's accent — the hull's green lifted toward the acid; a nostril; the second fang,
+translucent, where two solid slender fangs were under 0106's floor. The far wing the port shows over the back is
+still left out, because the launcher stands there (0666).
+
+**And her body is the port's green.** The first pass washed the palette's pale mix darker (0.42) and the player's
+word was *"the viper in play needs to match on the pad"* — the ship in play, on the pad and in the chase out of the
+port are to be one ship. So `drawViper`'s body is `VIPER.body`, the port's own ink, lifted a quarter of the way
+toward the palette's venom green (0666's mix), and the wash is a light one (0.15). 0666 refused the port's fixed
+inks so a palette could answer the hull; a quarter of the palette's answer is kept, so the high-contrast palette
+still lifts her, and the default palette shows the port's Viper. The port's own drawing (`paintViper`) is
+unchanged: it is the one the player held up.
 
 ## What guards it
 
@@ -95,12 +113,16 @@ because the launcher stands there (0666). The inks are still the palette's, not 
 with its base under the wing** — read off `SHIP_HULL` and the row's `tubeLength` through `LOADED_NOSE_HULL`'s
 proportions; and **between each of the ray's rings and the next is at least 2 px of sky**. Three probes in
 `scripts/probes/0705-the-review-is-answered.mjs`: the warheads laid forward of the wing, the warheads inboard of
-it, and the rings leaned back to 0588's quarter. The accents guard's hull-less list grew by three with its
-reason. Everything else here is held by what already held it — the mounts guard, the pad's tubes, 0493's mouth,
-0587's side view, 0227's containment and 0106's floor.
+it, and the rings leaned back to 0588's quarter. And in `tests/mounts.test.ts`, on the node: **from the side every
+mark of it is below the rim and it is round**, and **from above it is as round and its ring reaches as far** —
+two more probes there: the node flattened to a lens, and the side view's node drawn smaller than the fight's.
+The accents guard's hull-less list grew by three with its reason; the 0493 guard reads only solid marks as the
+housing, since the ring of light is painted over the rim. Everything else here is held by what already held it —
+the mounts guard, the pad's tubes, 0493's lip, 0227's containment and 0106's floor.
 
 ## Not held by any guard
 
 Items 2, 4 and 5 are the player's eye. The numbers that move them, if the next word asks: the ball's pods are on
-its `slate` and sunk `0.14`; the fairing is `1.5` times the saucer's old drop deep and starts `0.75` of its old
-radius back; the Viper's wash is `0.42` and its accent `0.45` above the hull's green lifted halfway to the acid.
+its `slate` and sunk `0.14`; the node is `0.2` of the box across with its ring at `1.35` of that and its glow at
+`1.55`, hung `0.32` under the rim from the side; the Viper's body is the port's green lifted `0.25` toward the
+palette's, her wash `0.15` and her accent `0.45` above that green lifted halfway to the acid.
