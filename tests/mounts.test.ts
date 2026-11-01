@@ -21,7 +21,7 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { SHIP_BOX, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { reset } from '../src/sim/entity.ts';
-import { caddieMounts, carMounts, drawKind, paintRaygunSide } from '../src/render/bake.ts';
+import { caddieMounts, carMounts, drawKind, paintRaygunSide, paintRaygunSideHalo } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -149,8 +149,8 @@ describe('0493 — the ray gun hangs under the lip, and its muzzle is a ring —
     covers it to the rim; and the muzzle is a dish the size of the smallest ring it fires.
   */
   const unit = 10;
-  /** Every filled mark of a kind's bake, as circles in world units about the tile's centre: where, and how far out. */
-  const circlesOf = (kind: 'caddie'): { x: number; y: number; r: number }[] => {
+  /** Every filled mark of a kind's bake, as circles in world units about the tile's centre: where, how far out, and its alpha. */
+  const circlesOf = (kind: 'caddie'): { x: number; y: number; r: number; alpha: number }[] => {
     const size = SPRITE_EXTENT[kind] * unit;
     const { pen, trace } = tracingPen();
     drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
@@ -159,17 +159,18 @@ describe('0493 — the ray gun hangs under the lip, and its muzzle is a ring —
       const x = points.reduce((sum, p) => sum + p[0], 0) / Math.max(1, points.length);
       const y = points.reduce((sum, p) => sum + p[1], 0) / Math.max(1, points.length);
       const r = Math.max(0, ...points.map((p) => Math.hypot(p[0] - x, p[1] - y)));
-      return { x: (x - size / 2) / unit, y: (y - size / 2) / unit, r: r / unit };
+      return { x: (x - size / 2) / unit, y: (y - size / 2) / unit, r: r / unit, alpha: pass.alpha };
     });
   };
 
   it('UNDER THE LIP: the emitter is painted before the disc’s face, so the face covers it to the rim', () => {
     const marks = circlesOf('caddie');
     const rim = CADDIE_DISC * R;
-    // The face: the biggest mark centred on the saucer. The housing: a mark centred inside the rim, ahead
-    // of the dome, that reaches out past it.
+    // The face: the biggest mark centred on the saucer. The housing: a SOLID mark centred inside the rim, ahead
+    // of the dome, that reaches out past it. 0705: the node's ring of light is painted over the rim so the ring
+    // is whole, and it is a light (translucent), not the housing — so only solid marks are read as the housing.
     const face = marks.findIndex((m) => Math.hypot(m.x, m.y) < 0.1 && m.r > rim * 0.9);
-    const housings = marks.flatMap((m, i) => (m.x > rim * 0.5 && m.x < rim && Math.abs(m.y) < 0.05 && m.x + m.r > rim ? [i] : []));
+    const housings = marks.flatMap((m, i) => (m.alpha >= 0.9 && m.x > rim * 0.5 && m.x < rim && Math.abs(m.y) < 0.05 && m.x + m.r > rim ? [i] : []));
     expect(face, 'no face is painted on the disc').toBeGreaterThanOrEqual(0);
     expect(housings.length, 'no emitter housing reaches out past the rim').toBeGreaterThan(0);
     for (const housing of housings) {
@@ -178,63 +179,62 @@ describe('0493 — the ray gun hangs under the lip, and its muzzle is a ring —
   });
 
   /*
-    ⚠️ **0587 AND 0588 CHANGED WHAT THIS MEASURES, NOT WHAT IT HOLDS.** The muzzle was a dish and the shot four
-    rings about one centre, so the dish's radius was set against the innermost ring's. The gun is a little
-    saucer now and the shot a train of four rings seen edge-on (Sonya Blade's), so the mouth is an edge-on
-    ring too, and the claim is the same one in the new picture: what the gun's mouth is, is what comes out
-    of it — as tall as the first ring it throws.
+    ⚠️ **A RING IN, A RING OUT STOOD HERE — 0493, re-measured by 0587 and 0588, and gone with 0705.** It held the
+    gun's mouth to be an edge-on ring as tall as the first ring the gun throws. The gun is a node now (0705): a
+    ball with a ring of light round it, which the player asked for by name, and the rings it throws leave from
+    its front with no mouth to be the size of. A guard that cannot be met by the ask is deleted, with this note.
   */
-  it('A RING IN, A RING OUT: the mouth is an edge-on ring as tall as the first ring the gun throws', () => {
-    const boxesOf = (kind: 'caddie' | 'ray'): { x: number; y: number; w: number; h: number }[] => {
-      const size = SPRITE_EXTENT[kind] * unit;
-      const { pen, trace } = tracingPen();
-      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
-      return trace.passes.map((pass) => {
-        const points = pass.subpaths[0] ?? [];
-        const xs = points.map((p) => p[0]);
-        const ys = points.map((p) => p[1]);
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-        return { x: ((minX + maxX) / 2 - size / 2) / unit, y: ((minY + maxY) / 2 - size / 2) / unit, w: (maxX - minX) / unit, h: (maxY - minY) / unit };
-      });
-    };
-    // The ray's first ring: the shortest tall mark in the back half of the train.
-    const rings = boxesOf('ray').filter((m) => m.x < 0 && m.h > m.w * 1.5 && Math.abs(m.y) < 0.05);
-    expect(rings.length, 'the ray is drawn with no edge-on rings').toBeGreaterThan(0);
-    const first = Math.min(...rings.map((m) => m.h));
-    // The mouth: a tall mark centred out past the rim on the gun's line.
-    const mouths = boxesOf('caddie').filter((m) => m.x > CADDIE_DISC * R && Math.abs(m.y) < 0.05 && m.h > m.w * 1.5);
-    expect(mouths.length, 'no edge-on mouth is drawn at the front of the gun').toBeGreaterThan(0);
-    const mouth = Math.max(...mouths.map((m) => m.h));
-    expect(mouth / first, `the mouth is ${mouth.toFixed(2)} units tall and the first ring ${first.toFixed(2)}`).toBeGreaterThan(0.8);
-    expect(mouth / first, `the mouth is ${mouth.toFixed(2)} units tall and the first ring ${first.toFixed(2)}`).toBeLessThan(1.25);
-  });
-
 });
 
-describe('0587 — the ray gun is a little saucer, and 0683 hangs it under the rim', () => {
+describe('0705 — the ray gun is a node with a ring of light, and 0683 hangs it under the rim', () => {
   /*
-    0587: *"The ray gun still looks bad, it should show on the top half of the ship. It should be more saucer
-    shaped."* 0683: *"the ray gun/weapon for the Lil Caddie should be below the ship, not above it in the
-    graphic, it'd be blocking the pilots view currently."* Held off the side view's own trace — the pad's and
-    the intro's picture of the saucer, whose rim is the frame's centreline: every solid mark of the gun is
-    below it, and the gun's outline is a saucer's, far wider than it is tall.
+    0705: *"maybe make it a node with a purple ring glow or something?"* — and *"the viper in play needs to match on
+    the pad, same with weapons like the ray gun"*: a ball is the one drawing that is the same from above and from the
+    side. 0683: *"the ray gun/weapon for the Lil Caddie should be below the ship, not above it in the graphic, it'd
+    be blocking the pilots view currently."* Held off the side view's own trace — the pad's and the intro's picture
+    of the saucer, whose rim is the frame's centreline: every mark of the gun, its ring of light included, is below
+    it, and the gun's outline is round. (0587's little saucer, wider than tall, stood here until 0705.)
   */
-  it('THE ASK: from the side, every mark of it is below the rim, and it is wider than it is tall', () => {
+  /*
+    Played, on the node hung under the nose: *"the side view is a hard no."* So the node sits ON the rim at the nose
+    from the side as it does from above, sunk into the hull: no solid mark of it stands higher than its own radius
+    above the rim line, which is under the dome and out of the pilot's line of sight (0683's claim, on a bead).
+  */
+  it('THE ASK: from the side, the node sits on the rim at the nose, no higher than its own radius, and it is round', () => {
     const size = 400;
+    const f = { half: size / 2, r: size * 0.42 };
     const { pen, trace } = tracingPen();
-    paintRaygunSide(pen, { half: size / 2, r: size * 0.42 }, PALETTES[DEFAULT_PALETTE], 0);
-    const points = trace.passes.flatMap((pass) => pass.subpaths.flat());
-    expect(points.length, 'the side view draws no gun').toBeGreaterThan(0);
-    // The pylon reaches up to the rim; nothing goes over it, where it would stand in the pilot's view.
-    for (const [, y] of points) expect(y, 'a mark of the gun is above the rim').toBeGreaterThanOrEqual(size / 2 - 0.5);
-    const below = points.filter(([, y]) => y > size / 2 + size * 0.42 * 0.08);
-    const xs = below.map(([x]) => x);
-    const ys = below.map(([, y]) => y);
+    paintRaygunSide(pen, f, PALETTES[DEFAULT_PALETTE], 0);
+    const solid = trace.passes.filter((pass) => pass.alpha >= 0.9).flatMap((pass) => pass.subpaths.flat());
+    expect(solid.length, 'the side view draws no gun').toBeGreaterThan(0);
+    const ys = solid.map(([, y]) => y);
+    const xs = solid.map(([x]) => x);
     const wide = Math.max(...xs) - Math.min(...xs);
     const tall = Math.max(...ys) - Math.min(...ys);
-    expect(wide / tall, 'the gun is not saucer-shaped: it is not much wider than it is tall').toBeGreaterThan(1.8);
+    // On the rim: its centre on the rim line, so it rises its own radius above it and no more.
+    expect(Math.min(...ys), 'the node stands higher above the rim than its own radius').toBeGreaterThanOrEqual(f.half - tall / 2 - 0.5);
+    expect(Math.max(...ys), 'the node hangs lower under the rim than its own radius').toBeLessThanOrEqual(f.half + tall / 2 + 0.5);
+    // Round but for its barrel: the ball and the short rod out of its front are a third wider than tall at most.
+    expect(wide / tall, `the gun is not round: ${wide.toFixed(0)} px wide to ${tall.toFixed(0)} px tall`).toBeGreaterThan(0.85);
+    expect(wide / tall, `the gun is not round: ${wide.toFixed(0)} px wide to ${tall.toFixed(0)} px tall`).toBeLessThan(1.4);
+  });
+
+  it('AND THE SAME NODE FROM ABOVE: the fight’s gun is as round, and its ring of light reaches as far', () => {
+    const size = 400;
+    const f = { half: size / 2, r: size * 0.42 };
+    const extent = (lean: number): { wide: number; tall: number } => {
+      const { pen, trace } = tracingPen();
+      paintRaygunSide(pen, f, PALETTES[DEFAULT_PALETTE], lean);
+      paintRaygunSideHalo(pen, f, PALETTES[DEFAULT_PALETTE], lean);
+      const points = trace.passes.flatMap((pass) => pass.subpaths.flat());
+      const xs = points.map(([x]) => x);
+      const ys = points.map(([, y]) => y);
+      return { wide: Math.max(...xs) - Math.min(...xs), tall: Math.max(...ys) - Math.min(...ys) };
+    };
+    const side = extent(0);
+    const above = extent(1);
+    expect(above.wide / above.tall, 'from above the gun is not round').toBeGreaterThan(0.85);
+    expect(above.wide / above.tall, 'from above the gun is not round').toBeLessThan(1.18);
+    expect(Math.abs(above.wide - side.wide), `the gun is ${above.wide.toFixed(0)} px across from above and ${side.wide.toFixed(0)} from the side`).toBeLessThan(2);
   });
 });

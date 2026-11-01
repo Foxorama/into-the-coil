@@ -481,7 +481,21 @@ const FIGHTER_MOUNT_SCALE = 0.6;
  * wing, then one under each. 0097's single still pops to the top of the lane and the pair to the top and the
  * bottom.
  */
-const FIGHTER_TUBES: ShipRow['tubes'] = [[], [{ along: -0.45, across: -1.76 }], [{ along: -0.45, across: -1.76 }, { along: -0.45, across: 1.76 }]];
+/*
+  0705: *"it should just be a couple of rocket heads poking out from under the rear wings — something like a F14
+  would look like from above."* A 1.7-unit dart lay at 1.76 across, where the wing is 0.9 of a unit deep, so most
+  of it showed — its nose ahead of the wing and its fins behind. Now what the fighter shows is the WARHEAD (the
+  cars' `nose` look, 1.2 units long), 1.5 units out under the wing (the row hangs them `under`, 0662), where
+  the wing's leading edge is half a unit behind the nose and its trailing edge 1.7: the point at −0.05 stands
+  0.47 of a unit out ahead of the wing and the cone's base lies under it, its inner corner under the hull —
+  an F-14's Phoenix from above. Photographed first at 1.9 out, a unit long: the cone's outer corner stood
+  past the wingtip beside the wingtip's lamp, and that corner was all that read.
+  (`SHIP_UPPER` in `src/render/bake.ts`, in a frame 2.94 units to the unit, is where those edges are read off;
+  `tests/the-review-is-answered.test.ts` holds the point ahead of the wing and the base under it.)
+*/
+const FIGHTER_TUBES: ShipRow['tubes'] = [[], [{ along: -0.05, across: -1.5 }], [{ along: -0.05, across: -1.5 }, { along: -0.05, across: 1.5 }]];
+/** How long the fighter's warhead is — 0705: 1.2 units, the cars' 0.59 being a turret's nose and this a missile's. */
+const FIGHTER_WARHEAD = 1.2;
 
 /**
  * The saucer's disc, in its box's radius — 0461; it was the whole of it. Here rather than in the bake
@@ -648,8 +662,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     hardpoint: FIGHTER_HARDPOINT,
     mountScale: FIGHTER_MOUNT_SCALE,
     tubes: FIGHTER_TUBES,
-    tubeLength: LOADED_TUBE,
-    tubeLook: 'dart',
+    // 0705: the warhead alone shows, out from under the wing.
+    tubeLength: FIGHTER_WARHEAD,
+    tubeLook: 'nose',
     hang: 'under',
     // Its two nacelles: 0.78 of the 7-unit hull's radius back, 0.21 of it out (`SHIP_CORE` in the bake).
     nozzles: [
@@ -710,7 +725,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // The saucer's rim.
     wingtip: 2.84,
     // 0587: the front of the ray gun's little saucer, at the nose — where the rings leave. It was the dish's, at 4.46.
-    muzzle: { along: 3.79, across: 0 },
+    // 0705: the front of the node, 0.88 of the box out (`RAYGUN.tip`); the little saucer's mouth was at 0.96.
+    muzzle: { along: 3.47, across: 0 },
     // 0525: from above, a borrowed gun seated on the rim at the nose, where its own ray gun's housing is.
     view: 'top',
     hardpoint: { along: 2.84, across: 0 },
@@ -1023,8 +1039,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // Nothing is ever mounted on it (`WEAPONS.ram.lends`); the front of the ball, so no reader is handed the centre.
     hardpoint: { along: BALL_RADIUS, across: 0 },
     mountScale: 1,
-    // The warhead of each tube in a cradle either side of the ball, on its axle, the tube's middle over the axle: the near one, then both.
-    tubes: [[], [{ along: LOADED_TUBE / 2, across: -BALL_CRADLE }], [{ along: LOADED_TUBE / 2, across: -BALL_CRADLE }, { along: LOADED_TUBE / 2, across: BALL_CRADLE }]],
+    // 0705: the warhead's point in a pod either side of the ball, the caddie's own pods on the ball's axle (`paintPod`):
+    // the near one, then both. They were a cradle on each axle stub with the dart lying over it.
+    tubes: [[], [{ along: 1.18, across: -BALL_CRADLE }], [{ along: 1.18, across: -BALL_CRADLE }, { along: 1.18, across: BALL_CRADLE }]],
     tubeLength: LOADED_TUBE,
     tubeLook: 'dart',
     hang: 'over',
@@ -1154,8 +1171,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // A borrowed gun stands on the head, ahead of the canopy, where a car's stands on its hood.
     hardpoint: wheelAt(11.5, -1.8, 0, 1),
     mountScale: 1,
-    // Each missile's nose in the face of the launcher on its back, between the canopy and the fin.
-    tubes: [[], [wheelAt(0.3, -4.25, 0, 1)], [wheelAt(0.9, -4.963, 0, 1), wheelAt(0.9, -3.537, 0, 1)]],
+    // Each missile's nose in the face of the launcher on its back — 0705: behind the fin's root, under its curl
+    // (`VIPER_PODS` in `src/render/bake.ts`; it stood between the canopy and the fin until the port's canopy was hers).
+    tubes: [[], [wheelAt(-5.1, -3.592, 0, 1)], [wheelAt(-5.1, -4.208, 0, 1), wheelAt(-5.1, -2.928, 0, 1)]],
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
     hang: 'over',

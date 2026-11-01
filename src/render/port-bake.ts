@@ -21,7 +21,7 @@ import type { Palette } from '../content/palette.ts';
 import { DOCK, FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, PORT_LIGHT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import { figureOf, type GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, rimLight, seam, shade, shaded, trace, withFit, type Atlas, type Frame, type Pen, type Pt } from './bake.ts';
+import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, paintRaygunSideHalo, paintViperArt, poly, rgba, rimLight, viperInks, seam, shade, shaded, trace, withFit, type Atlas, type Frame, type Pen, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHELL_SPAN, SHIPS, type ShipKind } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
@@ -3318,6 +3318,10 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     // The rim's nose is the top view's hardpoint (`CADDIE_DISC` of the box), so the mount stands where
     // the fight's drawing has it, and goes under the lens with its root as the ray gun's does.
     paintMountAt(ctx, box, palette, fitted, 'side', [CADDIE_DISC, 0]);
+  } else {
+    // 0705: its own ray gun's node, sunk into the nose: painted before the hull, which covers its back half, as the
+    // disc covers it from above. Its ring of light goes on last (`paintRaygunSideHalo`).
+    paintRaygunSide(ctx, box, palette, lean, body);
   }
   // The belly: under the rim, in shadow.
   const belly = ctx.createLinearGradient(0, Y(0), 0, Y(under));
@@ -3454,7 +3458,8 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     a little saucer on a pylon at the nose. 0683: hung UNDER the rim again, as 0493 had it — *"it'd be
     blocking the pilot's view"* — and still painted last, over the belly and its hover light.
   */
-  if (fitted === SHIPS.caddie.weapon) paintRaygunSide(ctx, box, palette, lean);
+  // 0705: the node's ring of light, over the nose it is sunk into, so the ring is whole.
+  if (fitted === SHIPS.caddie.weapon) paintRaygunSideHalo(ctx, box, palette, lean);
 }
 
 /**
@@ -3488,113 +3493,13 @@ function paintJets(
  * swept wing, and a dorsal fin that curls over like a tail about to strike.
  */
 function paintViper(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number): void {
-  const X = (x: number): number => f.half + x * f.r;
-  const Y = (y: number): number => f.half + y * f.r;
-  // 0701: the hull's path on any pen, so the rim light can lay it lowered (`rimLight`); `hullPath` is it on this one.
-  const hullOn = (pen: Pen): void => {
-    pen.moveTo(X(1), Y(0.03));
-    pen.bezierCurveTo(X(0.95), Y(-0.06), X(0.84), Y(-0.13), X(0.72), Y(-0.14));
-    pen.bezierCurveTo(X(0.62), Y(-0.16), X(0.48), Y(-0.2), X(0.36), Y(-0.16));
-    pen.lineTo(X(-0.1), Y(-0.17));
-    pen.bezierCurveTo(X(-0.4), Y(-0.17), X(-0.66), Y(-0.12), X(-0.8), Y(-0.06));
-    pen.lineTo(X(-0.88), Y(-0.05));
-    pen.lineTo(X(-0.88), Y(0.1));
-    pen.bezierCurveTo(X(-0.6), Y(0.18), X(-0.4), Y(0.21), X(-0.2), Y(0.2));
-    pen.bezierCurveTo(X(0.1), Y(0.2), X(0.4), Y(0.19), X(0.6), Y(0.13));
-    pen.bezierCurveTo(X(0.8), Y(0.09), X(0.93), Y(0.07), X(1), Y(0.03));
-    pen.closePath();
-  };
-  const hullPath = (): void => {
-    ctx.beginPath();
-    hullOn(ctx);
-  };
-  const outline = Math.max(1, size * 0.012);
-  // The far wing, in shadow, behind the hull.
-  poly(ctx, f, shade(VIPER.body, -0.35), [[0.2, 0.05], [-0.15, -0.36], [-0.34, -0.38], [-0.28, -0.1]]);
-  // The dorsal fin, curling over the back: an outline stroke, then the fin itself.
-  const fin = (): void => {
-    ctx.beginPath();
-    ctx.moveTo(X(-0.12), Y(-0.16));
-    ctx.bezierCurveTo(X(-0.3), Y(-0.5), X(-0.72), Y(-0.56), X(-0.7), Y(-0.34));
-    ctx.bezierCurveTo(X(-0.69), Y(-0.2), X(-0.5), Y(-0.24), X(-0.52), Y(-0.34));
-  };
+  /*
+    0705: the one painter the fight and the pad use too (`paintViperArt` in `src/render/bake.ts`) — *"the player
+    ship should be the same ship from the intro movie."* What stood here is there, curve for curve; the port keeps
+    its thin outline and its own inks, which are now hers everywhere.
+  */
   ctx.lineCap = 'round';
   ctx.strokeStyle = palette.space;
-  ctx.lineWidth = f.r * 0.1;
-  fin();
-  ctx.stroke();
-  ctx.strokeStyle = VIPER.accent;
-  ctx.lineWidth = f.r * 0.065;
-  fin();
-  ctx.stroke();
-  // The hull, shaded from a light back to a dark belly.
-  ctx.fillStyle = VIPER.body;
-  ctx.strokeStyle = palette.space;
-  ctx.lineWidth = outline;
-  hullPath();
-  ctx.fill();
-  const shadeDown = ctx.createLinearGradient(0, Y(-0.2), 0, Y(0.21));
-  shadeDown.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
-  shadeDown.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
-  shadeDown.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
-  ctx.fillStyle = shadeDown;
-  hullPath();
-  ctx.fill();
-  ctx.stroke();
-  // The lateral line and the scales under it.
-  ctx.strokeStyle = VIPER.accent;
-  ctx.lineWidth = f.r * 0.018;
-  ctx.beginPath();
-  ctx.moveTo(X(0.62), Y(-0.03));
-  ctx.bezierCurveTo(X(0.2), Y(-0.04), X(-0.3), Y(-0.03), X(-0.78), Y(0));
-  ctx.stroke();
-  for (let x = 0.46; x > -0.66; x -= 0.1) {
-    poly(ctx, f, VIPER.accent, [[x, 0.01], [x - 0.05, 0.06], [x, 0.11], [x + 0.025, 0.11], [x - 0.02, 0.06], [x + 0.025, 0.01]], 0.75);
-  }
-  // The near wing, swept, with its leading edge lit.
-  poly(ctx, f, shade(VIPER.body, 0.08), [[0.16, 0.13], [-0.3, 0.46], [-0.52, 0.46], [-0.36, 0.16]]);
-  poly(ctx, f, VIPER.accent, [[0.16, 0.13], [-0.3, 0.46], [-0.35, 0.46], [0.09, 0.14]]);
-  ctx.strokeStyle = palette.space;
-  ctx.lineWidth = outline;
-  ctx.beginPath();
-  trace(ctx, f, [[0.16, 0.13], [-0.3, 0.46], [-0.52, 0.46], [-0.36, 0.16]]);
-  ctx.stroke();
-  // The canopy — acid glass, with the sky in it.
-  ctx.fillStyle = VIPER.glass;
-  ctx.beginPath();
-  ctx.ellipse(X(0.12), Y(-0.19), f.r * 0.2, f.r * 0.085, 0, Math.PI, Math.PI * 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-  ctx.beginPath();
-  ctx.ellipse(X(0.17), Y(-0.235), f.r * 0.07, f.r * 0.022, 0, 0, Math.PI * 2);
-  ctx.fill();
-  /*
-    0701: the port's racer given the pass the fight's Viper has (`drawViper`), in its own inks — every mark
-    translucent: a horizon along the scales of its upper flank, the belly's plates as contours, the fin's
-    leading edge lit, the canopy deep at its sill, and the rim light inside every edge that faces up.
-    `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
-  */
-  shaded(ctx, f, [0, -0.15], [0, -0.05], shade(VIPER.body, 0.6), rgba(VIPER.body, 0), [[0.6, -0.14], [0.1, -0.16], [-0.5, -0.13], [-0.8, -0.06], [-0.8, -0.03], [-0.5, -0.08], [0.1, -0.1], [0.6, -0.09]], 0.35);
-  for (let x = 0.5; x > -0.7; x -= 0.12) seam(ctx, f, shade(VIPER.belly, -0.4), 0.02, [[x, 0.13], [x - 0.02, 0.185]], 0.35);
-  seam(ctx, f, shade(VIPER.accent, 0.5), 0.02, [[-0.15, -0.2], [-0.3, -0.42], [-0.5, -0.5], [-0.66, -0.47]], 0.5, true);
-  shaded(ctx, f, [0, -0.27], [0, -0.19], rgba(VIPER.glass, 0), shade(VIPER.glass, -0.6), [[-0.08, -0.19], [0, -0.25], [0.12, -0.275], [0.24, -0.25], [0.32, -0.19]], 0.45, true);
-  rimLight(ctx, f, shade(VIPER.body, 0.45), 0.75, Y(-0.21), Y(0.21), outline, hullOn);
-  // The head: an eye with a slit in it, a nostril, the mouth line and two fangs under the jaw.
-  glow(ctx, f, VIPER.eye, 0.74, -0.07, 0.09, 0.8);
-  disc(ctx, f, VIPER.eye, 0.74, -0.07, 0.036);
-  poly(ctx, f, '#000000', [[0.745, -0.1], [0.75, -0.07], [0.745, -0.04], [0.735, -0.07]]);
-  disc(ctx, f, '#000000', 0.93, -0.01, 0.012);
-  ctx.strokeStyle = VIPER.belly;
-  ctx.lineWidth = f.r * 0.016;
-  ctx.beginPath();
-  ctx.moveTo(X(0.98), Y(0.045));
-  ctx.lineTo(X(0.62), Y(0.1));
-  ctx.stroke();
-  poly(ctx, f, palette.impact, [[0.9, 0.06], [0.875, 0.16], [0.855, 0.068]]);
-  poly(ctx, f, palette.impact, [[0.8, 0.078], [0.775, 0.18], [0.755, 0.085]]);
-  // The nozzle, dark, with the violet of her engine already in it.
-  disc(ctx, f, '#0a0f0c', -0.87, 0.025, 0.07);
-  glow(ctx, f, VIPER.flame, -0.87, 0.025, 0.12, 0.6);
+  ctx.lineWidth = Math.max(1, size * 0.012);
+  paintViperArt(ctx, f, (x, y) => [x, y], 1, viperInks(palette), true);
 }

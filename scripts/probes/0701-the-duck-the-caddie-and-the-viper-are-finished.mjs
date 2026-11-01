@@ -35,8 +35,9 @@ export const PROBES = [
     guard: '0698: every finished ship wears a rim light inside its edges, wide enough to be drawn',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  rimLight(ctx, f, shade(body, 0.45), 0.75, top, bottom, sealWidth, viperOutlinePen);\n}',
-      replace: '  void top;\n  void bottom;\n  void sealWidth;\n  void viperOutlinePen;\n}',
+      // Re-anchored by 0705: the one Viper painter, `paintViperArt`, lays the rim light for the port and the fight both.
+      find: '  rimLight(ctx, f, shade(body, 0.45), 0.75, top, bottom, sealWidth, outlineOn);\n  // The head:',
+      replace: '  void top;\n  void bottom;\n  void sealWidth;\n  // The head:',
     },
   },
 ];

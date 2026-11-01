@@ -17,16 +17,9 @@ export const PROBES = [
       replace: '  disc(ctx, f, palette.impact, dx - 0.15 * D, dy - 0.17 * D, 0.075, 0.9);\n  paintRaygun(ctx, f, palette);\n  // 0701: and the rim light',
     },
   },
-  {
-    decision: '0493',
-    suite: 'tests/mounts.test.ts',
-    // The mouth a small point again, firing a large ring. Re-anchored by 0587, whose mouth is an edge-on ring.
-    broke: 'the muzzle back to the small orb it was',
-    guard: 'A RING IN, A RING OUT: the mouth is an edge-on ring as tall as the first ring the gun throws',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '    mouth(cx + R * 0.55, cy, R * 0.55);',
-      replace: '    mouth(cx + R * 0.55, cy, R * 0.25);',
-    },
-  },
+  /*
+    ⚠️ A second probe stood here — `the muzzle back to the small orb it was`, against *A RING IN, A RING OUT* — and
+    went with that guard in 0705: the gun is a node with no mouth, the player's own ask. The guard's note in
+    tests/mounts.test.ts says the same.
+  */
 ];

@@ -192,3 +192,21 @@ top of the ones before it, which outlives the branch.
 - **What the fight's camera can show**, found building item 1 and now the shape of every item: light and
   material read at 85 px; a contour half a pixel wide there fades to nothing and is a line on the pad. Nothing
   in the queue adds a solid mark under 0106's floor to get detail into the fight.
+
+### The review, and its answers — 2026-11-01
+
+The review was given off a page of the game's own screenshots — every ship on the pad and off the sheet, every gun
+firing on the bench, the tubes, the specials, the pickup faces — and came back as five items, answered together as
+[0705](../docs/decisions/0705-the-review-is-answered.md):
+
+1. the fighter's tubes are warheads out from under its wings, the F-14 asked for;
+2. the Hamster Ball's tubes are the caddie's own pods, one drawing on both;
+3. the ray is four rings with sky between them, its dark field gone;
+4. the caddie's ray gun is a node with a ring of light — one drawing from above and from the side, as asked for
+   by name after the first answer (a fairing) read worse;
+5. the Viper is one drawing — the port's painter now paints her in the intro, on the pad and in the fight, so the
+   player's ship is the ship from the intro, with her violet thruster (hers since 0667; the review's pictures had
+   fitted an orange one). Asked whether an art-count limit kept them apart: it did not, and 0705 says what did.
+
+The same page carries the after, batch by batch. Still open from the batches above: the three early vetoes and
+each batch's open calls, none of which the review raised.

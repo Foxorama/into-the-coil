@@ -35,6 +35,8 @@ import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { LEAN_KINDS, THRUST, THRUST_KINDS, THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
 import { BALL_CRADLE, BALL_RADIUS, CADDIE_DISC, MAX_SHIELDS, UFO_BULBS, UFO_RING, SHIELD_ANGLES, SHIELD_LAYOUT, SHIELD_ORBIT, SHIPS, SHIP_KINDS, ownFit, shellOrbit, shellSpan, type Fit, type GunView } from '../content/ships.ts';
+// 0705: the Viper's own inks, the port's, so the ship in play is the one that blasted out of the port.
+import { VIPER } from '../content/port.ts';
 import { SHELLS, shieldPlateOf, type ShellKind, type ShieldLook } from '../content/shells.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
@@ -2975,16 +2977,37 @@ function roundel(cx: number, cy: number, radius: number, count: number, from: nu
 */
 
 /** The ray gun's little saucer, in the box's radius: its centre and radius from above, and its front, the tip. */
+/*
+  ── A NODE WITH A RING OF LIGHT, THE SAME FROM EVERY SIDE — 0705 ──────────────────────────────────
+
+  Played, on 0705's first answer (a fairing on the belly): *"the new ray gun if anything looks worse. maybe make it a
+  node with a purple ring glow or something?"* — and *"the viper in play needs to match on the pad, same with
+  weapons like the ray gun"*: the fight draws the saucer from above and the pad from the side, and every ray gun so
+  far was two drawings, one a view. A ball is the one shape that is the same drawing from any side, so the gun is
+  a NODE: a slate ball half sunk into the rim at the nose with the rings' lavender lit in its heart, and a ring of
+  that light round it (`paintEmitter`, `paintNodeHalo`) — from above, from the side, and borrowed on another ship.
+*/
+/*
+  Played, on the node at the nose: *"it's way too big, has no obvious firing mechanism and doesn't even really fit
+  the game."* So the ball is three quarters the size it was (0.15 of the box), and a short BARREL runs out of its
+  front to the muzzle — a cylinder, which from above and from the side is the same short rod, so the gun has a
+  mouth and the two views still agree.
+*/
 const RAYGUN = {
-  /** From above: its centre inside the rim, so its front stands out past the disc and its back is under it. */
-  housing: { x: 0.66, r: 0.3 },
-  /** Where the rings leave: the front of the little saucer. */
-  tip: 0.96,
+  /** From above: the node's centre inside the rim, so its front stands out past the disc and its back is under it. */
+  housing: { x: 0.68, r: 0.15 },
+  /** The barrel out of the node's front to the muzzle: where it starts and ends along, and its half-width — as shares of the ball's radius. */
+  // Its half-width 0.4 of the ball: 4.3 px across at the fight's camera, over 0106's floor (0.3 measured 2.1 px).
+  barrel: { from: 0.4, to: 1.333, half: 0.4 },
+  /** Where the rings leave: the barrel's mouth. */
+  tip: 0.88,
   /**
-   * From the side: its centre under the rim at the nose, and its radius — 0683, hung below the belly, out of
-   * the pilot's line of sight. 0587 rode it above the rim at −0.2.
+   * From the side: the same node, sunk into the nose on the rim line as it is from above — painted before the hull,
+   * so the hull covers its back half and what shows is its front, a bead on the nose. Played, on a node hung under
+   * the nose: *"the side view is a hard no."* It stands no higher than its own radius above the rim, under the dome
+   * and out of the pilot's line of sight (0683).
    */
-  side: { x: 0.6, y: 0.2, r: 0.26 },
+  side: { x: 0.68, y: 0, r: 0.15 },
 };
 
 /**
@@ -3022,10 +3045,13 @@ function podHalf(x: number): number {
  * pylon's front, forward down the pod's inner edge, round the warhead, back along its outer edge, round
  * the tail, forward to the pylon's back and in to the disc. The top one is this mirrored.
  */
-function podDetour(): Pt[] {
-  const { y, tail, mouth, wide, point } = CADDIE_POD;
+/*
+  0705: on any round hull, at any distance out — `D` the hull's radius where the pylon meets it and `y` the
+  pod's axis — so the ball hangs the same pods off its axle (`ballHull`). The caddie's are the defaults.
+*/
+function podDetour(D = CADDIE_DISC, y = CADDIE_POD.y): Pt[] {
+  const { tail, mouth, wide, point } = CADDIE_POD;
   const [back, front] = CADDIE_PYLON;
-  const D = CADDIE_DISC;
   const out: Pt[] = [[front, Math.sqrt(D * D - front * front)]];
   const steps = 8;
   for (let i = 0; i <= steps; i++) {
@@ -3089,9 +3115,12 @@ function caddieHull(stage: number, own = true): Pt[] {
  */
 export function raygunProfile(): Pt[] {
   const { x: hx, r: hr } = RAYGUN.housing;
+  const { to, half } = RAYGUN.barrel;
   const seat = housingSeat();
-  // 0587: the little saucer's front, round from its seat in the rim on the upper side to the lower.
-  return roundel(hx, 0, hr, 24, -seat.onHousing, seat.onHousing);
+  // 0705: the node's front, round from its seat in the rim on the upper side to where the barrel leaves it, out along
+  // the barrel to its mouth and back, and round to the seat on the lower side.
+  const leaves = Math.asin(half);
+  return [...roundel(hx, 0, hr, 12, -seat.onHousing, -leaves), [hx + hr * to, -hr * half], [hx + hr * to, hr * half], ...roundel(hx, 0, hr, 12, leaves, seat.onHousing)];
 }
 
 /**
@@ -3120,10 +3149,10 @@ export function caddieMounts(): { muzzle: Pt; tubes: readonly (readonly Pt[])[] 
   — the caddie's own gun, and the hangar's — `place` is the identity and `s` is one, which return the very
   numbers this drew before there was a choice: no arithmetic is added to the caddie's own pixels.
 */
-export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true, at?: Pt, s = 1): void {
-  // The caddie's own sits at its housing; a borrowed one is placed with its front on the mount's muzzle.
+export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true, at?: Pt, s = 1, skin: string | null = null): void {
+  // The caddie's own sits at its housing, in its hull's skin (0705); a borrowed one is placed with its front on the mount's muzzle.
   const { x: hx, r: hr } = RAYGUN.housing;
-  if (at === undefined) paintEmitter(ctx, f, palette, 'top', hx, 0, hr, onDisc);
+  if (at === undefined) paintEmitter(ctx, f, palette, 'top', hx, 0, hr, onDisc, skin);
   else paintEmitter(ctx, f, palette, 'top', at[0], at[1], hr * s, false);
 }
 
@@ -3134,21 +3163,34 @@ export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true,
  * play said *"it'd be blocking the pilot's view"*. Leaning past half way it is the view from above, sitting on
  * the disc.
  */
-export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: number): void {
+/*
+  0705: *"I'm still not happy with the side or top down view of the ray gun for the lil caddie … it just doesn't
+  look like part of the ship design at the moment at all."* From the side it was a chrome saucer on a stub
+  under the nose with a mouth bigger than itself — a thing bolted on. Now it is a FAIRING: a shallow blister
+  faired into the belly under the nose, in the hull's own ink and the belly's shading, its top edge the rim
+  line and its tail lost in the belly, the rings' lavender running down its flank to a lens set in its front.
+  Still every mark of it below the rim and far wider than tall, which is what 0587 and 0683 hold.
+*/
+export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: number, skin: string | null = null): void {
   const { x, y, r } = RAYGUN.side;
   if (lean > 0.5) {
-    paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r);
+    paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r, false, skin);
     return;
   }
-  // How far under the rim it hangs at this lean: the whole drop side-on, closing on the rim as the view leans over.
-  const rise = y * Math.cos((lean * Math.PI) / 2);
-  poly(ctx, f, shade(palette.trim, -0.35), [
-    [x - r * 0.35, rise],
-    [x - r * 0.15, rise],
-    [x - r * 0.25, 0],
-    [x - r * 0.55, 0],
-  ]);
-  paintEmitter(ctx, f, palette, 'side', x, rise, r);
+  // The same node as from above, sunk into the nose on the rim line: painted before the hull (`paintSaucer`), which
+  // covers its back half, as the disc covers it from above. `y` is 0; the drop is kept for a side that wants one.
+  const drop = y * Math.cos((lean * Math.PI) / 2);
+  paintEmitter(ctx, f, palette, 'side', x, drop, r, false, skin);
+}
+
+/** The node's ring of light from the side — 0705: painted last, over the hull the node is sunk into, so the ring is whole. */
+export function paintRaygunSideHalo(ctx: Pen, f: Frame, palette: Palette, lean: number): void {
+  const { x, y, r } = RAYGUN.side;
+  if (lean > 0.5) {
+    paintNodeHalo(ctx, f, palette, RAYGUN.housing.x, 0, RAYGUN.housing.r);
+    return;
+  }
+  paintNodeHalo(ctx, f, palette, x, y * Math.cos((lean * Math.PI) / 2), r);
 }
 
 /**
@@ -3156,77 +3198,64 @@ export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: numb
  * side. `under`: from above, painted before the disc it hangs under, so only its front past the rim shows and
  * the lens on top is not drawn.
  */
-export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView, cx: number, cy: number, R: number, under = false): void {
-  const chrome = shade(palette.trim, 0.65);
+/*
+  0705: *"it just doesn't look like part of the ship design at the moment at all."* With `skin` — the caddie's own
+  hull ink — the housing is the hull's: its disc in the hull's ink lit as the saucer's disc is, its band the
+  saucer's dark rim band carried round it, so what shows past the rim reads as the saucer's nose and not a
+  chrome thing bolted on. A borrowed ray gun on another ship keeps its chrome.
+*/
+export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView, cx: number, cy: number, R: number, under = false, skin: string | null = null): void {
+  /*
+    0705: a node — the one drawing from above and from the side, which is what a ball is. `view` and `under` are
+    kept for the callers that say which way they look, and change nothing: the disc painted after it covers what
+    is under the rim (0493), and nothing else differs. On the hull's `skin` the ball is the hull's deep shade; a
+    borrowed one is slate.
+  */
+  void view;
+  void under;
   const lav = palette.ally;
-  const oval = (x: number, y: number, rx: number, ry: number, count: number, from = 0, to = Math.PI * 2): Pt[] =>
-    roundel(0, 0, 1, count, from, to).map(([c, d]): Pt => [x + c * rx, y + d * ry]);
-  const mouth = (x: number, y: number, ry: number): void => {
-    // The mouth: an edge-on ring of the rings' lavender, lit — what comes out of it is a ring like it.
-    glow(ctx, f, lav, x, y, ry * 0.8, 0.7);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = shade(lav, 0.55);
-    ctx.beginPath();
-    // A tenth of the box wider than the ring's own quarter, so at the fight's size it is over the floor.
-    trace(ctx, f, oval(x, y, ry / 4 + 0.05, ry + 0.05, 24));
-    ctx.fill();
-    // And open, deep in the rings' lavender, where the ring is big enough to have an inside that shows.
-    const inside = ry / 4 - 0.05;
-    if (inside >= 0.05) poly(ctx, f, shade(lav, -0.45), oval(x, y, inside, ry - 0.05, 24));
-  };
-  if (view === 'top') {
-    // The disc: chrome lit from ahead, dark where it goes under the rim.
-    shaded(ctx, f, [cx - R * 0.6, cy], [cx + R, cy], shade(chrome, under ? -0.35 : -0.2), shade(chrome, 0.45), oval(cx, cy, R, R, 32));
-    // Its rim band and the six lights round it.
-    band(ctx, f, shade(palette.trim, -0.2), cx, cy, R * 0.97, R * 0.8, 0.9);
-    // 0702: the band's chrome glinting along its upper arc, toward the light.
-    seam(ctx, f, palette.impact, R * 0.05, roundel(cx, cy, R * 0.885, 10, Math.PI * 1.2, Math.PI * 1.8), 0.45, true);
-    // Lights, not marks: a glow each, so none is a solid speck under the floor at the fight's size.
-    for (let k = 0; k < 6; k++) {
-      const a = Math.PI / 6 + (k * Math.PI) / 3;
-      glow(ctx, f, lav, cx + Math.cos(a) * R * 0.885, cy + Math.sin(a) * R * 0.885, R * 0.18, 0.8);
-    }
-    if (!under) {
-      // The lens on top: lavender, deep at its edge, lit at its crown.
-      shaded(ctx, f, [cx - R * 0.2, cy - R * 0.4], [cx + R * 0.2, cy + R * 0.4], shade(lav, 0.15), shade(lav, -0.45), oval(cx, cy, R * 0.42, R * 0.42, 24));
-      glow(ctx, f, palette.impact, cx - R * 0.12, cy - R * 0.14, R * 0.16, 0.8);
-    }
-    // Inside the disc's own outline: at 0.55 of the way out it is 0.83 of the radius tall, and the ring 0.72.
-    mouth(cx + R * 0.55, cy, R * 0.55);
-    return;
-  }
-  // From the side: a lens on its edge, a lavender band round its rim, a small dome on top, the mouth ahead.
-  const up = R * 0.28;
-  const down = R * 0.22;
-  ctx.fillStyle = shade(chrome, -0.35);
-  ctx.beginPath();
-  trace(ctx, f, [...oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2), ...oval(cx, cy, R, down, 24, 0, Math.PI)]);
-  ctx.fill();
-  shaded(ctx, f, [cx, cy - up], [cx, cy], shade(chrome, 0.45), chrome, oval(cx, cy, R, up, 24, Math.PI, Math.PI * 2));
-  // 0702: a glint along the lens's upper face, and its belly in shadow.
-  seam(ctx, f, palette.impact, R * 0.05, oval(cx, cy, R * 0.85, up * 0.7, 12, Math.PI * 1.15, Math.PI * 1.85), 0.45, true);
-  shaded(ctx, f, [cx, cy], [cx, cy + down], rgba(chrome, 0), shade(chrome, -0.7), oval(cx, cy, R * 0.98, down * 0.98, 24, 0, Math.PI), 0.45);
-  // The dome: a lavender lens on top, lit at its crown.
-  shaded(ctx, f, [cx, cy - up - R * 0.32], [cx, cy - up * 0.5], shade(lav, 0.25), shade(lav, -0.35), oval(cx, cy - up * 0.6, R * 0.38, R * 0.36, 20, Math.PI, Math.PI * 2));
-  glow(ctx, f, palette.impact, cx - R * 0.1, cy - up - R * 0.18, R * 0.12, 0.8);
-  // The band round its rim: a line of the rings' light, and three lights on the near side.
-  seam(ctx, f, shade(lav, 0.4), R * 0.09, [[cx - R * 0.96, cy], [cx + R * 0.96, cy]], 0.95);
-  for (const x of [-0.55, 0, 0.55]) glow(ctx, f, lav, cx + x * R, cy, R * 0.22, 0.85);
-  // Its front edge at the radius, so the saucer and its mouth end where the muzzle is.
-  mouth(cx + R * 0.72, cy, R * 0.5);
+  const ball = skin === null ? shade(palette.trim, 0.1) : shade(skin, -0.5);
+  const slate = shade(palette.trim, 0.1);
+  // The barrel first, so the ball's front covers its root: a slate rod out to the muzzle, lit along its upper edge,
+  // its mouth dark — a light, under 0106's floor at the fight's camera.
+  const { from, to, half } = RAYGUN.barrel;
+  shaded(ctx, f, [cx, cy - R * half], [cx, cy + R * half], shade(slate, 0.5), shade(slate, -0.55), [[cx + R * from, cy - R * half], [cx + R * to, cy - R * half], [cx + R * to, cy + R * half], [cx + R * from, cy + R * half]]);
+  disc(ctx, f, shade(lav, -0.5), cx + R * to, cy, R * half * 0.7, 0.85);
+  // The ball, lit from up the screen and ahead, deep on its far side.
+  shaded(ctx, f, [cx - R * 0.45, cy - R * 0.45], [cx + R * 0.7, cy + R * 0.7], shade(ball, 0.55), shade(ball, -0.5), roundel(cx, cy, R, 28, 0, Math.PI * 2));
+  // The rings' lavender lit in its heart, to white at the centre: lights, translucent, not marks.
+  glow(ctx, f, lav, cx, cy, R * 0.8, 0.85);
+  glow(ctx, f, palette.impact, cx, cy, R * 0.35, 0.7);
+  disc(ctx, f, palette.impact, cx - R * 0.32, cy - R * 0.32, R * 0.16, 0.8);
+}
+
+/**
+ * The node's ring of light — 0705: *"a purple ring glow."* A ring of the rings' lavender round the ball, lit where it
+ * catches the light up the screen, and a soft glow past it. Painted over whatever the ball is sunk into, so the ring
+ * is whole; every part translucent. Reaches 1.55 of the ball's radius.
+ */
+export function paintNodeHalo(ctx: Pen, f: Frame, palette: Palette, cx: number, cy: number, R: number): void {
+  const lav = palette.ally;
+  glow(ctx, f, lav, cx, cy, R * 1.55, 0.3);
+  band(ctx, f, shade(lav, 0.25), cx, cy, R * 1.35, R * 1.12, 0.8);
+  seam(ctx, f, palette.impact, R * 0.08, roundel(cx, cy, R * 1.235, 10, Math.PI * 1.12, Math.PI * 1.62), 0.45, true);
 }
 
 /** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
-function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1, paint: string | null = null): void {
-  const { y, tail, mouth, wide, point } = CADDIE_POD;
+// 0705: and on the ball — `on` is the hull's radius at the pylon and the pod's axis, the caddie's by default.
+function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1, paint: string | null = null, on: { D: number; y: number; sunk: number } = { D: CADDIE_DISC, y: CADDIE_POD.y, sunk: 0.04 }): void {
+  const { tail, mouth, wide, point } = CADDIE_POD;
+  // `sunk`: how far inside the hull the pylon starts — under the saucer's opaque face a little is enough; through
+  // the ball's clear plastic it is the axle, seen.
+  const { D, y, sunk } = on;
   const at = (x: number, off: number): Pt => [x, (y + off) * side];
   const [back, front] = CADDIE_PYLON;
   // 0529: in the saucer's paint, when it has one.
   const body = paint ?? mix(palette.player, palette.acid, 0.55);
   // The pylon, in the saucer's own shadow, and a seam where it meets the pod.
   poly(ctx, f, shade(body, -0.45), [
-    [back + 0.03, (CADDIE_DISC - 0.04) * side],
-    [front - 0.03, (CADDIE_DISC - 0.04) * side],
+    [back + 0.03, (D - sunk) * side],
+    [front - 0.03, (D - sunk) * side],
     [front - 0.03, (y - podHalf(front - 0.03) + 0.02) * side],
     [back + 0.03, (y - podHalf(back + 0.03) + 0.02) * side],
   ]);
@@ -4562,9 +4591,16 @@ function viperAt(x: number, y: number): Pt {
 }
 /** Its back, where the launcher stands, and how high the launcher stands on it — the predecessor's frame. */
 const VIPER_BACK = -2;
-const VIPER_POD_TOP = -5.4;
-/** Where its launcher stands on its back, at one tube and two, as `[back, front]` spans — behind the canopy. */
-const VIPER_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-4.6, 0.4]], [[-5.2, -2.6], [-1.6, 1]]];
+/*
+  0705: the launcher moved aft, under the fin's curl — the port's canopy sits further back than the fight's copy
+  did (its arc runs to 0.08 of the port's frame behind the centre) and the port's fin rises right behind it, so
+  the launcher's old place, behind the canopy and ahead of the fin, is under the glass now. Lower too (−4.6 from
+  −5.4), so its top clears the curl, which passes at −0.34 of the port's frame and lower.
+*/
+const VIPER_POD_TOP = -4.6;
+/** Where its launcher stands on its back, at one tube and two, as `[back, front]` spans — behind the fin's root, under its curl. */
+// Its front at −5 keeps the fin's ribbon clear of the pod's front corner, and its tail short of the curl's end over it.
+const VIPER_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-9.2, -5]], [[-9.3, -7.3], [-6.6, -5]]];
 /** Its jaw, where the acid leaves; `VIPER_MUZZLE` on its row. */
 const VIPER_MUZZLE: Pt = [17.6, 1.9];
 /** The root of the fin, which it turns about in its War Dance, and the neck the head rears about — 0666. */
@@ -4575,78 +4611,206 @@ const VIPER_COIL = -0.32;
 const VIPER_THROW = 0.22;
 const VIPER_REAR = -0.14;
 
-/** The top of the head from the nose back to the canopy, in the port's frame. */
-const VIPER_HEAD_TOP: readonly Pt[] = [
+/*
+  ── ONE VIPER — 0705 ───────────────────────────────────────────────────────────────────────────────
+
+  Played: *"these two things are not like each other at all. the intro ship is way cooler … the player ship should
+  be the same ship from the intro movie, not some dodgy version of it."* The port painted her (`paintViper` in
+  `src/render/port-bake.ts`) and the fight painted a polygon copy of the port's numbers, in the palette's inks, and
+  every pass that brought the copy closer (0701, 0705's first two) left it a copy. So there is one painter now,
+  `paintViperArt`, and the port, the pad and the fight all call it: the port's curves, the port's inks, the port's
+  fin, eye, fangs and nozzle. What the fight adds, it adds on top — its launcher, its looks, its War Dance.
+
+  ⚠️ **AND IT IS NOT AN ART-COUNT LIMIT, AND NEVER WAS.** What kept the two apart was three things, none a count:
+  the fight's camera draws her 85 px long, and 0106 forbids a solid mark under 2.5 px there (the port's slender
+  fangs were 1.8 px, its nostril half a pixel); the guards read a polygon trace, and the tracing pen has flattened
+  curves since 0276; and 0666 chose the palette's inks over the port's so a palette could answer her. The first is
+  met by drawing the fine marks as lights (translucent, 0698's rule) and the fangs a hair broader; the second is
+  gone; the third is given up — she wears the port's green on every palette, which is the one thing the
+  high-contrast palette no longer moves, and that is noted as her own open call.
+*/
+
+/** The Viper's inks: the port's own (`VIPER` in `src/content/port.ts`), with what the palette lends every hull. */
+export interface ViperInks {
+  readonly body: string;
+  readonly belly: string;
+  readonly accent: string;
+  readonly glass: string;
+  readonly eye: string;
+  readonly flame: string;
+  readonly impact: string;
+}
+
+/** The Viper's inks as she comes, or in `livery` — 0529's paint over the port's green. */
+export function viperInks(palette: Palette, livery: string | null = null): ViperInks {
+  return { body: livery ?? VIPER.body, belly: VIPER.belly, accent: VIPER.accent, glass: VIPER.glass, eye: VIPER.eye, flame: VIPER.flame, impact: palette.impact };
+}
+
+/** `n` points along a cubic from `from` through `c1` and `c2` to `to`, the start left out. */
+function cubic(from: Pt, c1: Pt, c2: Pt, to: Pt, n: number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 1; i <= n; i++) {
+    const t = i / n;
+    const u = 1 - t;
+    out.push([
+      u * u * u * from[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * to[0],
+      u * u * u * from[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * to[1],
+    ]);
+  }
+  return out;
+}
+
+/** The Viper's hull in the port's frame: the nose, over the head and the back to the stern, and the belly back to the nose. */
+const VIPER_HULL: readonly Pt[] = [
   [1, 0.03],
-  [0.95, -0.05],
-  [0.86, -0.11],
-  [0.74, -0.14],
-  [0.62, -0.155],
-  [0.5, -0.17],
-];
-/** The canopy's top, front to back. */
-const VIPER_CANOPY: readonly Pt[] = [
-  [0.49, -0.19],
-  [0.46, -0.235],
-  [0.4, -0.262],
-  [0.3, -0.275],
-  [0.2, -0.262],
-  [0.14, -0.235],
-  [0.11, -0.19],
-];
-/** The dorsal fin, from its root up round its hook and back down to the hull. */
-const VIPER_FIN: readonly Pt[] = [
-  [-0.3, -0.165],
-  [-0.42, -0.33],
-  [-0.56, -0.46],
-  [-0.72, -0.53],
-  [-0.85, -0.48],
-  [-0.88, -0.36],
-  [-0.8, -0.32],
-  [-0.72, -0.38],
-  [-0.64, -0.32],
-  [-0.62, -0.13],
-];
-/** The stern and the belly back to the wing, the wing, and the belly on to the jaw. */
-const VIPER_BELLY: readonly Pt[] = [
-  [-0.8, -0.06],
+  ...cubic([1, 0.03], [0.95, -0.06], [0.84, -0.13], [0.72, -0.14], 12),
+  ...cubic([0.72, -0.14], [0.62, -0.16], [0.48, -0.2], [0.36, -0.16], 12),
+  // The back's straight run, in steps, so a detour spliced in meets a vertex near where it leaves the hull.
+  [0.25, -0.162],
+  [0.14, -0.165],
+  [0.03, -0.168],
+  [-0.1, -0.17],
+  ...cubic([-0.1, -0.17], [-0.4, -0.17], [-0.66, -0.12], [-0.8, -0.06], 12),
   [-0.88, -0.05],
   [-0.88, 0.1],
-  [-0.7, 0.155],
-  [-0.5, 0.185],
-  [-0.36, 0.19],
-  // The wing, swept back and down.
-  [-0.52, 0.36],
-  [-0.3, 0.36],
-  [0.16, 0.195],
-  [0.4, 0.19],
-  [0.6, 0.13],
-  [0.74, 0.1],
+  ...cubic([-0.88, 0.1], [-0.6, 0.18], [-0.4, 0.21], [-0.2, 0.2], 12),
+  ...cubic([-0.2, 0.2], [0.1, 0.2], [0.4, 0.19], [0.6, 0.13], 12),
+  ...cubic([0.6, 0.13], [0.8, 0.09], [0.93, 0.07], [1, 0.03], 12),
 ];
-/**
- * The fang under the jaw, back to front: its root, its point, its front. One, as a snake's pair is from the side, and
- * broad: two of the port's slender fangs were a pixel and a third across at the fight's camera, under 0106's floor.
- */
-const VIPER_FANGS: readonly Pt[] = [
-  [0.72, 0.105],
-  [0.79, 0.27],
-  [0.86, 0.088],
+/** The belly's height at `x`, in the port's frame, off the hull's own points — where a wing or a fang meets it. */
+function viperBellyAt(x: number): number {
+  let best: Pt = VIPER_HULL[0]!;
+  for (const p of VIPER_HULL) if (p[1] > 0 && Math.abs(p[0] - x) < Math.abs(best[0] - x)) best = p;
+  return best[1];
+}
+/** The dorsal fin's line: up from the back, over, and curling back on itself. */
+const VIPER_FIN_LINE: readonly Pt[] = [
+  [-0.12, -0.16],
+  ...cubic([-0.12, -0.16], [-0.3, -0.5], [-0.72, -0.56], [-0.7, -0.34], 10),
+  ...cubic([-0.7, -0.34], [-0.69, -0.2], [-0.5, -0.24], [-0.52, -0.34], 6),
 ];
+/** The far wing, seen over the back. (The near wing is `viperWingDetour`, the hull's own loop round it.) */
+const VIPER_FAR_WING: readonly Pt[] = [[0.2, 0.05], [-0.15, -0.36], [-0.34, -0.38], [-0.28, -0.1]];
+/** Her two fangs' points; each hangs from the jaw on a root a tenth of the frame wide — the port's 0.045 broadened, so each clears 0106's floor at the fight's camera. */
+const VIPER_FANG_TIPS: readonly Pt[] = [[0.875, 0.165], [0.775, 0.185]];
+/** A fang: its root on the belly line either side of its point, so it meets the hull on the hull's own edge. */
+function viperFang([tx, ty]: Pt): Pt[] {
+  return [[tx - 0.05, viperBellyAt(tx - 0.05)], [tx, ty], [tx + 0.05, viperBellyAt(tx + 0.05)]];
+}
+/** The near wing's detour of the belly: where its trailing and leading edges leave the hull, round its tip. */
+function viperWingDetour(): Pt[] {
+  return [[-0.376, viperBellyAt(-0.376)], [-0.52, 0.46], [-0.3, 0.46], [0.069, viperBellyAt(0.069)]];
+}
+/** The canopy's arc over the back, front to back: the upper half of an ellipse. */
+// A tenth of the frame tall (the port drew it 0.085): at the fight's camera the lower dome measured under 0106's floor.
+const VIPER_CANOPY_ARC: readonly Pt[] = [[0.32, -0.19], ...cubic([0.32, -0.19], [0.32, -0.2452], [0.2305, -0.29], [0.12, -0.29], 6), ...cubic([0.12, -0.29], [0.0095, -0.29], [-0.08, -0.2452], [-0.08, -0.19], 6)];
 
-/** The Viper's outline at `stage` tubes, in the predecessor's frame — with its own gun, the fang under the jaw it spits from. */
-function viperOutline(stage: number, own = true): Pt[] {
-  const at = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => viperAt(x, y));
-  return [
-    ...at(VIPER_HEAD_TOP),
-    ...at(VIPER_CANOPY),
-    [viperAt(0.11, 0)[0], VIPER_BACK],
-    ...turretsOn(VIPER_PODS[stage]!, () => VIPER_BACK, VIPER_POD_TOP),
-    ...at(VIPER_FIN),
-    ...at(VIPER_BELLY),
-    // The jaw: the fang under it with her own gun, closed without.
-    ...(own ? at(VIPER_FANGS) : []),
-    ...at([[0.93, 0.06]]),
-  ];
+/**
+ * `hull` with `detour` spliced into it: from the hull's vertex nearest the detour's first point, along the detour,
+ * to the vertex nearest its last — one closed loop, so the silhouette is one sub-path and every part of it shares
+ * an edge with the hull and no area (0227, 0631). The detour runs the way the hull does there.
+ */
+function spliced(hull: readonly Pt[], detour: readonly Pt[]): Pt[] {
+  // The hull's edge nearest `p`, and `p`'s foot on it — so the detour leaves and rejoins ON the edge, with no fold
+  // where its end stands a hair off the nearest vertex and no notch where it stands a hair inside.
+  const footOf = (p: Pt): { edge: number; at: Pt } => {
+    let best = { edge: 0, at: hull[0]!, d: Number.POSITIVE_INFINITY };
+    for (let e = 0; e < hull.length; e++) {
+      const [ax, ay] = hull[e]!;
+      const [bx, by] = hull[(e + 1) % hull.length]!;
+      const len2 = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
+      const t = Math.max(0, Math.min(1, ((p[0] - ax) * (bx - ax) + (p[1] - ay) * (by - ay)) / len2));
+      const at: Pt = [ax + (bx - ax) * t, ay + (by - ay) * t];
+      const d = Math.hypot(at[0] - p[0], at[1] - p[1]);
+      if (d < best.d) best = { edge: e, at, d };
+    }
+    return { edge: best.edge, at: best.at };
+  };
+  const from = footOf(detour[0]!);
+  const to = footOf(detour[detour.length - 1]!);
+  // A detour given against the hull's way round is turned round; one that meets the hull on one edge is no detour.
+  if (from.edge > to.edge) return spliced(hull, [...detour].reverse());
+  if (from.edge === to.edge) return [...hull];
+  return [...hull.slice(0, from.edge + 1), from.at, ...detour, to.at, ...hull.slice(to.edge + 1)];
+}
+
+/**
+ * The Viper painted — 0705: the one painter the port, the pad and the fight share. `at` maps a point of the port's
+ * own ±1 drawing into the frame (the port's is the identity; the fight's lays it in the predecessor's frame, bent
+ * by the War Dance); `k` is how many of the frame's units one of the port's is, for widths. The pen's stroke is the
+ * outline: the caller sets it, and the first fill is sealed with it. `hull` adds sub-paths to that first fill (the
+ * fight's launcher) and `over` paints between the hull and its finish (the fight's looks and launcher).
+ */
+export function paintViperArt(ctx: Pen, f: Frame, at: (x: number, y: number) => Pt, k: number, inks: ViperInks, own: boolean, detours: readonly (readonly Pt[])[] = [], over: (() => void) | null = null): void {
+  const pts = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => at(x, y));
+  const { body, belly, accent, glass, eye, flame, impact } = inks;
+  /*
+    The silhouette, one loop: the hull with the canopy's arc, the fin — the Marmot's `ribbon` (0557) along the
+    port's fin line, a tenth of the port's frame wide and untapered — the near wing, the fangs with her own gun, and
+    what the caller adds (the fight's launcher), each spliced in where it meets the hull. Over the top from the
+    nose, x falls: the canopy, the launcher and the fin go in that order; along the belly back to the nose, x rises:
+    the wing and then the fangs.
+  */
+  let loop: Pt[] = [...VIPER_HULL];
+  loop = spliced(loop, VIPER_CANOPY_ARC);
+  loop = spliced(loop, ribbon(VIPER_FIN_LINE, 0.1, 1));
+  for (const detour of detours) loop = spliced(loop, detour);
+  loop = spliced(loop, viperWingDetour());
+  if (own) for (const tip of [...VIPER_FANG_TIPS].reverse()) loop = spliced(loop, viperFang(tip));
+  const silhouette = pts(loop);
+  const outlineOn = (pen: Pen): void => trace(pen, f, silhouette);
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  outlineOn(ctx);
+  seal(ctx);
+  const sealWidth = ctx.lineWidth;
+  // The far wing, in shadow, behind everything: a light, so it may stand off the hull over the back.
+  ctx.globalCompositeOperation = 'destination-over';
+  poly(ctx, f, shade(body, -0.35), pts(VIPER_FAR_WING), 0.75);
+  ctx.globalCompositeOperation = 'source-over';
+  // The hull shaded from a light back to a dark belly.
+  shaded(ctx, f, at(0, -0.2), at(0, 0.21), 'rgba(255, 255, 255, 0.12)', 'rgba(0, 0, 0, 0.45)', pts(VIPER_HULL));
+  // The fin's accent core down its middle, inside its dark edge.
+  // A light (0.85): at the curl the ribbon pinches under 0106's floor at the fight's camera, and a light may.
+  poly(ctx, f, accent, pts(ribbon(VIPER_FIN_LINE, 0.075, 1)), 0.85);
+  // The lateral line and the scales under it, as chevrons — lights, so they fade at the fight's camera rather than smear.
+  seam(ctx, f, accent, 0.018 * k, pts([[0.62, -0.03], [0.2, -0.04], [-0.3, -0.03], [-0.78, 0]]), 0.75, true);
+  for (let x = 0.46; x > -0.66; x -= 0.1) {
+    poly(ctx, f, accent, pts([[x, 0.01], [x - 0.05, 0.06], [x, 0.11], [x + 0.025, 0.11], [x - 0.02, 0.06], [x + 0.025, 0.01]]), 0.75);
+  }
+  // The near wing, lit a shade, its leading edge in the accent — filled as the hull's own detour, so it is inside it exactly.
+  poly(ctx, f, shade(body, 0.08), pts(viperWingDetour()));
+  poly(ctx, f, accent, pts([[0.16, 0.13], [-0.3, 0.46], [-0.35, 0.46], [0.09, 0.14]]), 0.75);
+  // The canopy — acid glass, with the sky in it — the upper half of an ellipse on the back, its arc the hull's own
+  // outline and its sill a contour where the glass meets the hull.
+  poly(ctx, f, glass, pts(VIPER_CANOPY_ARC));
+  seam(ctx, f, shade(body, -0.65), 0.02 * k, pts([[0.32, -0.19], [-0.08, -0.19]]), 0.6);
+  poly(ctx, f, '#ffffff', pts([[0.24, -0.235], ...cubic([0.24, -0.235], [0.24, -0.247], [0.21, -0.257], [0.17, -0.257], 4), ...cubic([0.17, -0.257], [0.13, -0.257], [0.1, -0.247], [0.1, -0.235], 4), ...cubic([0.1, -0.235], [0.1, -0.223], [0.13, -0.213], [0.17, -0.213], 4), ...cubic([0.17, -0.213], [0.21, -0.213], [0.24, -0.223], [0.24, -0.235], 4)]), 0.6);
+  if (over !== null) over();
+  /*
+    0701: the finish — every mark translucent: a horizon along the scales of the upper flank, the belly's plates as
+    contours, the fin's leading edge lit, the canopy deep at its sill, and the rim light inside every edge that
+    faces up.
+  */
+  shaded(ctx, f, at(0, -0.15), at(0, -0.05), shade(body, 0.6), rgba(body, 0), pts([[0.6, -0.14], [0.1, -0.16], [-0.5, -0.13], [-0.8, -0.06], [-0.8, -0.03], [-0.5, -0.08], [0.1, -0.1], [0.6, -0.09]]), 0.35);
+  for (let x = 0.5; x > -0.7; x -= 0.12) seam(ctx, f, shade(belly, -0.4), 0.02 * k, pts([[x, 0.13], [x - 0.02, 0.185]]), 0.35);
+  seam(ctx, f, shade(accent, 0.5), 0.02 * k, pts([[-0.15, -0.2], [-0.3, -0.42], [-0.5, -0.5], [-0.66, -0.47]]), 0.5, true);
+  shaded(ctx, f, at(0, -0.27), at(0, -0.19), rgba(glass, 0), shade(glass, -0.6), pts([[-0.08, -0.19], [0, -0.25], [0.12, -0.275], [0.24, -0.25], [0.32, -0.19]]), 0.45, true);
+  const [top, bottom] = heightOf(ctx, outlineOn);
+  rimLight(ctx, f, shade(body, 0.45), 0.75, top, bottom, sealWidth, outlineOn);
+  // The head: an eye with a slit in it, a nostril, the mouth line and two fangs under the jaw — the small ones lights.
+  const [ex, ey] = at(0.74, -0.07);
+  glow(ctx, f, eye, ex, ey, 0.09 * k, 0.8);
+  disc(ctx, f, eye, ex, ey, 0.036 * k, 0.75);
+  poly(ctx, f, '#000000', pts([[0.745, -0.1], [0.75, -0.07], [0.745, -0.04], [0.735, -0.07]]), 0.75);
+  const [nx, ny] = at(0.93, -0.01);
+  disc(ctx, f, '#000000', nx, ny, 0.012 * k, 0.75);
+  seam(ctx, f, belly, 0.016 * k, pts([[0.98, 0.045], [0.62, 0.1]]), 0.75);
+  if (own) for (const tip of VIPER_FANG_TIPS) poly(ctx, f, impact, pts(viperFang(tip)));
+  // The nozzle, dark, with the violet of her engine already in it — inside the stern, not over it (0227).
+  const [zx, zy] = at(-0.805, 0.025);
+  disc(ctx, f, '#0a0f0c', zx, zy, 0.065 * k);
+  glow(ctx, f, flame, zx, zy, 0.12 * k, 0.6);
 }
 
 /**
@@ -4659,7 +4823,9 @@ function viperStrikes(fin: number, head: number): (p: Pt) => Pt {
   const [rx] = VIPER_FIN_ROOT;
   const [nx] = VIPER_NECK;
   return ([x, y]) => {
-    const finShare = Math.min(1, Math.max(0, (rx + 2.2 - x) / 2.2)) * Math.min(1, Math.max(0, (-y - 1.6) / 1.4));
+    // 0705: the fin's share begins above the launcher's top (−4.6), now that the launcher stands under the curl — a
+    // pod bent with the fin sheared its band off its own outline by a sixth of a pixel.
+    const finShare = Math.min(1, Math.max(0, (rx + 2.2 - x) / 2.2)) * Math.min(1, Math.max(0, (-y - 4.8) / 1.4));
     const headShare = Math.min(1, Math.max(0, (x - nx) / 2.4));
     const [fx, fy] = pitchAbout(VIPER_FIN_ROOT, fin * finShare)([x, y]);
     return pitchAbout(VIPER_NECK, head * headShare)([fx, fy]);
@@ -4682,41 +4848,40 @@ function viperGirth(x: number): readonly [number, number] {
 }
 
 function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'wyrmGreen', livery: string | null = null, pose: DancePose = 0): void {
-  // The player's cyan taken halfway to the acid's lime: a venom green every palette answers.
-  const body = livery ?? mix(palette.player, palette.acid, 0.55);
+  // 0705: one Viper — the port's painter (`paintViperArt`) in the port's inks, or her paint; the fight adds its
+  // launcher, its looks and its War Dance on top. *"the player ship should be the same ship from the intro movie."*
+  const inks = viperInks(palette, livery);
+  const body = inks.body;
   const dark = shade(body, -0.5);
   const bob = viperStrikes(pose === 1 ? VIPER_COIL : pose === 2 ? VIPER_THROW : 0, pose === 2 ? VIPER_REAR : 0);
   const box = (points: readonly Pt[]): Pt[] => inBox(points.map(bob), 0, 1);
   const port = (points: readonly Pt[]): Pt[] => box(points.map(([x, y]) => viperAt(x, y)));
   const at = (x: number, y: number): Pt => port([[x, y]])[0]!;
-  // A shape painted on the outline's own edges is split as the outline is, so its edge IS the outline's.
-  const onEdge = (points: readonly Pt[]): Pt[] => box(densified(points.map(([x, y]) => viperAt(x, y)), 1));
-  const outline = box(densified(viperOutline(stage, own), 1));
-  ctx.fillStyle = body;
-  trace(ctx, f, outline);
-  seal(ctx);
-  // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
-  const sealWidth = ctx.lineWidth;
-  // Lit along its back and dark along its belly, as the port's is.
-  shaded(ctx, f, at(0, -0.3), at(0, 0.3), shade(body, 0.25), shade(body, -0.3), outline);
-  // The fin, a shade darker than the back it rises from, so it reads as a fin and not more hull.
-  poly(ctx, f, shade(body, -0.18), onEdge(VIPER_FIN));
-  // The wing, its leading edge lit.
-  poly(ctx, f, shade(body, -0.25), onEdge([[-0.36, 0.19], [-0.52, 0.36], [-0.3, 0.36], [0.16, 0.195]]));
-  poly(ctx, f, shade(body, 0.45), onEdge([[0.16, 0.195], [-0.3, 0.36], [-0.4, 0.36], [0.03, 0.21]]));
-  // The belly, its scales darker: a band from the jaw to the stern, two units deep — over 0106's floor.
-  poly(ctx, f, dark, port([[0.6, 0.13], [0.4, 0.19], [-0.2, 0.2], [-0.5, 0.185], [-0.86, 0.1], [-0.86, 0.04], [-0.5, 0.075], [-0.2, 0.085], [0.4, 0.075], [0.62, 0.07]]));
-  /*
-    Its looks, on the flank — 0528's slot. Each mark two units and more across, so it clears 0106's floor at the
-    shipped camera: a band or a diamond a tenth of the port's frame or more, which is 1.8 of the predecessor's.
-  */
-  if (art === 'wyrmGreen') {
-    // As it came: the port's lateral line, and the scales along it as chevrons.
-    // Each arm a twentieth of the port's frame thick — 0106's floor at the shipped camera.
-    for (let x = 0.42; x > -0.66; x -= 0.2) {
-      poly(ctx, f, dark, port([[x, -0.04], [x - 0.1, 0.02], [x, 0.08], [x + 0.07, 0.08], [x - 0.02, 0.02], [x + 0.07, -0.04]]));
+  // The launcher's silhouette on her back, a detour of the hull's own loop (0227) — in the port's frame, as the painter takes it.
+  const launcher = turretsOn(VIPER_PODS[stage]!, () => VIPER_BACK, VIPER_POD_TOP).map(([x, y]): Pt => [x / VIPER_SCALE, (y - 1) / VIPER_SCALE]);
+  const accent = inks.accent;
+  const over = (): void => {
+    /*
+      Its looks, on the flank — 0528's slot. Each mark two units and more across, so it clears 0106's floor at the
+      shipped camera: a band or a diamond a tenth of the port's frame or more, which is 1.8 of the predecessor's.
+      As she comes (`wyrmGreen`) the look is the port's own scales, which the painter draws.
+    */
+    paintViperLook(ctx, f, art, port, at, palette, body, dark);
+    // The launcher on its back, in its own green banded in the void's violet.
+    paintTurrets(ctx, f, VIPER_PODS[stage]!, VIPER_POD_TOP, VIPER_BACK, box, { shell: shade(body, -0.15), band: mix(palette.ally, palette.void, 0.4) });
+    if (own) {
+      // The venom at the jaw, where the spit leaves — the spit's own cyan, no further out than the box allows.
+      const [mx, my] = box([VIPER_MUZZLE])[0]!;
+      glow(ctx, f, palette.player, mx, my, 0.9 * 0.062, 0.6);
     }
-  } else if (art === 'kraitBands') {
+  };
+  paintViperArt(ctx, f, at, VIPER_SCALE * 0.062, inks, own, launcher.length > 0 ? [launcher] : [], over);
+  void accent;
+}
+
+/** The Viper's looks but her own — 0528's slot, painted over the hull by the fight. */
+function paintViperLook(ctx: Pen, f: Frame, art: ArtKind, port: (points: readonly Pt[]) => Pt[], at: (x: number, y: number) => Pt, palette: Palette, body: string, dark: string): void {
+  if (art === 'kraitBands') {
     // A krait's bands round the hull, dark and evenly spaced from the neck to the stern.
     for (const x of [0.46, 0.18, -0.1, -0.38, -0.66]) {
       const [t0, b0] = viperGirth(x);
@@ -4739,58 +4904,6 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
     const [gx, gy] = at(0, 0.05);
     glow(ctx, f, palette.pickup, gx, gy, 0.5, 0.35);
   }
-  /*
-    0701: the serpent lit as a lacquered racer, on 0698's terms — every mark translucent. A horizon along the scales
-    of its upper flank; the belly's broad plates as contours across the dark band, in its own deep shade; the fin's
-    leading edge catching the light and two ribs down its membrane; the wing's root a contour against the hull; the
-    brow over the eye lit. `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
-  */
-  shaded(ctx, f, at(0, -0.15), at(0, -0.05), shade(body, 0.7), rgba(body, 0), port([[0.6, -0.15], [0.1, -0.155], [-0.5, -0.12], [-0.8, -0.06], [-0.8, -0.03], [-0.5, -0.075], [0.1, -0.1], [0.6, -0.1]]), 0.35);
-  for (let x = 0.5; x > -0.8; x -= 0.12) {
-    const [, belly] = viperGirth(x);
-    seam(ctx, f, shade(dark, -0.5), 0.025, port([[x, belly - 0.085], [x - 0.02, belly - 0.015]]), 0.35);
-  }
-  seam(ctx, f, shade(body, 0.6), 0.035, port([[-0.32, -0.19], [-0.43, -0.34], [-0.57, -0.45], [-0.71, -0.5]]), 0.55, true);
-  for (const [x0, y0, x1, y1] of [
-    [-0.42, -0.2, -0.6, -0.42],
-    [-0.52, -0.16, -0.7, -0.45],
-  ] as const) {
-    seam(ctx, f, shade(body, -0.55), 0.025, port([[x0, y0], [x1, y1]]), 0.35);
-  }
-  seam(ctx, f, shade(body, -0.6), 0.03, port([[0.16, 0.2], [-0.36, 0.195]]), 0.45);
-  seam(ctx, f, shade(body, 0.65), 0.03, port([[0.84, -0.11], [0.76, -0.13], [0.68, -0.13]]), 0.55, true);
-  // The canopy — glass with the sky in it, and a glint.
-  poly(ctx, f, mix(palette.frost, palette.space, 0.55), port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16]]));
-  // 0701: the glass paler under its crown and deep at its sill, a streak along it, and its frame a contour.
-  shaded(ctx, f, at(0, -0.275), at(0, -0.16), shade(palette.frost, -0.1), shade(palette.space, 0.08), port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16]]), 0.55);
-  seam(ctx, f, palette.impact, 0.03, port([[0.44, -0.235], [0.38, -0.258], [0.28, -0.265]]), 0.5, true);
-  seam(ctx, f, shade(body, -0.65), 0.03, port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16], VIPER_CANOPY[0]!]), 0.45);
-  const [cx, cy] = at(0.36, -0.23);
-  disc(ctx, f, palette.impact, cx, cy, 0.5 * 0.062, 0.7);
-  // The eye: lit, and its slit.
-  const [ex, ey] = at(0.76, -0.07);
-  glow(ctx, f, palette.hazard, ex, ey, 2.4 * 0.062, 0.6);
-  disc(ctx, f, palette.hazard, ex, ey, 1.15 * 0.062);
-  // No slit: at the fight's camera it is half a pixel across, under 0106's floor — the eye is the lit bead alone.
-  // The mouth, a dark line back from short of the nose; and with her own gun the fang under it, white.
-  seam(ctx, f, shade(body, -0.75), 0.035, port([[0.9, 0.035], [0.66, 0.085]]), 0.9);
-  if (own) {
-    poly(ctx, f, palette.impact, onEdge(VIPER_FANGS));
-    // The venom at the jaw, where the spit leaves — the spit's own cyan, no further out than the box allows.
-    const [mx, my] = box([VIPER_MUZZLE])[0]!;
-    glow(ctx, f, palette.player, mx, my, 0.9 * 0.062, 0.6);
-  }
-  // The nozzle in the stern, dark, the void's violet already in it — inside the stern, not over it.
-  const [nx, ny] = at(-0.8, 0.025);
-  disc(ctx, f, shade(palette.space, 0.1), nx, ny, 1 * 0.062);
-  glow(ctx, f, palette.ally, nx, ny, 2.2 * 0.062, 0.5);
-  // The launcher on its back, in its own green banded in the void's violet.
-  paintTurrets(ctx, f, VIPER_PODS[stage]!, VIPER_POD_TOP, VIPER_BACK, box, { shell: shade(body, -0.15), band: mix(palette.ally, palette.void, 0.4) });
-  // 0701: the nozzle's lip catching the light, and the rim light inside every edge that faces up (0698's).
-  seam(ctx, f, shade(palette.trim, 0.5), 0.025, roundel(nx, ny, 0.85 * 0.062, 8, Math.PI * 1.1, Math.PI * 1.9), 0.5, true);
-  const viperOutlinePen = (pen: Pen): void => trace(pen, f, outline);
-  const [top, bottom] = heightOf(ctx, viperOutlinePen);
-  rimLight(ctx, f, shade(body, 0.45), 0.75, top, bottom, sealWidth, viperOutlinePen);
 }
 
 /**
@@ -5096,8 +5209,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   seal(ctx);
   // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
   const sealWidth = ctx.lineWidth;
-  // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493.
-  if (own) paintRaygun(ctx, f, palette);
+  // The ray gun's node before the disc, so the disc covers it to the rim: it hangs under the lip — 0493, 0705.
+  if (own) paintRaygun(ctx, f, palette, true, undefined, 1, body);
   if (stage >= 1) paintPod(ctx, f, palette, -1, livery);
   if (stage >= 2) paintPod(ctx, f, palette, 1, livery);
   // The disc lit from above and ahead, in shadow behind and below, so it has a top and turns — 0461.
@@ -5105,6 +5218,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   // The rim: a dark band, a lit lip along its upper edge, and a line of light along the band's inside.
   band(ctx, f, dark, 0, 0, 0.97 * D, 0.8 * D);
   seam(ctx, f, shade(body, 0.55), 0.05, roundel(0, 0, 0.9 * D, 12, Math.PI * 1.08, Math.PI * 1.72), 0.85, true);
+  // 0705: the node's ring of light, over the rim it is sunk into, so the ring is whole.
+  if (own) paintNodeHalo(ctx, f, palette, RAYGUN.housing.x, 0, RAYGUN.housing.r);
   // Six vents between the rim and the inner ring: dark slots, each with the acid it runs on glowing in it.
   for (let k = 0; k < 6; k++) {
     const a = (k * Math.PI) / 3 + spin;
@@ -5178,7 +5293,7 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   ── THE HAMSTER BALL — `docs/decisions/0593-the-hamster-ball-rolls.md` ──────────────────────────────
 
   Unity in a clear plastic ball, from above, running nose-first up the lane, with a thruster pack strapped
-  behind and, for each tube it carries, a cradle on a stub of axle out of the ball's side. It never breaks
+  behind and, for each tube it carries, a pod off the ball's side (0705; a cradle on a stub of axle before). It never breaks
   since 0609, so it is never drawn without the ball.
 
   ⚠️ **THE PLASTIC IS TRANSLUCENT AND ITS RIM IS NOT.** The ball is filled at a low alpha so Unity and the
@@ -5200,22 +5315,27 @@ const BALL_PACK_R = (BALL_RADIUS + 0.55) / (SHIP_BOX * 0.42);
  * so no fill finds a hole where the two meet. Walked from the nose, which no stub stands on.
  */
 function ballHull(stage: number, rx: number, ry: number): Pt[] {
-  const axle = 0.13;
-  const cradle = BALL_CRADLE_R + 0.09;
   const pack = 0.27;
   const steps = 48;
-  // Where each stub leaves the ellipse, and the half-angle of the arc it covers.
-  const axleOn = ry * Math.sqrt(1 - (axle / rx) ** 2);
+  // Where the pack's stub leaves the ellipse, and the half-angle of the arc it covers.
   const packOn = rx * Math.sqrt(1 - (pack / ry) ** 2);
-  const axleArc = Math.asin(axle / rx);
   const packArc = Math.asin(pack / ry);
+  /*
+    0705: a pod on each side that carries a tube, the caddie's own (`podDetour`), hung off the ball on the pylon
+    the caddie's hangs from — it was a cradle on a stub of axle. The detour runs from the pylon's front round the
+    pod to its back, which going round the ball is the arc from `podFrom` to `podTo` on the lower side and its
+    mirror on the upper. The ball is round (`rx` is `ry`), so the detour's own sense of where the hull is holds.
+  */
+  const [podBack, podFront] = CADDIE_PYLON;
+  const podFrom = Math.acos(podFront / rx);
+  const podTo = Math.acos(podBack / rx);
   const cuts: { from: number; to: number; corners: Pt[] }[] = [
     // Down the screen: x runs from + to − across it.
-    ...(stage >= 2 ? [{ from: Math.PI / 2 - axleArc, to: Math.PI / 2 + axleArc, corners: [[axle, axleOn], [axle, cradle], [-axle, cradle], [-axle, axleOn]] as Pt[] }] : []),
+    ...(stage >= 2 ? [{ from: podFrom, to: podTo, corners: podDetour(rx, BALL_CRADLE_R) }] : []),
     // Behind: y runs from + to −.
     { from: Math.PI - packArc, to: Math.PI + packArc, corners: [[-packOn, pack], [-BALL_PACK_R, pack], [-BALL_PACK_R, -pack], [-packOn, -pack]] },
     // Up the screen: x runs from − to +.
-    ...(stage >= 1 ? [{ from: (3 * Math.PI) / 2 - axleArc, to: (3 * Math.PI) / 2 + axleArc, corners: [[-axle, -axleOn], [-axle, -cradle], [axle, -cradle], [axle, -axleOn]] as Pt[] }] : []),
+    ...(stage >= 1 ? [{ from: Math.PI * 2 - podTo, to: Math.PI * 2 - podFrom, corners: mirrored(podDetour(rx, BALL_CRADLE_R)).reverse() }] : []),
   ];
   const out: Pt[] = [];
   let next = 0;
@@ -5441,10 +5561,15 @@ function drawBall(ctx: Pen, f: Frame, palette: Palette, stage: number, art: ArtK
     [-BALL_R - 0.06, -0.22],
     [-BALL_R - 0.06, 0.22],
   ], 0.45);
-  // A cradle on each axle stub that carries a tube; the tube itself is the frame's (`stepLoaded`).
-  for (const place of SHIPS.ball.tubes[stage >= 2 ? 2 : stage === 1 ? 1 : 0]) {
-    paintPylon(ctx, f, palette, [(place.along - SHIPS.ball.tubeLength / 2) / BOX_R, place.across / BOX_R]);
-  }
+  /*
+    0705: *"the tubes on the hamster wheel also look pretty bad, should be closer to the tubes on the lil caddie or the
+    same as the lil caddie so it's consistent."* The caddie's own pods, one off each side of the axle that carries a
+    tube, on the ball's slate; the dart in each is the frame's (`stepLoaded`). They were a cradle on each axle stub.
+  */
+  // Each pylon runs 0.14 into the ball — the axle, seen through the plastic — so it is over 0106's floor where the
+  // ball's rounder side leaves it less room than the saucer's flat one.
+  if (stage >= 1) paintPod(ctx, f, palette, -1, slate, { D: BALL_R, y: BALL_CRADLE_R, sunk: 0.14 });
+  if (stage >= 2) paintPod(ctx, f, palette, 1, slate, { D: BALL_R, y: BALL_CRADLE_R, sunk: 0.14 });
   // 0612: whoever runs in it, under the plastic.
   if (rider !== null) insideAs(rider)(ctx, f, palette, 1, pose);
   // The plastic over them: its tint, the look on it, and the rim and its light — what says *ball*.
@@ -6904,20 +7029,27 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     },
   },
   /*
-    The ray gun: the caddie's own little saucer (0587), its mouth on the muzzle — from above sitting on the
-    mount, and from the side riding a short pylon, as it rides the caddie's nose on the pad.
+    The ray gun: the caddie's own node (0705; 0587's little saucer before it), its front on the muzzle — from
+    above sitting on the mount, and from the side riding a short pylon, as it hangs under the caddie's nose on
+    the pad. The same node and the same ring of light either way.
   */
   ray: {
+    // The ball is sized so its ring's glow (1.55 of the ball) reaches the mount's front and no further: a borrowed gun
+    // is drawn inside its ship's tile (`tests/gun-layer.test.ts`), and the estate's hood gun stands at the tile's edge.
     top: (ctx, f, palette, p, [mx]) => {
       const c = p(mx * 0.4, 0);
       const front = p(mx, 0);
-      paintEmitter(ctx, f, palette, 'top', c[0], c[1], Math.hypot(front[0] - c[0], front[1] - c[1]));
+      const r = Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.55;
+      paintEmitter(ctx, f, palette, 'top', c[0], c[1], r);
+      paintNodeHalo(ctx, f, palette, c[0], c[1], r);
     },
     side: (ctx, f, palette, p, [mx, my]) => {
       poly(ctx, f, shade(palette.trim, -0.35), [p(-0.04, 0), p(0.04, 0), p(0.04, my), p(-0.04, my)]);
       const c = p(mx * 0.45, my);
       const front = p(mx, my);
-      paintEmitter(ctx, f, palette, 'side', c[0], c[1], Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.02);
+      const r = Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.55;
+      paintEmitter(ctx, f, palette, 'side', c[0], c[1], r);
+      paintNodeHalo(ctx, f, palette, c[0], c[1], r);
     },
   },
   /*
@@ -17377,39 +17509,33 @@ function drawGaze(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n:
  * The ray's four rings, back to front — 0588: where each stands along the line of flight and how tall it is,
  * in the shot's frame. Each is seen edge-on, a quarter as wide as it is tall, and each a size up on the last.
  */
+/*
+  0705: *"The four rings pulse from the lil caddie don't actually look like a pulse of four separate rings, it looks
+  connected like a band of energy."* Photographed on the bench at 4×: the four stood 0.42 of the frame apart with
+  the biggest two 0.21 and 0.175 wide, so their edges touched, and the dark cone (`RAY_FIELD`) and the glow about
+  each filled what was left between them — one lavender cone. Now the train is spread to the frame's ends, each
+  ring is a sixth as wide as it is tall rather than a quarter, and there is no field: between the rings is sky.
+*/
 export const RAY_RINGS: readonly (readonly [number, number])[] = [
-  [-0.66, 0.42],
-  [-0.2, 0.56],
-  [0.22, 0.7],
-  [0.58, 0.85],
+  [-0.78, 0.42],
+  [-0.3, 0.56],
+  [0.2, 0.7],
+  [0.72, 0.85],
 ];
 
-/** The dark field the train sweeps: a cone round the four rings, narrow at the back. */
-const RAY_FIELD: readonly Pt[] = [
-  [-0.97, 0],
-  [-0.86, -0.5],
-  [-0.4, -0.72],
-  [0.1, -0.9],
-  [0.5, -1.02],
-  [0.82, -0.8],
-  [1.05, -0.4],
-  [1.08, 0],
-  [1.05, 0.4],
-  [0.82, 0.8],
-  [0.5, 1.02],
-  [0.1, 0.9],
-  [-0.4, 0.72],
-  [-0.86, 0.5],
-];
+/** How wide an edge-on ring is for its height — 0705: a sixth, so the train has sky between the rings. */
+export const RAY_RING_LEAN = 1 / 6;
 
 /** An edge-on ring at `x`, `ry` tall and a quarter of that wide, `thick` across its band — 0588. */
-function edgeRing(ctx: Pen, f: Frame, colour: string, x: number, ry: number, thick: number, alpha: number): void {
+function edgeRing(ctx: Pen, f: Frame, colour: string, x: number, ry: number, thick: number, alpha: number, lean = 1 / 4): void {
   const oval = (rx: number, h: number): Pt[] => roundel(0, 0, 1, 28, 0, Math.PI * 2).map(([c, d]): Pt => [x + c * rx, d * h]);
   ctx.globalAlpha = alpha;
   ctx.fillStyle = colour;
   ctx.beginPath();
-  // Never narrower than 0.18 of the frame, so even the smallest ring has an inside two and a half pixels across.
-  const rx = Math.max(ry / 4, 0.18);
+  // Never narrower than 0.18 of the frame, so even the smallest ring has an inside two and a half pixels across —
+  // at a quarter's lean. 0705's sixth leans the ray's rings nearer edge-on: never narrower than 0.1, so with its
+  // thickness the smallest is still three pixels across at the fight's size, a lens of light with no inside.
+  const rx = Math.max(ry * lean, lean < 1 / 4 ? 0.1 : 0.18);
   trace(ctx, f, oval(rx + thick / 2, ry + thick / 2));
   // A ring too small to have an inside that shows is one lens of light: a sliver of a hole is no mark.
   if (rx - thick / 2 >= 0.12) trace(ctx, f, oval(rx - thick / 2, ry - thick / 2));
@@ -20821,16 +20947,13 @@ export function drawKind(
         rings read on the palest sky; the lit ring steps forward a page at a time and the front one is
         always lit, so the pulse surges toward what it is thrown at.
       */
-      ctx.fillStyle = shade(ring, -0.62);
-      ctx.beginPath();
-      trace(ctx, f, RAY_FIELD);
-      seal(ctx);
-      glow(ctx, f, ring, 0.2, 0, 0.85, 0.4);
+      // 0705: no field and no glow over the whole train — each ring has its own small light, and sky between.
       RAY_RINGS.forEach(([x, ry], k) => {
         const lit = k === page + 1 || k === RAY_RINGS.length - 1;
+        glow(ctx, f, ring, x, 0, ry * 0.45, lit ? 0.4 : 0.25);
         // A tenth of the frame thick: at the fight's size a ring is two and a half pixels across, the floor.
-        if (lit) edgeRing(ctx, f, ring, x, ry, 0.17, 0.5);
-        edgeRing(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), x, ry, 0.1, lit ? 1 : 0.8);
+        if (lit) edgeRing(ctx, f, ring, x, ry, 0.17, 0.5, RAY_RING_LEAN);
+        edgeRing(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), x, ry, 0.1, lit ? 1 : 0.8, RAY_RING_LEAN);
       });
       glow(ctx, f, palette.impact, RAY_RINGS[RAY_RINGS.length - 1]![0], 0, 0.3, 0.7);
       // 0702: each lit ring catching its own light where it is nearest — a white point on its upper arc — so the

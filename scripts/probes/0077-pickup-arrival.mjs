@@ -108,8 +108,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0448, which puts where each tube is on the ship's row: the fighter's pair,
       // one down the nose and one off the left wing. ⚠️ And by 0581, which hangs them under its wings.
       path: 'src/content/ships.ts',
-      find: '[{ along: -0.45, across: -1.76 }, { along: -0.45, across: 1.76 }]];',
-      replace: '[{ along: -0.45, across: 0 }, { along: -0.45, across: -1.76 }]];',
+      // ⚠️ And by 0705, which makes them warheads out from under the wings, further in and forward.
+      find: '[{ along: -0.05, across: -1.5 }, { along: -0.05, across: 1.5 }]];',
+      replace: '[{ along: -0.05, across: 0 }, { along: -0.05, across: -1.5 }]];',
     },
   },
 ];
