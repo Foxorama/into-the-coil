@@ -21,7 +21,7 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { SHIP_BOX, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { reset } from '../src/sim/entity.ts';
-import { caddieMounts, carMounts, drawKind, paintRaygunSide } from '../src/render/bake.ts';
+import { caddieMounts, carMounts, drawKind, paintRaygunSide, paintRaygunSideHalo } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
@@ -195,18 +195,25 @@ describe('0705 — the ray gun is a node with a ring of light, and 0683 hangs it
     of the saucer, whose rim is the frame's centreline: every mark of the gun, its ring of light included, is below
     it, and the gun's outline is round. (0587's little saucer, wider than tall, stood here until 0705.)
   */
-  it('THE ASK: from the side, every mark of it is below the rim, and it is round', () => {
+  /*
+    Played, on the node hung under the nose: *"the side view is a hard no."* So the node sits ON the rim at the nose
+    from the side as it does from above, sunk into the hull: no solid mark of it stands higher than its own radius
+    above the rim line, which is under the dome and out of the pilot's line of sight (0683's claim, on a bead).
+  */
+  it('THE ASK: from the side, the node sits on the rim at the nose, no higher than its own radius, and it is round', () => {
     const size = 400;
+    const f = { half: size / 2, r: size * 0.42 };
     const { pen, trace } = tracingPen();
-    paintRaygunSide(pen, { half: size / 2, r: size * 0.42 }, PALETTES[DEFAULT_PALETTE], 0);
-    const points = trace.passes.flatMap((pass) => pass.subpaths.flat());
-    expect(points.length, 'the side view draws no gun').toBeGreaterThan(0);
-    // Nothing goes over the rim, where it would stand in the pilot's view.
-    for (const [, y] of points) expect(y, 'a mark of the gun is above the rim').toBeGreaterThanOrEqual(size / 2 - 0.5);
-    const xs = points.map(([x]) => x);
-    const ys = points.map(([, y]) => y);
+    paintRaygunSide(pen, f, PALETTES[DEFAULT_PALETTE], 0);
+    const solid = trace.passes.filter((pass) => pass.alpha >= 0.9).flatMap((pass) => pass.subpaths.flat());
+    expect(solid.length, 'the side view draws no gun').toBeGreaterThan(0);
+    const ys = solid.map(([, y]) => y);
+    const xs = solid.map(([x]) => x);
     const wide = Math.max(...xs) - Math.min(...xs);
     const tall = Math.max(...ys) - Math.min(...ys);
+    // On the rim: its centre on the rim line, so it rises its own radius above it and no more.
+    expect(Math.min(...ys), 'the node stands higher above the rim than its own radius').toBeGreaterThanOrEqual(f.half - tall / 2 - 0.5);
+    expect(Math.max(...ys), 'the node hangs lower under the rim than its own radius').toBeLessThanOrEqual(f.half + tall / 2 + 0.5);
     expect(wide / tall, `the gun is not round: ${wide.toFixed(0)} px wide to ${tall.toFixed(0)} px tall`).toBeGreaterThan(0.85);
     expect(wide / tall, `the gun is not round: ${wide.toFixed(0)} px wide to ${tall.toFixed(0)} px tall`).toBeLessThan(1.18);
   });
@@ -217,6 +224,7 @@ describe('0705 — the ray gun is a node with a ring of light, and 0683 hangs it
     const extent = (lean: number): { wide: number; tall: number } => {
       const { pen, trace } = tracingPen();
       paintRaygunSide(pen, f, PALETTES[DEFAULT_PALETTE], lean);
+      paintRaygunSideHalo(pen, f, PALETTES[DEFAULT_PALETTE], lean);
       const points = trace.passes.flatMap((pass) => pass.subpaths.flat());
       const xs = points.map(([x]) => x);
       const ys = points.map(([, y]) => y);

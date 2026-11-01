@@ -21,7 +21,7 @@ import type { Palette } from '../content/palette.ts';
 import { DOCK, FLAME_BOX, HANGAR_SCALE, jetGrow, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, PORT_LIGHT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import { figureOf, type GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, poly, rgba, rimLight, seam, shade, shaded, trace, withFit, type Atlas, type Frame, type Pen, type Pt } from './bake.ts';
+import { bakeGlyph, bakeShell, bakeSize, disc, drawPlayerShip, drawRider, fitNow, flameInks, glow, gunNow, mix, paintLoadedTubes, paintMountAt, paintRaygunSide, paintRaygunSideHalo, poly, rgba, rimLight, seam, shade, shaded, trace, withFit, type Atlas, type Frame, type Pen, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHELL_SPAN, SHIPS, type ShipKind } from '../content/ships.ts';
 import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
@@ -3318,6 +3318,10 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     // The rim's nose is the top view's hardpoint (`CADDIE_DISC` of the box), so the mount stands where
     // the fight's drawing has it, and goes under the lens with its root as the ray gun's does.
     paintMountAt(ctx, box, palette, fitted, 'side', [CADDIE_DISC, 0]);
+  } else {
+    // 0705: its own ray gun's node, sunk into the nose: painted before the hull, which covers its back half, as the
+    // disc covers it from above. Its ring of light goes on last (`paintRaygunSideHalo`).
+    paintRaygunSide(ctx, box, palette, lean, body);
   }
   // The belly: under the rim, in shadow.
   const belly = ctx.createLinearGradient(0, Y(0), 0, Y(under));
@@ -3454,8 +3458,8 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     a little saucer on a pylon at the nose. 0683: hung UNDER the rim again, as 0493 had it — *"it'd be
     blocking the pilot's view"* — and still painted last, over the belly and its hover light.
   */
-  // 0705: in the hull's own ink, a fairing on the belly.
-  if (fitted === SHIPS.caddie.weapon) paintRaygunSide(ctx, box, palette, lean, body);
+  // 0705: the node's ring of light, over the nose it is sunk into, so the ring is whole.
+  if (fitted === SHIPS.caddie.weapon) paintRaygunSideHalo(ctx, box, palette, lean);
 }
 
 /**

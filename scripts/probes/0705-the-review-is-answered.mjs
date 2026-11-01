@@ -41,8 +41,10 @@ export const PROBES = [
   {
     decision: '0705',
     suite: 'tests/mounts.test.ts',
-    broke: 'the node drawn as a wide lens rather than a ball — the saucer shape 0587 asked for, back',
-    guard: 'THE ASK: from the side, every mark of it is below the rim, and it is round',
+    broke: 'the ring of light drawn as a wide lens rather than a ring — the saucer shape 0587 asked for, back as light',
+    // The ring is translucent, so the side guard (which reads solid marks) stays green and the one-node guard, which reads
+    // every mark from above, is the one that catches it.
+    guard: 'AND THE SAME NODE FROM ABOVE: the fight’s gun is as round, and its ring of light reaches as far',
     edit: {
       path: 'src/render/bake.ts',
       find: '  glow(ctx, f, lav, cx, cy, R * 1.55, 0.3);\n  band(ctx, f, shade(lav, 0.25), cx, cy, R * 1.35, R * 1.12, 0.8);',
@@ -52,12 +54,23 @@ export const PROBES = [
   {
     decision: '0705',
     suite: 'tests/mounts.test.ts',
+    broke: 'the ball itself drawn as a wide lens — the saucer shape 0587 asked for, back as the solid node',
+    guard: 'THE ASK: from the side, the node sits on the rim at the nose, no higher than its own radius, and it is round',
+    edit: {
+      path: 'src/render/bake.ts',
+      find: 'shade(ball, 0.55), shade(ball, -0.5), roundel(cx, cy, R, 28, 0, Math.PI * 2));',
+      replace: 'shade(ball, 0.55), shade(ball, -0.5), roundel(cx, cy, R, 28, 0, Math.PI * 2).map(([a, b]): Pt => [cx + (a - cx) * 2.2, b]));',
+    },
+  },
+  {
+    decision: '0705',
+    suite: 'tests/mounts.test.ts',
     broke: 'the side view drawing a smaller node than the fight’s, two guns rather than one',
     guard: 'AND THE SAME NODE FROM ABOVE: the fight’s gun is as round, and its ring of light reaches as far',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  side: { x: 0.68, y: 0.32, r: 0.2 },',
-      replace: '  side: { x: 0.68, y: 0.32, r: 0.14 },',
+      find: '  side: { x: 0.68, y: 0, r: 0.2 },',
+      replace: '  side: { x: 0.68, y: 0, r: 0.14 },',
     },
   },
 ];

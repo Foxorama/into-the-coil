@@ -2993,10 +2993,12 @@ const RAYGUN = {
   /** Where the rings leave: the front of the node. */
   tip: 0.88,
   /**
-   * From the side: the same node hung under the rim's nose, its ring of light reaching up to the rim and no further —
-   * 0683, out of the pilot's line of sight.
+   * From the side: the same node, sunk into the nose on the rim line as it is from above — painted before the hull,
+   * so the hull covers its back half and what shows is its front, a bead on the nose. Played, on a node hung under
+   * the nose: *"the side view is a hard no."* It stands no higher than its own radius above the rim, under the dome
+   * and out of the pilot's line of sight (0683).
    */
-  side: { x: 0.68, y: 0.32, r: 0.2 },
+  side: { x: 0.68, y: 0, r: 0.2 },
 };
 
 /**
@@ -3161,15 +3163,22 @@ export function paintRaygunSide(ctx: Pen, f: Frame, palette: Palette, lean: numb
   const { x, y, r } = RAYGUN.side;
   if (lean > 0.5) {
     paintEmitter(ctx, f, palette, 'top', RAYGUN.housing.x, 0, RAYGUN.housing.r, false, skin);
+    return;
+  }
+  // The same node as from above, sunk into the nose on the rim line: painted before the hull (`paintSaucer`), which
+  // covers its back half, as the disc covers it from above. `y` is 0; the drop is kept for a side that wants one.
+  const drop = y * Math.cos((lean * Math.PI) / 2);
+  paintEmitter(ctx, f, palette, 'side', x, drop, r, false, skin);
+}
+
+/** The node's ring of light from the side — 0705: painted last, over the hull the node is sunk into, so the ring is whole. */
+export function paintRaygunSideHalo(ctx: Pen, f: Frame, palette: Palette, lean: number): void {
+  const { x, y, r } = RAYGUN.side;
+  if (lean > 0.5) {
     paintNodeHalo(ctx, f, palette, RAYGUN.housing.x, 0, RAYGUN.housing.r);
     return;
   }
-  // The same node as from above, hung under the rim's nose: its whole drop side-on, closing on the rim as the view
-  // leans over. Nothing of it above the rim, its ring of light included — 0683, and `tests/mounts.test.ts` reads
-  // every mark.
-  const drop = y * Math.cos((lean * Math.PI) / 2);
-  paintEmitter(ctx, f, palette, 'side', x, drop, r, false, skin);
-  paintNodeHalo(ctx, f, palette, x, drop, r);
+  paintNodeHalo(ctx, f, palette, x, y * Math.cos((lean * Math.PI) / 2), r);
 }
 
 /**

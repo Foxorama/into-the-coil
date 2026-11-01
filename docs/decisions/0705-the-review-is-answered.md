@@ -70,16 +70,19 @@ from above and the pad from the side, and every ray gun so far was two drawings,
 So the gun is a **node**: a ball — the one shape that is the same drawing from any side — half sunk into the rim
 at the nose, the hull's own deep shade, the rings' lavender lit in its heart, and a **ring of that light round it**
 (`paintEmitter`, `paintNodeHalo`). From above (`paintRaygun`, before the disc, as 0493 asks) the ball's front
-stands past the rim and the ring is painted over the rim so it is whole; from the side (`paintRaygunSide`) it is
-the same ball and the same ring, hung under the rim's nose by enough that nothing of it, the ring's glow included,
-stands above the rim (0683). Borrowed on another ship it is the same node on that ship's mount, in slate. The row's
-muzzle moved to the node's front (0.88 of the box from 0.96) and the mounts guard moved with it.
+stands past the rim and the ring is painted over the rim so it is whole; from the side (`paintRaygunSide`,
+`paintRaygunSideHalo`) it is the same ball sunk into the nose on the rim line — painted before the hull, which
+covers its back half — and the same ring over it. *First hung under the nose, whole, with the ring reaching up to
+the rim: "the side view is a hard no."* On the rim it rises its own radius above the rim line and no more, under
+the dome and out of the pilot's line of sight, which is 0683's claim kept on a bead. Borrowed on another ship it
+is the same node on that ship's mount, in slate. The row's muzzle moved to the node's front (0.88 of the box from
+0.96) and the mounts guard moved with it.
 
 Two guards went with the saucer: *A RING IN, A RING OUT* (0493: the mouth as tall as the first ring thrown — a
 node has no mouth) and 0587's *wider than it is tall* — each replaced or deleted with its note in
-`tests/mounts.test.ts`, their probes likewise. What holds now: every mark of it below the rim (0683's claim on the
-node), **it is round, and it is the one node from above and from the side** — the fight's as round as the pad's,
-and its ring reaching as far.
+`tests/mounts.test.ts`, their probes likewise. What holds now: from the side the node sits on the rim at the nose
+and no higher than its own radius above it (0683's claim on a bead), **it is round, and it is the one node from
+above and from the side** — the fight's as round as the pad's, and its ring reaching as far.
 
 ## 5. The Viper on the pad
 
