@@ -1187,6 +1187,14 @@ pilot, and a run with each gun and each special, on `staging` once the last batc
 fixed**: the void missile is over 0024's flash cap on `main` — 0703 has the four runs, and it is its own piece
 of work on the rift's light.
 
+### ⚠️ THE VERSION IS 1.0.0: THE TAG IS THE PLAYER'S — 2026-11-01
+
+[0706](decisions/0706-the-version-is-one.md) moves `package.json` to `1.0.0` and nothing else: `v0.9.0` was tagged
+and deployed on 2026-10-29, and 0697–0705 are the only commits between it and this. **Next is the tag `v1.0.0`,
+which is the player's** (*"never tag unasked"*), then release day as `ITCH-COIL.md` in the site repository lays it
+out: the itch page Public, the launch devlog posted, the site's itch links put back. The decision's table says what
+is still owed after it — the candidate play, and the rewrite of this file.
+
 ### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
 
 [`the-release-review`](../reports/the-release-review-2026-10-29.md) answers *"is it ready for release"*: the
