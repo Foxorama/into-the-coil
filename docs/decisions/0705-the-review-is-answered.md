@@ -105,7 +105,7 @@ limit?"*
 **It was never an art-count limit.** Three things kept the two drawings apart, none a count: the fight's camera
 draws her 85 px long, and [0106](0106-a-mark-thinner-than-a-pixel-is-not-drawn.md) forbids a solid mark under
 2.5 px there (the port's slender fangs were 1.8 px, its nostril half a pixel); the guards read a polygon trace,
-and the tracing pen has flattened curves since [0276](0276-a-hull-is-a-curve.md); and 0666 chose the palette's
+and the tracing pen has flattened curves since [0276](0276-the-kit-draws-a-creature.md); and 0666 chose the palette's
 inks over the port's so a palette could answer her. So: **one painter, `paintViperArt`**, that the port
 (`paintViper`), the pad and the fight (`drawViper`) all call — the port's curves, inks, fin, eye, fangs and
 nozzle, with the fine marks drawn as lights (translucent, 0698's rule) so they fade at the fight's camera rather
@@ -113,12 +113,12 @@ than smear, the fangs a hair broader (0.09 at the root, three pixels), and the c
 where the port drew it 0.085. The silhouette is one loop — the hull with the canopy's arc, the fin as a ribbon
 along the port's fin line, the near wing, the fangs and the fight's launcher each spliced in where it meets the
 hull (`spliced`) — so every part shares an edge with the hull and no area
-([0227](0227-a-sprite-is-painted-not-filled.md), [0631](0631-a-hull-does-not-straddle-its-outline.md)). What the
+([0227](0227-a-sprite-is-painted-not-filled.md), [0631](0631-the-mid-bosses-are-drawn.md)). What the
 fight adds, it adds on top: its launcher, its looks, its War Dance (which bends the painter's points as it bent
 the copy's). The far wing is back, as a light behind the hull.
 
 **And the thruster was always hers.** Her row's flame has been the violet `wyrmFlame` since
-[0667](0667-the-viper-has-her-own-flame.md); the review's pad pictures showed an orange one because the
+[0667](0667-play-asks-of-venoma.md); the review's pad pictures showed an orange one because the
 photographing script fitted `standard` on every ship, which the game never does. The pictures are reshot with
 each ship's own.
 
