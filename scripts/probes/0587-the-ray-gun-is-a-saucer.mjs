@@ -14,6 +14,6 @@ export const PROBES = [
     broke: 'the side view’s gun rode the top half again, in the pilot’s view',
     guard: 'THE ASK: from the side, the node sits on the rim at the nose, no higher than its own radius, and it is round',
     // Re-anchored by 0705: the node on the rim line at the nose, lifted clear above it.
-    edit: { path: 'src/render/bake.ts', find: '  side: { x: 0.68, y: 0, r: 0.2 },', replace: '  side: { x: 0.68, y: -0.3, r: 0.2 },' },
+    edit: { path: 'src/render/bake.ts', find: '  side: { x: 0.68, y: 0, r: 0.15 },', replace: '  side: { x: 0.68, y: -0.3, r: 0.15 },' },
   },
 ];

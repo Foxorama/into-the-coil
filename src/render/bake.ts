@@ -2987,10 +2987,19 @@ function roundel(cx: number, cy: number, radius: number, count: number, from: nu
   a NODE: a slate ball half sunk into the rim at the nose with the rings' lavender lit in its heart, and a ring of
   that light round it (`paintEmitter`, `paintNodeHalo`) — from above, from the side, and borrowed on another ship.
 */
+/*
+  Played, on the node at the nose: *"it's way too big, has no obvious firing mechanism and doesn't even really fit
+  the game."* So the ball is three quarters the size it was (0.15 of the box), and a short BARREL runs out of its
+  front to the muzzle — a cylinder, which from above and from the side is the same short rod, so the gun has a
+  mouth and the two views still agree.
+*/
 const RAYGUN = {
   /** From above: the node's centre inside the rim, so its front stands out past the disc and its back is under it. */
-  housing: { x: 0.68, r: 0.2 },
-  /** Where the rings leave: the front of the node. */
+  housing: { x: 0.68, r: 0.15 },
+  /** The barrel out of the node's front to the muzzle: where it starts and ends along, and its half-width — as shares of the ball's radius. */
+  // Its half-width 0.4 of the ball: 4.3 px across at the fight's camera, over 0106's floor (0.3 measured 2.1 px).
+  barrel: { from: 0.4, to: 1.333, half: 0.4 },
+  /** Where the rings leave: the barrel's mouth. */
   tip: 0.88,
   /**
    * From the side: the same node, sunk into the nose on the rim line as it is from above — painted before the hull,
@@ -2998,7 +3007,7 @@ const RAYGUN = {
    * the nose: *"the side view is a hard no."* It stands no higher than its own radius above the rim, under the dome
    * and out of the pilot's line of sight (0683).
    */
-  side: { x: 0.68, y: 0, r: 0.2 },
+  side: { x: 0.68, y: 0, r: 0.15 },
 };
 
 /**
@@ -3106,9 +3115,12 @@ function caddieHull(stage: number, own = true): Pt[] {
  */
 export function raygunProfile(): Pt[] {
   const { x: hx, r: hr } = RAYGUN.housing;
+  const { to, half } = RAYGUN.barrel;
   const seat = housingSeat();
-  // 0587: the little saucer's front, round from its seat in the rim on the upper side to the lower.
-  return roundel(hx, 0, hr, 24, -seat.onHousing, seat.onHousing);
+  // 0705: the node's front, round from its seat in the rim on the upper side to where the barrel leaves it, out along
+  // the barrel to its mouth and back, and round to the seat on the lower side.
+  const leaves = Math.asin(half);
+  return [...roundel(hx, 0, hr, 12, -seat.onHousing, -leaves), [hx + hr * to, -hr * half], [hx + hr * to, hr * half], ...roundel(hx, 0, hr, 12, leaves, seat.onHousing)];
 }
 
 /**
@@ -3203,6 +3215,12 @@ export function paintEmitter(ctx: Pen, f: Frame, palette: Palette, view: GunView
   void under;
   const lav = palette.ally;
   const ball = skin === null ? shade(palette.trim, 0.1) : shade(skin, -0.5);
+  const slate = shade(palette.trim, 0.1);
+  // The barrel first, so the ball's front covers its root: a slate rod out to the muzzle, lit along its upper edge,
+  // its mouth dark — a light, under 0106's floor at the fight's camera.
+  const { from, to, half } = RAYGUN.barrel;
+  shaded(ctx, f, [cx, cy - R * half], [cx, cy + R * half], shade(slate, 0.5), shade(slate, -0.55), [[cx + R * from, cy - R * half], [cx + R * to, cy - R * half], [cx + R * to, cy + R * half], [cx + R * from, cy + R * half]]);
+  disc(ctx, f, shade(lav, -0.5), cx + R * to, cy, R * half * 0.7, 0.85);
   // The ball, lit from up the screen and ahead, deep on its far side.
   shaded(ctx, f, [cx - R * 0.45, cy - R * 0.45], [cx + R * 0.7, cy + R * 0.7], shade(ball, 0.55), shade(ball, -0.5), roundel(cx, cy, R, 28, 0, Math.PI * 2));
   // The rings' lavender lit in its heart, to white at the centre: lights, translucent, not marks.

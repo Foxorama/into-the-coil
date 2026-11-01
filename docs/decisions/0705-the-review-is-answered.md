@@ -69,7 +69,11 @@ from above and the pad from the side, and every ray gun so far was two drawings,
 
 So the gun is a **node**: a ball — the one shape that is the same drawing from any side — half sunk into the rim
 at the nose, the hull's own deep shade, the rings' lavender lit in its heart, and a **ring of that light round it**
-(`paintEmitter`, `paintNodeHalo`). From above (`paintRaygun`, before the disc, as 0493 asks) the ball's front
+(`paintEmitter`, `paintNodeHalo`). *Then, played at the nose: "it's way too big, has no obvious firing mechanism
+and doesn't even really fit the game."* So the ball is three quarters the size (0.15 of the box) and a short
+**barrel** runs out of its front to the muzzle — a cylinder, the same short rod from above and from the side, 4.3
+px across at the fight's camera — with its mouth dark. The side guard's *round* allows for it: a third wider than
+tall at most. From above (`paintRaygun`, before the disc, as 0493 asks) the ball's front
 stands past the rim and the ring is painted over the rim so it is whole; from the side (`paintRaygunSide`,
 `paintRaygunSideHalo`) it is the same ball sunk into the nose on the rim line — painted before the hull, which
 covers its back half — and the same ring over it. *First hung under the nose, whole, with the ring reaching up to

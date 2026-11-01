@@ -214,8 +214,9 @@ describe('0705 — the ray gun is a node with a ring of light, and 0683 hangs it
     // On the rim: its centre on the rim line, so it rises its own radius above it and no more.
     expect(Math.min(...ys), 'the node stands higher above the rim than its own radius').toBeGreaterThanOrEqual(f.half - tall / 2 - 0.5);
     expect(Math.max(...ys), 'the node hangs lower under the rim than its own radius').toBeLessThanOrEqual(f.half + tall / 2 + 0.5);
+    // Round but for its barrel: the ball and the short rod out of its front are a third wider than tall at most.
     expect(wide / tall, `the gun is not round: ${wide.toFixed(0)} px wide to ${tall.toFixed(0)} px tall`).toBeGreaterThan(0.85);
-    expect(wide / tall, `the gun is not round: ${wide.toFixed(0)} px wide to ${tall.toFixed(0)} px tall`).toBeLessThan(1.18);
+    expect(wide / tall, `the gun is not round: ${wide.toFixed(0)} px wide to ${tall.toFixed(0)} px tall`).toBeLessThan(1.4);
   });
 
   it('AND THE SAME NODE FROM ABOVE: the fight’s gun is as round, and its ring of light reaches as far', () => {

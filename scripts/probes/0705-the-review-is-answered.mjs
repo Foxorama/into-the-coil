@@ -69,8 +69,8 @@ export const PROBES = [
     guard: 'AND THE SAME NODE FROM ABOVE: the fight’s gun is as round, and its ring of light reaches as far',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  side: { x: 0.68, y: 0, r: 0.2 },',
-      replace: '  side: { x: 0.68, y: 0, r: 0.14 },',
+      find: '  side: { x: 0.68, y: 0, r: 0.15 },',
+      replace: '  side: { x: 0.68, y: 0, r: 0.1 },',
     },
   },
 ];
