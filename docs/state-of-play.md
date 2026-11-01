@@ -1178,9 +1178,10 @@ Viper), [0702](decisions/0702-the-eight-guns-are-finished.md) (C: the eight guns
 [0704](decisions/0704-the-pickup-faces-are-finished.md) (E: the pickup faces).
 
 **The review came back as five items** — the fighter's tubes, the ball's tubes, the ray's rings, the caddie's
-ray gun, the Viper on the pad — and [0705](decisions/0705-the-review-is-answered.md) answers all five; the report's
-*answers* say what each was and what it is now, and the next word on them is the player's. Still open there,
-which the review did not raise: 0698's two vetoes and 0699's gold rim, and
+ray gun, the Viper on the pad — and [0705](decisions/0705-the-review-is-answered.md) answers all five, twice
+over where the first answer was refused: the ray gun is a node with a ring of light, and the Viper is one drawing,
+the port's, in the intro, on the pad and in the fight. The report's *answers* say what each was and what it is now,
+and the next word on them is the player's. Still open there, which the review did not raise: 0698's two vetoes and 0699's gold rim, and
 each batch's open calls with the one number that moves it and its preview. **Plays owed**: the pad with each
 pilot, and a run with each gun and each special, on `staging` once the last batch merges. **Found and not
 fixed**: the void missile is over 0024's flash cap on `main` — 0703 has the four runs, and it is its own piece

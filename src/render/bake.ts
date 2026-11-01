@@ -4573,9 +4573,16 @@ function viperAt(x: number, y: number): Pt {
 }
 /** Its back, where the launcher stands, and how high the launcher stands on it — the predecessor's frame. */
 const VIPER_BACK = -2;
-const VIPER_POD_TOP = -5.4;
-/** Where its launcher stands on its back, at one tube and two, as `[back, front]` spans — behind the canopy. */
-const VIPER_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-4.6, 0.4]], [[-5.2, -2.6], [-1.6, 1]]];
+/*
+  0705: the launcher moved aft, under the fin's curl — the port's canopy sits further back than the fight's copy
+  did (its arc runs to 0.08 of the port's frame behind the centre) and the port's fin rises right behind it, so
+  the launcher's old place, behind the canopy and ahead of the fin, is under the glass now. Lower too (−4.6 from
+  −5.4), so its top clears the curl, which passes at −0.34 of the port's frame and lower.
+*/
+const VIPER_POD_TOP = -4.6;
+/** Where its launcher stands on its back, at one tube and two, as `[back, front]` spans — behind the fin's root, under its curl. */
+// Its front at −5 keeps the fin's ribbon clear of the pod's front corner, and its tail short of the curl's end over it.
+const VIPER_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-9.2, -5]], [[-9.3, -7.3], [-6.6, -5]]];
 /** Its jaw, where the acid leaves; `VIPER_MUZZLE` on its row. */
 const VIPER_MUZZLE: Pt = [17.6, 1.9];
 /** The root of the fin, which it turns about in its War Dance, and the neck the head rears about — 0666. */
@@ -4586,90 +4593,206 @@ const VIPER_COIL = -0.32;
 const VIPER_THROW = 0.22;
 const VIPER_REAR = -0.14;
 
-/** The top of the head from the nose back to the canopy, in the port's frame. */
-const VIPER_HEAD_TOP: readonly Pt[] = [
-  [1, 0.03],
-  [0.95, -0.05],
-  [0.86, -0.11],
-  [0.74, -0.14],
-  [0.62, -0.155],
-  [0.5, -0.17],
-];
-/** The canopy's top, front to back. */
-const VIPER_CANOPY: readonly Pt[] = [
-  [0.49, -0.19],
-  [0.46, -0.235],
-  [0.4, -0.262],
-  [0.3, -0.275],
-  [0.2, -0.262],
-  [0.14, -0.235],
-  [0.11, -0.19],
-];
-/** The dorsal fin, from its root up round its hook and back down to the hull. */
 /*
-  0705: *"the unlocked venoma krait ship looks terrible compared to the intro title venoma krait ship, it doesn't
-  have as much detail or style."* Beside the port's (`paintViper`) the fin was the plainest difference: the port's
-  is a tendril, a stroke a fifteenth of the frame thick that curls over and back on itself; this was a blade a
-  third of the frame wide at the root. Now it is the tendril: an outer edge up and over to a curl, an inner edge
-  back down, a tenth of the frame between them — four pixels at the fight's camera, over 0106's floor.
+  ── ONE VIPER — 0705 ───────────────────────────────────────────────────────────────────────────────
+
+  Played: *"these two things are not like each other at all. the intro ship is way cooler … the player ship should
+  be the same ship from the intro movie, not some dodgy version of it."* The port painted her (`paintViper` in
+  `src/render/port-bake.ts`) and the fight painted a polygon copy of the port's numbers, in the palette's inks, and
+  every pass that brought the copy closer (0701, 0705's first two) left it a copy. So there is one painter now,
+  `paintViperArt`, and the port, the pad and the fight all call it: the port's curves, the port's inks, the port's
+  fin, eye, fangs and nozzle. What the fight adds, it adds on top — its launcher, its looks, its War Dance.
+
+  ⚠️ **AND IT IS NOT AN ART-COUNT LIMIT, AND NEVER WAS.** What kept the two apart was three things, none a count:
+  the fight's camera draws her 85 px long, and 0106 forbids a solid mark under 2.5 px there (the port's slender
+  fangs were 1.8 px, its nostril half a pixel); the guards read a polygon trace, and the tracing pen has flattened
+  curves since 0276; and 0666 chose the palette's inks over the port's so a palette could answer her. The first is
+  met by drawing the fine marks as lights (translucent, 0698's rule) and the fangs a hair broader; the second is
+  gone; the third is given up — she wears the port's green on every palette, which is the one thing the
+  high-contrast palette no longer moves, and that is noted as her own open call.
 */
-const VIPER_FIN: readonly Pt[] = [
-  [-0.3, -0.165],
-  [-0.36, -0.3],
-  [-0.46, -0.44],
-  [-0.6, -0.54],
-  [-0.76, -0.55],
-  [-0.87, -0.46],
-  [-0.87, -0.36],
-  [-0.8, -0.31],
-  [-0.77, -0.37],
-  [-0.8, -0.45],
-  [-0.72, -0.47],
-  [-0.6, -0.44],
-  [-0.5, -0.36],
-  [-0.44, -0.25],
-  [-0.42, -0.165],
-];
-/** The stern and the belly back to the wing, the wing, and the belly on to the jaw. */
-const VIPER_BELLY: readonly Pt[] = [
-  [-0.8, -0.06],
+
+/** The Viper's inks: the port's own (`VIPER` in `src/content/port.ts`), with what the palette lends every hull. */
+export interface ViperInks {
+  readonly body: string;
+  readonly belly: string;
+  readonly accent: string;
+  readonly glass: string;
+  readonly eye: string;
+  readonly flame: string;
+  readonly impact: string;
+}
+
+/** The Viper's inks as she comes, or in `livery` — 0529's paint over the port's green. */
+export function viperInks(palette: Palette, livery: string | null = null): ViperInks {
+  return { body: livery ?? VIPER.body, belly: VIPER.belly, accent: VIPER.accent, glass: VIPER.glass, eye: VIPER.eye, flame: VIPER.flame, impact: palette.impact };
+}
+
+/** `n` points along a cubic from `from` through `c1` and `c2` to `to`, the start left out. */
+function cubic(from: Pt, c1: Pt, c2: Pt, to: Pt, n: number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 1; i <= n; i++) {
+    const t = i / n;
+    const u = 1 - t;
+    out.push([
+      u * u * u * from[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * to[0],
+      u * u * u * from[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * to[1],
+    ]);
+  }
+  return out;
+}
+
+/** The Viper's hull in the port's frame: the nose, over the head and the back to the stern, and the belly back to the nose. */
+const VIPER_HULL: readonly Pt[] = [
+  [1, 0.03],
+  ...cubic([1, 0.03], [0.95, -0.06], [0.84, -0.13], [0.72, -0.14], 12),
+  ...cubic([0.72, -0.14], [0.62, -0.16], [0.48, -0.2], [0.36, -0.16], 12),
+  // The back's straight run, in steps, so a detour spliced in meets a vertex near where it leaves the hull.
+  [0.25, -0.162],
+  [0.14, -0.165],
+  [0.03, -0.168],
+  [-0.1, -0.17],
+  ...cubic([-0.1, -0.17], [-0.4, -0.17], [-0.66, -0.12], [-0.8, -0.06], 12),
   [-0.88, -0.05],
   [-0.88, 0.1],
-  [-0.7, 0.155],
-  [-0.5, 0.185],
-  [-0.36, 0.19],
-  // The wing, swept back and down.
-  [-0.52, 0.36],
-  [-0.3, 0.36],
-  [0.16, 0.195],
-  [0.4, 0.19],
-  [0.6, 0.13],
-  [0.74, 0.1],
+  ...cubic([-0.88, 0.1], [-0.6, 0.18], [-0.4, 0.21], [-0.2, 0.2], 12),
+  ...cubic([-0.2, 0.2], [0.1, 0.2], [0.4, 0.19], [0.6, 0.13], 12),
+  ...cubic([0.6, 0.13], [0.8, 0.09], [0.93, 0.07], [1, 0.03], 12),
 ];
-/**
- * The fang under the jaw, back to front: its root, its point, its front. One, as a snake's pair is from the side, and
- * broad: two of the port's slender fangs were a pixel and a third across at the fight's camera, under 0106's floor.
- */
-const VIPER_FANGS: readonly Pt[] = [
-  [0.72, 0.105],
-  [0.79, 0.27],
-  [0.86, 0.088],
+/** The belly's height at `x`, in the port's frame, off the hull's own points — where a wing or a fang meets it. */
+function viperBellyAt(x: number): number {
+  let best: Pt = VIPER_HULL[0]!;
+  for (const p of VIPER_HULL) if (p[1] > 0 && Math.abs(p[0] - x) < Math.abs(best[0] - x)) best = p;
+  return best[1];
+}
+/** The dorsal fin's line: up from the back, over, and curling back on itself. */
+const VIPER_FIN_LINE: readonly Pt[] = [
+  [-0.12, -0.16],
+  ...cubic([-0.12, -0.16], [-0.3, -0.5], [-0.72, -0.56], [-0.7, -0.34], 10),
+  ...cubic([-0.7, -0.34], [-0.69, -0.2], [-0.5, -0.24], [-0.52, -0.34], 6),
 ];
+/** The far wing, seen over the back. (The near wing is `viperWingDetour`, the hull's own loop round it.) */
+const VIPER_FAR_WING: readonly Pt[] = [[0.2, 0.05], [-0.15, -0.36], [-0.34, -0.38], [-0.28, -0.1]];
+/** Her two fangs' points; each hangs from the jaw on a root a tenth of the frame wide — the port's 0.045 broadened, so each clears 0106's floor at the fight's camera. */
+const VIPER_FANG_TIPS: readonly Pt[] = [[0.875, 0.165], [0.775, 0.185]];
+/** A fang: its root on the belly line either side of its point, so it meets the hull on the hull's own edge. */
+function viperFang([tx, ty]: Pt): Pt[] {
+  return [[tx - 0.05, viperBellyAt(tx - 0.05)], [tx, ty], [tx + 0.05, viperBellyAt(tx + 0.05)]];
+}
+/** The near wing's detour of the belly: where its trailing and leading edges leave the hull, round its tip. */
+function viperWingDetour(): Pt[] {
+  return [[-0.376, viperBellyAt(-0.376)], [-0.52, 0.46], [-0.3, 0.46], [0.069, viperBellyAt(0.069)]];
+}
+/** The canopy's arc over the back, front to back: the upper half of an ellipse. */
+// A tenth of the frame tall (the port drew it 0.085): at the fight's camera the lower dome measured under 0106's floor.
+const VIPER_CANOPY_ARC: readonly Pt[] = [[0.32, -0.19], ...cubic([0.32, -0.19], [0.32, -0.2452], [0.2305, -0.29], [0.12, -0.29], 6), ...cubic([0.12, -0.29], [0.0095, -0.29], [-0.08, -0.2452], [-0.08, -0.19], 6)];
 
-/** The Viper's outline at `stage` tubes, in the predecessor's frame — with its own gun, the fang under the jaw it spits from. */
-function viperOutline(stage: number, own = true): Pt[] {
-  const at = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => viperAt(x, y));
-  return [
-    ...at(VIPER_HEAD_TOP),
-    ...at(VIPER_CANOPY),
-    [viperAt(0.11, 0)[0], VIPER_BACK],
-    ...turretsOn(VIPER_PODS[stage]!, () => VIPER_BACK, VIPER_POD_TOP),
-    ...at(VIPER_FIN),
-    ...at(VIPER_BELLY),
-    // The jaw: the fang under it with her own gun, closed without.
-    ...(own ? at(VIPER_FANGS) : []),
-    ...at([[0.93, 0.06]]),
-  ];
+/**
+ * `hull` with `detour` spliced into it: from the hull's vertex nearest the detour's first point, along the detour,
+ * to the vertex nearest its last — one closed loop, so the silhouette is one sub-path and every part of it shares
+ * an edge with the hull and no area (0227, 0631). The detour runs the way the hull does there.
+ */
+function spliced(hull: readonly Pt[], detour: readonly Pt[]): Pt[] {
+  // The hull's edge nearest `p`, and `p`'s foot on it — so the detour leaves and rejoins ON the edge, with no fold
+  // where its end stands a hair off the nearest vertex and no notch where it stands a hair inside.
+  const footOf = (p: Pt): { edge: number; at: Pt } => {
+    let best = { edge: 0, at: hull[0]!, d: Number.POSITIVE_INFINITY };
+    for (let e = 0; e < hull.length; e++) {
+      const [ax, ay] = hull[e]!;
+      const [bx, by] = hull[(e + 1) % hull.length]!;
+      const len2 = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
+      const t = Math.max(0, Math.min(1, ((p[0] - ax) * (bx - ax) + (p[1] - ay) * (by - ay)) / len2));
+      const at: Pt = [ax + (bx - ax) * t, ay + (by - ay) * t];
+      const d = Math.hypot(at[0] - p[0], at[1] - p[1]);
+      if (d < best.d) best = { edge: e, at, d };
+    }
+    return { edge: best.edge, at: best.at };
+  };
+  const from = footOf(detour[0]!);
+  const to = footOf(detour[detour.length - 1]!);
+  // A detour given against the hull's way round is turned round; one that meets the hull on one edge is no detour.
+  if (from.edge > to.edge) return spliced(hull, [...detour].reverse());
+  if (from.edge === to.edge) return [...hull];
+  return [...hull.slice(0, from.edge + 1), from.at, ...detour, to.at, ...hull.slice(to.edge + 1)];
+}
+
+/**
+ * The Viper painted — 0705: the one painter the port, the pad and the fight share. `at` maps a point of the port's
+ * own ±1 drawing into the frame (the port's is the identity; the fight's lays it in the predecessor's frame, bent
+ * by the War Dance); `k` is how many of the frame's units one of the port's is, for widths. The pen's stroke is the
+ * outline: the caller sets it, and the first fill is sealed with it. `hull` adds sub-paths to that first fill (the
+ * fight's launcher) and `over` paints between the hull and its finish (the fight's looks and launcher).
+ */
+export function paintViperArt(ctx: Pen, f: Frame, at: (x: number, y: number) => Pt, k: number, inks: ViperInks, own: boolean, detours: readonly (readonly Pt[])[] = [], over: (() => void) | null = null): void {
+  const pts = (points: readonly Pt[]): Pt[] => points.map(([x, y]) => at(x, y));
+  const { body, belly, accent, glass, eye, flame, impact } = inks;
+  /*
+    The silhouette, one loop: the hull with the canopy's arc, the fin — the Marmot's `ribbon` (0557) along the
+    port's fin line, a tenth of the port's frame wide and untapered — the near wing, the fangs with her own gun, and
+    what the caller adds (the fight's launcher), each spliced in where it meets the hull. Over the top from the
+    nose, x falls: the canopy, the launcher and the fin go in that order; along the belly back to the nose, x rises:
+    the wing and then the fangs.
+  */
+  let loop: Pt[] = [...VIPER_HULL];
+  loop = spliced(loop, VIPER_CANOPY_ARC);
+  loop = spliced(loop, ribbon(VIPER_FIN_LINE, 0.1, 1));
+  for (const detour of detours) loop = spliced(loop, detour);
+  loop = spliced(loop, viperWingDetour());
+  if (own) for (const tip of [...VIPER_FANG_TIPS].reverse()) loop = spliced(loop, viperFang(tip));
+  const silhouette = pts(loop);
+  const outlineOn = (pen: Pen): void => trace(pen, f, silhouette);
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  outlineOn(ctx);
+  seal(ctx);
+  const sealWidth = ctx.lineWidth;
+  // The far wing, in shadow, behind everything: a light, so it may stand off the hull over the back.
+  ctx.globalCompositeOperation = 'destination-over';
+  poly(ctx, f, shade(body, -0.35), pts(VIPER_FAR_WING), 0.75);
+  ctx.globalCompositeOperation = 'source-over';
+  // The hull shaded from a light back to a dark belly.
+  shaded(ctx, f, at(0, -0.2), at(0, 0.21), 'rgba(255, 255, 255, 0.12)', 'rgba(0, 0, 0, 0.45)', pts(VIPER_HULL));
+  // The fin's accent core down its middle, inside its dark edge.
+  // A light (0.85): at the curl the ribbon pinches under 0106's floor at the fight's camera, and a light may.
+  poly(ctx, f, accent, pts(ribbon(VIPER_FIN_LINE, 0.075, 1)), 0.85);
+  // The lateral line and the scales under it, as chevrons — lights, so they fade at the fight's camera rather than smear.
+  seam(ctx, f, accent, 0.018 * k, pts([[0.62, -0.03], [0.2, -0.04], [-0.3, -0.03], [-0.78, 0]]), 0.75, true);
+  for (let x = 0.46; x > -0.66; x -= 0.1) {
+    poly(ctx, f, accent, pts([[x, 0.01], [x - 0.05, 0.06], [x, 0.11], [x + 0.025, 0.11], [x - 0.02, 0.06], [x + 0.025, 0.01]]), 0.75);
+  }
+  // The near wing, lit a shade, its leading edge in the accent — filled as the hull's own detour, so it is inside it exactly.
+  poly(ctx, f, shade(body, 0.08), pts(viperWingDetour()));
+  poly(ctx, f, accent, pts([[0.16, 0.13], [-0.3, 0.46], [-0.35, 0.46], [0.09, 0.14]]), 0.75);
+  // The canopy — acid glass, with the sky in it — the upper half of an ellipse on the back, its arc the hull's own
+  // outline and its sill a contour where the glass meets the hull.
+  poly(ctx, f, glass, pts(VIPER_CANOPY_ARC));
+  seam(ctx, f, shade(body, -0.65), 0.02 * k, pts([[0.32, -0.19], [-0.08, -0.19]]), 0.6);
+  poly(ctx, f, '#ffffff', pts([[0.24, -0.235], ...cubic([0.24, -0.235], [0.24, -0.247], [0.21, -0.257], [0.17, -0.257], 4), ...cubic([0.17, -0.257], [0.13, -0.257], [0.1, -0.247], [0.1, -0.235], 4), ...cubic([0.1, -0.235], [0.1, -0.223], [0.13, -0.213], [0.17, -0.213], 4), ...cubic([0.17, -0.213], [0.21, -0.213], [0.24, -0.223], [0.24, -0.235], 4)]), 0.6);
+  if (over !== null) over();
+  /*
+    0701: the finish — every mark translucent: a horizon along the scales of the upper flank, the belly's plates as
+    contours, the fin's leading edge lit, the canopy deep at its sill, and the rim light inside every edge that
+    faces up.
+  */
+  shaded(ctx, f, at(0, -0.15), at(0, -0.05), shade(body, 0.6), rgba(body, 0), pts([[0.6, -0.14], [0.1, -0.16], [-0.5, -0.13], [-0.8, -0.06], [-0.8, -0.03], [-0.5, -0.08], [0.1, -0.1], [0.6, -0.09]]), 0.35);
+  for (let x = 0.5; x > -0.7; x -= 0.12) seam(ctx, f, shade(belly, -0.4), 0.02 * k, pts([[x, 0.13], [x - 0.02, 0.185]]), 0.35);
+  seam(ctx, f, shade(accent, 0.5), 0.02 * k, pts([[-0.15, -0.2], [-0.3, -0.42], [-0.5, -0.5], [-0.66, -0.47]]), 0.5, true);
+  shaded(ctx, f, at(0, -0.27), at(0, -0.19), rgba(glass, 0), shade(glass, -0.6), pts([[-0.08, -0.19], [0, -0.25], [0.12, -0.275], [0.24, -0.25], [0.32, -0.19]]), 0.45, true);
+  const [top, bottom] = heightOf(ctx, outlineOn);
+  rimLight(ctx, f, shade(body, 0.45), 0.75, top, bottom, sealWidth, outlineOn);
+  // The head: an eye with a slit in it, a nostril, the mouth line and two fangs under the jaw — the small ones lights.
+  const [ex, ey] = at(0.74, -0.07);
+  glow(ctx, f, eye, ex, ey, 0.09 * k, 0.8);
+  disc(ctx, f, eye, ex, ey, 0.036 * k, 0.75);
+  poly(ctx, f, '#000000', pts([[0.745, -0.1], [0.75, -0.07], [0.745, -0.04], [0.735, -0.07]]), 0.75);
+  const [nx, ny] = at(0.93, -0.01);
+  disc(ctx, f, '#000000', nx, ny, 0.012 * k, 0.75);
+  seam(ctx, f, belly, 0.016 * k, pts([[0.98, 0.045], [0.62, 0.1]]), 0.75);
+  if (own) for (const tip of VIPER_FANG_TIPS) poly(ctx, f, impact, pts(viperFang(tip)));
+  // The nozzle, dark, with the violet of her engine already in it — inside the stern, not over it (0227).
+  const [zx, zy] = at(-0.805, 0.025);
+  disc(ctx, f, '#0a0f0c', zx, zy, 0.065 * k);
+  glow(ctx, f, flame, zx, zy, 0.12 * k, 0.6);
 }
 
 /**
@@ -4682,7 +4805,9 @@ function viperStrikes(fin: number, head: number): (p: Pt) => Pt {
   const [rx] = VIPER_FIN_ROOT;
   const [nx] = VIPER_NECK;
   return ([x, y]) => {
-    const finShare = Math.min(1, Math.max(0, (rx + 2.2 - x) / 2.2)) * Math.min(1, Math.max(0, (-y - 1.6) / 1.4));
+    // 0705: the fin's share begins above the launcher's top (−4.6), now that the launcher stands under the curl — a
+    // pod bent with the fin sheared its band off its own outline by a sixth of a pixel.
+    const finShare = Math.min(1, Math.max(0, (rx + 2.2 - x) / 2.2)) * Math.min(1, Math.max(0, (-y - 4.8) / 1.4));
     const headShare = Math.min(1, Math.max(0, (x - nx) / 2.4));
     const [fx, fy] = pitchAbout(VIPER_FIN_ROOT, fin * finShare)([x, y]);
     return pitchAbout(VIPER_NECK, head * headShare)([fx, fy]);
@@ -4705,49 +4830,40 @@ function viperGirth(x: number): readonly [number, number] {
 }
 
 function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'wyrmGreen', livery: string | null = null, pose: DancePose = 0): void {
-  // 0705: the port's own green (`VIPER.body`), lifted a quarter of the way toward the palette's venom green — the
-  // player's cyan taken halfway to the acid's lime, which was the whole of it since 0666 — so the ship in play is
-  // the one that blasted out of the port, and a palette still moves it. *"the viper in play needs to match on the pad."*
-  const body = livery ?? mix(VIPER.body, mix(palette.player, palette.acid, 0.55), 0.25);
+  // 0705: one Viper — the port's painter (`paintViperArt`) in the port's inks, or her paint; the fight adds its
+  // launcher, its looks and its War Dance on top. *"the player ship should be the same ship from the intro movie."*
+  const inks = viperInks(palette, livery);
+  const body = inks.body;
   const dark = shade(body, -0.5);
   const bob = viperStrikes(pose === 1 ? VIPER_COIL : pose === 2 ? VIPER_THROW : 0, pose === 2 ? VIPER_REAR : 0);
   const box = (points: readonly Pt[]): Pt[] => inBox(points.map(bob), 0, 1);
   const port = (points: readonly Pt[]): Pt[] => box(points.map(([x, y]) => viperAt(x, y)));
   const at = (x: number, y: number): Pt => port([[x, y]])[0]!;
-  // A shape painted on the outline's own edges is split as the outline is, so its edge IS the outline's.
-  const onEdge = (points: readonly Pt[]): Pt[] => box(densified(points.map(([x, y]) => viperAt(x, y)), 1));
-  const outline = box(densified(viperOutline(stage, own), 1));
-  ctx.fillStyle = body;
-  trace(ctx, f, outline);
-  seal(ctx);
-  // 0701: the seal's width, read before a seam moves the pen's, for the rim light laid last (0698).
-  const sealWidth = ctx.lineWidth;
-  // Lit along its back and dark along its belly, as the port's is.
-  shaded(ctx, f, at(0, -0.3), at(0, 0.3), shade(body, 0.25), shade(body, -0.3), outline);
-  // 0705: and a light wash of her deeper green over the hull, under the canopy and every mark, so the glass keeps its
-  // own light. (0.42 while the body was the palette's pale mix; the body is the port's green now.)
-  poly(ctx, f, shade(body, -0.55), outline, 0.15);
-  // The fin, a shade darker than the back it rises from, so it reads as a fin and not more hull.
-  poly(ctx, f, shade(body, -0.18), onEdge(VIPER_FIN));
-  // The wing, its leading edge lit.
-  poly(ctx, f, shade(body, -0.25), onEdge([[-0.36, 0.19], [-0.52, 0.36], [-0.3, 0.36], [0.16, 0.195]]));
-  poly(ctx, f, shade(body, 0.45), onEdge([[0.16, 0.195], [-0.3, 0.36], [-0.4, 0.36], [0.03, 0.21]]));
-  // The belly, its scales darker: a band from the jaw to the stern, two units deep — over 0106's floor.
-  poly(ctx, f, dark, port([[0.6, 0.13], [0.4, 0.19], [-0.2, 0.2], [-0.5, 0.185], [-0.86, 0.1], [-0.86, 0.04], [-0.5, 0.075], [-0.2, 0.085], [0.4, 0.075], [0.62, 0.07]]));
-  /*
-    Its looks, on the flank — 0528's slot. Each mark two units and more across, so it clears 0106's floor at the
-    shipped camera: a band or a diamond a tenth of the port's frame or more, which is 1.8 of the predecessor's.
-  */
-  // 0705: the port's accent, the hull's green lifted toward the acid — what its lateral line and its scales are drawn in.
-  const accent = shade(mix(body, palette.acid, 0.5), 0.45);
-  if (art === 'wyrmGreen') {
-    // As it came: the port's lateral line, and the scales along it as chevrons.
-    // Each arm a twentieth of the port's frame thick — 0106's floor at the shipped camera.
-    // 0705: in the accent, as the port's are, and no longer dark on a pale hull.
-    for (let x = 0.42; x > -0.66; x -= 0.2) {
-      poly(ctx, f, accent, port([[x, -0.04], [x - 0.1, 0.02], [x, 0.08], [x + 0.07, 0.08], [x - 0.02, 0.02], [x + 0.07, -0.04]]), 0.85);
+  // The launcher's silhouette on her back, a detour of the hull's own loop (0227) — in the port's frame, as the painter takes it.
+  const launcher = turretsOn(VIPER_PODS[stage]!, () => VIPER_BACK, VIPER_POD_TOP).map(([x, y]): Pt => [x / VIPER_SCALE, (y - 1) / VIPER_SCALE]);
+  const accent = inks.accent;
+  const over = (): void => {
+    /*
+      Its looks, on the flank — 0528's slot. Each mark two units and more across, so it clears 0106's floor at the
+      shipped camera: a band or a diamond a tenth of the port's frame or more, which is 1.8 of the predecessor's.
+      As she comes (`wyrmGreen`) the look is the port's own scales, which the painter draws.
+    */
+    paintViperLook(ctx, f, art, port, at, palette, body, dark);
+    // The launcher on its back, in its own green banded in the void's violet.
+    paintTurrets(ctx, f, VIPER_PODS[stage]!, VIPER_POD_TOP, VIPER_BACK, box, { shell: shade(body, -0.15), band: mix(palette.ally, palette.void, 0.4) });
+    if (own) {
+      // The venom at the jaw, where the spit leaves — the spit's own cyan, no further out than the box allows.
+      const [mx, my] = box([VIPER_MUZZLE])[0]!;
+      glow(ctx, f, palette.player, mx, my, 0.9 * 0.062, 0.6);
     }
-  } else if (art === 'kraitBands') {
+  };
+  paintViperArt(ctx, f, at, VIPER_SCALE * 0.062, inks, own, launcher.length > 0 ? [launcher] : [], over);
+  void accent;
+}
+
+/** The Viper's looks but her own — 0528's slot, painted over the hull by the fight. */
+function paintViperLook(ctx: Pen, f: Frame, art: ArtKind, port: (points: readonly Pt[]) => Pt[], at: (x: number, y: number) => Pt, palette: Palette, body: string, dark: string): void {
+  if (art === 'kraitBands') {
     // A krait's bands round the hull, dark and evenly spaced from the neck to the stern.
     for (const x of [0.46, 0.18, -0.1, -0.38, -0.66]) {
       const [t0, b0] = viperGirth(x);
@@ -4770,62 +4886,6 @@ function drawViper(ctx: Pen, f: Frame, palette: Palette, stage: number, own = tr
     const [gx, gy] = at(0, 0.05);
     glow(ctx, f, palette.pickup, gx, gy, 0.5, 0.35);
   }
-  /*
-    0701: the serpent lit as a lacquered racer, on 0698's terms — every mark translucent. A horizon along the scales
-    of its upper flank; the belly's broad plates as contours across the dark band, in its own deep shade; the fin's
-    leading edge catching the light and two ribs down its membrane; the wing's root a contour against the hull; the
-    brow over the eye lit. `docs/decisions/0701-the-duck-the-caddie-and-the-viper-are-finished.md`.
-  */
-  shaded(ctx, f, at(0, -0.15), at(0, -0.05), shade(body, 0.7), rgba(body, 0), port([[0.6, -0.15], [0.1, -0.155], [-0.5, -0.12], [-0.8, -0.06], [-0.8, -0.03], [-0.5, -0.075], [0.1, -0.1], [0.6, -0.1]]), 0.35);
-  for (let x = 0.5; x > -0.8; x -= 0.12) {
-    const [, belly] = viperGirth(x);
-    seam(ctx, f, shade(dark, -0.5), 0.025, port([[x, belly - 0.085], [x - 0.02, belly - 0.015]]), 0.35);
-  }
-  // 0705: the tendril's outer edge lit, and the port's accent core down its middle to the curl.
-  seam(ctx, f, shade(body, 0.6), 0.03, port([[-0.32, -0.19], [-0.4, -0.34], [-0.5, -0.47], [-0.64, -0.55], [-0.78, -0.54]]), 0.55, true);
-  seam(ctx, f, accent, 0.03, port([[-0.36, -0.18], [-0.42, -0.33], [-0.54, -0.47], [-0.68, -0.5], [-0.81, -0.43], [-0.82, -0.36]]), 0.75, true);
-  /*
-    0705: the rest of what the port's racer has and this did not — the lateral line in the accent from the eye to
-    the stern; a nostril; the second fang, translucent, where the port's slender pair was under 0106's floor as
-    two solid marks. (The dark wash is laid under the canopy, above.)
-  */
-  seam(ctx, f, accent, 0.022, port([[0.62, -0.03], [0.2, -0.04], [-0.3, -0.03], [-0.78, 0]]), 0.8);
-  disc(ctx, f, palette.space, at(0.93, -0.01)[0], at(0.93, -0.01)[1], 0.25 * 0.062, 0.85);
-  if (own) poly(ctx, f, palette.impact, port([[0.62, 0.115], [0.67, 0.25], [0.72, 0.105]]), 0.85);
-  seam(ctx, f, shade(body, -0.6), 0.03, port([[0.16, 0.2], [-0.36, 0.195]]), 0.45);
-  seam(ctx, f, shade(body, 0.65), 0.03, port([[0.84, -0.11], [0.76, -0.13], [0.68, -0.13]]), 0.55, true);
-  // The canopy — glass with the sky in it, and a glint.
-  poly(ctx, f, mix(palette.frost, palette.space, 0.55), port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16]]));
-  // 0701: the glass paler under its crown and deep at its sill, a streak along it, and its frame a contour.
-  shaded(ctx, f, at(0, -0.275), at(0, -0.16), shade(palette.frost, -0.1), shade(palette.space, 0.08), port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16]]), 0.55);
-  seam(ctx, f, palette.impact, 0.03, port([[0.44, -0.235], [0.38, -0.258], [0.28, -0.265]]), 0.5, true);
-  seam(ctx, f, shade(body, -0.65), 0.03, port([...VIPER_CANOPY, [0.11, -0.16], [0.49, -0.16], VIPER_CANOPY[0]!]), 0.45);
-  const [cx, cy] = at(0.36, -0.23);
-  disc(ctx, f, palette.impact, cx, cy, 0.5 * 0.062, 0.7);
-  // The eye: lit, and its slit.
-  const [ex, ey] = at(0.76, -0.07);
-  glow(ctx, f, palette.hazard, ex, ey, 2.4 * 0.062, 0.6);
-  disc(ctx, f, palette.hazard, ex, ey, 1.15 * 0.062);
-  // No slit: at the fight's camera it is half a pixel across, under 0106's floor — the eye is the lit bead alone.
-  // The mouth, a dark line back from short of the nose; and with her own gun the fang under it, white.
-  seam(ctx, f, shade(body, -0.75), 0.035, port([[0.9, 0.035], [0.66, 0.085]]), 0.9);
-  if (own) {
-    poly(ctx, f, palette.impact, onEdge(VIPER_FANGS));
-    // The venom at the jaw, where the spit leaves — the spit's own cyan, no further out than the box allows.
-    const [mx, my] = box([VIPER_MUZZLE])[0]!;
-    glow(ctx, f, palette.player, mx, my, 0.9 * 0.062, 0.6);
-  }
-  // The nozzle in the stern, dark, the void's violet already in it — inside the stern, not over it.
-  const [nx, ny] = at(-0.8, 0.025);
-  disc(ctx, f, shade(palette.space, 0.1), nx, ny, 1 * 0.062);
-  glow(ctx, f, palette.ally, nx, ny, 2.2 * 0.062, 0.5);
-  // The launcher on its back, in its own green banded in the void's violet.
-  paintTurrets(ctx, f, VIPER_PODS[stage]!, VIPER_POD_TOP, VIPER_BACK, box, { shell: shade(body, -0.15), band: mix(palette.ally, palette.void, 0.4) });
-  // 0701: the nozzle's lip catching the light, and the rim light inside every edge that faces up (0698's).
-  seam(ctx, f, shade(palette.trim, 0.5), 0.025, roundel(nx, ny, 0.85 * 0.062, 8, Math.PI * 1.1, Math.PI * 1.9), 0.5, true);
-  const viperOutlinePen = (pen: Pen): void => trace(pen, f, outline);
-  const [top, bottom] = heightOf(ctx, viperOutlinePen);
-  rimLight(ctx, f, shade(body, 0.45), 0.75, top, bottom, sealWidth, viperOutlinePen);
 }
 
 /**
@@ -6956,10 +7016,12 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     the pad. The same node and the same ring of light either way.
   */
   ray: {
+    // The ball is sized so its ring's glow (1.55 of the ball) reaches the mount's front and no further: a borrowed gun
+    // is drawn inside its ship's tile (`tests/gun-layer.test.ts`), and the estate's hood gun stands at the tile's edge.
     top: (ctx, f, palette, p, [mx]) => {
       const c = p(mx * 0.4, 0);
       const front = p(mx, 0);
-      const r = Math.hypot(front[0] - c[0], front[1] - c[1]);
+      const r = Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.55;
       paintEmitter(ctx, f, palette, 'top', c[0], c[1], r);
       paintNodeHalo(ctx, f, palette, c[0], c[1], r);
     },
@@ -6967,7 +7029,7 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       poly(ctx, f, shade(palette.trim, -0.35), [p(-0.04, 0), p(0.04, 0), p(0.04, my), p(-0.04, my)]);
       const c = p(mx * 0.45, my);
       const front = p(mx, my);
-      const r = Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.02;
+      const r = Math.hypot(front[0] - c[0], front[1] - c[1]) / 1.55;
       paintEmitter(ctx, f, palette, 'side', c[0], c[1], r);
       paintNodeHalo(ctx, f, palette, c[0], c[1], r);
     },

@@ -204,7 +204,9 @@ firing on the bench, the tubes, the specials, the pickup faces — and came back
 3. the ray is four rings with sky between them, its dark field gone;
 4. the caddie's ray gun is a node with a ring of light — one drawing from above and from the side, as asked for
    by name after the first answer (a fairing) read worse;
-5. the Viper on the pad and in play is the port's: her green, her tendril fin, her accent scales, her second fang.
+5. the Viper is one drawing — the port's painter now paints her in the intro, on the pad and in the fight, so the
+   player's ship is the ship from the intro, with her violet thruster (hers since 0667; the review's pictures had
+   fitted an orange one). Asked whether an art-count limit kept them apart: it did not, and 0705 says what did.
 
 The same page carries the after, batch by batch. Still open from the batches above: the three early vetoes and
 each batch's open calls, none of which the review raised.

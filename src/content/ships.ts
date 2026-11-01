@@ -1171,8 +1171,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // A borrowed gun stands on the head, ahead of the canopy, where a car's stands on its hood.
     hardpoint: wheelAt(11.5, -1.8, 0, 1),
     mountScale: 1,
-    // Each missile's nose in the face of the launcher on its back, between the canopy and the fin.
-    tubes: [[], [wheelAt(0.3, -4.25, 0, 1)], [wheelAt(0.9, -4.963, 0, 1), wheelAt(0.9, -3.537, 0, 1)]],
+    // Each missile's nose in the face of the launcher on its back — 0705: behind the fin's root, under its curl
+    // (`VIPER_PODS` in `src/render/bake.ts`; it stood between the canopy and the fin until the port's canopy was hers).
+    tubes: [[], [wheelAt(-5.1, -3.592, 0, 1)], [wheelAt(-5.1, -4.208, 0, 1), wheelAt(-5.1, -2.928, 0, 1)]],
     tubeLength: TURRET_NOSE,
     tubeLook: 'nose',
     hang: 'over',

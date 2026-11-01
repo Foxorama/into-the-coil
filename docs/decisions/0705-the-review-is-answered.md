@@ -95,19 +95,35 @@ stroke a fifteenth of the frame thick curling over and back on itself — an eye
 and two fangs. The pad's (`drawViper`, the fight's own bitmap at hangar size) was pale, its fin a blade a third of
 the frame wide at the root, its chevrons dark on the pale hull, one fang.
 
-**Done, in `drawViper`:** the fin is the tendril (`VIPER_FIN`, a tenth of the frame between its edges — four
-pixels at the fight's camera), with its outer edge lit and the accent core down its middle; the lateral line and
-the chevrons in the port's accent — the hull's green lifted toward the acid; a nostril; the second fang,
-translucent, where two solid slender fangs were under 0106's floor. The far wing the port shows over the back is
-still left out, because the launcher stands there (0666).
+**Done, three times.** First the fight's copy was brought nearer — a tendril fin, the accent scales, the second
+fang; then its body was given the port's green. The player's word on that: *"these two things are not like each
+other at all. the intro ship is way cooler, and the player ship should come with the exact same purple thruster.
+the player ship should be the same ship from the intro movie, not some dodgy version of it. if we can't do it
+because of art count — is it a false limit on the art count and we can raise it on all ships or is it a real
+limit?"*
 
-**And her body is the port's green.** The first pass washed the palette's pale mix darker (0.42) and the player's
-word was *"the viper in play needs to match on the pad"* — the ship in play, on the pad and in the chase out of the
-port are to be one ship. So `drawViper`'s body is `VIPER.body`, the port's own ink, lifted a quarter of the way
-toward the palette's venom green (0666's mix), and the wash is a light one (0.15). 0666 refused the port's fixed
-inks so a palette could answer the hull; a quarter of the palette's answer is kept, so the high-contrast palette
-still lifts her, and the default palette shows the port's Viper. The port's own drawing (`paintViper`) is
-unchanged: it is the one the player held up.
+**It was never an art-count limit.** Three things kept the two drawings apart, none a count: the fight's camera
+draws her 85 px long, and [0106](0106-a-mark-thinner-than-a-pixel-is-not-drawn.md) forbids a solid mark under
+2.5 px there (the port's slender fangs were 1.8 px, its nostril half a pixel); the guards read a polygon trace,
+and the tracing pen has flattened curves since [0276](0276-a-hull-is-a-curve.md); and 0666 chose the palette's
+inks over the port's so a palette could answer her. So: **one painter, `paintViperArt`**, that the port
+(`paintViper`), the pad and the fight (`drawViper`) all call — the port's curves, inks, fin, eye, fangs and
+nozzle, with the fine marks drawn as lights (translucent, 0698's rule) so they fade at the fight's camera rather
+than smear, the fangs a hair broader (0.09 at the root, three pixels), and the canopy a tenth of the frame tall
+where the port drew it 0.085. The silhouette is one loop — the hull with the canopy's arc, the fin as a ribbon
+along the port's fin line, the near wing, the fangs and the fight's launcher each spliced in where it meets the
+hull (`spliced`) — so every part shares an edge with the hull and no area
+([0227](0227-a-sprite-is-painted-not-filled.md), [0631](0631-a-hull-does-not-straddle-its-outline.md)). What the
+fight adds, it adds on top: its launcher, its looks, its War Dance (which bends the painter's points as it bent
+the copy's). The far wing is back, as a light behind the hull.
+
+**And the thruster was always hers.** Her row's flame has been the violet `wyrmFlame` since
+[0667](0667-the-viper-has-her-own-flame.md); the review's pad pictures showed an orange one because the
+photographing script fitted `standard` on every ship, which the game never does. The pictures are reshot with
+each ship's own.
+
+**Given up with this:** 0666's palette answer. She wears the port's green on every palette, so the high-contrast
+palette no longer lifts her hull — the one open call this leaves, and hers alone.
 
 ## What guards it
 
