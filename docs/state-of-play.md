@@ -1187,13 +1187,16 @@ pilot, and a run with each gun and each special, on `staging` once the last batc
 fixed**: the void missile is over 0024's flash cap on `main` — 0703 has the four runs, and it is its own piece
 of work on the rift's light.
 
-### ⚠️ THE VERSION IS 1.0.0: THE TAG IS THE PLAYER'S — 2026-11-01
+### ⚠️ 1.0.0 IS RELEASED — 2026-11-01
 
-[0706](decisions/0706-the-version-is-one.md) moves `package.json` to `1.0.0` and nothing else: `v0.9.0` was tagged
-and deployed on 2026-10-29, and 0697–0705 are the only commits between it and this. **Next is the tag `v1.0.0`,
-which is the player's** (*"never tag unasked"*), then release day as `ITCH-COIL.md` in the site repository lays it
-out: the itch page Public, the launch devlog posted, the site's itch links put back. The decision's table says what
-is still owed after it — the candidate play, and the rewrite of this file.
+[0706](decisions/0706-the-version-is-one.md) moved `package.json` to `1.0.0` and nothing else; the player asked for
+the tag the same day, `v1.0.0` ran green on every job of `release.yml` (tests, build, the origin, itch, verify), the
+itch page went Public and the launch devlog was posted, from the site repository's `ITCH-COIL.md`. The release
+review's four steps are all done. **Everything from here is a `1.0.x` patch, tagged only when asked.** Still owed,
+in this order: the candidate play the review names (one whole run inside the itch embed, the Save tab's QR from
+inside the iframe, a phone, and one run by someone who has never played) and then the rewrite of this file, which
+[`the-road-to-v1`](../reports/the-road-to-v1-2026-10-19.md) lists as step 6 and most of whose *owed a play* headings
+retire with that play.
 
 ### ⚠️ THE CANDIDATE IS CUT: `v0.9.0` IS THE TREE TO TAG — 2026-10-29
 
